@@ -600,7 +600,7 @@ function celebrate() {
     { duration: 500, delay: s * 120, iterations: 2, easing: 'ease-in-out' }));
   clearTimeout(winT);
   winT = setTimeout(() => dialog('Bravo, vous avez gagné !', `C'est votre victoire numéro ${stats.won}.`,
-    [['Nouvelle partie', newGame, true], ['Regarder le jeu', null]], true), REDUCED ? 0 : 1500);
+    [['Nouvelle partie', newGame, true], ['Retour aux jeux', () => { location.href = document.getElementById('home').href; }]], true), REDUCED ? 0 : 1500);
 }
 
 /* ---------- Dialog ---------- */

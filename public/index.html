@@ -93,6 +93,8 @@
     height: 130px; position: relative; overflow: hidden;
     background: radial-gradient(90% 120% at 50% 0%, #1F7A6C, #12594F);
   }
+  .art svg.board { position: absolute; left: 50%; bottom: -34px; width: 250px; height: 156px; margin-left: -125px;
+    filter: drop-shadow(0 8px 12px rgba(0,0,0,.35)); transform: rotate(-5deg); }
   .art svg.card { position: absolute; left: 50%; bottom: -44px; width: 96px; height: 134px; margin-left: -48px;
     filter: drop-shadow(0 6px 10px rgba(0,0,0,.3)); transform-origin: 50% 120%; }
   .body { padding: 18px 26px 24px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
@@ -190,16 +192,19 @@
 <script>
 'use strict';
 // The library. To add a game: put it in <id>/index.html, add it here, and add its folder to CORE in sw.js.
-// Each game has its own look: the felt of its table, and a picture made of cards, fanned or in a row.
+// Each game has its own look: the felt of its table, and a picture made of cards, fanned or in a row,
+// or for the dames, a corner of the board with its pieces.
 const GAMES = [
   { id: 'solitaire', title: 'Solitaire', text: 'Rangez toutes les cartes, de l’as jusqu’au roi.',
     felt: ['#1F7A6C', '#12594F'], cards: [['7', 2], ['A', 0], ['R', 1]] },
   { id: 'freecell', title: 'FreeCell', text: 'Rangez les cartes avec l’aide de quatre cases libres.',
     felt: ['#2E66A0', '#173F6B'], row: true, cards: [['A', 1], ['A', 0], ['A', 2], ['A', 3]] },
+  { id: 'dames', title: 'Dames', text: 'Le jeu de dames sur 100 cases, contre l’ordinateur.',
+    felt: ['#8A3440', '#4C161E'], board: true },
 ];
-const SOON = [
-  { title: 'Dame de pique', text: 'Une partie de cartes contre trois joueurs de l’ordinateur.', cards: [['D', 0]] },
-];
+// Games shown as coming soon, with a "Bientôt" badge. Empty while the three games fill the laptop
+// screen: a fourth tile would wrap to a second row and make the page scroll.
+const SOON = [];
 
 const SUIT_RED = s => s === 1 || s === 2;
 function cardSvg([rank, suit], angle, dx, back) {
@@ -218,6 +223,17 @@ function cardSvg([rank, suit], angle, dx, back) {
     <use href="#su${suit}" x="20" y="44" width="40" height="40" fill="${col}"/></svg>`;
 }
 // A fan of cards, or with row, the cards standing side by side.
+// A corner of the dames board: 6 by 4 squares, a few pieces and a crowned one.
+function boardArt() {
+  let sq = '<rect width="240" height="160" fill="#F0E2C4"/>';
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) if ((r + c) % 2) sq += `<rect x="${c * 40}" y="${r * 40}" width="40" height="40" fill="#A06D48"/>`;
+  const piece = (c, r, white, king) => `<g transform="translate(${c * 40 + 20} ${r * 40 + 20})">
+    <circle r="16.5" fill="${white ? '#F4EEDF' : '#24211F'}" stroke="${white ? '#B5AC97' : '#77706A'}" stroke-width="1.5"/>
+    <circle r="11.5" fill="none" stroke="${white ? '#C9C0AC' : '#5C5550'}" stroke-width="1.2"/>
+    ${king ? '<path d="M-9 -4l4.2 3.6L0 -9l4.3 7.1 4.2-3.6-1.8 10H-7.2z" fill="#D69B1E" stroke="#6B4A0A" stroke-width="1"/>' : ''}</g>`;
+  sq += piece(1, 0, false) + piece(3, 0, false) + piece(4, 1, false) + piece(2, 1, true, true) + piece(1, 2, true) + piece(3, 2, true) + piece(0, 3, true);
+  return `<svg class="board" viewBox="0 0 240 150" aria-hidden="true"><rect x="-6" y="-6" width="252" height="172" rx="4" fill="#5A3822"/>${sq}</svg>`;
+}
 function art(cards, back, row) {
   const n = cards.length;
   return cards.map((c, i) => {
@@ -237,7 +253,7 @@ function render() {
     // The button already says a game is in progress: the line under the text shows only the wins.
     const wins = parts.filter(p => !/en cours/i.test(p)).join(' · ');
     return `<a class="tile" href="${g.id}/" data-id="${g.id}">
-      <div class="art" style="background: radial-gradient(90% 120% at 50% 0%, ${g.felt[0]}, ${g.felt[1]})">${art(g.cards, false, g.row)}</div>
+      <div class="art" style="background: radial-gradient(90% 120% at 50% 0%, ${g.felt[0]}, ${g.felt[1]})">${g.board ? boardArt() : art(g.cards, false, g.row)}</div>
       <div class="body">
         <h3>${esc(g.title)}</h3>
         <p>${esc(g.text)}</p>

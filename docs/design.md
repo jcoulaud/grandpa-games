@@ -68,3 +68,15 @@ FreeCell uses the solitaire's cards, top bar, message line, clicks, drag, hints 
 - **One click.** The empty free cells count as one place, and so do the empty columns. A card that fits nowhere else goes to the first free cell with one click.
 - **Runs.** A click on a card in an ordered run takes the card and the cards on it. When the run is too long for the room, the message line gives the number of cards that can move now.
 - **Solver.** It searches best-first and wins about 98% of random deals in less than 30,000 positions, in about 20 ms. A deal is kept only if the solver wins it.
+
+## Dames
+
+The jeu de dames is international draughts on the 10x10 board, as the FMJD and the FFJD play it. Two second opinions (GPT-6.2 Astra and GPT-6.2 Sol) checked the rules, the draw limits and the input design against the FMJD 2024 annexes.
+
+- **Its own look.** A wine-red felt (#7E2F38 to #4C161E) around a wooden board: light squares #F0E2C4, dark squares #A06D48, a walnut frame. His pieces are ivory, the computer's are black with a grey rim, so both show on the dark squares. A king wears a large gold crown.
+- **Board size.** The board fills the height under the message line: 49 px squares at 1366x680, 84 px at 1920x1000. A side column shows the computer and him, the pieces each has left, whose turn it is, and the moves left before a draw.
+- **Two clicks, always.** He clicks a piece, then a framed square, even when there is one move. A slip on a piece only chooses it. During a capture he clicks each landing, so the route is always his choice. The game never guesses between two routes.
+- **Captures.** The pieces that must take have a dashed yellow ring. A taken piece gets a red cross and stays until the end of the move, as on a real board.
+- **The computer's move.** It waits at least 0.7 s, so his own move is seen landing first. Its piece then travels one landing at a time, 0.52 s apart, crossing out what it takes. Its start and end squares stay lit until he chooses a piece, and the message line says what it took.
+- **Levels.** Facile searches 2 plies and, 40% of the time, picks a move that loses at most 0.9 of a man against the best one. It still never misses a compulsory capture. Moyen and Fort search deeper with alpha-beta and follow every compulsory capture past the depth limit, so they do not give pieces away.
+- **No settings.** The level is the only choice, at "Nouvelle partie", and it is kept.

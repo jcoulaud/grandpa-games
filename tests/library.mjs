@@ -48,6 +48,7 @@ try {
   await page.waitForSelector('#saves svg');
   check('tile for solitaire', await page.locator('a.tile[data-id="solitaire"]').count() === 1);
   check('tile for freecell', await page.locator('a.tile[data-id="freecell"]').count() === 1);
+  check('tile for dames', await page.locator('a.tile[data-id="dames"]').count() === 1);
   check('no "Nouveau" badge on the games', await page.locator('a.tile .badge').count() === 0);
   check('note from message.json', await page.locator('#note.on').count() === 1);
   check('says the saves stay on this PC', (await page.textContent('#saves')).includes('sur cet ordinateur'));
@@ -85,6 +86,13 @@ try {
   await page.goto(BASE + 'solitaire/');
   await page.waitForTimeout(1500);
   check('game opens offline', await page.locator('#table .card').count() > 50);
+  // The dames were never opened: they still open offline, and the computer answers from its worker.
+  await page.goto(BASE + 'dames/');
+  await page.waitForTimeout(800);
+  check('dames open offline before their first visit', await page.locator('#board .pc').count() === 40);
+  await page.evaluate(() => { Kit.closeHelp(); tap(32); tap(28); });
+  await page.waitForFunction(() => G.turn === 1 && phase === 'player', null, { timeout: 8000 }).catch(() => {});
+  check('the computer answers offline, in its worker', await page.evaluate(() => G.turn === 1 && workerOk && !!worker));
   await pc.setOffline(false);
 
   // 4. A new version starts when the library opens, never under an open game.
