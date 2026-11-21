@@ -80,8 +80,8 @@
 
 
   /* Game tiles */
-  /* Four games side by side on a laptop: each tile is at least 250 px wide. */
-  #games { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 22px; }
+  /* Three games per row at most, so each tile has room for its words. A tile is at least 300 px wide. */
+  #games { display: grid; grid-template-columns: repeat(auto-fill, minmax(max(300px, calc((100% - 44px) / 3)), 1fr)); gap: 22px; }
   .tile {
     position: relative; display: flex; flex-direction: column; border-radius: 28px; overflow: hidden;
     background: var(--face); color: var(--text); text-decoration: none;
@@ -109,7 +109,7 @@
   .status svg { width: 26px; height: 26px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .status:empty { display: none; }
   .play {
-    margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 60px; white-space: nowrap;
+    margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 60px; padding: 8px 16px; text-align: center;
     border-radius: 16px; background: var(--gold); color: #1F1A00; font: 700 22px var(--ui);
   }
   a.tile:hover .play { background: #FFD666; }
@@ -265,10 +265,15 @@ function render() {
 }
 document.getElementById('games').addEventListener('click', e => {
   const t = e.target.closest('a.tile');
-  if (!t) return;
+  // A click with Cmd, Ctrl or Shift opens the game in another tab or window: this page stays.
+  if (!t || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
   t.classList.add('opening');
-  t.querySelector('.play').textContent = 'Ouverture…';
+  t.querySelector('.play').textContent = 'Un instant…';
+  // If the browser stops the navigation, the tiles must not stay on "Un instant…".
+  setTimeout(render, 4000);
 });
+// Safari keeps the page in memory when Papi goes into a game. Coming back, redraw the tiles.
+addEventListener('pageshow', e => { if (e.persisted) render(); });
 
 function clock() {
   const d = new Date(), h = d.getHours();
