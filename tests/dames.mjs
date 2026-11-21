@@ -40,10 +40,15 @@ for (let n = 0; n < 4; n++) {
 ok(!(await g(() => Kit.isOpen())), '"J\'ai compris" closes the rules');
 
 // 2. Layout: large squares, and the board and the side column fit in the window.
-const lay = await g(() => { const b = document.getElementById('board').getBoundingClientRect(), s = document.getElementById('side').getBoundingClientRect(), t = table.getBoundingClientRect();
-  return { S, fits: b.bottom <= t.bottom && b.top >= t.top && s.right <= t.right, apart: s.left > b.right + 10 }; });
+const lay = await g(() => {
+  const r = id => document.getElementById(id).getBoundingClientRect(), f = r('frame'), t = table.getBoundingClientRect();
+  const panels = ['whoB', 'whoW'].map(r);
+  return { S, fits: f.bottom <= t.bottom && f.top >= t.top && panels.every(p => p.left >= t.left && p.right <= t.right && p.bottom <= t.bottom),
+    apart: panels.every(p => p.right < f.left || p.left > f.right), twoCols };
+});
 ok(lay.S >= 46, `squares are ${lay.S} px at 1366x680`);
-ok(lay.fits && lay.apart, 'the board and the side column fit side by side');
+ok(lay.fits && lay.apart, 'the board and the two panels fit side by side');
+ok(lay.twoCols, 'a laptop window puts the computer on the left and the player on the right');
 
 // 3. A move: click a piece, then a framed square. The computer answers from its worker.
 await click(32);
@@ -104,6 +109,7 @@ await click(35);
 await wait(1200);
 ok(await g(() => G.result && G.result.winner === 1), 'taking the last pieces wins');
 ok(await g(() => stats.won === 1 && document.getElementById('over').classList.contains('on')), 'the win is counted and shown');
+ok(await g(() => document.querySelectorAll('#trayW i.b').length === 20 && document.getElementById('tookW').textContent.includes('20 pièces')), 'every black piece is in his tray');
 await page.screenshot({ path: `${OUT}/dames-won.png` });
 ok((await g(() => [...document.querySelectorAll('#overBtns button')].map(b => b.textContent).join())) === 'Nouvelle partie,Retour aux jeux', 'the win offers a new game or the way back to the games');
 await g(() => Kit.closeDialog());
@@ -168,7 +174,7 @@ await page.screenshot({ path: `${OUT}/dames-ending.png` });
 await page.click('#newBtn');
 ok((await g(() => [...document.querySelectorAll('#overBtns button')].map(b => b.textContent).join())).includes('Facile,Moyen,Fort'), 'a new game offers three levels');
 await page.click('#overBtns button:nth-child(2)');
-ok(await g(() => level === 'moyen' && document.getElementById('infoB').textContent.startsWith('Niveau moyen')), 'the level is chosen and shown');
+ok(await g(() => level === 'moyen' && document.getElementById('levelB').textContent === 'Niveau moyen'), 'the level is chosen and shown');
 await page.reload(); await wait(300);
 ok(await g(() => level === 'moyen'), 'the level is kept');
 

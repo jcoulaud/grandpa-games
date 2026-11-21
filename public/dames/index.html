@@ -19,99 +19,151 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../lib/kit.css">
 <style>
-  /* Dames plays on a deep wine-red felt, around a wooden board. */
+  /* Dames plays on a deep wine-red felt, around a wooden board with a thin gold line. */
   :root {
     --felt-top: #7E2F38; --felt: #4C161E; --shade: 38,10,14; --accent: #8E2F3B;
-    --light: #F0E2C4; --dark: #A06D48; --wood: #5A3822;
-    --s: 56px;
+    --s: 56px; --f: 10px; --t: 22px;
   }
   button.game:hover { background: #A33A47; }
   button.game:active { background: #76252F; }
-  #title svg { width: 30px; height: 30px; }
+  #title svg { width: 32px; height: 32px; }
 
   #table { position: relative; overflow: hidden; }
-  #board {
-    position: absolute; width: calc(var(--s) * 10); height: calc(var(--s) * 10); background: var(--light);
-    box-shadow: 0 0 0 calc(var(--s) * .16) var(--wood), 0 0 0 calc(var(--s) * .16 + 2px) rgba(0,0,0,.35), 0 18px 50px calc(var(--s) * .16) rgba(0,0,0,.4);
-    border-radius: 2px; touch-action: none;
+  /* The frame: walnut with a fine grain, around the squares. */
+  #frame {
+    position: absolute; border-radius: 12px;
+    background:
+      linear-gradient(160deg, rgba(255,255,255,.14), transparent 40%, rgba(0,0,0,.25)),
+      repeating-linear-gradient(84deg, rgba(0,0,0,.09) 0 2px, transparent 2px 9px),
+      #6A4127;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 0 0 1px rgba(0,0,0,.4), 0 24px 60px rgba(0,0,0,.5), 0 6px 14px rgba(0,0,0,.35);
   }
-  .sq { position: absolute; width: var(--s); height: var(--s); background: var(--dark); }
-  .sq.last::after { content: ""; position: absolute; inset: 0; background: rgba(255,255,255,.26); box-shadow: inset 0 0 0 3px rgba(255,255,255,.7); }
+  #board {
+    position: absolute; width: calc(var(--s) * 10); height: calc(var(--s) * 10); touch-action: none;
+    background:
+      linear-gradient(rgba(255,255,255,.1), rgba(0,0,0,.04)),
+      repeating-linear-gradient(95deg, rgba(150,105,55,.07) 0 3px, transparent 3px 12px),
+      #EEDCB6;
+    box-shadow: 0 0 0 2px #2E1B0F, 0 0 0 4px #C9A35B, 0 0 0 5px #2E1B0F;
+  }
+  .sq {
+    position: absolute; width: var(--s); height: var(--s);
+    background:
+      linear-gradient(135deg, rgba(255,255,255,.08), rgba(0,0,0,.1)),
+      repeating-linear-gradient(78deg, rgba(0,0,0,.06) 0 2px, transparent 2px 8px),
+      #8F5B39;
+  }
+  /* The computer's last move: its start and end squares are lit. */
+  .sq.last::after { content: ""; position: absolute; inset: 0; background: rgba(255,236,190,.34); box-shadow: inset 0 0 0 3px rgba(255,236,190,.85); }
   /* A place the piece can go: a dashed yellow frame with a dark edge, and a dot in the middle. */
   .sq.go { cursor: pointer; }
   .sq.go::before {
-    content: ""; position: absolute; inset: 4px; z-index: 3; border: 5px dashed var(--gold); border-radius: 6px;
-    background: rgba(255,200,61,.3) radial-gradient(circle, var(--gold) 0 14%, rgba(var(--shade),.7) 14% 17%, transparent 17%);
+    content: ""; position: absolute; inset: 4px; z-index: 3; border: 5px dashed var(--gold); border-radius: 7px;
+    background: rgba(255,200,61,.28) radial-gradient(circle, var(--gold) 0 13%, rgba(var(--shade),.75) 13% 16.5%, transparent 16.5%);
     box-shadow: inset 0 0 0 1.5px rgba(var(--shade),.7), 0 0 0 1.5px rgba(var(--shade),.7);
   }
   .sq.go:hover::before, .sq.go.over::before { border-style: solid; background-color: rgba(255,200,61,.5); }
   .sq.go.hint::before { border: 6px solid var(--gold); animation: pulse 1.4s ease-in-out infinite; }
   @keyframes pulse { 50% { background-color: rgba(255,200,61,.62); } }
 
-  /* The pieces: ivory for the player, black for the computer, with a rim so they show on the dark squares. */
+  /* The pieces: thick discs with two grooves, ivory for the player and black for the computer.
+     The edge under the top shows their thickness. A king is two pieces stacked, with a crown. */
   .pc {
     position: absolute; width: var(--s); height: var(--s); z-index: 5; pointer-events: none;
     transition: left .3s ease, top .3s ease;
+    --lift: calc(var(--s) * -.04); --edge: calc(var(--s) * .055);
   }
+  .pc.k { --lift: calc(var(--s) * -.09); }
   .pc i {
-    position: absolute; inset: 7%; border-radius: 50%; display: grid; place-items: center;
+    position: absolute; inset: 8%; border-radius: 50%; display: grid; place-items: center; translate: 0 var(--lift);
   }
-  .pc.w i { background: radial-gradient(circle at 38% 32%, #FFFFFF, #F4EEDF 55%, #DCD3BF); box-shadow: inset 0 0 0 2px #B5AC97, inset 0 0 0 calc(var(--s) * .1) #F4EEDF, inset 0 0 0 calc(var(--s) * .1 + 2px) #C9C0AC, 0 3px 6px rgba(0,0,0,.45); }
-  .pc.b i { background: radial-gradient(circle at 38% 32%, #4A4541, #24211F 60%, #151312); box-shadow: inset 0 0 0 2px #77706A, inset 0 0 0 calc(var(--s) * .1) #24211F, inset 0 0 0 calc(var(--s) * .1 + 2px) #5C5550, 0 3px 6px rgba(0,0,0,.5); }
-  .pc svg { width: 72%; height: 72%; }
-  .pc.w svg { fill: #D69B1E; stroke: #6B4A0A; stroke-width: 1.4; }
-  .pc.b svg { fill: #FFC83D; stroke: #1A1500; stroke-width: 1.4; }
+  .pc i::before, .pc i::after { content: ""; position: absolute; border-radius: 50%; }
+  .pc i::before { inset: 13%; }
+  .pc i::after { inset: 27%; }
+  .pc.w i {
+    background: radial-gradient(circle at 34% 28%, #FFFFFF 0, #F8F2E4 42%, #E6DCC6 100%);
+    box-shadow: inset 0 0 0 1.5px rgba(150,130,95,.6), 0 var(--edge) 0 #C8BB9C, 0 var(--edge) 0 1px rgba(80,60,30,.45), 0 calc(var(--edge) * 2) calc(var(--s) * .08) rgba(0,0,0,.45);
+  }
+  .pc.w.k i {
+    box-shadow: inset 0 0 0 1.5px rgba(150,130,95,.6), 0 var(--edge) 0 #C8BB9C, 0 calc(var(--edge) + 1.5px) 0 #8E8062,
+      0 calc(var(--edge) * 2) 0 #C8BB9C, 0 calc(var(--edge) * 2) 0 1px rgba(80,60,30,.45), 0 calc(var(--edge) * 3) calc(var(--s) * .08) rgba(0,0,0,.45);
+  }
+  .pc.w i::before, .pc.w i::after { border: 1.5px solid rgba(140,120,85,.45); box-shadow: 0 1px 0 rgba(255,255,255,.9), inset 0 1px 0 rgba(255,255,255,.9); }
+  .pc.b i {
+    background: radial-gradient(circle at 34% 28%, #5B544E 0, #2C2826 42%, #141211 100%);
+    box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.16), 0 var(--edge) 0 #0E0D0C, 0 var(--edge) 0 1px rgba(255,255,255,.1), 0 calc(var(--edge) * 2) calc(var(--s) * .08) rgba(0,0,0,.5);
+  }
+  .pc.b.k i {
+    box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.16), 0 var(--edge) 0 #0E0D0C, 0 calc(var(--edge) + 1.5px) 0 #4A4440,
+      0 calc(var(--edge) * 2) 0 #0E0D0C, 0 calc(var(--edge) * 2) 0 1px rgba(255,255,255,.1), 0 calc(var(--edge) * 3) calc(var(--s) * .08) rgba(0,0,0,.5);
+  }
+  .pc.b i::before, .pc.b i::after { border: 1.5px solid rgba(0,0,0,.55); box-shadow: 0 1px 0 rgba(255,255,255,.13), inset 0 1px 0 rgba(255,255,255,.1); }
+  .pc svg { position: relative; z-index: 1; width: 70%; height: 70%; filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
+  .pc svg path { fill: #E2A82C; stroke: #5E3F06; stroke-width: 1.3; stroke-linejoin: round; }
+  .pc svg circle { fill: #FFF1C2; }
+  .pc.b svg path { fill: #FFC83D; stroke: #1A1500; }
+  /* Rings around a piece: white on hover, yellow when chosen, dashed yellow when it must take. */
+  .pc b { position: absolute; inset: 3%; border-radius: 50%; translate: 0 var(--lift); display: none; }
   .pc.can { pointer-events: auto; cursor: pointer; }
-  .pc.can:hover i { outline: 3px solid #fff; outline-offset: 2px; }
-  /* Chosen: a yellow ring. Must take: a dashed yellow ring. */
-  .pc.sel i, .pc.must i, .pc.hint i { outline-offset: 3px; }
-  .pc.sel i { outline: 5px solid var(--gold); box-shadow: 0 0 0 9px rgba(var(--shade),.6), 0 0 22px 10px rgba(255,200,61,.6); }
-  .pc.must i { outline: 4px dashed var(--gold); }
-  .pc.hint i { outline: 5px solid var(--gold); animation: glow 1.4s ease-in-out infinite; }
-  @keyframes glow { 50% { box-shadow: 0 0 26px 12px rgba(255,200,61,.75); } }
+  .pc.can:hover b { display: block; border: 3px solid #fff; }
+  .pc.must b { display: block; border: 4px dashed var(--gold); box-shadow: 0 0 0 1.5px rgba(var(--shade),.7); }
+  .pc.sel b, .pc.hint b { display: block; border: 5px solid var(--gold); box-shadow: 0 0 0 2px rgba(var(--shade),.8), 0 0 22px 8px rgba(255,200,61,.6); }
+  .pc.hint b { animation: glow 1.4s ease-in-out infinite; }
+  @keyframes glow { 50% { box-shadow: 0 0 0 2px rgba(var(--shade),.8), 0 0 30px 14px rgba(255,200,61,.85); } }
   .pc.moving { z-index: 50; transition: left .38s ease-in-out, top .38s ease-in-out; }
+  .pc.moving i { --lift: calc(var(--s) * -.12); }
   .pc.dragging { z-index: 60; transition: none; }
   /* A piece taken during the move: crossed out, until the move ends. */
-  .pc.taken i { opacity: .55; }
+  .pc.taken i { opacity: .6; }
   .pc.taken::after {
     content: ""; position: absolute; inset: 18%; z-index: 2;
     background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 5l14 14M19 5L5 19' stroke='%23fff' stroke-width='6' stroke-linecap='round'/%3E%3Cpath d='M5 5l14 14M19 5L5 19' stroke='%23C4122F' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
   }
-  .pc.gone { opacity: 0; transition: opacity .3s; }
 
-  /* The side column: the computer at the top, the player at the bottom, like on the board. */
-  .side { position: absolute; width: 260px; display: flex; flex-direction: column; gap: 10px; }
-  .who {
-    background: #fff; color: var(--text); border-radius: 18px; padding: 14px 18px; box-shadow: 0 4px 16px rgba(0,0,0,.3);
-    display: grid; grid-template-columns: 44px 1fr; column-gap: 12px; align-items: center; border: 3px solid transparent;
+  /* The two players. The computer sits by its pieces, top left; the player by his, bottom right.
+     Each tray holds the pieces that player has taken: 20 places, filled one by one. */
+  .col { position: absolute; display: flex; flex-direction: column; gap: 14px; }
+  .panel {
+    width: 100%; background: #FFFDF6; color: var(--text); border-radius: 22px; padding: 18px 20px 16px;
+    box-shadow: 0 4px 18px rgba(0,0,0,.32); border: 3px solid transparent; transition: border-color .2s;
   }
-  .who.turn { border-color: var(--gold); }
-  .who .disc { width: 44px; height: 44px; border-radius: 50%; grid-row: span 2; }
-  .who .disc.w { background: radial-gradient(circle at 38% 32%, #fff, #E9E1CC); box-shadow: inset 0 0 0 2px #B5AC97, 0 2px 4px rgba(0,0,0,.3); }
-  .who .disc.b { background: radial-gradient(circle at 38% 32%, #4A4541, #1B1918); box-shadow: inset 0 0 0 2px #77706A, 0 2px 4px rgba(0,0,0,.3); }
-  .who b { font: 700 23px var(--ui); }
-  .who span { font: 500 19px/1.3 var(--ui); color: #4E5A57; white-space: pre-line; }
-  .who .now { grid-column: 1 / -1; margin-top: 10px; font: 600 20px var(--ui); color: var(--text); display: none; align-items: center; gap: 8px; }
-  .who.turn .now { display: flex; }
+  .panel.turn { border-color: var(--gold); box-shadow: 0 0 0 4px rgba(255,200,61,.25), 0 4px 18px rgba(0,0,0,.32); }
+  .panel .head { display: flex; align-items: center; gap: 14px; }
+  .panel .disc { width: 46px; height: 46px; border-radius: 50%; flex: none; }
+  .disc.w { background: radial-gradient(circle at 34% 28%, #fff, #E6DCC6); box-shadow: inset 0 0 0 1.5px rgba(150,130,95,.6), 0 3px 0 #C8BB9C, 0 5px 6px rgba(0,0,0,.3); }
+  .disc.b { background: radial-gradient(circle at 34% 28%, #5B544E, #141211); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.16), 0 3px 0 #0E0D0C, 0 5px 6px rgba(0,0,0,.3); }
+  .panel b { display: block; font: 700 24px/1.15 var(--ui); }
+  .panel .head span { display: block; font: 500 19px/1.3 var(--ui); color: #5A6461; }
+  .panel .now { display: none; align-items: center; gap: 10px; margin-top: 12px; padding: 8px 12px; border-radius: 12px;
+    background: #FFF4D6; font: 600 20px var(--ui); }
+  .panel.turn .now { display: flex; }
   .dots { display: inline-flex; gap: 5px; }
   .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: dot 1.2s infinite; }
   .dots i:nth-child(2) { animation-delay: .2s; } .dots i:nth-child(3) { animation-delay: .4s; }
   @keyframes dot { 50% { opacity: .2; } }
-  #drawNote { background: #FFF4D6; color: var(--text); border-radius: 15px; padding: 10px 16px; font: 600 19px/1.3 var(--ui); box-shadow: 0 2px 10px rgba(0,0,0,.25); }
+  .tray { margin-top: 14px; padding: 10px; border-radius: 14px; background: #EFE7D6; box-shadow: inset 0 2px 5px rgba(60,40,20,.25);
+    display: grid; grid-template-columns: repeat(10, var(--t)); gap: 6px calc((100% - 10 * var(--t)) / 9); }
+  .tray i { width: var(--t); height: var(--t); border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgba(90,70,40,.18); }
+  .tray i.w { background: radial-gradient(circle at 34% 28%, #fff, #E6DCC6); box-shadow: inset 0 0 0 1px rgba(150,130,95,.6), 0 2px 0 #C8BB9C, 0 3px 3px rgba(0,0,0,.25); }
+  .tray i.b { background: radial-gradient(circle at 34% 28%, #5B544E, #141211); box-shadow: 0 2px 0 #0E0D0C, 0 3px 3px rgba(0,0,0,.3); }
+  .tray i.new { animation: drop .5s cubic-bezier(.2,1.5,.4,1) both; }
+  @keyframes drop { from { transform: translateY(-14px) scale(.4); opacity: 0; } }
+  .took { margin-top: 8px; font: 600 19px var(--ui); color: #4E5A57; }
+  #drawNote { background: #FFF4D6; color: var(--text); border-radius: 16px; padding: 12px 16px; font: 600 19px/1.3 var(--ui); box-shadow: 0 2px 10px rgba(0,0,0,.25); }
   #drawNote:empty { display: none; }
 
   #helpText .demo { display: flex; gap: 24px; align-items: center; margin: 6px 0 10px; }
   #helpText .demo svg { width: 150px; height: 150px; flex: none; border-radius: 6px; }
 
   @media (prefers-reduced-motion: reduce) {
-    .pc, .pc.moving, .pc.gone { transition: none; }
-    .sq.go.hint::before, .pc.hint i, .dots i { animation: none; }
+    .pc, .pc.moving { transition: none; }
+    .sq.go.hint::before, .pc.hint b, .dots i, .tray i.new { animation: none; }
   }
 </style>
 </head>
 <body>
 <div id="bar">
-  <div id="title"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#26302D"/><circle cx="12" cy="12" r="6.8" fill="none" stroke="#fff" stroke-width="1.5"/></svg>Dames</div>
+  <div id="title"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.6" r="9.6" fill="#141211"/><circle cx="12" cy="11.4" r="9.6" fill="#2C2826"/><circle cx="12" cy="11.4" r="6.2" fill="none" stroke="#5B544E" stroke-width="1.3"/></svg>Dames</div>
   <button id="undoBtn" data-icon="undo" title="Reprend votre dernier coup et la réponse de l'ordinateur"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span></button>
   <button id="hintBtn" class="primary" data-icon="bulb" title="Montre un bon coup à jouer maintenant"><span class="long">Quel coup jouer ?</span><span class="short">Aide</span></button>
   <span class="spacer"></span>
@@ -120,11 +172,24 @@
 </div>
 <div id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div></div>
 <div id="table">
+  <div id="frame"></div>
   <div id="board" role="grid" aria-label="Damier"></div>
-  <div class="side" id="side">
-    <div class="who" id="whoB"><div class="disc b"></div><b>L'ordinateur</b><span id="infoB"></span><div class="now"><span class="dots"><i></i><i></i><i></i></span>Il réfléchit</div></div>
+  <div class="col" id="colL">
+    <div class="panel" id="whoB">
+      <div class="head"><div class="disc b"></div><div><b>L'ordinateur</b><span id="levelB"></span></div></div>
+      <div class="now"><span class="dots"><i></i><i></i><i></i></span>Il réfléchit</div>
+      <div class="tray" id="trayB"></div>
+      <div class="took" id="tookB"></div>
+    </div>
     <div id="drawNote"></div>
-    <div class="who" id="whoW"><div class="disc w"></div><b>Vous</b><span id="infoW"></span><div class="now">À vous de jouer</div></div>
+  </div>
+  <div class="col" id="colR">
+    <div class="panel" id="whoW">
+      <div class="head"><div class="disc w"></div><div><b>Vous</b><span>Les pions blancs</span></div></div>
+      <div class="now">À vous de jouer</div>
+      <div class="tray" id="trayW"></div>
+      <div class="took" id="tookW"></div>
+    </div>
   </div>
 </div>
 <div id="help" data-title="Comment jouer">
@@ -168,7 +233,7 @@ const $ = id => document.getElementById(id);
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const HOP_MS = 520;        // between two landings of the computer's piece
 const THINK_MS = 700;      // the computer never answers faster, so his own move is seen landing first
-const CROWN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 8.5l4.2 3.6L12 5l4.3 7.1 4.2-3.6-1.8 10H5.3z" stroke-linejoin="round"/></svg>';
+const CROWN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 8.5l4.2 3.6L12 5l4.3 7.1 4.2-3.6-1.8 10H5.3z"/><circle cx="12" cy="15" r="1.6"/></svg>';
 
 // The levels of the computer. Facile searches two plies and sometimes picks a weaker move, but never
 // one that loses much more. Moyen and Fort search deeper. The hint always plays its best.
@@ -500,22 +565,37 @@ function build() {
     boardEl.appendChild(e); squares[n] = e;
   }
 }
-// The board fills the height of the table, the side column sits on its right.
+// The board fills the height of the table, in the middle. On a wide window, the computer's panel sits
+// on the left by its pieces and the player's on the right by his. Narrower, both go on the right.
+let twoCols = null;
 function layout() {
   const W = table.clientWidth, H = table.clientHeight;
-  const sideW = 260, gap = 40;
-  const byH = (H - 28) / 10.32, byW = (W - 48 - sideW - gap) / 10.32;
-  S = Math.floor(Math.max(34, Math.min(byH, byW, 96)));
-  const total = 10 * S + gap + sideW;
-  BX = Math.max(24 + S * .16, Math.round((W - total) / 2 + S * .16));
-  BY = Math.max(Math.ceil(S * .16) + 4, Math.round((H - 10 * S) / 2));
+  const panelW = 290, gap = 36;
+  const byH = (H - 30) / 10.4;
+  let wide = (W - 2 * (panelW + gap) - 40) / 10.4 >= Math.min(byH, 60);
+  const byW = wide ? (W - 2 * (panelW + gap) - 40) / 10.4 : (W - panelW - gap - 40) / 10.4;
+  S = Math.floor(Math.max(34, Math.min(byH, byW, 92)));
+  const F = Math.round(S * .2);
+  BY = Math.max(F + 6, Math.round((H - 10 * S) / 2));
+  BX = wide ? Math.round((W - 10 * S) / 2) : Math.max(F + 20, Math.round((W - 10 * S - gap - panelW) / 2));
   document.documentElement.style.setProperty('--s', S + 'px');
   boardEl.style.left = BX + 'px'; boardEl.style.top = BY + 'px';
+  const frame = $('frame');
+  frame.style.left = BX - F + 'px'; frame.style.top = BY - F + 'px';
+  frame.style.width = frame.style.height = 10 * S + 2 * F + 'px';
   for (let n = 1; n <= 50; n++) { squares[n].style.left = colOf(n) * S + 'px'; squares[n].style.top = rowOf(n) * S + 'px'; }
-  const side = $('side');
-  side.style.left = BX + 10 * S + gap + 'px';
-  side.style.top = BY + 'px'; side.style.height = 10 * S + 'px';
-  side.style.justifyContent = 'space-between';
+  const L = $('colL'), R = $('colR');
+  if (wide !== twoCols) {
+    twoCols = wide;
+    if (wide) { L.prepend($('whoB')); L.append($('drawNote')); }
+    else { R.prepend($('drawNote')); R.prepend($('whoB')); }
+  }
+  const right = BX + 10 * S + F + gap;
+  R.style.left = right + 'px'; R.style.width = panelW + 'px';
+  R.style.top = BY - F + 'px'; R.style.height = 10 * S + 2 * F + 'px';
+  R.style.justifyContent = wide ? 'flex-end' : 'space-between';
+  L.style.display = wide ? 'flex' : 'none';
+  L.style.left = BX - F - gap - panelW + 'px'; L.style.width = panelW + 'px'; L.style.top = BY - F + 'px';
 }
 const xy = n => [colOf(n) * S, rowOf(n) * S];
 
@@ -554,8 +634,8 @@ function render(opts = {}) {
     const isMover = n === moving && moving;
     if (isMover && keep) { const [x, y] = xy(at); keep.style.left = x + 'px'; keep.style.top = y + 'px'; continue; }
     const e = document.createElement('div');
-    e.className = 'pc ' + (v > 0 ? 'w' : 'b');
-    e.innerHTML = `<i>${Math.abs(v) === 2 ? CROWN : ''}</i>`;
+    e.className = 'pc ' + (v > 0 ? 'w' : 'b') + (Math.abs(v) === 2 ? ' k' : '');
+    e.innerHTML = `<b></b><i>${Math.abs(v) === 2 ? CROWN : ''}</i>`;
     const [x, y] = xy(isMover ? at : n);
     e.style.left = x + 'px'; e.style.top = y + 'px';
     if (isMover && opts.shown) e.classList.add('moving');
@@ -569,17 +649,27 @@ function render(opts = {}) {
     boardEl.appendChild(e);
   }
 
-  // The side column
-  const count = s => { let p = 0, k = 0; for (let n = 1; n <= 50; n++) if (Math.sign(b[n]) === s) { p++; if (Math.abs(b[n]) === 2) k++; } return [p, k]; };
-  const info = ([p, k]) => plural(p, 'pièce', 'pièces') + (k ? ` · ${plural(k, 'dame', 'dames')}` : '');
-  $('infoB').textContent = `Niveau ${LEVELS[level].name.toLowerCase()}\n${info(count(BLACK))}`;
-  $('infoW').textContent = info(count(WHITE));
+  // The two panels: whose turn it is, and the pieces each side has taken.
+  const left = s => { let p = 0; for (let n = 1; n <= 50; n++) if (Math.sign(b[n]) === s) p++; return p; };
+  tray('trayB', 'tookB', 20 - left(WHITE), 'w', n => n ? `Il vous a pris ${plural(n, 'pièce', 'pièces')}.` : 'Il ne vous a rien pris.');
+  tray('trayW', 'tookW', 20 - left(BLACK), 'b', n => n ? `Vous avez pris ${plural(n, 'pièce', 'pièces')}.` : 'Vous n\'avez rien pris.');
+  $('levelB').textContent = 'Niveau ' + LEVELS[level].name.toLowerCase();
   $('whoB').classList.toggle('turn', phase === 'thinking' || phase === 'anim');
   $('whoW').classList.toggle('turn', phase === 'player' && !G.result);
   $('drawNote').textContent = drawNote();
   $('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
   $('undoBtn').disabled = !undo.length && !(sel && sel.path.length);
   $('hintBtn').disabled = phase !== 'player' || !!G.result;
+}
+// A tray of 20 places. The pieces taken since the last drawing drop in.
+const shownTaken = {};
+function tray(id, textId, n, cls, text) {
+  const el = $(id), was = shownTaken[id] ?? n;
+  if (el.childElementCount !== 20 || was !== n) {
+    el.innerHTML = Array.from({ length: 20 }, (_, i) => `<i class="${i < n ? cls : ''}${i < n && i >= was ? ' new' : ''}"></i>`).join('');
+  }
+  shownTaken[id] = n;
+  $(textId).textContent = text(n);
 }
 // A word on a coming draw, in moves of each player.
 function drawNote() {
