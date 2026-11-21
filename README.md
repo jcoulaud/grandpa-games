@@ -59,6 +59,16 @@ When a game changes its save format, it must still read the old format. His save
   - The empty free cells count as one place, and so do the empty columns. So a card that fits nowhere else goes to a free cell with one click. The game frames only the first empty free cell and the first empty column, but a click or a drop on another one also works.
   - A run of cards moves in one go when there is room: one card more per empty free cell, doubled by each empty column. When the run is too long, the message line gives the number of cards that can move.
 
+- `public/dames/`: the jeu de dames on the 10x10 board, against the computer, with the FMJD rules.
+  - `engine.js` holds the rules and the computer. It has no DOM, so the page, a Web Worker and the tests all run the same code. The worker is made from the engine's own source in a Blob, so it also starts offline and from a file.
+  - Taking is compulsory, and the player must take the most pieces. Kings fly. A man that passes over the last row during a capture and goes on stays a man.
+  - Click a piece, then a square framed in yellow. During a capture, click each landing square. The pieces taken are crossed out and leave the board at the end of the move. When several routes take the same pieces, every route is allowed.
+  - A refused click keeps the piece chosen and says why in one sentence.
+  - The computer has three levels, chosen at "Nouvelle partie": Facile (2 plies, sometimes a slightly weaker move), Moyen (6 plies, 0.6 s) and Fort (1.5 s). Its move is saved before it is shown, then shown one landing at a time.
+  - "Annuler le dernier coup" takes back his move and the computer's answer, also while the computer thinks. During a capture, it takes back the landings clicked so far.
+  - The game is drawn after the same position three times, after 25 king moves each without a capture or a man move, and at the end of the FMJD limits for endings with few pieces. The side column says how many moves are left.
+  - A capture half done is saved too, so it comes back after the window is closed.
+
 The design and the research behind it are in `docs/design.md`.
 
 ## Saves
@@ -103,7 +113,7 @@ The tests play the game in a real browser with the mouse. They are only for deve
 2. If Playwright has no browser yet, run `bunx playwright install chromium`.
 3. Run `bun run test`.
 
-`tests/library.mjs` starts a local Worker with a fresh database and covers the library, saves on the PC, offline use, updates, the statistics and the admin page. `tests/play.mjs` covers moves, drag and drop, hints, undo and the layout. `tests/dialogs.mjs` covers the rules guide, the labels, saving across a reload, the stuck dialog and the win. Each test prints PASS or FAIL per check and ends with `ALL PASSED`. Screenshots go to `tests/screenshots/`.
+`tests/library.mjs` starts a local Worker with a fresh database and covers the library, saves on the PC, offline use, updates, the statistics and the admin page. `tests/play.mjs` covers moves, drag and drop, hints, undo and the layout. `tests/dialogs.mjs` covers the rules guide, the labels, saving across a reload, the stuck dialog and the win. `tests/dames-rules.mjs` checks the rules engine in Node: the published opening move counts, every tricky capture from the FMJD rules, the draw rules and the computer. `tests/dames.mjs` plays the dames with the mouse: captures step by step, refusals, undo, hint, drag, reloads, the win, the loss and the levels. Each test prints PASS or FAIL per check and ends with `ALL PASSED`. Screenshots go to `tests/screenshots/`.
 
 ## Planned
 

@@ -11,6 +11,7 @@ const CORE = [
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
   'solitaire/', 'solitaire/icon.svg',
   'freecell/', 'freecell/solver.js', 'freecell/icon.svg',
+  'dames/', 'dames/engine.js', 'dames/icon.svg',
 ];
 
 self.addEventListener('install', e => {

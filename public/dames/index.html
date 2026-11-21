@@ -1,0 +1,793 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dames · Jeux de Papi</title>
+<meta name="description" content="Le jeu de dames en grand, pour les grands-parents : le damier de 100 cases et les vraies règles, contre l'ordinateur, en facile, moyen ou fort. Gratuit, sans publicité, sans compte.">
+<link rel="canonical" href="https://jeux-papi.fr/dames/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Jeux de Papi">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://jeux-papi.fr/dames/">
+<meta property="og:title" content="Dames · Jeux de Papi">
+<meta property="og:description" content="Le jeu de dames en grand, contre l'ordinateur. Gratuit, sans publicité, sans compte.">
+<meta property="og:image" content="https://jeux-papi.fr/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../lib/kit.css">
+<style>
+  /* Dames plays on a deep wine-red felt, around a wooden board with a thin gold line. */
+  :root {
+    --felt-top: #7E2F38; --felt: #4C161E; --shade: 38,10,14; --accent: #8E2F3B;
+    --s: 56px; --f: 10px; --t: 22px;
+  }
+  button.game:hover { background: #A33A47; }
+  button.game:active { background: #76252F; }
+  #title svg { width: 32px; height: 32px; }
+
+  #table { position: relative; overflow: hidden; }
+  /* The frame: walnut with a fine grain, around the squares. */
+  #frame {
+    position: absolute; border-radius: 12px;
+    background:
+      linear-gradient(160deg, rgba(255,255,255,.14), transparent 40%, rgba(0,0,0,.25)),
+      repeating-linear-gradient(84deg, rgba(0,0,0,.09) 0 2px, transparent 2px 9px),
+      #6A4127;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 0 0 1px rgba(0,0,0,.4), 0 24px 60px rgba(0,0,0,.5), 0 6px 14px rgba(0,0,0,.35);
+  }
+  #board {
+    position: absolute; width: calc(var(--s) * 10); height: calc(var(--s) * 10); touch-action: none;
+    background:
+      linear-gradient(rgba(255,255,255,.1), rgba(0,0,0,.04)),
+      repeating-linear-gradient(95deg, rgba(150,105,55,.07) 0 3px, transparent 3px 12px),
+      #EEDCB6;
+    box-shadow: 0 0 0 2px #2E1B0F, 0 0 0 4px #C9A35B, 0 0 0 5px #2E1B0F;
+  }
+  .sq {
+    position: absolute; width: var(--s); height: var(--s);
+    background:
+      linear-gradient(135deg, rgba(255,255,255,.08), rgba(0,0,0,.1)),
+      repeating-linear-gradient(78deg, rgba(0,0,0,.06) 0 2px, transparent 2px 8px),
+      #8F5B39;
+  }
+  /* The computer's last move: its start and end squares are lit. */
+  .sq.last::after { content: ""; position: absolute; inset: 0; background: rgba(110,180,255,.28); box-shadow: inset 0 0 0 4px #8CCBFF; }
+  /* A place the piece can go: a dashed yellow frame with a dark edge, and a dot in the middle. */
+  .sq.go { cursor: pointer; }
+  .sq.go::before {
+    content: ""; position: absolute; inset: 4px; z-index: 3; border: 5px dashed var(--gold); border-radius: 7px;
+    background: rgba(255,200,61,.32);
+    box-shadow: inset 0 0 0 1.5px rgba(var(--shade),.7);
+  }
+  .sq.go:hover::before, .sq.go.over::before { border-style: solid; background-color: rgba(255,200,61,.5); }
+  .sq.go.hint::before { border: 6px solid var(--gold); animation: pulse 1.4s ease-in-out infinite; }
+  /* During a hint, only the hinted square is framed. The other squares still accept a click. */
+  #board.hinting .sq.go:not(.hint)::before { display: none; }
+  @keyframes pulse { 50% { background-color: rgba(255,200,61,.62); } }
+
+  /* The pieces: thick discs with two grooves, ivory for the player and black for the computer.
+     The edge under the top shows their thickness. A king is two pieces stacked, with a crown. */
+  .pc {
+    position: absolute; width: var(--s); height: var(--s); z-index: 5; pointer-events: none;
+    transition: left .3s ease, top .3s ease;
+    --lift: calc(var(--s) * -.04); --edge: calc(var(--s) * .055);
+  }
+  .pc.k { --lift: calc(var(--s) * -.09); }
+  .pc i {
+    position: absolute; inset: 8%; border-radius: 50%; display: grid; place-items: center; translate: 0 var(--lift);
+  }
+  .pc i::before, .pc i::after { content: ""; position: absolute; border-radius: 50%; }
+  .pc i::before { inset: 13%; }
+  .pc i::after { inset: 27%; }
+  .pc.w i {
+    background: radial-gradient(circle at 34% 28%, #FFFFFF 0, #F8F2E4 42%, #E6DCC6 100%);
+    box-shadow: inset 0 0 0 1.5px rgba(150,130,95,.6), 0 var(--edge) 0 #C8BB9C, 0 var(--edge) 0 1px rgba(80,60,30,.45), 0 calc(var(--edge) * 2) calc(var(--s) * .08) rgba(0,0,0,.45);
+  }
+  .pc.w.k i {
+    box-shadow: inset 0 0 0 1.5px rgba(150,130,95,.6), 0 var(--edge) 0 #C8BB9C, 0 calc(var(--edge) + 1.5px) 0 #8E8062,
+      0 calc(var(--edge) * 2) 0 #C8BB9C, 0 calc(var(--edge) * 2) 0 1px rgba(80,60,30,.45), 0 calc(var(--edge) * 3) calc(var(--s) * .08) rgba(0,0,0,.45);
+  }
+  .pc.w i::before, .pc.w i::after { border: 1.5px solid rgba(140,120,85,.45); box-shadow: 0 1px 0 rgba(255,255,255,.9), inset 0 1px 0 rgba(255,255,255,.9); }
+  .pc.b i {
+    background: radial-gradient(circle at 34% 28%, #5B544E 0, #2C2826 42%, #141211 100%);
+    box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.16), 0 var(--edge) 0 #0E0D0C, 0 var(--edge) 0 1px rgba(255,255,255,.1), 0 calc(var(--edge) * 2) calc(var(--s) * .08) rgba(0,0,0,.5);
+  }
+  .pc.b.k i {
+    box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.16), 0 var(--edge) 0 #0E0D0C, 0 calc(var(--edge) + 1.5px) 0 #4A4440,
+      0 calc(var(--edge) * 2) 0 #0E0D0C, 0 calc(var(--edge) * 2) 0 1px rgba(255,255,255,.1), 0 calc(var(--edge) * 3) calc(var(--s) * .08) rgba(0,0,0,.5);
+  }
+  .pc.b i::before, .pc.b i::after { border: 1.5px solid rgba(0,0,0,.55); box-shadow: 0 1px 0 rgba(255,255,255,.13), inset 0 1px 0 rgba(255,255,255,.1); }
+  .pc svg { position: relative; z-index: 1; width: 70%; height: 70%; filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
+  .pc svg path { fill: #E2A82C; stroke: #5E3F06; stroke-width: 1.3; stroke-linejoin: round; }
+  .pc svg circle { fill: #FFF1C2; }
+  .pc.b svg path { fill: #FFC83D; stroke: #1A1500; }
+  /* Rings around a piece: white on hover, yellow when chosen, dashed yellow when it must take. */
+  .pc b { position: absolute; inset: 3%; border-radius: 50%; translate: 0 var(--lift); display: none; }
+  .pc.can { pointer-events: auto; cursor: pointer; }
+  .pc.can:hover b { display: block; border: 3px solid #fff; }
+  .pc.must b { display: block; border: 4px dashed var(--gold); box-shadow: 0 0 0 1.5px rgba(var(--shade),.7); }
+  .pc.sel b, .pc.hint b { display: block; border: 5px solid var(--gold); box-shadow: 0 0 0 2px rgba(var(--shade),.8), 0 0 22px 8px rgba(255,200,61,.6); }
+  .pc.hint b { animation: glow 1.4s ease-in-out infinite; }
+  @keyframes glow { 50% { box-shadow: 0 0 0 2px rgba(var(--shade),.8), 0 0 30px 14px rgba(255,200,61,.85); } }
+  .pc.moving { z-index: 50; transition: left .38s ease-in-out, top .38s ease-in-out; }
+  .pc.moving i { --lift: calc(var(--s) * -.12); }
+  .pc.dragging { z-index: 60; transition: none; }
+  /* A piece taken during the move: crossed out, until the move ends. */
+  .pc.taken i { opacity: .6; }
+  .pc.taken::after {
+    content: ""; position: absolute; inset: 18%; z-index: 2;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 5l14 14M19 5L5 19' stroke='%23fff' stroke-width='6' stroke-linecap='round'/%3E%3Cpath d='M5 5l14 14M19 5L5 19' stroke='%23C4122F' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+
+  /* The two players. The computer sits by its pieces, top left; the player by his, bottom right.
+     Each tray holds the pieces that player has taken: 20 places, filled one by one. */
+  .col { position: absolute; display: flex; flex-direction: column; gap: 14px; }
+  .panel {
+    width: 100%; background: #FFFDF6; color: var(--text); border-radius: 22px; padding: 18px 20px 16px;
+    box-shadow: 0 4px 18px rgba(0,0,0,.32); border: 3px solid transparent; transition: border-color .2s;
+  }
+  .panel.turn { border-color: var(--gold); box-shadow: 0 0 0 4px rgba(255,200,61,.25), 0 4px 18px rgba(0,0,0,.32); }
+  /* Yellow means "chosen" or "go here": the computer's turn has the felt's red instead. */
+  #whoB.turn { border-color: #8E2F3B; box-shadow: 0 4px 18px rgba(0,0,0,.32); }
+  .panel .head { display: flex; align-items: center; gap: 14px; }
+  .panel .disc { width: 46px; height: 46px; border-radius: 50%; flex: none; }
+  .disc.w { background: radial-gradient(circle at 34% 28%, #fff, #E6DCC6); box-shadow: inset 0 0 0 1.5px rgba(150,130,95,.6), 0 3px 0 #C8BB9C, 0 5px 6px rgba(0,0,0,.3); }
+  .disc.b { background: radial-gradient(circle at 34% 28%, #5B544E, #141211); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.16), 0 3px 0 #0E0D0C, 0 5px 6px rgba(0,0,0,.3); }
+  .panel b { display: block; font: 700 24px/1.15 var(--ui); }
+  .panel .head span { display: block; font: 500 21px/1.3 var(--ui); color: #5A6461; }
+  .panel .now { display: none; align-items: center; gap: 10px; margin-top: 12px; padding: 8px 12px; border-radius: 12px;
+    background: #FFF4D6; font: 600 20px var(--ui); }
+  .panel.turn .now { display: flex; }
+  .dots { display: inline-flex; gap: 5px; }
+  .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: dot 1.2s infinite; }
+  .dots i:nth-child(2) { animation-delay: .2s; } .dots i:nth-child(3) { animation-delay: .4s; }
+  @keyframes dot { 50% { opacity: .2; } }
+  .tray { margin-top: 14px; padding: 10px; border-radius: 14px; background: #EFE7D6; box-shadow: inset 0 2px 5px rgba(60,40,20,.25);
+    display: grid; grid-template-columns: repeat(10, var(--t)); gap: 6px calc((100% - 10 * var(--t)) / 9); }
+  .tray i { width: var(--t); height: var(--t); border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgba(90,70,40,.18); }
+  .tray i.w { background: radial-gradient(circle at 34% 28%, #fff, #E6DCC6); box-shadow: inset 0 0 0 1px rgba(150,130,95,.6), 0 2px 0 #C8BB9C, 0 3px 3px rgba(0,0,0,.25); }
+  .tray i.b { background: radial-gradient(circle at 34% 28%, #5B544E, #141211); box-shadow: 0 2px 0 #0E0D0C, 0 3px 3px rgba(0,0,0,.3); }
+  .tray i.new { animation: drop .5s cubic-bezier(.2,1.5,.4,1) both; }
+  @keyframes drop { from { transform: translateY(-14px) scale(.4); opacity: 0; } }
+  .took { margin-top: 8px; font: 600 21px var(--ui); color: #4E5A57; }
+  #drawNote { background: #FFF4D6; color: var(--text); border-radius: 16px; padding: 12px 16px; font: 600 21px/1.3 var(--ui); box-shadow: 0 2px 10px rgba(0,0,0,.25); }
+  #drawNote:empty { display: none; }
+
+  #helpText .demo { display: flex; gap: 24px; align-items: center; margin: 6px 0 10px; }
+  #helpText .demo svg { width: 180px; height: 180px; flex: none; border-radius: 6px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pc, .pc.moving { transition: none; }
+    .sq.go.hint::before, .pc.hint b, .dots i, .tray i.new { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div id="bar">
+  <div id="title"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.6" r="9.6" fill="#141211"/><circle cx="12" cy="11.4" r="9.6" fill="#2C2826"/><circle cx="12" cy="11.4" r="6.2" fill="none" stroke="#5B544E" stroke-width="1.3"/></svg>Dames</div>
+  <button id="undoBtn" data-icon="undo" title="Reprend votre dernier coup et la réponse de l'ordinateur"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre un bon coup à jouer maintenant"><span class="long">Quel coup jouer ?</span><span class="short">Aide</span></button>
+  <span class="spacer"></span>
+  <button id="helpBtn" data-icon="help">Règles</button>
+  <button id="newBtn" class="game">Nouvelle partie</button>
+</div>
+<div id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div></div>
+<div id="table">
+  <div id="frame"></div>
+  <div id="board" role="grid" aria-label="Damier"></div>
+  <div class="col" id="colL">
+    <div class="panel" id="whoB">
+      <div class="head"><div class="disc b"></div><div><b>L'ordinateur</b><span id="levelB"></span></div></div>
+      <div class="now"><span class="dots"><i></i><i></i><i></i></span>Il réfléchit</div>
+      <div class="tray" id="trayB"></div>
+      <div class="took" id="tookB"></div>
+    </div>
+  </div>
+  <div class="col" id="colR">
+    <div id="drawNote"></div>
+    <div class="panel" id="whoW">
+      <div class="head"><div class="disc w"></div><div><b>Vous</b><span>Les pions blancs</span></div></div>
+      <div class="now">À vous de jouer</div>
+      <div class="tray" id="trayW"></div>
+      <div class="took" id="tookW"></div>
+    </div>
+  </div>
+</div>
+<div id="help" data-title="Comment jouer">
+  <section class="page">
+    <h3>Le but</h3>
+    <p>Vous jouez les pions blancs, en bas. L'ordinateur joue les noirs. Pour gagner, prenez toutes ses pièces, ou bloquez-les pour qu'elles ne puissent plus bouger.</p>
+    <h3>Avancer</h3>
+    <p>Un pion avance d'une case en diagonale, vers l'avant, sur une case vide.</p>
+    <p>Cliquez sur votre pion, puis sur une case entourée de jaune. Vous pouvez aussi faire glisser le pion avec la souris.</p>
+  </section>
+  <section class="page">
+    <h3>Prendre</h3>
+    <div class="demo">
+      <svg viewBox="0 0 3 3" aria-hidden="true"><rect width="3" height="3" fill="#F0E2C4"/><rect width="1" height="1" fill="#A06D48"/><rect x="2" width="1" height="1" fill="#A06D48"/><rect x="1" y="1" width="1" height="1" fill="#A06D48"/><rect y="2" width="1" height="1" fill="#A06D48"/><rect x="2" y="2" width="1" height="1" fill="#A06D48"/><circle cx="1.5" cy="1.5" r=".38" fill="#24211F"/><circle cx="0.5" cy="2.5" r=".38" fill="#F4EEDF" stroke="#B5AC97" stroke-width=".05"/><rect x="2.08" y=".08" width=".84" height=".84" rx=".1" fill="rgba(255,200,61,.35)" stroke="#FFC83D" stroke-width=".08" stroke-dasharray=".16 .1"/><path d="M.75 2.25 2.2 .8" stroke="#C4122F" stroke-width=".09" fill="none" stroke-linecap="round"/><path d="M2.27 .73 1.95 .83 2.17 1.05z" fill="#C4122F"/></svg>
+      <p>Quand un pion noir touche le vôtre en diagonale et que la case derrière lui est vide, sautez par-dessus : il est pris. Un pion prend en avant et en arrière.</p>
+    </div>
+    <p>La prise est obligatoire. Si le pion peut encore prendre après un saut, il continue. Il faut prendre le plus de pièces possible.</p>
+    <p>Cliquez sur chaque case où le pion se pose. Les pièces prises sont barrées, puis retirées à la fin du coup.</p>
+  </section>
+  <section class="page">
+    <h3>La dame</h3>
+    <p>Un pion qui finit son coup sur la dernière rangée, tout en haut, devient une dame : il porte une couronne.</p>
+    <p>La dame va aussi loin qu'elle veut en diagonale, en avant et en arrière. Elle prend de loin : elle saute une pièce de sa diagonale et se pose sur une des cases vides derrière.</p>
+    <p>Un pion qui passe par la dernière rangée pendant une prise, puis repart, reste un pion.</p>
+  </section>
+  <section class="page">
+    <h3>Partie nulle</h3>
+    <p>La partie est nulle si la même position revient trois fois. Elle est nulle aussi après 25 coups de dame chacun sans prise ni coup de pion, ou si une fin de partie avec très peu de pièces dure trop longtemps. Dans ces deux cas, le jeu compte les coups qui restent.</p>
+    <h3>Les boutons</h3>
+    <p>« Quel coup jouer ? » montre un bon coup. « Annuler le dernier coup » reprend votre coup et la réponse de l'ordinateur. « Nouvelle partie » vous fait choisir la force de l'ordinateur. La partie est enregistrée à chaque coup.</p>
+  </section>
+</div>
+
+<script src="../lib/store.js"></script>
+<script src="../lib/kit.js"></script>
+<script src="engine.js"></script>
+<script>
+'use strict';
+const { moves, advance, newGame: freshGame, rowOf, colOf, sqAt, WHITE, BLACK } = Dames;
+const $ = id => document.getElementById(id);
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const HOP_MS = 520;        // between two landings of the computer's piece
+const THINK_MS = 700;      // the computer never answers faster, so his own move is seen landing first
+const CROWN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 8.5l4.2 3.6L12 5l4.3 7.1 4.2-3.6-1.8 10H5.3z"/><circle cx="12" cy="15" r="1.6"/></svg>';
+
+// The levels of the computer. Facile searches two plies and sometimes picks a weaker move, but never
+// one that loses much more. Moyen and Fort search deeper. The hint always plays its best.
+const LEVELS = {
+  facile: { name: 'Facile', opts: { time: 150, depth: 2, spread: 90, chance: 0.4 } },
+  moyen: { name: 'Moyen', opts: { time: 600, depth: 6 } },
+  fort: { name: 'Fort', opts: { time: 1500 } },
+};
+const HINT = { time: 1000 };
+
+/* ---------- State ----------
+   G: the game (see engine.js). last: the move just played, { by, from, path, caps }, to mark it.
+   undo: the games at the start of each of the player's moves, with their marks: one undo takes back his
+   move and the computer's answer. sel: the chosen piece and the landings clicked so far, { from, path }.
+   wonNow: this game is counted as won (undo keeps it, so a win counts once). */
+let G, last = null, undo = [], level = 'facile', stats = { won: 0 }, wonNow = false, started = false;
+let sel = null, hint = null, phase = 'player', gen = 0, timers = [], lastTap = null, drag = null;
+// Another window saved the game since this one loaded it: lib/kit.js asks to reload, and this one stops saving.
+let stale = false;
+addEventListener('gg-stale', () => { stale = true; });
+
+const pieceWord = v => Math.abs(v) === 2 ? 'dame' : 'pion';
+const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
+const mkey = m => m.from + '-' + m.to + ':' + m.caps.join(',');
+
+/* ---------- Saves ---------- */
+function save() {
+  const parts = [];
+  if (started && !G.result) parts.push('Partie en cours');
+  if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
+  const keep = sel && sel.path.length ? sel : null;
+  for (const n of [Infinity, 200, 40, 0]) {
+    const data = { v: 1, G, last, undo: n ? undo.slice(-n) : [], level, stats, wonNow, started, sel: keep };
+    if (GG.save('dames', data, { summary: parts.join(' · ') })) return true;
+    if (stale) return false;
+  }
+  Kit.say("La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.");
+  return false;
+}
+function load() {
+  try {
+    const v = GG.load('dames');
+    if (!v || !v.G || !Array.isArray(v.G.b) || v.G.b.length !== 51) return false;
+    G = v.G; last = v.last || null; undo = v.undo || []; stats = v.stats || stats;
+    level = LEVELS[v.level] ? v.level : 'facile'; wonNow = !!v.wonNow; started = v.started !== false;
+    // A capture he had begun: keep it if its landings still lead to a legal move.
+    if (v.sel && G.turn === WHITE && !G.result && routesFrom(v.sel.from, v.sel.path).length) sel = v.sel;
+    return true;
+  } catch (e) { return false; }
+}
+
+/* ---------- The player's moves ---------- */
+const legal = () => G.turn === WHITE && !G.result ? moves(G.b, WHITE) : [];
+// The routes of the piece on `from` that begin with the landings clicked so far.
+function routesFrom(from, path) {
+  const out = [];
+  for (const m of legal()) if (m.from === from) for (const r of m.routes)
+    if (path.every((s, i) => r.path[i] === s)) out.push({ m, r });
+  return out;
+}
+// Where the chosen piece can land next.
+function nextLandings() {
+  if (!sel) return [];
+  return [...new Set(routesFrom(sel.from, sel.path).map(x => x.r.path[sel.path.length]))];
+}
+// The square the chosen piece stands on now, and the pieces it has taken so far.
+const selAt = () => sel && sel.path.length ? sel.path[sel.path.length - 1] : sel ? sel.from : 0;
+const selTaken = () => { const x = sel && sel.path.length ? routesFrom(sel.from, sel.path)[0] : null; return x ? x.r.caps.slice(0, sel.path.length) : []; };
+// The pieces that must take, when a capture is compulsory.
+const mustTake = () => { const ms = legal(); return ms.length && ms[0].caps.length ? [...new Set(ms.map(m => m.from))] : []; };
+
+function turnMessage() {
+  const ms = legal();
+  if (!ms.length) return '';
+  if (ms[0].caps.length) {
+    const from = [...new Set(ms.map(m => m.from))], n = ms[0].caps.length;
+    const who = from.length > 1 ? 'une des pièces entourées' : Math.abs(G.b[from[0]]) === 2 ? 'la dame entourée' : 'le pion entouré';
+    return `Vous devez prendre ${n === 1 ? 'une pièce' : n + ' pièces'} : cliquez sur ${who}.`;
+  }
+  return 'À vous : cliquez sur une de vos pièces, puis sur une case entourée de jaune.';
+}
+function chosenMessage() {
+  const x = routesFrom(sel.from, sel.path)[0];
+  const left = x.r.caps.length - sel.path.length;
+  if (!x.m.caps.length) return 'Cliquez sur une case entourée de jaune pour y poser votre ' + pieceWord(G.b[sel.from]) + '.';
+  if (!sel.path.length) return left === 1 ? 'Cliquez sur une case entourée de jaune, derrière la pièce à prendre.'
+    : `Prenez ${left} pièces : cliquez sur chaque case où votre ${pieceWord(G.b[sel.from])} se pose.`;
+  return left === 1 ? 'Encore une pièce à prendre : cliquez sur une case entourée de jaune.' : `Encore ${left} pièces à prendre : cliquez sur une case entourée de jaune.`;
+}
+
+function select(n) {
+  const v = G.b[n];
+  const ms = legal(), mine = ms.filter(m => m.from === n);
+  if (!mine.length) {
+    shake(n);
+    if (ms.length && ms[0].caps.length) {
+      const where = mustTake().length > 1 ? 'sur une des pièces entourées' : 'sur la pièce entourée';
+      return say(Dames.capturesFrom(G.b, n).length ? `Il faut prendre le plus de pièces possible : cliquez ${where}.`
+        : `La prise est obligatoire : cliquez ${where}.`);
+    }
+    return say(Math.abs(v) === 2 ? 'Cette dame ne peut pas bouger pour le moment.' : 'Ce pion ne peut pas avancer pour le moment.');
+  }
+  sel = { from: n, path: [] }; hint = null;
+  say(chosenMessage()); render();
+}
+
+// A click on a square of the board (or the end of a drag).
+function tap(n) {
+  if (phase !== 'player') {
+    if (phase === 'thinking' || phase === 'anim') say("Attendez un instant : l'ordinateur joue.");
+    return;
+  }
+  const v = G.b[n];
+  if (sel) {
+    if (nextLandings().includes(n)) return land(n);
+    if (sel.path.length) {
+      if (n === selAt()) return say('Continuez la prise : cliquez sur une case entourée de jaune.');
+      if (v < 0 && !selTaken().includes(n)) return say('Cliquez sur une case entourée de jaune, derrière la pièce à prendre.');
+      if (v > 0 && n !== sel.from) return say('Continuez la prise avec la même pièce.');
+      return say('Cliquez sur une case entourée de jaune.');
+    }
+    if (n === sel.from) { sel = null; hint = null; say(turnMessage()); return render(); }
+    if (v > 0) return select(n);
+    if (v < 0 && routesFrom(sel.from, []).some(x => x.r.caps[0] === n)) return say('Cliquez sur une case entourée de jaune, derrière la pièce à prendre.');
+    if (v < 0) return say("Cette pièce est à l'ordinateur : vous jouez les blancs.");
+    if (legal()[0].caps.length) return say('Vous devez prendre : cliquez sur une case entourée de jaune.');
+    return say(Math.abs(G.b[sel.from]) === 1 ? "Un pion avance d'une case en diagonale vers l'avant : cliquez sur une case entourée de jaune." : 'Cliquez sur une case entourée de jaune.');
+  }
+  if (v > 0) return select(n);
+  if (v < 0) return say("Cette pièce est à l'ordinateur : vous jouez les blancs.");
+  const must = mustTake();
+  if (must.length) return say(must.length > 1 ? 'Vous devez prendre : cliquez d\'abord sur une pièce entourée.' : "Vous devez prendre : cliquez d'abord sur la pièce entourée.");
+  say("Cliquez d'abord sur une de vos pièces.");
+}
+
+// One landing of the chosen piece. When the route is complete, the move is played.
+function land(n) {
+  sel.path.push(n);
+  const xs = routesFrom(sel.from, sel.path);
+  const done = xs.find(x => x.r.path.length === sel.path.length);
+  if (hint && !(hint.r.path.slice(0, sel.path.length).every((s, i) => s === sel.path[i]))) hint = null;
+  if (!done) { say(chosenMessage()); render(); save(); return; }
+  commit(done.m, done.r);
+}
+
+function commit(m, r) {
+  undo.push(JSON.stringify({ G, last }));
+  const before = G;
+  G = advance(G, m);
+  started = true;
+  last = { by: WHITE, from: m.from, path: r.path, caps: r.caps };
+  sel = null; hint = null; phase = 'anim';
+  // A win counts once, and only when it is saved: a stale window cannot count it a second time.
+  const firstWin = G.result && G.result.winner === WHITE && !wonNow;
+  if (firstWin) { wonNow = true; stats.won++; }
+  if (save()) { if (firstWin) GG.track('dames', 'won'); }
+  else if (firstWin) { wonNow = false; stats.won--; }
+  // His piece slides to its last landing, then the pieces taken leave the board.
+  render({ shown: before, moving: m.from, at: r.path.length > 1 ? r.path[r.path.length - 2] : m.from, taken: r.caps });
+  const my = gen;
+  later(() => {
+    if (my !== gen) return;
+    render({ shown: before, moving: m.from, at: m.to, taken: r.caps, slide: true });
+    later(() => { if (my === gen) afterPlayer(); }, REDUCED ? 150 : 330);
+  }, 20);
+}
+function afterPlayer() {
+  if (G.result) return finish(true);
+  computerTurn();
+}
+
+/* ---------- The computer ----------
+   It thinks in a Web Worker made from engine.js, so the page never freezes. If the worker cannot
+   start, it thinks in the page instead, after the screen has been drawn. */
+let worker = null, workerUrl = null, workerOk = true, pending = null;
+function ask(game, opts) {
+  return new Promise(resolve => {
+    const id = Math.random();
+    const local = () => setTimeout(() => resolve(Dames.think(game, opts)), 30);
+    if (workerOk && !worker) {
+      try {
+        workerUrl = workerUrl || URL.createObjectURL(new Blob([Dames.source], { type: 'text/javascript' }));
+        worker = new Worker(workerUrl);
+      }
+      catch (e) { workerOk = false; worker = null; }
+    }
+    if (!worker) return local();
+    // No answer in time: the worker is broken, so think here this time and every next time.
+    // A request that was dropped (undo, new game) no longer has a watchdog: stopWorker clears it.
+    const guard = setTimeout(() => { if (!pending || pending.id !== id) return; stopWorker(); workerOk = false; local(); }, (opts.time || 500) + 4000);
+    pending = { id, guard, done: best => { clearTimeout(guard); resolve(best); } };
+    worker.onmessage = e => { if (pending && e.data.id === pending.id) { const p = pending; pending = null; p.done(e.data.best); } };
+    worker.onerror = e => { e.preventDefault(); if (!pending || pending.id !== id) return; stopWorker(); workerOk = false; local(); };
+    worker.postMessage({ id, G: game, opts });
+  });
+}
+// Drops a search that is no longer wanted (undo, new game).
+function stopWorker() { if (pending) clearTimeout(pending.guard); if (worker) worker.terminate(); worker = null; pending = null; }
+
+function computerTurn() {
+  phase = 'thinking';
+  const my = ++gen, t0 = Date.now();
+  render();
+  say("L'ordinateur réfléchit…");
+  ask(G, LEVELS[level].opts).then(best => {
+    if (my !== gen || !best) return;
+    later(() => { if (my === gen) computerPlays(best.move); }, Math.max(0, THINK_MS - (Date.now() - t0)));
+  });
+}
+// The move is saved first, then shown hop by hop: closing the page during the show loses nothing.
+function computerPlays(m) {
+  const r = m.routes[0], before = G;
+  G = advance(G, m);
+  last = { by: BLACK, from: m.from, path: r.path, caps: r.caps };
+  save();
+  phase = 'anim';
+  const my = gen;
+  const steps = [m.from, ...r.path];
+  let k = 0;
+  const hop = () => {
+    if (my !== gen) return;
+    render({ shown: before, moving: m.from, at: steps[k], taken: r.caps.slice(0, k), slide: k > 0, from: m.from });
+    if (k++ < r.path.length) return later(hop, k === 1 ? 380 : HOP_MS);
+    later(() => { if (my !== gen) return; phase = 'player'; render(); computerSaid(before, m); if (G.result) finish(true); }, r.caps.length ? 350 : 120);
+  };
+  hop();
+}
+function computerSaid(before, m) {
+  const n = m.caps.length;
+  const crowned = Math.abs(before.b[m.from]) === 1 && Math.abs(G.b[m.to]) === 2;
+  let text = n > 1 ? `L'ordinateur a pris ${n} de vos pièces.` : n ? "L'ordinateur a pris une de vos pièces." : "L'ordinateur a joué.";
+  if (crowned) text += ' Son pion est devenu une dame.';
+  if (!G.result) text += ' ' + (legal()[0]?.caps.length ? turnMessage() : 'À vous de jouer.');
+  say(text);
+}
+
+/* ---------- End of the game ---------- */
+const DRAW_WHY = {
+  repeat: 'La même position est revenue trois fois.',
+  quiet: 'Chaque joueur a joué 25 coups de dame, sans rien prendre ni bouger de pion.',
+  ending: 'Cette fin de partie a duré trop longtemps.',
+};
+function resultText() {
+  const r = G.result;
+  if (r.winner === WHITE) return r.why === 'taken' ? "Vous avez pris toutes les pièces de l'ordinateur." : "Les pièces de l'ordinateur ne peuvent plus bouger.";
+  if (r.winner === BLACK) return r.why === 'taken' ? 'Il a pris toutes vos pièces.' : 'Vos pièces ne peuvent plus bouger.';
+  return DRAW_WHY[r.why] || '';
+}
+function finish(show) {
+  phase = 'over'; sel = null; hint = null;
+  render();
+  const r = G.result;
+  const title = r.winner === WHITE ? 'Bravo, vous avez gagné !' : r.winner === BLACK ? "L'ordinateur a gagné" : 'Partie nulle';
+  say(title.replace(/ !$/, '') + ' : ' + resultText().charAt(0).toLowerCase() + resultText().slice(1));
+  if (!show) return;
+  const back = ['Annuler le dernier coup', doUndo];
+  const games = ['Retour aux jeux', () => { location.href = $('home').href; }];
+  if (r.winner === WHITE) {
+    later(() => Kit.dialog(title, `${resultText()}${!wonNow ? '' : stats.won === 1 ? " C'est votre première victoire." : ` C'est votre ${stats.won}e victoire.`}`,
+      [['Nouvelle partie', askNewGame, true], games], true), REDUCED ? 0 : 700);
+  } else {
+    later(() => Kit.dialog(title, resultText(), [[back[0], back[1], true], ['Nouvelle partie', askNewGame], games]), REDUCED ? 0 : 500);
+  }
+}
+
+/* ---------- Buttons ---------- */
+function cancelAll() {
+  gen++; timers.forEach(clearTimeout); timers = []; stopWorker(); drag = null;
+}
+function later(fn, ms) { const t = setTimeout(() => { timers = timers.filter(x => x !== t); fn(); }, ms); timers.push(t); return t; }
+
+// During a capture, undo takes back the landings clicked so far. Otherwise it takes back his last move
+// and the computer's answer, even while the computer is still thinking or moving.
+function doUndo() {
+  if (sel && sel.path.length && (phase === 'player' || phase === 'hint')) {
+    if (phase === 'hint') { cancelAll(); phase = 'player'; }
+    sel = null; hint = null; say('Prise annulée. ' + turnMessage()); render(); save(); return;
+  }
+  if (!undo.length) return;
+  cancelAll();
+  ({ G, last } = JSON.parse(undo.pop()));
+  sel = null; hint = null; phase = 'player';
+  say('Coup annulé. ' + turnMessage());
+  render(); save();
+}
+
+function showHint() {
+  if (phase !== 'player' || G.result) return;
+  const only = sel && sel.path.length ? routesFrom(sel.from, sel.path) : null;
+  const my = gen;
+  say("Recherche d'un bon coup…");
+  phase = 'hint';
+  render();
+  const opts = Object.assign({}, HINT, only ? { only: [...new Set(only.map(x => mkey(x.m)))] } : {});
+  ask(G, opts).then(best => {
+    if (my !== gen) return;
+    phase = 'player';
+    if (!best) { render(); return; }
+    const m = best.move;
+    const r = (only ? only.filter(x => mkey(x.m) === mkey(m)).map(x => x.r) : m.routes)[0];
+    if (!sel || sel.from !== m.from || !sel.path.length) sel = { from: m.from, path: [] };
+    hint = { from: m.from, r };
+    const w = pieceWord(G.b[m.from]);
+    say(m.caps.length ? `Prenez avec ${w === 'dame' ? 'la dame entourée' : 'le pion entouré'} : cliquez sur la case entourée de jaune.`
+      : `Jouez ${w === 'dame' ? 'la dame entourée' : 'le pion entouré'} sur la case entourée de jaune.`);
+    render();
+  });
+}
+
+function askNewGame() {
+  const playing = started && !G.result;
+  const pick = k => () => newGame(k);
+  const btns = Object.keys(LEVELS).map(k => [LEVELS[k].name, pick(k), k === level]);
+  if (playing) btns.push(['Continuer la partie', null]);
+  Kit.dialog('Nouvelle partie', (playing ? 'La partie en cours sera effacée. ' : '') + "Choisissez la force de l'ordinateur.", btns);
+}
+function newGame(lv) {
+  cancelAll();
+  if (lv) level = lv;
+  G = freshGame(); last = null; undo = []; sel = null; hint = null; wonNow = false; started = false; phase = 'player';
+  GG.track('dames', 'start');
+  save();
+  say(turnMessage());
+  render();
+}
+
+/* ---------- Drawing ---------- */
+const table = $('table'), boardEl = $('board');
+let S = 56, BX = 0, BY = 0, squares = [];
+function build() {
+  for (let n = 1; n <= 50; n++) {
+    const e = document.createElement('div');
+    e.className = 'sq'; e.dataset.n = n;
+    boardEl.appendChild(e); squares[n] = e;
+  }
+}
+// The board fills the height of the table, in the middle. On a wide window, the computer's panel sits
+// on the left by its pieces and the player's on the right by his. Narrower, both go on the right.
+// On a very narrow window (a phone), the board is alone and fills the width.
+let twoCols = null, layoutMode = null;
+function layout() {
+  const W = table.clientWidth, H = table.clientHeight;
+  const panelW = 290, gap = 36;
+  const byH = (H - 30) / 10.4;
+  const byTwo = (W - 2 * (panelW + gap) - 40) / 10.4, byOne = (W - panelW - gap - 40) / 10.4;
+  const mode = byTwo >= Math.min(byH, 60) ? 2 : byOne >= 40 ? 1 : 0;
+  S = Math.floor(Math.max(20, Math.min(byH, mode === 2 ? byTwo : mode === 1 ? byOne : (W - 16) / 10.4, 92)));
+  const F = Math.round(S * .2);
+  BY = mode ? Math.max(F + 6, Math.round((H - 10 * S) / 2)) : F + 8;
+  BX = mode === 1 ? Math.max(F + 20, Math.round((W - 10 * S - gap - panelW) / 2)) : Math.round((W - 10 * S) / 2);
+  document.documentElement.style.setProperty('--s', S + 'px');
+  boardEl.style.left = BX + 'px'; boardEl.style.top = BY + 'px';
+  const frame = $('frame');
+  frame.style.left = BX - F + 'px'; frame.style.top = BY - F + 'px';
+  frame.style.width = frame.style.height = 10 * S + 2 * F + 'px';
+  for (let n = 1; n <= 50; n++) { squares[n].style.left = colOf(n) * S + 'px'; squares[n].style.top = rowOf(n) * S + 'px'; }
+  const L = $('colL'), R = $('colR');
+  if (mode !== layoutMode) {
+    layoutMode = mode; twoCols = mode === 2;
+    if (twoCols) L.prepend($('whoB')); else R.prepend($('whoB'));
+    // On a narrow window the column is under the board: the draw warning goes first, so it is seen.
+    if (mode === 0) R.prepend($('drawNote')); else R.insertBefore($('drawNote'), $('whoW'));
+  }
+  if (mode) {
+    R.style.left = BX + 10 * S + F + gap + 'px'; R.style.width = panelW + 'px';
+    R.style.top = BY - F + 'px'; R.style.height = 10 * S + 2 * F + 'px';
+  } else {
+    // Under the board, as wide as it (or a panel, if wider): the window scrolls down to them.
+    const w = Math.min(W - 16, Math.max(10 * S + 2 * F, panelW));
+    R.style.left = Math.round((W - w) / 2) + 'px'; R.style.width = w + 'px';
+    R.style.top = BY + 10 * S + F + 16 + 'px'; R.style.height = 'auto';
+  }
+  R.style.justifyContent = twoCols ? 'flex-end' : mode ? 'space-between' : 'flex-start';
+  R.style.paddingBottom = mode ? '0' : '16px';
+  table.style.overflowY = mode ? 'hidden' : 'auto';
+  L.style.display = twoCols ? 'flex' : 'none';
+  L.style.left = BX - F - gap - panelW + 'px'; L.style.width = panelW + 'px'; L.style.top = BY - F + 'px';
+}
+const xy = n => [colOf(n) * S, rowOf(n) * S];
+
+// opts.shown: the board to draw (the one before a move being shown); opts.moving and opts.at: the piece
+// that travels and where it is; opts.taken: the pieces crossed out so far.
+function render(opts = {}) {
+  layout();
+  const b = opts.shown ? opts.shown.b : G.b;
+  const mine = phase === 'player' && !opts.shown ? legal() : [];
+  const movable = new Set(mine.map(m => m.from));
+  const must = mine.length && mine[0].caps.length && !sel ? new Set(mine.map(m => m.from)) : new Set();
+  const go = new Set(phase === 'player' && !opts.shown ? nextLandings() : []);
+  const taken = new Set(opts.shown ? opts.taken || [] : selTaken());
+  const at = opts.shown ? opts.at : selAt();
+  const moving = opts.shown ? opts.moving : sel ? sel.from : 0;
+
+  // The squares: places to go, the hint, and the last move (cleared once he picks a piece).
+  const lastSq = new Set();
+  if (opts.from) lastSq.add(opts.from);
+  else if (last && !opts.shown && !sel && last.by === BLACK) { lastSq.add(last.from); lastSq.add(last.path[last.path.length - 1]); }
+  const hintSq = hint && sel ? hint.r.path[sel.path.length] : 0;
+  boardEl.classList.toggle('hinting', !!hintSq && go.has(hintSq));
+  for (let n = 1; n <= 50; n++) {
+    const e = squares[n];
+    e.classList.toggle('go', go.has(n));
+    e.classList.toggle('hint', go.has(n) && n === hintSq);
+    e.classList.toggle('last', lastSq.has(n));
+    e.classList.remove('over');
+  }
+
+  // The pieces, drawn again each time. The travelling piece keeps its element so it slides.
+  const keep = opts.slide ? boardEl.querySelector('.pc.moving') : null;
+  boardEl.querySelectorAll('.pc').forEach(e => { if (e !== keep) e.remove(); });
+  for (let n = 1; n <= 50; n++) {
+    const v = b[n];
+    if (!v) continue;
+    const isMover = n === moving && moving;
+    if (isMover && keep) { const [x, y] = xy(at); keep.style.left = x + 'px'; keep.style.top = y + 'px'; continue; }
+    const e = document.createElement('div');
+    e.className = 'pc ' + (v > 0 ? 'w' : 'b') + (Math.abs(v) === 2 ? ' k' : '');
+    e.innerHTML = `<b></b><i>${Math.abs(v) === 2 ? CROWN : ''}</i>`;
+    const [x, y] = xy(isMover ? at : n);
+    e.style.left = x + 'px'; e.style.top = y + 'px';
+    if (isMover && opts.shown) e.classList.add('moving');
+    if (taken.has(n)) e.classList.add('taken');
+    if (!opts.shown) {
+      if (movable.has(n) && !(sel && sel.path.length)) e.classList.add('can');
+      if (sel && n === sel.from) e.classList.add(hint && hint.from === n && !sel.path.length ? 'hint' : 'sel');
+      if (must.has(n)) e.classList.add('must');
+    }
+    e.dataset.n = n;
+    boardEl.appendChild(e);
+  }
+
+  // The two panels: whose turn it is, and the pieces each side has taken.
+  const left = s => { let p = 0; for (let n = 1; n <= 50; n++) if (Math.sign(b[n]) === s) p++; return p; };
+  tray('trayB', 'tookB', 20 - left(WHITE), 'w', n => n ? `Il vous a pris ${plural(n, 'pièce', 'pièces')}.` : 'Il ne vous a rien pris.');
+  tray('trayW', 'tookW', 20 - left(BLACK), 'b', n => n ? `Vous avez pris ${plural(n, 'pièce', 'pièces')}.` : 'Vous n\'avez rien pris.');
+  $('levelB').textContent = 'Niveau ' + LEVELS[level].name.toLowerCase();
+  $('whoB').classList.toggle('turn', phase === 'thinking' || phase === 'anim');
+  $('whoW').classList.toggle('turn', phase === 'player' && !G.result);
+  $('drawNote').textContent = drawNote();
+  $('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
+  $('undoBtn').disabled = !undo.length && !(sel && sel.path.length);
+  $('hintBtn').disabled = phase !== 'player' || !!G.result;
+}
+// A tray of 20 places. The pieces taken since the last drawing drop in.
+const shownTaken = {};
+function tray(id, textId, n, cls, text) {
+  const el = $(id), was = shownTaken[id] ?? n;
+  if (el.childElementCount !== 20 || was !== n) {
+    el.innerHTML = Array.from({ length: 20 }, (_, i) => `<i class="${i < n ? cls : ''}${i < n && i >= was ? ' new' : ''}"></i>`).join('');
+  }
+  shownTaken[id] = n;
+  $(textId).textContent = text(n);
+}
+// A word on a coming draw, in moves of each player.
+function drawNote() {
+  if (G.result) return '';
+  const end = G.endLeft, quiet = G.quiet >= 30 ? 50 - G.quiet : null;
+  if (end === null && quiet === null) return '';
+  // The quiet count stops at a capture or a man's move; an ending's count never stops.
+  const byEnd = end !== null && (quiet === null || end <= quiet);
+  // The moves left, his and the computer's together. With one left, the warning says whose it is.
+  const plies = byEnd ? end : quiet;
+  const when = plies > 1 ? `Partie nulle dans ${plies} coups, en comptant ceux de l'ordinateur`
+    : G.turn === WHITE ? 'Partie nulle après votre prochain coup' : "Partie nulle au prochain coup de l'ordinateur";
+  return when + (byEnd ? ', si personne ne gagne avant.' : ', sauf si une pièce est prise ou si un pion avance.');
+}
+const say = Kit.say;
+function shake(n) {
+  const e = boardEl.querySelector(`.pc[data-n="${n}"]`);
+  if (!e) return;
+  e.classList.remove('shake'); void e.offsetWidth; e.classList.add('shake');
+}
+
+/* ---------- Mouse and touch ----------
+   A press and release that moves less than 16 px is a click, so a shaky hand still clicks. Moving
+   further drags the piece; it is dropped on the square under the pointer. A second click on the same
+   spot within half a second is a double-click: it counts as one click. */
+function squareAt(e) {
+  const r = boardEl.getBoundingClientRect();
+  const c = Math.floor((e.clientX - r.left) / S), w = Math.floor((e.clientY - r.top) / S);
+  return sqAt(w, c);
+}
+boardEl.addEventListener('pointerdown', e => {
+  if (e.button !== 0 || Kit.isOpen() || drag) return;
+  e.preventDefault();
+  const n = squareAt(e);
+  drag = { n, x0: e.clientX, y0: e.clientY, started: false, pointer: e.pointerId };
+});
+addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.pointer) return;
+  const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+  if (!drag.started) {
+    if (Math.hypot(dx, dy) < 16 || phase !== 'player') return;
+    if (sel && sel.path.length) { if (drag.n !== selAt()) return; }
+    else {
+      if (!(G.b[drag.n] > 0) || !legal().some(m => m.from === drag.n)) return;
+      if (!sel || sel.from !== drag.n) select(drag.n);
+    }
+    const el = boardEl.querySelector(`.pc[data-n="${sel.from}"]`);
+    if (!el) return;
+    drag.started = true; drag.el = el; drag.x = parseFloat(el.style.left); drag.y = parseFloat(el.style.top);
+    el.classList.add('dragging');
+  }
+  drag.el.style.left = drag.x + dx + 'px'; drag.el.style.top = drag.y + dy + 'px';
+  const n = squareAt(e);
+  squares.forEach((q, i) => q && q.classList.toggle('over', i === n));
+});
+addEventListener('pointerup', e => {
+  if (!drag || e.pointerId !== drag.pointer) return;
+  const d = drag; drag = null;
+  const n = squareAt(e);
+  if (d.started) {
+    if (n && nextLandings().includes(n)) return tap(n);
+    render();
+    if (n && n !== selAt()) tap(n);
+    return;
+  }
+  if (!n || n !== d.n) return;
+  // A click while the computer plays only gets an answer: it does not count for a double-click.
+  if (phase !== 'player') return tap(n);
+  // Two quick clicks on the same spot of one square are a double-click. On two squares, two clicks.
+  const t = performance.now(), prev = lastTap;
+  lastTap = { t, n, x: e.clientX, y: e.clientY };
+  if (prev && prev.n === n && t - prev.t < 500 && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) < 24) return;
+  tap(n);
+});
+addEventListener('pointercancel', () => { if (drag && drag.started) render(); drag = null; });
+
+$('undoBtn').onclick = doUndo;
+$('hintBtn').onclick = showHint;
+$('helpBtn').onclick = () => { if (!drag) Kit.openHelp(); };
+$('newBtn').onclick = askNewGame;
+addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (!Kit.isOpen()) doUndo(); }
+  else if (e.key === 'Escape' && !Kit.escape() && sel && phase === 'player') {
+    if (sel.path.length) doUndo(); else { sel = null; hint = null; say(turnMessage()); render(); }
+  }
+});
+addEventListener('resize', () => { if (drag && drag.started) drag = null; render(); });
+
+build();
+// The rules open by themselves the first time the game is opened.
+if (load()) {
+  if (G.result) finish(false);
+  else if (G.turn === BLACK) computerTurn();
+  else { say(sel ? chosenMessage() : turnMessage()); render(); }
+} else {
+  newGame('facile');
+  Kit.openHelp();
+}
+</script>
+</body>
+</html>

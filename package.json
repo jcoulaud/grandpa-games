@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --port 8787",
-    "test": "node tests/play.mjs && node tests/freecell.mjs && node tests/dialogs.mjs && node tests/library.mjs",
+    "test": "node tests/play.mjs && node tests/freecell.mjs && node tests/dames-rules.mjs && node tests/dames.mjs && node tests/dialogs.mjs && node tests/library.mjs",
     "typecheck": "tsc --noEmit",
     "deploy": "node scripts/stamp.mjs && wrangler d1 migrations apply grandpa-games --remote && wrangler deploy"
   },

@@ -34,7 +34,9 @@
   // Top bar: the way back to the library first, then icons on the buttons that ask for one.
   const bar = $('bar');
   if (bar && !$('home')) {
-    bar.insertAdjacentHTML('afterbegin', `<a id="home" href="${libRoot}" aria-label="Retour aux jeux">${icon('back')}Jeux</a>`);
+    // Opened from a file, the folder alone would show a list of files: name the library page.
+    const home = location.protocol === 'file:' ? libRoot + 'index.html' : libRoot;
+    bar.insertAdjacentHTML('afterbegin', `<a id="home" href="${home}" aria-label="Retour aux jeux">${icon('back')}Jeux</a>`);
   }
   document.querySelectorAll('button[data-icon]').forEach(b => b.insertAdjacentHTML('afterbegin', icon(b.dataset.icon)));
 
