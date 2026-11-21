@@ -74,8 +74,10 @@ try {
   check('trophy line shows wins only', !(await page.textContent('a.tile')).includes('Partie en cours'));
   check('button says resume', (await page.textContent('a.tile .play')).includes('Reprendre'));
   await page.screenshot({ path: join(OUT, 'library.png') });
-  check('fits a 1366x680 app window without scrolling', await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight),
-    String(await page.evaluate(() => document.documentElement.scrollHeight)));
+  // Three games per row: the fourth one is on a second row, below the fold. The first row must show whole.
+  check('first row of games fits a 1366x680 app window', await page.evaluate(() => document.querySelector('a.tile').getBoundingClientRect().bottom <= innerHeight),
+    String(await page.evaluate(() => document.querySelector('a.tile').getBoundingClientRect().bottom)));
+  check('no sideways scroll', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   check('one visit a day, however many pages', calls.filter(c => c.includes('"visit"')).length === 1, calls.join('\n'));
   check('no save is ever sent', !calls.some(c => c.includes('"S"') || c.includes('undo')), calls.join('\n'));
   const plays = sql("SELECT kind, n FROM plays WHERE game = 'solitaire'");
