@@ -185,7 +185,7 @@ function render() {
     : games.map(g => {
       const rate = g.starts7 ? Math.round(100 * g.wins7 / g.starts7) : 0;
       return `<div class="game">
-        <img src="../games/${esc(g.game)}/icon.svg" alt="">
+        <img src="../${esc(g.game)}/icon.svg" alt="">
         <div><b>${esc(gameName(g.game))}</b><div class="meta">${plural(g.starts, 'partie', 'parties')} en tout · ${plural(g.wins, 'gagnée', 'gagnées')}</div></div>
         <div class="big num">${fmt(g.starts7)}<small>parties</small></div>
         <div class="rate"><div class="track"><div class="fill" style="width:${rate}%"></div></div><span class="num">${rate} % gagnées</span></div>

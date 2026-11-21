@@ -59,7 +59,7 @@ try {
 
   // 2. Play: open the game from its tile, make a move, come back.
   await page.click('a.tile[data-id="solitaire"]');
-  await page.waitForURL(/games\/solitaire/);
+  await page.waitForURL(/\/solitaire\//);
   await page.waitForTimeout(2500);
   await page.keyboard.press('Escape');
   await page.waitForTimeout(400);
@@ -82,7 +82,7 @@ try {
   await pc.setOffline(true);
   await page.reload();
   check('library opens offline', await page.locator('a.tile[data-id="solitaire"]').count() === 1);
-  await page.goto(BASE + 'games/solitaire/');
+  await page.goto(BASE + 'solitaire/');
   await page.waitForTimeout(1500);
   check('game opens offline', await page.locator('#table .card').count() > 50);
   await pc.setOffline(false);
@@ -113,7 +113,7 @@ try {
   check('an unknown game is refused', (await post('stats', { id: id2, kind: 'start', game: 'nope' })).status === 400);
   check('a bad id is refused', (await post('stats', { id: 'x', kind: 'visit' })).status === 400);
   await post('stats', { id: id2, kind: 'won', game: 'solitaire' });
-  await post('errors', { id: id2, message: 'Erreur de test', page: '/games/solitaire/', stack: 'at x' });
+  await post('errors', { id: id2, message: 'Erreur de test', page: '/solitaire/', stack: 'at x' });
   for (let i = 0; i < 25; i++) await post('errors', { id: id2, message: 'spam ' + i });
   check('20 errors a day per PC', sql(`SELECT COUNT(*) AS n FROM errors WHERE pc = 'ZZZZZZ'`)[0].n === 20);
 
