@@ -17,18 +17,17 @@ function cardName(id) {
 }
 // The faces are drawn here. Suits are the SVG symbols su0..su3, so they look the same on every PC.
 const suitHtml = s => `<svg class="s" viewBox="0 0 100 100"><use href="#su${s}"/></svg>`;
-const pip = (s, x, y, d) => `<use href="#su${s}" x="${x - d / 2}" y="${y - d / 2}" width="${d}" height="${d}"/>`;
-// Pip places in an 88 x 84 box: [x, y] per pip, then the pip size.
+const pip = (s, x, y, d, flip = false) => `<use href="#su${s}" x="${x - d / 2}" y="${y - d / 2}" width="${d}" height="${d}"${flip ? ` transform="rotate(180 ${x} ${y})"` : ''}/>`;
+// Pip places in a 50 x 117 box in the middle of the card, between the two corner indexes:
+// [x, y] per pip, then the pip size. As on a real card, the pips in the lower half are upside down.
 const PIPS = (() => {
-  const Lx = 18, C = 44, R = 70, pair = y => [[Lx, y], [R, y]];
-  const three = [12, 42, 72].flatMap(pair), four = [11, 31.5, 52, 72.5].flatMap(pair);
+  const Lx = 10, C = 25, R = 40, M = 58.5, pair = y => [[Lx, y], [R, y]];
+  const three = [14, M, 103].flatMap(pair), four = [14, 44, 73, 103].flatMap(pair);
   return {
-    // The 2 and the 3 go on a diagonal, away from the corner suit: in one column under it,
-    // the corner suit read as one more pip.
-    2: [[[64, 18], [24, 66]], 32], 3: [[[67, 13], [C, 42], [21, 71]], 25],
-    4: [[...pair(18), ...pair(66)], 28], 5: [[...pair(16), [C, 42], ...pair(68)], 26],
-    6: [three, 23], 7: [[...three, [C, 27]], 22], 8: [[...three, [C, 27], [C, 57]], 22],
-    9: [[...four, [C, 42]], 19.5], 10: [[...four, [C, 21], [C, 62.5]], 19.5],
+    2: [[[C, 15], [C, 102]], 23], 3: [[[C, 15], [C, M], [C, 102]], 23],
+    4: [[...pair(14), ...pair(103)], 18], 5: [[...pair(14), [C, M], ...pair(103)], 18],
+    6: [three, 17], 7: [[...three, [C, 36]], 17], 8: [[...three, [C, 36], [C, 81]], 17],
+    9: [[...four, [C, M]], 15], 10: [[...four, [C, 29], [C, 88]], 15],
   };
 })();
 // Court cards: a flat bust in the suit colour. The valet wears a feathered cap,
@@ -76,11 +75,14 @@ function court(r, s) {
 }
 function faceSvg(id) {
   const s = st(id), r = rk(id);
+  if (r > 1 && r < 11) {
+    const [places, d] = PIPS[r];
+    return `<svg viewBox="0 0 50 117" aria-hidden="true">${places.map(([x, y]) => pip(s, x, y, d, y > 58.5)).join('')}</svg>`;
+  }
   let g;
   if (r === 1) g = `<circle cx="44" cy="42" r="39" fill="none" stroke="currentColor" stroke-width="1.2"/>
     <circle cx="44" cy="42" r="35" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray=".1 4.3" stroke-linecap="round"/>${pip(s, 44, 42, 50)}`;
-  else if (r > 10) g = court(r, s);
-  else g = PIPS[r][0].map(([x, y]) => pip(s, x, y, PIPS[r][1])).join('');
+  else g = court(r, s);
   return `<svg viewBox="0 0 88 84" aria-hidden="true">${g}</svg>`;
 }
 
@@ -92,5 +94,11 @@ document.body.insertAdjacentHTML('afterbegin', `<svg width="0" height="0" style=
   <clipPath id="courtClip"><rect x="1" y="1" width="86" height="82" rx="7"/></clipPath>
 </defs></svg>`);
 
-window.Cards = { RANKS, RANK_NAMES, SUIT_NAMES, SUIT_PLURALS, rk, st, rd, cap, cardName, suitHtml, pip, faceSvg };
+// A whole face, like a real card: the rank over its suit in the top-left corner, the same upside down
+// in the bottom-right corner, and the pips or the picture in the middle.
+function faceHtml(id) {
+  const r = rk(id), ix = `${RANKS[r]}${suitHtml(st(id))}`;
+  return `<div class="ix">${ix}</div><div class="c ${r > 1 && r < 11 ? 'pips' : 'pic'}">${faceSvg(id)}</div><div class="ix end">${ix}</div>`;
+}
+window.Cards = { RANKS, RANK_NAMES, SUIT_NAMES, SUIT_PLURALS, rk, st, rd, cap, cardName, suitHtml, pip, faceSvg, faceHtml };
 })();

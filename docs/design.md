@@ -37,10 +37,10 @@ For one elderly French speaker with weak eyes and an unsteady mouse hand, in Edg
 
 All suits are inline SVG drawn for this game, so they do not depend on a Windows font.
 
-- **Index.** Rank at 34% of the card width (35 px on the laptop, 52 px on the monitor) with the suit beside it at 30%. It sits in the top strip, the only part visible in a column.
+- **Index.** As on a real card: the rank at 19% of the card width with the suit under it at 13%, in the top-left corner, and the same upside down in the bottom-right corner. The top strip of a covered card in a column shows the whole index.
 - **Colours.** Red #C4122F and ink #14171A on ivory #FFFDF6. Red has a 5.9:1 contrast on the face. The inverted box around black suits is gone.
 - **Grayscale.** Two colours only, because red on black is the rule of the game. The four shapes differ strongly: pointed spade with a foot, deep-notched heart, sharp diamond, three round club lobes.
-- **Number cards.** A real pip layout, 2 to 10, in two or three columns under the index.
+- **Number cards.** A real pip layout, 2 to 10, in one to three columns between the two indexes, over the full height of the card. The pips in the lower half are upside down.
 - **Aces.** One large suit inside a solid ring and a dotted ring.
 - **Valet, dame, roi.** Original flat busts in a framed panel: the valet has a feathered cap, the dame long hair and a pearl diadem, the roi a tall crown and a beard. Red suits wear red on a pink panel (#FCEDE9). Black suits wear navy #1C2B45 on a grey-blue panel (#E9EDF3). Gold is #E0A526. A brooch at the collar carries the suit. The rank letter appears once, in the index.
 - **Back.** Navy #1F4470 with a fine white lattice, a wider gold lattice, an ivory frame and a thin gold frame.

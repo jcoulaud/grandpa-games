@@ -17,7 +17,8 @@ const g = fn => page.evaluate(fn);
 const L = await g(() => L);
 ok(L.w >= 100, `card width at 1366x680 is ${L.w}px, height ${L.h}px`);
 const rankPx = await g(() => parseFloat(getComputedStyle(document.querySelector('.ix')).fontSize));
-ok(rankPx >= 31, `rank text is ${rankPx}px`);
+// The corner index is small, as on a real card: the rank over its suit.
+ok(rankPx >= 19, `rank text is ${rankPx}px`);
 const tablePos = () => g(() => { const r = table.getBoundingClientRect(); return [r.left, r.top]; });
 const [tx, ty] = await tablePos();
 const at = ([x, y]) => [tx + x, ty + y];

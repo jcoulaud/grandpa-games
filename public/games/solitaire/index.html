@@ -98,7 +98,7 @@
 <script>
 'use strict';
 /* ---------- Cards ---------- */
-const { RANKS, RANK_NAMES, SUIT_NAMES, SUIT_PLURALS, rk, st, rd, cap, cardName, suitHtml, pip, faceSvg } = Cards;
+const { RANKS, RANK_NAMES, SUIT_NAMES, SUIT_PLURALS, rk, st, rd, cap, cardName, suitHtml, pip, faceSvg, faceHtml } = Cards;
 const KEY = 'solitaire-grand-pere-v2';
 const last = a => a[a.length - 1];
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -565,7 +565,7 @@ function mk(cls, html) {
 }
 function makeCard(id) {
   const s = st(id), r = rk(id);
-  const el = mk('card down ' + (rd(id) ? 'red' : 'black'), `<div class="ix">${RANKS[r]}${suitHtml(s)}</div><div class="c">${faceSvg(id)}</div>`);
+  const el = mk('card down ' + (rd(id) ? 'red' : 'black'), faceHtml(id));
   el.dataset.id = id;
   return el;
 }
@@ -595,9 +595,10 @@ function layout() {
   const top = Math.round(Math.max(pad, Math.min(32, H * 0.03)));
   const rowGap = Math.round(Math.max(g0, Math.min(W * 0.025, H * 0.035)));
   const byWidth = (W - 2 * m - 6 * g0) / 7;
-  // Height: the top row and its labels, then a column with six face-down and six face-up cards.
+  // Height: the top row and its labels, then a column with three face-down and five face-up cards.
   // Longer columns squeeze (see colY), so the cards can stay large on a laptop.
-  const byHeight = (H - 2 * pad - LABEL) / (2 + 5 * UP + 3 * DOWN) / RATIO;
+  // UP shows the whole corner index (the rank over its suit) of a covered card.
+  const byHeight = (H - 2 * pad - LABEL) / (2 + 4 * UP + 3 * DOWN) / RATIO;
   const w = Math.floor(Math.max(48, Math.min(byWidth, byHeight, 170)));
   const h = Math.round(w * RATIO);
   // A wide window spreads the columns, up to 30% of a card, so the board fills the felt.
