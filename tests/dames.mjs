@@ -125,12 +125,20 @@ await g(() => Kit.closeDialog());
 await setPos('K46,31', '23,24,1');
 await g(() => { undo.push(JSON.stringify({ G, last })); save(); });
 await click(46); await click(19);
-await page.click('#hintBtn'); await page.click('#undoBtn'); await wait(1500);
+// The hint is kept waiting, so the undo surely comes while it searches.
+await g(() => { window.realAsk = ask; window.ask = () => new Promise(() => {}); });
+await page.click('#hintBtn');
+ok(await g(() => phase === 'hint'), 'the hint is searching');
+await page.click('#undoBtn');
+await g(() => { window.ask = window.realAsk; });
 ok(await g(() => undo.length === 1 && sel === null && phase === 'player' && G.b[46] === 2), 'undo during a hint keeps the turn before');
 
 // 7c. Two quick clicks on two squares are two clicks: the move is played.
 await setPos('32', '1');
-await page.mouse.click(...await at(32)); await wait(120); await page.mouse.click(...await at(28)); await wait(200);
+// Both clicks land near the corner the two squares share, 8 px apart.
+const corner = await g(() => { const r = boardEl.getBoundingClientRect(); return [r.left + 4 * S, r.top + 6 * S]; });
+await page.mouse.click(corner[0] - 3, corner[1] + 3); await wait(120);
+await page.mouse.click(corner[0] + 3, corner[1] - 3); await wait(200);
 ok(await g(() => G.b[28] === 1), 'a quick second click on another square plays the move');
 await waitTurn();
 
@@ -183,7 +191,9 @@ ok(await g(() => G.turn === 1) && await g(() => undo.length) === undoLen, 'after
 
 // 13. The draw counter, and the level chosen for a new game.
 await setPos('K47,K48', 'K3');
-ok((await g(() => document.getElementById('drawNote').textContent)).includes('5 coups'), 'a short ending says when it is drawn: ' + await g(() => document.getElementById('drawNote').textContent));
+ok((await g(() => document.getElementById('drawNote').textContent)).includes('5 de vos coups'), 'a short ending says when it is drawn: ' + await g(() => document.getElementById('drawNote').textContent));
+await g(() => { G.endLeft = 1; render(); });
+ok((await g(() => document.getElementById('drawNote').textContent)).startsWith('Partie nulle après votre prochain coup'), 'one ply left: the draw comes after his next move');
 await page.screenshot({ path: `${OUT}/dames-ending.png` });
 await page.click('#newBtn');
 ok((await g(() => [...document.querySelectorAll('#overBtns button')].map(b => b.textContent).join())).includes('Facile,Moyen,Fort'), 'a new game offers three levels');
@@ -207,6 +217,9 @@ ok((await g(() => document.getElementById('home').href)).endsWith('/public/index
 // 13d. A phone-sized window shows the whole board.
 await page.setViewportSize({ width: 360, height: 640 }); await wait(200);
 ok(await g(() => { const r = boardEl.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; }), 'a narrow window shows the whole board');
+await setPos('K47,K48', 'K3');
+ok(await g(() => { const d = document.getElementById('drawNote'); d.scrollIntoView(); const r = d.getBoundingClientRect(); return d.offsetParent && r.width > 100 && r.bottom <= innerHeight && r.top >= 0; }), 'a narrow window still shows the draw warning, under the board');
+await page.screenshot({ path: `${OUT}/dames-phone.png` });
 
 // 14. A wide screen gets larger squares.
 await page.setViewportSize({ width: 1920, height: 1000 }); await wait(200);

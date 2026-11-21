@@ -393,7 +393,8 @@ function commit(m, r) {
   // A win counts once, and only when it is saved: a stale window cannot count it a second time.
   const firstWin = G.result && G.result.winner === WHITE && !wonNow;
   if (firstWin) { wonNow = true; stats.won++; }
-  if (save() && firstWin) GG.track('dames', 'won');
+  if (save()) { if (firstWin) GG.track('dames', 'won'); }
+  else if (firstWin) { wonNow = false; stats.won--; }
   // His piece slides to its last landing, then the pieces taken leave the board.
   render({ shown: before, moving: m.from, at: r.path.length > 1 ? r.path[r.path.length - 2] : m.from, taken: r.caps });
   const my = gen;
@@ -585,7 +586,7 @@ function layout() {
   const mode = byTwo >= Math.min(byH, 60) ? 2 : byOne >= 40 ? 1 : 0;
   S = Math.floor(Math.max(20, Math.min(byH, mode === 2 ? byTwo : mode === 1 ? byOne : (W - 16) / 10.4, 92)));
   const F = Math.round(S * .2);
-  BY = Math.max(F + 6, Math.round((H - 10 * S) / 2));
+  BY = mode ? Math.max(F + 6, Math.round((H - 10 * S) / 2)) : F + 8;
   BX = mode === 1 ? Math.max(F + 20, Math.round((W - 10 * S - gap - panelW) / 2)) : Math.round((W - 10 * S) / 2);
   document.documentElement.style.setProperty('--s', S + 'px');
   boardEl.style.left = BX + 'px'; boardEl.style.top = BY + 'px';
@@ -598,10 +599,17 @@ function layout() {
     twoCols = mode === 2;
     if (twoCols) L.prepend($('whoB')); else R.prepend($('whoB'));
   }
-  R.style.left = BX + 10 * S + F + gap + 'px'; R.style.width = panelW + 'px';
-  R.style.top = BY - F + 'px'; R.style.height = 10 * S + 2 * F + 'px';
-  R.style.justifyContent = twoCols ? 'flex-end' : 'space-between';
-  R.style.display = mode ? 'flex' : 'none';
+  if (mode) {
+    R.style.left = BX + 10 * S + F + gap + 'px'; R.style.width = panelW + 'px';
+    R.style.top = BY - F + 'px'; R.style.height = 10 * S + 2 * F + 'px';
+  } else {
+    // Under the board, as wide as it: the window scrolls down to them.
+    R.style.left = BX - F + 'px'; R.style.width = 10 * S + 2 * F + 'px';
+    R.style.top = BY + 10 * S + F + 16 + 'px'; R.style.height = 'auto';
+  }
+  R.style.justifyContent = twoCols ? 'flex-end' : mode ? 'space-between' : 'flex-start';
+  R.style.paddingBottom = mode ? '0' : '16px';
+  table.style.overflowY = mode ? 'hidden' : 'auto';
   L.style.display = twoCols ? 'flex' : 'none';
   L.style.left = BX - F - gap - panelW + 'px'; L.style.width = panelW + 'px'; L.style.top = BY - F + 'px';
 }
@@ -687,8 +695,11 @@ function drawNote() {
   if (end === null && quiet === null) return '';
   // The quiet count stops at a capture or a man's move; an ending's count never stops.
   const byEnd = end !== null && (quiet === null || end <= quiet);
-  const n = Math.ceil((byEnd ? end : quiet) / 2);
-  return `Partie nulle dans ${plural(n, 'coup', 'coups')} chacun, ` + (byEnd ? 'si personne ne gagne avant.' : 'sauf si une pièce est prise ou si un pion avance.');
+  // The plies left, counted in his own moves: on his turn, he plays the 1st, 3rd, 5th… of them.
+  const plies = byEnd ? end : quiet;
+  const n = G.turn === WHITE ? Math.ceil(plies / 2) : Math.floor(plies / 2);
+  const when = n <= 1 ? 'Partie nulle après votre prochain coup' : `Partie nulle dans ${n} de vos coups`;
+  return when + (byEnd ? ', si personne ne gagne avant.' : ', sauf si une pièce est prise ou si un pion avance.');
 }
 const say = Kit.say;
 function shake(n) {
@@ -742,10 +753,10 @@ addEventListener('pointerup', e => {
     return;
   }
   if (!n || n !== d.n) return;
-  // Two quick clicks on the same square are a double-click. On two squares, they are two clicks.
+  // Two quick clicks on the same spot of one square are a double-click. On two squares, two clicks.
   const t = performance.now(), prev = lastTap;
-  lastTap = { t, n };
-  if (prev && prev.n === n && t - prev.t < 500) return;
+  lastTap = { t, n, x: e.clientX, y: e.clientY };
+  if (prev && prev.n === n && t - prev.t < 500 && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) < 24) return;
   tap(n);
 });
 addEventListener('pointercancel', () => { if (drag && drag.started) render(); drag = null; });
