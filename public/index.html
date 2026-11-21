@@ -79,18 +79,14 @@
   .tile.soon .badge { background: rgba(255,255,255,.16); color: #fff; box-shadow: none; }
   a.tile.opening { opacity: .85; transform: none; }
 
-  /* Footer band: the backup state and the PC code on the left, the install button on the right */
+  /* Footer band: where the saves are on the left, the install button on the right */
   body { display: flex; flex-direction: column; min-height: 100vh; }
   main { flex: 1; }
   footer { background: rgba(0,0,0,.18); border-top: 1px solid rgba(255,255,255,.08); }
   footer .in { max-width: 1240px; margin: 0 auto; padding: 14px 40px; display: flex; align-items: center; justify-content: space-between; gap: 24px;
     font: 500 20px var(--ui); color: rgba(255,255,255,.85); }
-  footer .info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-  footer:has(#sync:empty):has(#code:empty):has(#install:not(.on)) { display: none; }
-  #sync { display: flex; align-items: center; gap: 10px; }
-  #sync svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  #code b { color: #fff; letter-spacing: .08em; }
-  #code:empty { display: none; }
+  #saves { display: flex; align-items: center; gap: 10px; }
+  #saves svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   #install { display: none; flex: none; min-height: 54px; padding: 8px 22px; border: 0; border-radius: 15px; cursor: pointer;
     background: #fff; color: var(--text); font: 600 21px var(--ui); }
   #install.on { display: inline-flex; align-items: center; }
@@ -132,7 +128,7 @@
 
 </main>
 <footer><div class="in">
-  <div class="info"><div id="sync"></div><div id="code"></div></div>
+  <div id="saves"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Vos parties sont gardées sur cet ordinateur.</div>
   <button id="install">Installer sur cet ordinateur</button>
 </div></footer>
 
@@ -173,8 +169,6 @@ function art(cards, back) {
 }
 const ICON_PLAY = '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg>';
 const ICON_TROPHY = '<svg viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v4M8.5 20h7"/></svg>';
-const ICON_CLOUD = '<svg viewBox="0 0 24 24"><path d="M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 9.5a4 4 0 0 1-.5 8.5z"/><path d="m9.5 13 2 2 3.5-3.5"/></svg>';
-const ICON_PC = '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>';
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 function render() {
@@ -202,17 +196,12 @@ function render() {
       <div class="body"><h3>${esc(g.title)}</h3><p>${esc(g.text)}</p></div></div>`);
   document.getElementById('games').innerHTML = tiles.concat(soon).join('');
 }
-// A game opens only after the startup sync (4 s at most), so it never starts from an old copy
-// and then uploads it over the newer one on the server.
-let syncing = Promise.resolve();
 document.getElementById('games').addEventListener('click', e => {
   const t = e.target.closest('a.tile');
   if (!t) return;
-  e.preventDefault();
   GG.set('seen:' + t.dataset.id, true);
   t.classList.add('opening');
   t.querySelector('.play').textContent = 'Ouverture…';
-  Promise.race([syncing, new Promise(r => setTimeout(r, 4000))]).then(() => { location.href = t.href; });
 });
 
 function clock() {
@@ -224,30 +213,14 @@ function clock() {
 }
 
 // The note lives in message.json. An empty text hides it.
-let asker = '', lastSync = null;
 async function note() {
   try {
     const m = await (await fetch('message.json', { cache: 'no-cache' })).json();
     if (!m.text) return;
-    if (m.from) asker = m.from;
     document.getElementById('noteFrom').textContent = m.from ? `Un mot de ${m.from}` : 'Un petit mot';
     document.getElementById('noteText').textContent = m.text;
     document.getElementById('note').classList.add('on');
   } catch (e) {}
-}
-
-function syncLine(r) {
-  const el = document.getElementById('sync');
-  if (!r) { el.innerHTML = ''; return; }
-  lastSync = r;
-  el.innerHTML = r.approved && !r.offline ? ICON_CLOUD + 'Vos parties sont sauvegardées en ligne.'
-    : r.offline ? ICON_PC + 'Pas d’internet pour le moment : vos parties restent sur cet ordinateur.'
-    : ICON_PC + 'Vos parties sont gardées sur cet ordinateur.';
-  // The code is for the person who approves this PC: say so, so he does not think he must remember it.
-  const who = asker ? `Si ${esc(asker)} vous demande le code, lisez-lui :` : `Code de cet ordinateur :`;
-  document.getElementById('code').innerHTML = r.approved ? ''
-    : r.full ? 'La sauvegarde en ligne ne peut pas accueillir cet ordinateur pour le moment. Réessayez demain.'
-    : `${who} <b>${GG.code.slice(0, 3)} ${GG.code.slice(3)}</b>`;
 }
 
 // Edge offers to install the site as an app. Show the offer as a plain button.
@@ -265,8 +238,7 @@ document.getElementById('install').onclick = async () => {
 };
 
 clock(); setInterval(clock, 15000);
-render(); note().then(() => { if (lastSync) syncLine(lastSync); });
-if (location.protocol !== 'file:') syncing = GG.sync().then(r => { syncLine(r); if (r.changed.length) render(); });
+render(); note();
 </script>
 </body>
 </html>

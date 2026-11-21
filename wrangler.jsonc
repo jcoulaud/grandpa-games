@@ -12,6 +12,7 @@
   ],
   "workers_dev": false,
   "preview_urls": false,
+  // The games keep their saves in the browser. The Worker handles only /api: statistics, errors, admin.
   "assets": {
     "directory": "./public",
     "run_worker_first": ["/api/*"]

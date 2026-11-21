@@ -2,7 +2,7 @@
 
 A library of simple card games for my grandfather on Windows. No ads and no account. The text is in French, and the cards and buttons are large.
 
-The library is a website installed once as an app with Edge. It works offline. Each push to `main` publishes a new version. His PC downloads it in the background and starts it after the app window is closed, never during a game. His progress is saved on his PC and backed up to the server.
+The library is a website installed once as an app with Edge. It works offline. Each push to `main` publishes a new version. His PC downloads it in the background and starts it after the app window is closed, never during a game. His progress is saved on his PC.
 
 ## How it works
 
@@ -10,14 +10,15 @@ The library is a website installed once as an app with Edge. It works offline. E
 public/                  the site, served as static files
   index.html             the library: greeting, a note from me, one tile per game
   games/<id>/index.html  one game per folder
-  lib/store.js           saves for every game (on the PC, then backed up), and error reports
+  lib/store.js           saves for every game, in the browser of the PC, and the statistics
   lib/kit.css, kit.js    shared look and behaviour: top bar, "Jeux" button, message line, rules guide, dialogs
   lib/cards.css, cards.js  playing cards: French names, suits, pips, court cards, back
-  admin/                 the admin page, behind the ADMIN_TOKEN password
   sw.js                  offline copy and quiet updates
   message.json           the note on the library screen ("text": "" hides it)
-src/worker.ts            the backup and error API, a Cloudflare Worker with a D1 database
+  admin/                 the admin dashboard, behind the ADMIN_TOKEN password
+src/worker.ts            the statistics and error API, a Cloudflare Worker with a D1 database
 src/admin.ts             the admin API, behind the ADMIN_TOKEN secret
+src/util.ts              helpers shared by the two
 migrations/              the database tables
 ```
 
@@ -25,9 +26,10 @@ migrations/              the database tables
 
 1. Make `public/games/<id>/index.html` like the solitaire: link `../../lib/kit.css` (and `../../lib/cards.css` for a card game), write the top bar, the message line, the table and the rules pages, then load `../../lib/store.js`, `../../lib/cards.js` and `../../lib/kit.js` before the game's own script. The top of `lib/kit.js` shows the markup.
 2. The kit adds the "Jeux" button, the button icons (`data-icon="undo"`, `bulb`, `help`, `close`), the rules guide frame and the dialog. Use `Kit.say`, `Kit.dialog`, `Kit.openHelp` and `Kit.escape`.
-3. Save with `GG.save('<id>', data, { cloud, summary })` and read with `GG.load('<id>')`. Keep `cloud` under 100 KB. `summary` is the line on the tile, for example "Partie en cours · 3 victoires".
+3. Save with `GG.save('<id>', data, { summary })` and read with `GG.load('<id>')`. `summary` is the line on the tile, for example "Partie en cours · 3 victoires".
 4. Give the game its own browser tab icon: `public/games/<id>/icon.svg`, linked with `<link rel="icon" href="icon.svg">`.
-5. Add the game to `GAMES` in `public/index.html`, and its folder and icon to `CORE` in `public/sw.js`.
+5. Add the game to `GAMES` in `public/index.html` and in `src/worker.ts`, and its folder and icon to `CORE` in `public/sw.js`.
+6. Count its games with `GG.track('<id>', 'start')` when a game begins and `GG.track('<id>', 'won')` when it is won.
 
 When a game changes its save format, it must still read the old format. His saves are never deleted.
 
@@ -51,40 +53,29 @@ When a game changes its save format, it must still read the old format. His save
 
 The design and the research behind it are in `docs/design.md`.
 
-## Saves and the backup
+## Saves
 
-- Each PC creates a random id at the first start. The library shows its first 6 letters as "Code de cet ordinateur".
-- A PC backs up its saves only after you approve it. Until then, it plays normally and keeps its saves on the PC. Strangers who find the address cannot write to the database.
-- The server keeps the newest save of each game and up to 30 older versions, at most one per hour.
-- The first time a PC is approved, it takes the server copy. So a new PC gets the old PC's progress, even if someone played on it before the approval.
+- Everyone plays freely, with no account and no approval. Each game saves in the browser of the PC (localStorage) and never leaves it.
+- The library asks Edge to keep this data when the disk is full. Clearing the browser data for jeux-papi.fr deletes the saves.
 
-### Admin page
+## Admin page
 
-https://jeux-papi.fr/admin/ shows:
+https://jeux-papi.fr/admin/ is the overview dashboard:
 
-- the PCs, with their name, code, approval and last visit. Approve a PC there, alone or with the saves of another PC, and rename or remove it.
-- the saved games of each player and when they were last saved.
-- the JavaScript errors of approved PCs, with the page, the stack and the app version. Every page reports its errors through `lib/store.js`: 5 per page at most, 50 per PC per day, 2,000 kept.
+- the number of players since the start;
+- the players today, over 7 days and new over 7 days, and the games over 7 days, each with the change from the day or week before;
+- a chart of the players and the games started each day, over 7, 30 or 90 days, with the numbers of a day on hover;
+- each game, with its games over 7 days and in total, and its win rate;
+- the JavaScript errors, grouped by message, with how often, on how many PCs, the page, the stack and the browser.
+
+A player is a PC, or a browser, that opened the site. Each PC makes a random id at its first start and sends it with a visit once a day, a game started, a game won and its errors (20 a day at most, 2,000 kept). For players, the server stores no name, no IP address and no save. Visits are kept 90 days, and the daily counts of games are kept for good. The Worker (`src/worker.ts`) accepts only these numbers, for the games listed in its `GAMES`.
 
 The password is the `ADMIN_TOKEN` Worker secret. Use a long random password. To change it, run `bunx wrangler secret put ADMIN_TOKEN`. After 10 wrong passwords from one network in 15 minutes, the admin API refuses that network until the oldest try is 15 minutes old.
-
-The same actions also exist as commands:
-
-| Command | What it does |
-| --- | --- |
-| `bun run devices` | Lists the PCs, their code, approval and last visit |
-| `bun run approve K7FQ2M` | Approves this PC with its own saves |
-| `bun run approve K7FQ2M ABC123` | Approves a new PC and gives it the saves of the PC with code ABC123 |
-| `bun run history <player code> <game>` | Lists the saved versions |
-| `bun run restore <id>` | Makes an old version the newest. The PC takes it at its next start |
-
-D1 also keeps 30 days of database history ("Time Travel"): `bunx wrangler d1 time-travel restore grandpa-games --timestamp <time>` puts the whole database back to that time.
 
 ## Install on his PC
 
 1. Open the site in Edge: https://jeux-papi.fr
 2. Select "Installer sur cet ordinateur" at the bottom of the library, or in the Edge menu select "Applications", then "Installer ce site en tant qu'application".
-3. Read the code at the bottom of the library, then approve the PC on the admin page.
 
 Windows Quick Assist is the easiest way to do this with him on the phone.
 
@@ -103,7 +94,7 @@ The tests play the game in a real browser with the mouse. They are only for deve
 2. If Playwright has no browser yet, run `bunx playwright install chromium`.
 3. Run `bun run test`.
 
-`tests/library.mjs` starts a local Worker with a fresh database and covers the library, approval, the backup, restoring on a new PC, offline use, refused writes, error reports and the admin page. `tests/play.mjs` covers moves, drag and drop, hints, undo and the layout. `tests/dialogs.mjs` covers the rules guide, the labels, saving across a reload, the stuck dialog and the win. Each test prints PASS or FAIL per check and ends with `ALL PASSED`. Screenshots go to `tests/screenshots/`.
+`tests/library.mjs` starts a local Worker with a fresh database and covers the library, saves on the PC, offline use, updates, the statistics and the admin page. `tests/play.mjs` covers moves, drag and drop, hints, undo and the layout. `tests/dialogs.mjs` covers the rules guide, the labels, saving across a reload, the stuck dialog and the win. Each test prints PASS or FAIL per check and ends with `ALL PASSED`. Screenshots go to `tests/screenshots/`.
 
 ## Planned
 

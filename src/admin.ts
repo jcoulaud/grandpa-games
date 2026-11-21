@@ -1,24 +1,16 @@
-// The admin API, used by public/admin/. Every request needs `Authorization: Bearer <ADMIN_TOKEN>`.
+// The admin API, used by public/admin/: the statistics and the errors.
+// Every request needs `Authorization: Bearer <ADMIN_TOKEN>`.
 // ADMIN_TOKEN is a Worker secret (wrangler secret put ADMIN_TOKEN). Without it, the admin API is off.
 
-import { network } from './ip';
+import { json, network, utcDay, VISIT_DAYS } from './util';
 
 export interface AdminEnv {
   DB: D1Database;
   ADMIN_TOKEN?: string;
 }
 
-const CODE = /^[A-Z2-9]{6}$/;
 const MAX_FAILURES = 10;
 const FAILURE_WINDOW_MS = 15 * 60_000;
-const PENDING_TTL_MS = 7 * 86_400_000;
-
-// A PC never approved and not seen for a week is dropped. A real one comes back at its next start.
-export const dropStalePending = (db: D1Database, now: number) =>
-  db.prepare('DELETE FROM devices WHERE approved = 0 AND player IS NULL AND last_seen < ?').bind(now - PENDING_TTL_MS);
-
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 
 // Compares in constant time, so the answer time does not reveal how much of the token was right.
 async function sameSecret(given: string, expected: string): Promise<boolean> {
@@ -26,16 +18,6 @@ async function sameSecret(given: string, expected: string): Promise<boolean> {
   const [a, b] = await Promise.all([given, expected].map(v => crypto.subtle.digest('SHA-256', enc.encode(v))));
   return crypto.subtle.timingSafeEqual(a, b);
 }
-
-async function body(request: Request): Promise<Record<string, unknown>> {
-  try {
-    const b: unknown = await request.json();
-    return b && typeof b === 'object' ? (b as Record<string, unknown>) : {};
-  } catch {
-    return {};
-  }
-}
-const codeOf = (v: unknown) => (typeof v === 'string' ? v.toUpperCase().replace(/\s/g, '') : '');
 
 export async function admin(request: Request, env: AdminEnv, path: string): Promise<Response> {
   if (!env.ADMIN_TOKEN) return json({ error: 'admin off' }, 503);
@@ -59,56 +41,39 @@ export async function admin(request: Request, env: AdminEnv, path: string): Prom
   await forget();
 
   if (path === 'overview' && request.method === 'GET') {
-    const [, devices, saves, errors] = await db.batch([
-      dropStalePending(db, Date.now()),
-      db.prepare('SELECT code, name, player, approved, created_at, last_seen, last_write FROM devices ORDER BY last_seen DESC'),
-      db.prepare('SELECT player, game, updated_at, summary FROM saves ORDER BY updated_at DESC'),
-      db.prepare(`SELECT id, device_code, player, page, message, stack, version, agent, happened_at, received_at
-        FROM errors ORDER BY id DESC LIMIT 100`),
+    const today = utcDay(now), d7 = utcDay(now, 6), d14 = utcDay(now, 13), d30 = utcDay(now, 29), first = utcDay(now, VISIT_DAYS - 1);
+    const [totals, days, games, errors] = await db.batch([
+      db.prepare(`SELECT
+          (SELECT COUNT(*) FROM players) AS players,
+          (SELECT COUNT(*) FROM players WHERE first_day >= ?2) AS new7,
+          (SELECT COUNT(*) FROM players WHERE first_day >= ?4 AND first_day < ?2) AS new7prev,
+          (SELECT COUNT(*) FROM visits WHERE day = ?1) AS today,
+          (SELECT COUNT(DISTINCT id) FROM visits WHERE day >= ?2) AS active7,
+          (SELECT COUNT(DISTINCT id) FROM visits WHERE day >= ?4 AND day < ?2) AS active7prev,
+          (SELECT COUNT(DISTINCT id) FROM visits WHERE day >= ?3) AS active30`).bind(today, d7, d30, d14),
+      // One row per day of the chart that had a visit or a game.
+      db.prepare(`SELECT day, SUM(players) AS players, SUM(starts) AS starts, SUM(wins) AS wins FROM (
+          SELECT day, COUNT(*) AS players, 0 AS starts, 0 AS wins FROM visits WHERE day >= ?1 GROUP BY day
+          UNION ALL
+          SELECT day, 0, SUM(CASE kind WHEN 'start' THEN n END), SUM(CASE kind WHEN 'won' THEN n END)
+          FROM plays WHERE day >= ?1 GROUP BY day)
+        GROUP BY day ORDER BY day`).bind(first),
+      db.prepare(`SELECT game,
+          SUM(CASE WHEN kind = 'start' THEN n ELSE 0 END) AS starts,
+          SUM(CASE WHEN kind = 'won' THEN n ELSE 0 END) AS wins,
+          SUM(CASE WHEN kind = 'start' AND day >= ?1 THEN n ELSE 0 END) AS starts7,
+          SUM(CASE WHEN kind = 'won' AND day >= ?1 THEN n ELSE 0 END) AS wins7
+        FROM plays GROUP BY game ORDER BY starts DESC`).bind(d7),
+      // One row per message: how often, on how many PCs, and the newest stack (SQLite takes the bare
+      // columns from the row that has the MAX).
+      db.prepare(`SELECT message, COUNT(*) AS n, COUNT(DISTINCT pc) AS pcs, MAX(at) AS last,
+          page, stack, agent FROM errors GROUP BY message ORDER BY last DESC LIMIT 50`),
     ]);
-    return json({ devices: devices.results, saves: saves.results, errors: errors.results });
+    return json({ totals: totals.results[0], days: days.results, games: games.results, errors: errors.results });
   }
 
-  if (request.method !== 'POST') return json({ error: 'not found' }, 404);
-  const b = await body(request);
-  const code = codeOf(b.code);
-
-  if (path === 'errors/clear') {
+  if (path === 'errors/clear' && request.method === 'POST') {
     await db.prepare('DELETE FROM errors').run();
-    return json({ ok: true });
-  }
-  if (!CODE.test(code)) return json({ error: 'code' }, 400);
-  const device = await db.prepare('SELECT code, approved, player FROM devices WHERE code = ?').bind(code)
-    .first<{ code: string; approved: number; player: string | null }>();
-  if (!device) return json({ error: 'unknown PC' }, 404);
-
-  if (path === 'approve') {
-    // "as": the code of an approved PC whose saves this PC takes over (a new PC for the same person).
-    const as = codeOf(b.as);
-    // Without "as", a PC approved again keeps the player it had, so its saves stay together.
-    let player = device.player ?? code;
-    if (as) {
-      const old = await db.prepare('SELECT player FROM devices WHERE code = ? AND approved = 1 AND player IS NOT NULL').bind(as)
-        .first<{ player: string }>();
-      if (!old) return json({ error: 'No approved PC has this code' }, 400);
-      player = old.player;
-    }
-    await db.prepare('UPDATE devices SET approved = 1, player = ? WHERE code = ?').bind(player, code).run();
-    return json({ ok: true });
-  }
-  if (path === 'rename') {
-    const name = typeof b.name === 'string' ? b.name.trim().slice(0, 40) : '';
-    await db.prepare('UPDATE devices SET name = ? WHERE code = ?').bind(name || null, code).run();
-    return json({ ok: true });
-  }
-  if (path === 'revoke') {
-    // The PC keeps playing and keeps its saves on the PC. It stops sending backups.
-    await db.prepare('UPDATE devices SET approved = 0 WHERE code = ?').bind(code).run();
-    return json({ ok: true });
-  }
-  if (path === 'forget') {
-    if (device.approved) return json({ error: 'Revoke the PC first' }, 400);
-    await db.prepare('DELETE FROM devices WHERE code = ?').bind(code).run();
     return json({ ok: true });
   }
   return json({ error: 'not found' }, 404);

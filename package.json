@@ -6,11 +6,7 @@
     "dev": "wrangler dev --port 8787",
     "test": "node tests/play.mjs && node tests/dialogs.mjs && node tests/library.mjs",
     "typecheck": "tsc --noEmit",
-    "deploy": "node scripts/stamp.mjs && wrangler d1 migrations apply grandpa-games --remote && wrangler deploy",
-    "devices": "wrangler d1 execute grandpa-games --remote --command \"SELECT code, player, approved, name, datetime(last_seen/1000, 'unixepoch', 'localtime') AS last_seen FROM devices ORDER BY last_seen DESC\"",
-    "approve": "scripts/approve.sh",
-    "history": "scripts/history.sh",
-    "restore": "scripts/restore.sh"
+    "deploy": "node scripts/stamp.mjs && wrangler d1 migrations apply grandpa-games --remote && wrangler deploy"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "4.20260702.1",
