@@ -37,6 +37,7 @@ for (let n = 0; n < 4; n++) {
   await page.screenshot({ path: `${OUT}/dames-rules-${n + 1}.png` });
   await page.click('#helpNext');
 }
+await page.getByRole('button', { name: 'Facile', exact: true }).click();
 ok(!(await g(() => Kit.isOpen())), '"J\'ai compris" closes the rules');
 
 // 2. Layout: large squares, and the board and the side column fit in the window.
@@ -198,7 +199,7 @@ await g(() => { G.turn = -1; render(); });
 ok((await g(() => document.getElementById('drawNote').textContent)).startsWith("Partie nulle au prochain coup de l'ordinateur"), "one ply left on the computer's turn: the draw comes with its move");
 await page.screenshot({ path: `${OUT}/dames-ending.png` });
 await page.click('#newBtn');
-ok((await g(() => [...document.querySelectorAll('#overBtns button')].map(b => b.textContent).join())).includes('Facile,Moyen,Fort'), 'a new game offers three levels');
+ok((await g(() => [...document.querySelectorAll('#overBtns button')].map(b => b.textContent).join())).includes('Facile,Moyen,Difficile'), 'a new game offers three levels');
 await page.click('#overBtns button:nth-child(2)');
 ok(await g(() => level === 'moyen' && document.getElementById('levelB').textContent === 'Niveau moyen'), 'the level is chosen and shown');
 await page.reload(); await wait(300);

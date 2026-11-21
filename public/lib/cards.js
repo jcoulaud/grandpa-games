@@ -100,5 +100,12 @@ function faceHtml(id) {
   const r = rk(id), ix = `${RANKS[r]}${suitHtml(st(id))}`;
   return `<div class="ix">${ix}</div><div class="c ${r > 1 && r < 11 ? 'pips' : 'pic'}">${faceSvg(id)}</div><div class="ix end">${ix}</div>`;
 }
-window.Cards = { RANKS, RANK_NAMES, SUIT_NAMES, SUIT_PLURALS, rk, st, rd, cap, cardName, suitHtml, pip, faceSvg, faceHtml };
+// Reproduce a verified deal when the bounded search has no match.
+function seededRandom(seed) {
+  return () => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+}
+window.Cards = { seededRandom, RANKS, RANK_NAMES, SUIT_NAMES, SUIT_PLURALS, rk, st, rd, cap, cardName, suitHtml, pip, faceSvg, faceHtml };
 })();

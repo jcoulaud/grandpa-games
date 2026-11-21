@@ -83,7 +83,7 @@
     </section>
     <section class="page">
       <h3>Les boutons</h3>
-      <p>« Quel coup jouer ? » montre un bon coup à jouer. « Annuler le dernier coup » revient un coup en arrière, autant de fois que vous voulez. « Nouvelle partie » commence une autre partie. « Règles » ouvre ces explications.</p>
+      <p>« Quel coup jouer ? » montre un bon coup à jouer. « Annuler le dernier coup » revient un coup en arrière, autant de fois que vous voulez. « Nouvelle partie » vous permet de choisir le niveau. « Règles » ouvre ces explications.</p>
       <h3>Bon à savoir</h3>
       <p>Si une carte ne peut pas aller quelque part, la ligne sous les boutons explique pourquoi.</p>
       <p>Toutes les parties peuvent être gagnées. Les cartes qui ne servent plus vont toutes seules au rangement. La partie est enregistrée à chaque coup : vous la retrouvez en rouvrant le jeu.</p>
@@ -110,25 +110,43 @@ const { solve, sApply, sMoves, sNormalize, sFits, sSafe, sRun } = Solver;
 /* ---------- Game state ---------- */
 // S.tab: the 8 columns, S.cells: the 4 free cells (a card id or null), S.found[s]: the cards of suit s.
 // sel: the chosen card (it moves with the cards on top of it). hintDst: the place the hint shows.
+let level = 'facile';
 let S, undo = [], stats = { won: 0 }, autoT = 0, zT = 0, winT = 0, busy = false, autoCount = 0;
 let drag = null, plan = null, sel = null, hintDst = null, lastTap = null, dealT = 0;
 
 function toSolver() {
   return { c: S.tab.map(p => p.slice()), l: S.cells.filter(id => id !== null).sort((a, b) => a - b), f: S.found.map(f => f.length) };
 }
-function freshDeal() {
+function freshDeal(random = Math.random) {
   const d = [...Array(52).keys()];
-  for (let i = d.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [d[i], d[j]] = [d[j], d[i]]; }
+  for (let i = d.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [d[i], d[j]] = [d[j], d[i]]; }
   const tab = [[], [], [], [], [], [], [], []];
   d.forEach((id, n) => tab[n % 8].push(id));
   return { tab, cells: [null, null, null, null], found: [[], [], [], []], moves: 0, won: false, stuckShown: false, lostShown: false };
 }
-// Deal only games the solver has won. Almost every deal passes on the first try.
+// Leave gaps between the bands. Each fallback seed was solved within 2,500 nodes.
+const fallbackSeeds = {
+  facile: [100046, 100043, 100082, 100358, 100074, 100095, 100041, 100040, 100341, 100096, 100396, 100073, 100037, 100335, 100161, 100133],
+  moyen: [100196, 100122, 100344, 100106, 100116, 100022, 100035, 100295, 100395, 100159, 100302, 100135, 100055, 100093, 100212, 100139],
+  fort: [100321, 100006, 100383, 100015, 100126, 100333, 100288, 100353, 100085, 100076, 100191, 100062, 100328, 100008, 100054, 100181],
+};
+function dealLevel(nodes) {
+  if (nodes <= 65) return 'facile';
+  if (nodes >= 120 && nodes <= 300) return 'moyen';
+  if (nodes >= 650 && nodes <= 2500) return 'fort';
+  return null;
+}
 function winnableDeal() {
-  for (;;) {
+  const budget = { facile: 65, moyen: 300, fort: 2500 }[level];
+  for (let attempt = 0; attempt < 4; attempt++) {
     S = freshDeal();
-    if (solve(toSolver(), 30000).win) return S;
+    const result = solve(toSolver(), budget);
+    if (result.win && dealLevel(result.nodes) === level) return S;
   }
+  const seeds = fallbackSeeds[level];
+  const seed = seeds[Math.floor(Math.random() * seeds.length)];
+  S = freshDeal(Cards.seededRandom(seed));
+  return S;
 }
 
 // Every undo step is saved. If the browser storage is full, the oldest steps go first.
@@ -139,14 +157,19 @@ function save() {
   if (S.moves > 0 && !isWon()) parts.push('Partie en cours');
   if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
   for (const n of [Infinity, 2000, 300, 50, 0]) {
-    if (GG.save('freecell', { S, undo: n ? undo.slice(-n) : [], stats }, { summary: parts.join(' · ') })) return;
+    if (GG.save('freecell', { S, level, undo: n ? undo.slice(-n) : [], stats }, { summary: parts.join(' · ') })) return;
   }
 }
 function load() {
   try {
     const v = GG.load('freecell');
     if (v && v.stats) stats = v.stats;
-    if (v && v.S) { S = v.S; undo = v.undo || []; return true; }
+    if (v && v.S) {
+      S = v.S; undo = v.undo || [];
+      level = Object.hasOwn(Kit.levelNames, v.level) ? v.level : 'moyen';
+      Kit.showLevel(level);
+      return true;
+    }
   } catch (e) {}
   return false;
 }
@@ -343,7 +366,7 @@ function checkStuck() {
   if (sMoves(toSolver()).length) return;
   S.stuckShown = true; save();
   dialog('Plus aucun coup possible', 'Aucune carte ne peut plus bouger.',
-    [['Revenir en arrière', backToWinnable, true], ['Nouvelle partie', newGame]]);
+    [['Revenir en arrière', backToWinnable, true], ['Nouvelle partie', askNewGame]]);
 }
 // After each move, once the automatic cards are home, say so as soon as the game is surely lost.
 // When the solver runs out of time, it says nothing. A lost position only stops being lost by undo,
@@ -356,10 +379,15 @@ function checkLost() {
 }
 function lostDialog() {
   dialog('Partie perdue', 'Cette partie ne peut plus être gagnée. « Revenir en arrière » annule vos derniers coups.',
-    [['Revenir en arrière', backToWinnable, true], ['Nouvelle partie', newGame]]);
+    [['Revenir en arrière', backToWinnable, true], ['Nouvelle partie', askNewGame]]);
 }
 
-function newGame() {
+function askNewGame() {
+  if (!drag) Kit.chooseLevel(level, S.moves > 0 && !isWon(), newGame);
+}
+function newGame(nextLevel = level) {
+  level = nextLevel;
+  Kit.showLevel(level);
   busy = true; drag = null; plan = null; autoCount = 0;
   clearTimeout(autoT); clearTimeout(winT); clearTimeout(dealT); clearSel();
   closeDialog();
@@ -399,7 +427,7 @@ function backToWinnable() {
     S.stuckShown = false; lastTap = null; flash([]);
     clearSel(); render(); save();
     setMsg('Vous êtes revenu à une position gagnante.');
-  } else dialog('Impossible de revenir en arrière', 'Aucune position gagnante n\'a été trouvée. Commencez une nouvelle partie.', [['Nouvelle partie', newGame, true]]);
+  } else dialog('Impossible de revenir en arrière', 'Aucune position gagnante n\'a été trouvée. Commencez une nouvelle partie.', [['Nouvelle partie', askNewGame, true]]);
 }
 
 /* ---------- Hint ---------- */
@@ -516,6 +544,7 @@ function hitPile(x, y) {
 }
 
 function render(opts = {}) {
+  if (!S) return;
   layout();
   document.getElementById('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
   const span = 4 * L.w + 3 * L.gap;
@@ -600,7 +629,7 @@ function celebrate() {
     { duration: 500, delay: s * 120, iterations: 2, easing: 'ease-in-out' }));
   clearTimeout(winT);
   winT = setTimeout(() => dialog('Bravo, vous avez gagné !', stats.won === 1 ? "C'est votre première victoire." : `C'est votre ${stats.won}e victoire.`,
-    [['Nouvelle partie', newGame, true], ['Retour aux jeux', () => { location.href = document.getElementById('home').href; }]], true), REDUCED ? 0 : 1500);
+    [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', () => { location.href = document.getElementById('home').href; }]], true), REDUCED ? 0 : 1500);
 }
 
 /* ---------- Dialog ---------- */
@@ -669,12 +698,7 @@ addEventListener('pointercancel', e => {
   if (d.started) { d.els.forEach(o => o.el.classList.remove('dragging')); render(); }
 });
 
-document.getElementById('newBtn').onclick = () => {
-  if (drag) return;
-  if (S.moves > 0 && !isWon()) dialog('Commencer une nouvelle partie ?', 'La partie en cours sera effacée.',
-    [['Continuer la partie', null, true], ['Nouvelle partie', newGame]]);
-  else newGame();
-};
+document.getElementById('newBtn').onclick = askNewGame;
 document.getElementById('undoBtn').onclick = doUndo;
 document.getElementById('hintBtn').onclick = showHint;
 document.getElementById('helpBtn').onclick = openHelp;
@@ -690,7 +714,7 @@ addEventListener('resize', () => {
 
 build();
 // The rules open by themselves the first time the game is opened.
-if (load()) { setMsg(isWon() ? 'Bravo, vous avez gagné !' : HELLO); render({ instant: true }); autoStep(); } else { newGame(); openHelp(); }
+if (load()) { setMsg(isWon() ? 'Bravo, vous avez gagné !' : HELLO); render({ instant: true }); autoStep(); } else { Kit.firstVisit(newGame); }
 </script>
 </body>
 </html>

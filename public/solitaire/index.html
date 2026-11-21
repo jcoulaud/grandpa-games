@@ -97,7 +97,7 @@
     </section>
     <section class="page">
       <h3>Les boutons</h3>
-      <p>« Quel coup jouer ? » montre un bon coup à jouer. « Annuler le dernier coup » revient un coup en arrière, autant de fois que vous voulez. « Nouvelle partie » commence une autre partie. « Règles » ouvre ces explications.</p>
+      <p>« Quel coup jouer ? » montre un bon coup à jouer. « Annuler le dernier coup » revient un coup en arrière, autant de fois que vous voulez. « Nouvelle partie » vous permet de choisir le niveau. « Règles » ouvre ces explications.</p>
       <h3>Bon à savoir</h3>
       <p>Si une carte ne peut pas aller quelque part, la ligne sous les boutons explique pourquoi.</p>
       <p>Toutes les parties peuvent être gagnées. Les cartes qui ne servent plus vont toutes seules au rangement. La partie est enregistrée à chaque coup : vous la retrouvez en rouvrant le jeu.</p>
@@ -225,7 +225,7 @@ function solve(x0, budget) {
     }
     return false;
   };
-  try { return dfs(x) ? { win: true, path: pre.concat(path) } : { win: false }; }
+  try { return dfs(x) ? { win: true, nodes, path: pre.concat(path) } : { win: false }; }
   catch (e) { if (e === 'budget') return { unknown: true }; throw e; }
 }
 
@@ -233,6 +233,7 @@ function solve(x0, budget) {
 // S.found[s] holds suit s. Cards are { id, up }.
 // sel: the chosen card (it moves with the cards on top of it). hintDst / hintStock: the shown hint.
 let turns = 0; // stock turns of the finish since the last card went home
+let level = 'facile';
 let S, undo = [], stats = { won: 0 }, autoT = 0, zT = 0, winT = 0, busy = false, autoCount = 0;
 let drag = null, plan = null, sel = null, hintDst = null, hintStock = false, lastTap = null, dealT = 0, legacy = false;
 
@@ -245,20 +246,37 @@ function solverOf(S) {
     t: S.stock.concat(S.waste).map(c => c.id).sort((a, b) => a - b),
   };
 }
-function freshDeal() {
+function freshDeal(random = Math.random) {
   const d = [];
   for (let id = 0; id < 52; id++) d.push({ id, up: false });
-  for (let i = d.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [d[i], d[j]] = [d[j], d[i]]; }
+  for (let i = d.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [d[i], d[j]] = [d[j], d[i]]; }
   const tab = [];
   for (let c = 0; c < 7; c++) { tab.push(d.splice(0, c + 1)); tab[c][c].up = true; }
   return { stock: d, waste: [], found: [[], [], [], []], tab, moves: 0, won: false, stuckShown: false, lostShown: false };
 }
-// Deal only games the solver has won. Most deals pass on the first or second try.
+// Leave gaps between the bands. Each fallback seed was solved within 2,500 nodes.
+const fallbackSeeds = {
+  facile: [100116, 100393, 100213, 100079, 100357, 100353, 100371, 100242, 100066, 100096, 100298, 100319, 100036, 100158, 100208, 100367],
+  moyen: [100354, 100109, 100140, 100164, 100052, 100178, 100225, 100395, 100048, 100176, 100157, 100061, 100277, 100159, 100262, 100039],
+  fort: [100328, 100218, 100171, 100233, 100043, 100349, 100065, 100384, 100037, 100077, 100099, 100309, 100363, 100291, 100358, 100327],
+};
+function dealLevel(nodes) {
+  if (nodes <= 40) return 'facile';
+  if (nodes >= 55 && nodes <= 85) return 'moyen';
+  if (nodes >= 180 && nodes <= 2500) return 'fort';
+  return null;
+}
 function winnableDeal() {
-  for (;;) {
+  const budget = { facile: 40, moyen: 85, fort: 2500 }[level];
+  for (let attempt = 0; attempt < 4; attempt++) {
     S = freshDeal();
-    if (solve(toSolver(), 30000).win) return S;
+    const result = solve(toSolver(), budget);
+    if (result.win && dealLevel(result.nodes) === level) return S;
   }
+  const seeds = fallbackSeeds[level];
+  const seed = seeds[Math.floor(Math.random() * seeds.length)];
+  S = freshDeal(Cards.seededRandom(seed));
+  return S;
 }
 
 // Every undo step is saved. If the browser storage is full, the oldest steps go first.
@@ -269,7 +287,7 @@ function save() {
   if (S.moves > 0 && !isWon()) parts.push('Partie en cours');
   if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
   for (const n of [Infinity, 2000, 300, 50, 0]) {
-    if (GG.save('solitaire', { S, undo: n ? undo.slice(-n) : [], stats }, { summary: parts.join(' · ') })) return;
+    if (GG.save('solitaire', { S, level, undo: n ? undo.slice(-n) : [], stats }, { summary: parts.join(' · ') })) return;
   }
 }
 function load() {
@@ -277,7 +295,12 @@ function load() {
     let v = GG.load('solitaire');
     if (!v) { v = JSON.parse(localStorage.getItem(KEY)); legacy = !!v; } // saves from before the library
     if (v && v.stats) stats = v.stats;
-    if (v && v.S) { S = v.S; undo = v.undo || []; return true; }
+    if (v && v.S) {
+      S = v.S; undo = v.undo || [];
+      level = Object.hasOwn(Kit.levelNames, v.level) ? v.level : 'moyen';
+      Kit.showLevel(level);
+      return true;
+    }
   } catch (e) {}
   return false;
 }
@@ -476,7 +499,7 @@ function checkStuck() {
   if (anyMove()) return;
   S.stuckShown = true; save();
   dialog('Plus aucun coup possible', 'Aucune carte ne peut plus bouger.',
-    [['Revenir en arrière', backToWinnable, true], ['Nouvelle partie', newGame]]);
+    [['Revenir en arrière', backToWinnable, true], ['Nouvelle partie', askNewGame]]);
 }
 // A legal move that changes something: a card of the stock or the waste that fits somewhere (the stock
 // can be turned until it shows), or a column card with a place. A king that only goes from the bottom
@@ -500,10 +523,15 @@ function checkLost() {
 }
 function lostDialog() {
   dialog('Partie perdue', 'Cette partie ne peut plus être gagnée. « Revenir en arrière » annule vos derniers coups.',
-    [['Revenir en arrière', backToWinnable, true], ['Nouvelle partie', newGame]]);
+    [['Revenir en arrière', backToWinnable, true], ['Nouvelle partie', askNewGame]]);
 }
 
-function newGame() {
+function askNewGame() {
+  if (!drag) Kit.chooseLevel(level, S.moves > 0 && !isWon(), newGame);
+}
+function newGame(nextLevel = level) {
+  level = nextLevel;
+  Kit.showLevel(level);
   busy = true; drag = null; plan = null; autoCount = 0;
   clearTimeout(autoT); clearTimeout(winT); clearTimeout(dealT); clearSel();
   closeDialog();
@@ -541,7 +569,7 @@ function backToWinnable() {
     restore(undo[k]); undo.length = k;
     S.stuckShown = false; lastTap = null; flash([]);
     clearSel(); setMsg('Vous êtes revenu à une position gagnante.'); render(); save();
-  } else dialog('Impossible de revenir en arrière', "Aucune position gagnante n'a été trouvée. Commencez une nouvelle partie.", [['Nouvelle partie', newGame, true]]);
+  } else dialog('Impossible de revenir en arrière', "Aucune position gagnante n'a été trouvée. Commencez une nouvelle partie.", [['Nouvelle partie', askNewGame, true]]);
 }
 
 /* ---------- Hint ---------- */
@@ -678,6 +706,7 @@ function hitPile(x, y) {
 }
 
 function render(opts = {}) {
+  if (!S) return;
   layout();
   put(slotStock, bankX(0), L.top); put(slotWaste, bankX(1), L.top);
   const recycle = !S.stock.length && S.waste.length > 0;
@@ -765,7 +794,7 @@ function celebrate() {
     { duration: 500, delay: s * 120, iterations: 2, easing: 'ease-in-out' }));
   clearTimeout(winT);
   winT = setTimeout(() => isWon() && dialog('Bravo, vous avez gagné !', stats.won === 1 ? "C'est votre première victoire." : `C'est votre ${stats.won}e victoire.`,
-    [['Nouvelle partie', newGame, true], ['Retour aux jeux', () => { location.href = document.getElementById('home').href; }]], true), REDUCED ? 0 : 1500);
+    [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', () => { location.href = document.getElementById('home').href; }]], true), REDUCED ? 0 : 1500);
 }
 
 /* ---------- Dialog ---------- */
@@ -838,12 +867,7 @@ addEventListener('pointercancel', e => {
   if (d.started) { d.els.forEach(o => o.el.classList.remove('dragging')); render(); }
 });
 
-document.getElementById('newBtn').onclick = () => {
-  if (drag) return;
-  if (S.moves > 0 && !isWon()) dialog('Commencer une nouvelle partie ?', 'La partie en cours sera effacée.',
-    [['Continuer la partie', null, true], ['Nouvelle partie', newGame]]);
-  else newGame();
-};
+document.getElementById('newBtn').onclick = askNewGame;
 document.getElementById('undoBtn').onclick = doUndo;
 document.getElementById('hintBtn').onclick = showHint;
 document.getElementById('helpBtn').onclick = openHelp;
@@ -859,7 +883,7 @@ addEventListener('resize', () => {
 
 build();
 // The rules open by themselves the first time the game is opened.
-if (load()) { if (legacy) save(); setMsg(isWon() ? 'Bravo, vous avez gagné !' : HELLO); render({ instant: true }); autoStep(); } else { newGame(); openHelp(); }
+if (load()) { if (legacy) save(); setMsg(isWon() ? 'Bravo, vous avez gagné !' : HELLO); render({ instant: true }); autoStep(); } else { Kit.firstVisit(newGame); }
 </script>
 </body>
 </html>

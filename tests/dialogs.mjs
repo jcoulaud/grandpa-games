@@ -15,6 +15,8 @@ for (let n = 0; n < 3; n++) {
   await page.screenshot({ path: `${OUT}/a-rules-${n + 1}.png` });
   await page.click('#helpNext');
 }
+await page.getByRole('button', { name: 'Facile', exact: true }).click();
+await page.waitForTimeout(1800);
 ok(!(await g(() => dialogOpen())), '"J\'ai compris" closes the rules');
 
 // Labels under the stock and the waste
@@ -89,7 +91,8 @@ await page.waitForTimeout(300);
 ok(await g(() => dialogOpen() && document.getElementById('overTitle').textContent === 'Plus aucun coup possible'), 'stuck dialog shows');
 await page.screenshot({ path: `${OUT}/c-stuck.png` });
 ok(await g(() => document.activeElement.textContent) === 'Revenir en arrière', 'stuck dialog focuses Revenir en arrière');
-await page.click('text=Nouvelle partie >> nth=-1');
+await page.click('#overBtns button:text-is("Nouvelle partie")');
+await page.click('#overBtns button:text-is("Moyen")');
 await page.waitForTimeout(2000);
 ok(!(await g(() => dialogOpen())) && await g(() => S.moves) === 0, 'Nouvelle partie from the stuck dialog deals a new game');
 

@@ -48,6 +48,7 @@ await page.goto(gameUrl('freecell'));
 await page.waitForTimeout(2600);
 ok(await page.evaluate(() => help.classList.contains('on')), 'rules open on the first visit');
 await page.keyboard.press('Escape');
+await page.getByRole('button', { name: 'Facile', exact: true }).click();
 
 const g = fn => page.evaluate(fn);
 const L = await g(() => L);
@@ -64,6 +65,8 @@ const pilePt = d => g(`(() => { const d = ${JSON.stringify(d)};
   const [x, y] = d.a === 'cell' ? cellXY(d.i) : d.a === 'found' ? foundXY(d.i)
     : S.tab[d.i].length ? pos[last(S.tab[d.i])] : [colX(d.i), L.ty]; return [x + L.w/2, y + L.h/2]; })()`).then(at);
 await page.screenshot({ path: `${OUT}/freecell-1-start.png` });
+
+await page.waitForFunction(() => !busy);
 
 // A made-up position. found[s] lowest cards of suit s are home. The other cards not in tab go to
 // the last column. With full, they also fill the free cells and the empty columns 4 to 6.
@@ -220,6 +223,7 @@ await page.keyboard.press('Escape');
 const big = await browser.newPage({ viewport: { width: 1920, height: 1000 } });
 big.on('pageerror', e => errors.push(e.message));
 await big.goto(gameUrl('freecell')); await big.waitForTimeout(2600); await big.keyboard.press('Escape');
+await big.getByRole('button', { name: 'Facile', exact: true }).click();
 console.log('     1920x1000 card: ' + JSON.stringify(await big.evaluate(() => [L.w, L.h])));
 await big.screenshot({ path: `${OUT}/freecell-5-1920x1000.png` });
 

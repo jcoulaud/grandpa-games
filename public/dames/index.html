@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dames · Jeux de Papi</title>
-<meta name="description" content="Le jeu de dames en grand, pour les grands-parents : le damier de 100 cases et les vraies règles, contre l'ordinateur, en facile, moyen ou fort. Gratuit, sans publicité, sans compte.">
+<meta name="description" content="Le jeu de dames en grand, pour les grands-parents : le damier de 100 cases et les vraies règles, contre l'ordinateur, en facile, moyen ou difficile. Gratuit, sans publicité, sans compte.">
 <link rel="canonical" href="https://jeux-papi.fr/dames/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Jeux de Papi">
@@ -24,8 +24,6 @@
     --felt-top: #7E2F38; --felt: #4C161E; --shade: 38,10,14; --accent: #8E2F3B;
     --s: 56px; --f: 10px; --t: 22px;
   }
-  button.game:hover { background: #A33A47; }
-  button.game:active { background: #76252F; }
   #title svg { width: 32px; height: 32px; }
 
   #table { position: relative; overflow: hidden; }
@@ -223,7 +221,7 @@
     <h3>Partie nulle</h3>
     <p>La partie est nulle si la même position revient trois fois. Elle est nulle aussi après 25 coups de dame chacun sans prise ni coup de pion, ou si une fin de partie avec très peu de pièces dure trop longtemps. Dans ces deux cas, le jeu compte les coups qui restent.</p>
     <h3>Les boutons</h3>
-    <p>« Quel coup jouer ? » montre un bon coup. « Annuler le dernier coup » reprend votre coup et la réponse de l'ordinateur. « Nouvelle partie » vous fait choisir la force de l'ordinateur. La partie est enregistrée à chaque coup.</p>
+    <p>« Quel coup jouer ? » montre un bon coup. « Annuler le dernier coup » reprend votre coup et la réponse de l'ordinateur. « Nouvelle partie » vous permet de choisir le niveau. La partie est enregistrée à chaque coup.</p>
   </section>
 </div>
 
@@ -242,9 +240,9 @@ const CROWN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 8.5l4.2
 // The levels of the computer. Facile searches two plies and sometimes picks a weaker move, but never
 // one that loses much more. Moyen and Fort search deeper. The hint always plays its best.
 const LEVELS = {
-  facile: { name: 'Facile', opts: { time: 150, depth: 2, spread: 90, chance: 0.4 } },
-  moyen: { name: 'Moyen', opts: { time: 600, depth: 6 } },
-  fort: { name: 'Fort', opts: { time: 1500 } },
+  facile: { time: 150, depth: 2, spread: 90, chance: 0.4 },
+  moyen: { time: 600, depth: 6 },
+  fort: { time: 1500 },
 };
 const HINT = { time: 1000 };
 
@@ -282,7 +280,7 @@ function load() {
     const v = GG.load('dames');
     if (!v || !v.G || !Array.isArray(v.G.b) || v.G.b.length !== 51) return false;
     G = v.G; last = v.last || null; undo = v.undo || []; stats = v.stats || stats;
-    level = LEVELS[v.level] ? v.level : 'facile'; wonNow = !!v.wonNow; started = v.started !== false;
+    level = Object.hasOwn(LEVELS, v.level) ? v.level : 'facile'; wonNow = !!v.wonNow; started = v.started !== false;
     // A capture he had begun: keep it if its landings still lead to a legal move.
     if (v.sel && G.turn === WHITE && !G.result && routesFrom(v.sel.from, v.sel.path).length) sel = v.sel;
     return true;
@@ -442,7 +440,7 @@ function computerTurn() {
   const my = ++gen, t0 = Date.now();
   render();
   say("L'ordinateur réfléchit…");
-  ask(G, LEVELS[level].opts).then(best => {
+  ask(G, LEVELS[level]).then(best => {
     if (my !== gen || !best) return;
     later(() => { if (my === gen) computerPlays(best.move); }, Math.max(0, THINK_MS - (Date.now() - t0)));
   });
@@ -548,15 +546,12 @@ function showHint() {
 }
 
 function askNewGame() {
-  const playing = started && !G.result;
-  const pick = k => () => newGame(k);
-  const btns = Object.keys(LEVELS).map(k => [LEVELS[k].name, pick(k), k === level]);
-  if (playing) btns.push(['Continuer la partie', null]);
-  Kit.dialog('Nouvelle partie', (playing ? 'La partie en cours sera effacée. ' : '') + "Choisissez la force de l'ordinateur.", btns);
+  Kit.chooseLevel(level, started && !G.result, newGame);
 }
 function newGame(lv) {
   cancelAll();
   if (lv) level = lv;
+  Kit.showLevel(level);
   G = freshGame(); last = null; undo = []; sel = null; hint = null; wonNow = false; started = false; phase = 'player';
   GG.track('dames', 'start');
   save();
@@ -621,6 +616,7 @@ const xy = n => [colOf(n) * S, rowOf(n) * S];
 // opts.shown: the board to draw (the one before a move being shown); opts.moving and opts.at: the piece
 // that travels and where it is; opts.taken: the pieces crossed out so far.
 function render(opts = {}) {
+  if (!G) return;
   layout();
   const b = opts.shown ? opts.shown.b : G.b;
   const mine = phase === 'player' && !opts.shown ? legal() : [];
@@ -673,7 +669,7 @@ function render(opts = {}) {
   const left = s => { let p = 0; for (let n = 1; n <= 50; n++) if (Math.sign(b[n]) === s) p++; return p; };
   tray('trayB', 'tookB', 20 - left(WHITE), 'w', n => n ? `Il vous a pris ${plural(n, 'pièce', 'pièces')}.` : 'Il ne vous a rien pris.');
   tray('trayW', 'tookW', 20 - left(BLACK), 'b', n => n ? `Vous avez pris ${plural(n, 'pièce', 'pièces')}.` : 'Vous n\'avez rien pris.');
-  $('levelB').textContent = 'Niveau ' + LEVELS[level].name.toLowerCase();
+  $('levelB').textContent = 'Niveau ' + Kit.levelNames[level].toLowerCase();
   $('whoB').classList.toggle('turn', phase === 'thinking' || phase === 'anim');
   $('whoW').classList.toggle('turn', phase === 'player' && !G.result);
   $('drawNote').textContent = drawNote();
@@ -781,12 +777,12 @@ addEventListener('resize', () => { if (drag && drag.started) drag = null; render
 build();
 // The rules open by themselves the first time the game is opened.
 if (load()) {
+  Kit.showLevel(level);
   if (G.result) finish(false);
   else if (G.turn === BLACK) computerTurn();
   else { say(sel ? chosenMessage() : turnMessage()); render(); }
 } else {
-  newGame('facile');
-  Kit.openHelp();
+  Kit.firstVisit(newGame);
 }
 </script>
 </body>
