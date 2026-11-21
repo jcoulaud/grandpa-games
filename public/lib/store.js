@@ -21,8 +21,21 @@
   // Ask Edge not to clear this site's data when the disk is full.
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
   // The offline copy (sw.js sits next to the library page, one folder up from this file).
+  // On the library page, a new version starts as soon as it is downloaded, and the page reloads with it.
   if (API && 'serviceWorker' in navigator) {
-    navigator.serviceWorker.register(new URL('../sw.js', SRC)).catch(() => {});
+    const sw = navigator.serviceWorker;
+    const home = location.pathname === new URL('../', SRC).pathname;
+    const updating = !!sw.controller;
+    sw.register(new URL('../sw.js', SRC)).then(reg => {
+      if (!home) return;
+      const start = w => { if (w && w.state === 'installed') w.postMessage('start'); };
+      start(reg.waiting);
+      reg.addEventListener('updatefound', () => {
+        const w = reg.installing;
+        w.addEventListener('statechange', () => start(w));
+      });
+      sw.addEventListener('controllerchange', () => { if (updating) location.reload(); });
+    }).catch(() => {});
   }
 
   // The online backup is gone: drop what it kept on the PC, to free the space for the games.
