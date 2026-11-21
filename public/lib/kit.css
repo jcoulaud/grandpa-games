@@ -49,6 +49,8 @@ button:disabled, button:disabled:hover { background: transparent; color: #8C9692
 button.primary { background: var(--gold); color: #1F1A00; border-color: #C9951A; box-shadow: 0 3px 0 #C9951A; }
 button.primary:hover { background: #FFD666; }
 button.primary:active { background: #F2BB2E; }
+/* A yellow button with nothing to do yet looks idle too, so yellow always means "press me". */
+button.primary:disabled, button.primary:disabled:hover { background: transparent; color: #8C9692; border: 2px dashed #C9D1CE; box-shadow: none; transform: none; }
 /* Win count: a chip at the right of the message line. */
 #wins { flex: none; height: 46px; padding: 0 18px; display: flex; align-items: center; gap: 10px;
   background: #fff; color: var(--text); font: 600 21px var(--ui); white-space: nowrap;

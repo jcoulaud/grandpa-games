@@ -74,9 +74,36 @@
   #seat1 .backs, #seat3 .backs { grid-column: 1 / -1; justify-self: center; }
   #seat2 { grid-template-columns: auto auto auto; min-width: 390px; }
   #seat1, #seat3 { min-width: 270px; }
-  /* His own points, top left, when the window is too narrow for the score column. */
-  #seat0 { padding: 10px 16px 10px 10px; }
-  #seat0 .ava { width: 44px; height: 44px; font-size: 22px; }
+  /* His own seat: a strip above the left end of his hand. Lilac, like the others, when it is his turn. */
+  #seat0 { display: flex; align-items: center; gap: 12px; padding: 6px 18px 6px 6px; border-radius: 16px; z-index: 25; }
+  #seat0 .ava { width: 40px; height: 40px; font-size: 20px; }
+  #seat0 b { display: inline; font-size: 22px; }
+  #seat0 .pts { margin: 0; }
+  #seat0.turn .now { display: inline-flex; font-size: 20px; }
+  /* Without the score column, his total stays in view on his turn too. */
+  #seat0.turn.narrow .pts { display: inline-flex; }
+  /* The dialog at the end of the game: one fact per line. */
+  #overText { white-space: pre-line; }
+  /* Who took the queen of spades: a small card by that player's name. */
+  .qs { display: inline-flex; align-items: center; gap: 1px; margin-left: 8px; padding: 0 6px; border-radius: 6px; vertical-align: 3px;
+    background: #fff; color: var(--ink); border: 1.5px solid var(--ink); font: 700 17px/1.35 var(--ui); }
+  .qs svg { width: 15px; height: 15px; fill: var(--ink); }
+  /* His place in the trick, while he has to play: a dashed lilac card with "À vous". */
+  #mySlot { position: absolute; z-index: 8; display: none; place-items: center; width: var(--w); height: var(--h);
+    border-radius: calc(var(--w) * .09); border: 4px dashed #B98AE0; background: rgba(185,138,224,.16);
+    color: #fff; font: 700 22px/1.2 var(--ui); text-align: center; }
+  #mySlot.on { display: grid; }
+  /* Why a card is refused, said just above the card. */
+  #bubble { position: absolute; z-index: 400; max-width: 380px; padding: 12px 18px; border-radius: 16px; display: none;
+    background: #fff; color: var(--text); border: 3px solid #B98AE0; font: 600 21px/1.3 var(--ui); box-shadow: 0 8px 24px rgba(0,0,0,.4); pointer-events: none; }
+  #bubble.on { display: block; }
+  #bubble::after { content: ""; position: absolute; left: var(--tip, 50%); bottom: -11px; width: 18px; height: 18px; margin-left: -9px;
+    background: #fff; border: 3px solid #B98AE0; border-top: 0; border-left: 0; transform: rotate(45deg); }
+  #msg.flash { animation: flash 1s; }
+  @keyframes flash { 25% { background: #FFD666; } }
+  /* The first card of a trick sets the suit to follow: a small "1er" tag on it. */
+  .card .first { position: absolute; right: calc(var(--w) * .06); top: calc(var(--h) * -.13); z-index: 3; padding: 1px 9px; border-radius: 9px;
+    background: #6A3F8C; color: #fff; font: 700 17px/1.3 var(--ui); box-shadow: 0 2px 6px rgba(0,0,0,.3); }
   .seat .pts, .seat .now { white-space: nowrap; }
   .backs i { position: absolute; top: 0; width: 26px; height: 36px; border-radius: 4px; border: 1px solid #0B1D33;
     background: repeating-linear-gradient(45deg, rgba(255,210,74,.35) 0 1px, transparent 1px 6px), repeating-linear-gradient(-45deg, rgba(255,210,74,.35) 0 1px, transparent 1px 6px), var(--back);
@@ -120,9 +147,15 @@
   #scores tr.me td { color: #1B2422; }
   #scores .who { display: flex; align-items: center; gap: 8px; }
   #scores .dot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+  #state { margin: 10px 0 0; display: grid; gap: 4px; font: 600 19px/1.3 var(--ui); color: #3A4542; }
+  #state span { display: flex; align-items: center; gap: 8px; }
+  #state svg { width: 18px; height: 18px; flex: none; }
+  /* The score sheet hides while the dialog of the end of the game is open. */
+  body:has(#over.on) #scoreSheet { visibility: hidden; }
   #scores .goal { margin: 10px 0 0; font: 500 19px/1.35 var(--ui); color: #55605C; }
   #lastCards { display: flex; gap: 8px; }
-  .mini { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .mini { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .mini em { position: absolute; top: -9px; left: -5px; padding: 0 6px; border-radius: 8px; background: #6A3F8C; color: #fff; font: 700 15px/1.3 var(--ui); font-style: normal; }
   .mini .f { width: 100%; height: 56px; border-radius: 9px; background: #fff; border: 1px solid #C9C1AE; display: flex; align-items: center;
     justify-content: center; gap: 2px; font: 700 25px var(--ui); letter-spacing: -.04em; }
   .mini .f.red { color: var(--red); } .mini .f.black { color: var(--ink); }
@@ -148,7 +181,7 @@
 <div id="bar">
   <div id="title"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="3" fill="#FFFDF6" stroke="#6A3F8C" stroke-width="1.4"/><path transform="translate(6.5 6) scale(.11)" fill="#14171A" d="M50 5C62 26 95 40 95 61c0 12-10 20-21 20-8 0-15-4-19-11 1 11 6 20 13 26H32c7-6 12-15 13-26-4 7-11 11-19 11C15 81 5 73 5 61 5 40 38 26 50 5z"/></svg>Dame de pique</div>
   <button id="undoBtn" data-icon="undo" title="Reprend votre dernière carte et celles jouées après"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span></button>
-  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre une bonne carte à jouer maintenant"><span class="long">Quelle carte jouer ?</span><span class="short">Aide</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre une bonne carte à jouer maintenant"><span class="long">Quelle carte jouer ?</span><span class="short">Quelle carte ?</span></button>
   <span class="spacer"></span>
   <button id="helpBtn" data-icon="help">Règles</button>
   <button id="newBtn" class="game">Nouvelle partie</button>
@@ -156,6 +189,8 @@
 <div id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div></div>
 <div id="table">
   <div id="mid"></div>
+  <div id="mySlot">À vous</div>
+  <div id="bubble" role="status"></div>
   <div class="seat" id="seat0"></div>
   <div class="seat" id="seat1"></div>
   <div class="seat" id="seat2"></div>
@@ -172,7 +207,7 @@
     <button id="nextBtn" class="primary"></button>
   </div>
   <aside id="side">
-    <div class="box" id="scores"><h3>Les points</h3><table id="scoreSide"></table><p class="goal">La partie s'arrête quand un joueur atteint 100 points. Le moins de points gagne.</p></div>
+    <div class="box" id="scores"><h3>Les points</h3><table id="scoreSide"></table><p id="state"></p><p class="goal">La partie s'arrête quand un joueur atteint 100 points. Le moins de points gagne.</p></div>
     <div class="box" id="lastBox"><h3>Le dernier pli</h3><div id="lastCards"></div><p id="lastText"></p></div>
   </aside>
 </div>
@@ -184,7 +219,7 @@
       <div class="pair"><span class="tag" style="color:#C4122F"><svg viewBox="0 0 100 100" fill="#C4122F"><use href="#su1"/></svg></span><span class="tag">D<svg viewBox="0 0 100 100" fill="#14171A"><use href="#su0"/></svg></span></div>
       <p>Chaque cœur que vous ramassez vaut 1 point. La dame de pique vaut 13 points. Il faut en prendre le moins possible.</p>
     </div>
-    <p>La partie s'arrête quand un joueur atteint 100 points. Celui qui a le moins de points gagne.</p>
+    <p>La partie s'arrête quand un joueur atteint 100 points. Celui qui a le moins de points gagne. S'ils sont plusieurs à égalité, ils partagent la victoire.</p>
   </section>
   <section class="page">
     <h3>Donner trois cartes</h3>
@@ -235,6 +270,8 @@ const PLAYERS = [
 const TO = { 1: 'à Jeanne, à votre gauche', 2: 'à Paul, en face de vous', 3: 'à Louise, à votre droite' };
 const ARROWS = { 1: '<path d="M19 12H5M11 6l-6 6 6 6"/>', 2: '<path d="M12 19V5M6 11l6-6 6 6"/>', 3: '<path d="M5 12h14M13 6l6 6-6 6"/>' };
 const HEART = '<svg viewBox="0 0 100 100" aria-hidden="true"><use href="#su1"/></svg>';
+const SPADE = '<svg viewBox="0 0 100 100" aria-hidden="true"><use href="#su0"/></svg>';
+const QS_CHIP = `<span class="qs" title="A pris la dame de pique">D${SPADE}</span>`;
 
 /* ---------- State ----------
    G: the game (see engine.js). picks: the cards he chose to pass. got: the cards he received, tagged
@@ -252,6 +289,13 @@ addEventListener('gg-stale', () => { stale = true; cancelAll(); render(); });
 
 const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
 const ptsText = n => n === 0 ? 'aucun point' : plural(n, 'point', 'points');
+// "Paul", "Paul et Louise", "Vous et Paul": the players named, he first.
+const names = seats => {
+  const n = seats.map(s => PLAYERS[s].name);
+  return n.length > 1 ? n.slice(0, -1).join(', ') + ' et ' + n[n.length - 1] : n[0];
+};
+// The verb after names(): "avez" with him, "ont" for several, "a" for one.
+const verb = (seats, one, many, you) => seats.includes(0) ? you : seats.length > 1 ? many : one;
 const listNames = cards => {
   const names = cards.map(cardName);
   return names.length > 1 ? names.slice(0, -1).join(', ') + ' et ' + names[names.length - 1] : names[0] || '';
@@ -319,24 +363,45 @@ function turnMessage() {
 }
 const say = Kit.say;
 
+// A refused click: the card shakes, the reason shows in a bubble just above it for 3 s, and the
+// message line says it too, with a short flash, so he sees that his click was heard.
+let bubbleT = 0;
+function refuse(c, text) {
+  shake(c);
+  say(text);
+  const m = $('msg'); m.classList.remove('flash'); void m.offsetWidth; m.classList.add('flash');
+  const card = els.get(c), b = $('bubble');
+  if (!card || !L) return;
+  b.textContent = text;
+  b.classList.add('on');
+  // The middle of the part of the card that shows: all of it for the last card of the hand.
+  const hand = G.hands[0], shows = hand.indexOf(c) === hand.length - 1 ? L.w : L.stepX;
+  const x = card.offsetLeft + shows / 2;
+  const left = Math.max(8, Math.min(x - b.offsetWidth / 2, L.W - b.offsetWidth - 8));
+  b.style.left = left + 'px';
+  b.style.top = Math.max(8, card.offsetTop - b.offsetHeight - 22) + 'px';
+  b.style.setProperty('--tip', Math.max(20, Math.min(b.offsetWidth - 20, x - left)) + 'px');
+  clearTimeout(bubbleT);
+  bubbleT = setTimeout(hideBubble, 3000);
+}
+function hideBubble() { clearTimeout(bubbleT); $('bubble').classList.remove('on'); }
+
 /* ---------- His cards ---------- */
 function tapCard(c) {
   if (stale) return;
-  if (busy || (G.phase === 'play' && G.turn !== 0)) return say('Attendez un instant : les autres joueurs posent leurs cartes.');
+  hideBubble();
+  if (busy || (G.phase === 'play' && G.turn !== 0)) return refuse(c, 'Attendez un instant : les autres joueurs posent leurs cartes.');
   if (G.phase === 'pass') {
     hint = [];
     if (picks.includes(c)) picks = picks.filter(x => x !== c);
     else if (picks.length < 3) picks.push(c);
-    else { shake(c); say('Vous avez déjà choisi 3 cartes : cliquez sur une carte levée pour la reprendre.'); return; }
+    else return refuse(c, 'Vous avez déjà choisi 3 cartes : cliquez sur une carte entourée de jaune pour la reprendre.');
     say(turnMessage()); render(); save();
     return;
   }
   if (G.phase !== 'play') return;
   const why = refusal(G, c);
-  if (why) {
-    shake(c);
-    return say(why === 'suit' ? `Vous avez du ${SUIT_NAMES[suit(G.trick[0])]} : vous devez en poser un.` : REFUSE[why]);
-  }
+  if (why) return refuse(c, why === 'suit' ? `Vous avez du ${SUIT_NAMES[suit(G.trick[0])]} : vous devez en poser un.` : REFUSE[why]);
   // A step still waiting (after a trick, a pass or a deal) must not start a second round of turns.
   cancelAll();
   undo.push(JSON.stringify({ G, got }));
@@ -414,15 +479,22 @@ function handOver(fresh) {
   render();
   const lowest = Math.min(...G.scores);
   if (G.phase === 'over') {
-    const won = G.result.winner === 0;
-    say(won ? 'Bravo, vous avez gagné la partie !' : `${PLAYERS[G.result.winner].name} a gagné la partie.`);
+    const ws = G.result.winners, won = ws.includes(0), mates = ws.filter(s => s !== 0);
+    say(won ? (mates.length ? `Bravo, vous partagez la victoire avec ${names(mates)} !` : 'Bravo, vous avez gagné la partie !')
+      : `${names(ws)} ${verb(ws, 'a', 'ont')} gagné la partie.`);
     if (!fresh) return;
     const games = ['Retour aux jeux', () => { location.href = $('home').href; }];
+    // Why the game ended, and the four totals.
+    const reached = [0, 1, 2, 3].filter(s => G.scores[s] >= 100);
+    const why = `${names(reached)} ${verb(reached, 'a', 'ont', 'avez')} atteint 100 points : la partie est finie.\n`;
+    const totals = '\nLes points : ' + [0, 1, 2, 3].map(s => `${PLAYERS[s].name} ${G.scores[s]}`).join(', ') + '.';
     // He may already have opened "Nouvelle partie" from the score sheet: then no result dialog over it.
-    if (won) later(() => Kit.isOpen() || Kit.dialog('Bravo, vous avez gagné !', `Vous finissez avec ${ptsText(G.scores[0])}, le moins de tous.` +
-      (!wonNow ? '' : stats.won === 1 ? " C'est votre première victoire." : ` C'est votre ${stats.won}e victoire.`),
+    if (won) later(() => Kit.isOpen() || Kit.dialog(mates.length ? 'Bravo, vous partagez la victoire !' : 'Bravo, vous avez gagné !',
+      `${why} Vous finissez avec ${ptsText(G.scores[0])}, ${mates.length ? `à égalité avec ${names(mates)}` : 'le moins de tous'}.` + totals +
+      (!wonNow ? '' : stats.won === 1 ? "\nC'est votre première victoire." : `\nC'est votre ${stats.won}e victoire.`),
       [['Nouvelle partie', askNewGame, true], games], true), REDUCED ? 0 : 700);
-    else later(() => Kit.isOpen() || Kit.dialog(`${PLAYERS[G.result.winner].name} a gagné`, `${PLAYERS[G.result.winner].name} finit avec ${ptsText(lowest)}, et vous avec ${ptsText(G.scores[0])}.`,
+    else later(() => Kit.isOpen() || Kit.dialog(`${names(ws)} ${verb(ws, 'a', 'ont')} gagné`,
+      `${why} ${names(ws)} ${verb(ws, 'finit', 'finissent')} avec ${ptsText(lowest)}, et vous avec ${ptsText(G.scores[0])}.` + totals,
       [['Nouvelle partie', askNewGame, true], games]), REDUCED ? 0 : 500);
     return;
   }
@@ -558,25 +630,25 @@ function render() {
     const e = $('seat' + s), p = PLAYERS[s], n = G.hands[s].length;
     const backs = Array.from({ length: n }, (_, i) => `<i style="left:${i * 7}px"></i>`).join('');
     e.innerHTML = `<div class="ava" style="background:${p.color}">${p.name[0]}</div>
-      <div><b>${p.name}</b><span class="where">${cap(p.where)}</span>
+      <div><b>${p.name}${G.qsTo === s ? QS_CHIP : ''}</b>${s === 2 ? '' : `<span class="where">${cap(p.where)}</span>`}
       <span class="pts">${HEART}${ptsText(G.pts[s])} pris${L.sideW ? '' : ` · total ${G.scores[s]}`}</span>
       <span class="now"><span class="dots"><i></i><i></i><i></i></span>${p.name} joue</span></div>
       <div class="backs" style="width:${n ? 26 + (n - 1) * 7 : 0}px">${backs}</div>`;
     e.classList.toggle('turn', turnSeat === s || (busy && !shown && G.phase === 'play' && G.turn === s));
   }
-  const s0 = $('seat0');
-  s0.style.display = L.sideW ? 'none' : '';
-  if (!L.sideW) {
-    s0.innerHTML = `<div class="ava" style="background:${PLAYERS[0].color}">V</div>
-      <div><b>Vous</b><span class="where">Total : ${G.scores[0]}</span><span class="pts">${HEART}${ptsText(G.pts[0])} pris</span></div>`;
-    s0.style.left = pad + 'px'; s0.style.top = '10px';
-  }
   const s1 = $('seat1'), s2 = $('seat2'), s3 = $('seat3');
-  s2.style.left = Math.round(Math.max(cx - s2.offsetWidth / 2, L.sideW ? 0 : s0.offsetLeft + s0.offsetWidth + 12)) + 'px'; s2.style.top = '10px';
+  s2.style.left = Math.round(Math.max(pad, cx - s2.offsetWidth / 2)) + 'px'; s2.style.top = '10px';
   // The side seats sit close to the trick, or at the edge when the window is narrow.
   const near = w * 1.62 + Math.max(24, w * .3);
   s1.style.left = Math.round(Math.max(pad, cx - near - s1.offsetWidth)) + 'px'; s1.style.top = Math.round(cy - s1.offsetHeight / 2) + 'px';
   s3.style.left = Math.round(Math.min(pad + PW - s3.offsetWidth, cx + near)) + 'px'; s3.style.top = Math.round(cy - s3.offsetHeight / 2) + 'px';
+  // His own seat, above the left end of his hand: his points, his total when the score column is
+  // hidden, and "À vous de jouer" on his turn.
+  const s0 = $('seat0');
+  s0.innerHTML = `<div class="ava" style="background:${PLAYERS[0].color}">V</div><b>Vous${G.qsTo === 0 ? QS_CHIP : ''}</b>
+    <span class="pts">${HEART}${ptsText(G.pts[0])} pris${L.sideW ? '' : ` · total ${G.scores[0]}`}</span><span class="now">À vous de jouer</span>`;
+  s0.classList.toggle('turn', playing);
+  s0.classList.toggle('narrow', !L.sideW);
   const mid = $('mid'), md = Math.round(w * 3.6);
   mid.style.left = cx - md / 2 + 'px'; mid.style.top = cy - md / 2 + 'px'; mid.style.width = mid.style.height = md + 'px';
 
@@ -586,6 +658,15 @@ function render() {
   const n = hand.length;
   const stepX = n > 1 ? Math.min(w * .64, (PW - w) / (n - 1)) : 0;
   const x0 = cx - (w + stepX * (n - 1)) / 2;
+  L.stepX = stepX;
+  s0.style.left = Math.round(Math.max(pad, n ? x0 : cx - s0.offsetWidth / 2)) + 'px';
+  s0.style.top = Math.round(handTop - s0.offsetHeight - 10) + 'px';
+  // Jeanne and Louise stay clear of his seat, in a low window.
+  for (const e of [s1, s3]) e.style.top = Math.round(Math.max(pad, Math.min(parseFloat(e.style.top), s0.offsetTop - e.offsetHeight - 8))) + 'px';
+  // His place in the trick waits for his card.
+  const slot = $('mySlot'), [sx, sy] = trickXY(0);
+  slot.classList.toggle('on', playing);
+  slot.style.left = sx + 'px'; slot.style.top = sy + 'px';
   hand.forEach((c, i) => {
     const e = cardEl(c); live.add(c);
     e.className = 'card hand ' + (rd(c) ? 'red' : 'black');
@@ -614,6 +695,7 @@ function render() {
     }
     e.className = 'card trick ' + (rd(c) ? 'red' : 'black');
     e.removeAttribute('role'); e.tabIndex = -1;
+    if (i === 0 && !e.querySelector('.first')) e.insertAdjacentHTML('beforeend', '<span class="first">1er</span>');
     let [x, y] = trickXY(seat);
     if (shown && shown.away) { [x, y] = seatXY(shown.winner); e.classList.add('away'); }
     else if (shown && seat === shown.winner) e.classList.add('won');
@@ -629,7 +711,7 @@ function render() {
     const to = passTarget(G, 0);
     $('passArrow').innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${ARROWS[{ 1: 1, 2: 2, 3: 3 }[to]]}</svg>`;
     $('passTitle').textContent = `Donnez 3 cartes ${TO[to]}`;
-    $('passText').textContent = picks.length === 3 ? 'Les 3 cartes levées partiront.' : `Cliquez sur ${plural(3 - picks.length, 'carte', 'cartes')} de votre jeu.`;
+    $('passText').textContent = picks.length === 3 ? 'Les 3 cartes entourées de jaune partiront.' : `Cliquez sur ${plural(3 - picks.length, 'carte', 'cartes')} de votre jeu.`;
     const b = $('passBtn');
     b.textContent = picks.length === 3 ? `Donner ces 3 cartes à ${PLAYERS[to].name}` : `Encore ${plural(3 - picks.length, 'carte', 'cartes')} à choisir`;
     b.disabled = picks.length !== 3 || stale;
@@ -645,11 +727,10 @@ function render() {
   if (ended) {
     const over = G.phase === 'over', low = Math.min(...G.scores);
     $('scoreTitle').textContent = over ? 'Fin de la partie' : `Fin de la manche ${G.handNo + 1}`;
-    const tie = !over && Math.max(...G.scores) >= 100;
     $('scoreNote').textContent = G.moon === 0 ? 'Grand chelem ! Vous avez pris tous les points : les autres marquent 26 chacun.'
       : G.moon !== null ? `${PLAYERS[G.moon].name} a pris tous les points : ${PLAYERS[G.moon].pro} marque 0, et chacun des autres 26.`
-      : tie ? "Un joueur a atteint 100 points, mais deux joueurs ont le moins de points : on joue une manche de plus."
-      : over ? (G.result.winner === 0 ? 'Vous avez le moins de points : vous gagnez !' : `${PLAYERS[G.result.winner].name} a le moins de points.`)
+      : over ? (G.result.winners.includes(0) ? (G.result.winners.length > 1 ? `Vous partagez la victoire avec ${names(G.result.winners.filter(s => s))}.` : 'Vous avez le moins de points : vous gagnez !')
+        : `${names(G.result.winners)} ${verb(G.result.winners, 'a', 'ont')} le moins de points.`)
       : '';
     $('scoreTable').innerHTML = '<tr><th></th><th>Cette manche</th><th>Total</th></tr>' + [0, 1, 2, 3].map(s =>
       `<tr class="${s === 0 ? 'me' : ''} ${G.scores[s] === low ? 'best' : ''}"><td>${PLAYERS[s].name}</td><td class="n">+${G.handPts[s]}</td><td class="n"><b>${G.scores[s]}</b></td></tr>`).join('');
@@ -667,12 +748,16 @@ function render() {
     $('scoreSide').innerHTML = '<tr><th></th><th>Manche</th><th>Total</th></tr>' + [0, 1, 2, 3].map(s =>
       `<tr class="${s === 0 ? 'me' : ''}"><td><span class="who"><span class="dot" style="background:${PLAYERS[s].color}"></span>${PLAYERS[s].name}</span></td>
        <td class="n">${G.phase === 'done' || G.phase === 'over' ? '+' + G.handPts[s] : G.pts[s]}</td><td class="n"><b>${G.scores[s]}</b></td></tr>`).join('');
-    const last = G.phase === 'play' || G.phase === 'done' || G.phase === 'over' ? G.last : null;
+    // Where the queen of spades is, and whether hearts may lead.
+    const inPlay = G.phase === 'play' || G.phase === 'done' || G.phase === 'over';
+    $('state').innerHTML = inPlay ? `<span>${SPADE}La dame de pique : ${G.qsTo === null || G.qsTo === undefined ? 'pas encore jouée'
+      : G.qsTo === 0 ? 'chez vous' : 'chez ' + PLAYERS[G.qsTo].name}</span><span>${HEART}Les cœurs : ${G.broken ? 'ouverts' : 'pas encore ouverts'}</span>` : '';
+    const last = inPlay ? G.last : null;
     $('lastBox').style.display = last && !(shown && !shown.away) ? '' : 'none';
     if (last) {
       $('lastCards').innerHTML = last.cards.map((c, i) => {
         const seat = (last.leader + i) % 4;
-        return `<div class="mini${seat === last.winner ? ' won' : ''}"><div class="f ${rd(c) ? 'red' : 'black'}">${RANKS[c % 13 + 1]}${suitHtml(suit(c))}</div><span>${PLAYERS[seat].name}</span></div>`;
+        return `<div class="mini${seat === last.winner ? ' won' : ''}">${i === 0 ? '<em>1er</em>' : ''}<div class="f ${rd(c) ? 'red' : 'black'}">${RANKS[c % 13 + 1]}${suitHtml(suit(c))}</div><span>${PLAYERS[seat].name}</span></div>`;
       }).join('');
       $('lastText').textContent = (last.winner === 0 ? 'Vous l\'avez ramassé' : `${PLAYERS[last.winner].name} l'a ramassé`) + ` : ${ptsText(last.pts)}.`;
     }

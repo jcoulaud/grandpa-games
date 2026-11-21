@@ -87,17 +87,32 @@ await page.screenshot({ path: `${OUT}/ddp-received.png` });
 
 // 4. His turn: a refused card says why; a legal card is played; the others answer.
 await myTurn();
+ok(await g(() => document.getElementById('mySlot').classList.contains('on') && document.getElementById('seat0').classList.contains('turn')
+  && document.getElementById('seat0').textContent.includes('À vous de jouer')), 'his turn shows on the table: his place in the trick and his seat');
+ok(await g(() => { const v = document.getElementById('seat0').getBoundingClientRect(), c = document.querySelector('.card.hand').getBoundingClientRect(); return v.bottom <= c.top && v.left >= c.left - 1; }),
+  'his seat sits above the left end of his hand');
 const bad = await g(() => G.hands[0].find(c => DDP.refusal(G, c)));
 if (bad !== undefined) {
   await clickCard(bad);
   ok(await g(c => G.hands[0].includes(c), bad) && /2 de trèfle|devez|premier pli|cœur/.test(await msg()), 'a card that cannot be played stays, and the line says why: ' + await msg());
+  ok(await g(c => {
+    const b = document.getElementById('bubble'), r = b.getBoundingClientRect(), k = document.querySelector(`.card.hand[data-c="${c}"]`).getBoundingClientRect();
+    return b.classList.contains('on') && b.textContent === document.getElementById('msg').textContent && r.bottom <= k.top && r.right > k.left && r.left < k.left + k.width;
+  }, bad), 'the reason also shows in a bubble just above the card');
+  await page.screenshot({ path: `${OUT}/ddp-refused.png` });
+  await wait(3100);
+  ok(!(await g(() => document.getElementById('bubble').classList.contains('on'))), 'the bubble goes after 3 seconds');
 }
 ok(await g(() => document.querySelectorAll('.card.hand.no').length === G.hands[0].filter(c => DDP.refusal(G, c)).length), 'the cards that cannot be played are darker');
 const before = await g(() => G.log.length);
 const good = await g(() => DDP.legal(G)[0]);
 await clickCard(good);
 ok(await g(([c, n]) => !G.hands[0].includes(c) && G.log.length > n, [good, before]), 'a legal card is played with one click');
+ok(!(await g(() => document.getElementById('mySlot').classList.contains('on'))), 'his place in the trick is no longer marked once he has played');
+ok(await g(() => { const f = document.querySelectorAll('.card.trick .first'); return f.length === 1 && f[0].parentElement.dataset.c == (shown || { cards: G.trick }).cards[0]; }), 'the first card of the trick has a "1er" tag');
 ok((await g(() => document.querySelectorAll('.card.hand .got').length)) === 0, 'the "Reçue" tags go once he plays');
+
+ok(await g(() => { const b = document.getElementById('hintBtn'); return b.disabled && getComputedStyle(b).backgroundColor === 'rgba(0, 0, 0, 0)'; }), 'the hint button looks idle while the others play');
 
 // 5. During the others' turn, a click on his cards does nothing but answer.
 await g(() => { cancelAll(); G.turn = 2; G.trick = G.trick.length ? G.trick : []; render(); });
@@ -161,6 +176,15 @@ await myTurn();
 await page.mouse.click(...await g(c => { const b = document.querySelector(`.card.hand[data-c="${c}"]`).getBoundingClientRect(); return [b.left + 12, b.top + 14]; }, card('2C')));
 ok(await g(() => timers.length === 1 && G.log.length === 49), 'a quick lead after a trick starts only one round of turns');
 
+// The queen of spades and the hearts: who took her, and whether hearts are open.
+await setHand(['2S 3D', 'QS 4D', 'AS 5D', '3S 6D'], { broken: false, pts: [0, 0, 0, 0] });
+await clickCard(card('2S'));
+for (let i = 0; i < 60 && !(await g(() => G.tricks === 12 && !busy)); i++) await wait(100);
+ok(await g(() => document.getElementById('seat2').querySelector('.qs') && document.getElementById('state').textContent.includes('La dame de pique : chez Paul')
+  && document.getElementById('state').textContent.includes('Les cœurs : pas encore ouverts')), 'Paul has the queen of spades by his name, and the scores say so');
+ok(await g(() => document.querySelector('#lastCards .mini em')?.textContent === '1er' && document.querySelector('#lastCards .mini:first-child em')), 'the last trick marks who led it');
+await page.screenshot({ path: `${OUT}/ddp-queen.png` });
+
 // 10. The moon: Paul takes all 26 points.
 await setHand(['2D', '3D', 'AH', '4D'], { pts: [0, 0, 25, 0], turn: 2, leader: 2 });
 for (let i = 0; i < 80 && !(await g(() => document.getElementById('scoreSheet').classList.contains('on'))); i++) {
@@ -182,10 +206,21 @@ await clickCard(card('2D'));
 for (let i = 0; i < 80 && !(await g(() => document.getElementById('over').classList.contains('on'))); i++) await wait(100);
 ok(await g(() => G.phase === 'over' && G.result.winner === 0 && stats.won === 1), 'he wins with the lowest score');
 ok((await g(() => document.getElementById('overTitle').textContent)) === 'Bravo, vous avez gagné !', 'the win sheet shows');
+ok(await g(() => /atteint 100 points : la partie est finie\.\n[^]*\nLes points : Vous 20, Jeanne/.test(document.getElementById('overText').textContent)), 'the win sheet says why the game ended, with the four totals');
+ok(await g(() => getComputedStyle(document.getElementById('scoreSheet')).visibility === 'hidden'), 'the score sheet hides behind the win sheet');
 await page.screenshot({ path: `${OUT}/ddp-won.png` });
 ok((await g(() => GG.meta('dame-de-pique').summary)) === '1 victoire', 'the library tile shows the win');
 await page.reload(); await wait(300);
 ok(await g(() => stats.won === 1 && G.phase === 'over'), 'a reload does not count the win again');
+await g(() => Kit.closeDialog());
+
+// A tie for the lowest score: he shares the win with Jeanne.
+await g(() => { wonNow = false; });
+await setHand(['2D', '3D', '4D', 'AH'], { pts: [0, 0, 13, 12], scores: [30, 30, 99, 99], turn: 0 });
+await clickCard(card('2D'));
+for (let i = 0; i < 80 && !(await g(() => document.getElementById('over').classList.contains('on'))); i++) await wait(100);
+ok(await g(() => G.phase === 'over' && G.result.winners.join() === '0,1' && document.getElementById('overTitle').textContent === 'Bravo, vous partagez la victoire !'
+  && document.getElementById('overText').textContent.includes('à égalité avec Jeanne')), 'a tie for the lowest: he shares the win with Jeanne');
 await g(() => Kit.closeDialog());
 
 // 12. The fourth hand keeps its cards.
@@ -194,9 +229,10 @@ ok(await g(() => G.phase === 'play' && !document.getElementById('passSheet').cla
 
 // 13. Other windows: a narrow one shows the totals by each player, a wide one larger cards.
 await page.setViewportSize({ width: 1024, height: 640 }); await wait(300);
-ok(await g(() => !L.sideW && document.getElementById('seat1').textContent.includes('total') && document.getElementById('seat0').textContent.includes('Total')), 'a narrow window shows each total by its player, his own too');
+ok(await g(() => !L.sideW && ['seat0', 'seat1', 'seat2', 'seat3'].every(id => document.getElementById(id).textContent.includes('total'))), 'a narrow window shows each total by its player, his own too');
 ok(await g(() => { const r = id => document.getElementById(id).getBoundingClientRect(), a = r('seat1'), b = r('seat3'), v = r('seat0'), p = r('seat2');
-  return a.left >= 0 && b.right <= innerWidth && v.right <= p.left; }), 'a narrow window keeps the players inside and apart');
+  const hand = document.querySelector('.card.hand')?.getBoundingClientRect();
+  return a.left >= 0 && b.right <= innerWidth && (!hand || v.bottom <= hand.top) && v.top >= a.bottom - 1; }), 'a narrow window keeps the players inside, his own above his hand');
 await page.screenshot({ path: `${OUT}/ddp-1024.png` });
 await page.setViewportSize({ width: 1920, height: 1000 }); await wait(300);
 ok(await g(() => L.w) >= 150, `cards are ${await g(() => L.w)} px wide at 1920x1000`);

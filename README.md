@@ -72,12 +72,14 @@ When a game changes its save format, it must still read the old format. His save
 - `public/dame-de-pique/`: the dame de pique (Hearts), against three computer players: Jeanne on the left, Paul across and Louise on the right.
   - `engine.js` holds the rules and the computer players. It has no DOM, so the page and the tests run the same code.
   - Each hand starts with a pass of 3 cards: to the left, to the right, across, then none. The holder of the 2 of clubs leads. Players follow suit. The first trick takes no point card unless a hand holds nothing else. Hearts cannot lead until a heart has been played, unless the hand holds only hearts. The queen of spades does not break hearts.
-  - Each heart is 1 point and the queen of spades 13. A player who takes all 26 scores 0, and each other player 26. The game ends after a hand in which a score reaches 100, if one player alone has the lowest score. On a tie for the lowest, another hand is played.
-  - One click on a card plays it. The cards he cannot play now are darker, and a click on one says why in one sentence. To pass, he clicks 3 cards, then the button. The cards received carry a "Reçue" tag until he plays.
+  - Each heart is 1 point and the queen of spades 13. A player who takes all 26 scores 0, and each other player 26. The game ends after a hand in which a score reaches 100. The lowest score wins, and players tied for it share the win, as in the French rules and in Windows.
+  - One click on a card plays it. The cards he cannot play now are darker, and a click on one says why in one sentence, in a bubble just above the card and in the message line.
+  - On his turn, his place in the trick is a dashed "À vous" card, and his seat above his hand says "À vous de jouer". The first card of each trick has a "1er" tag.
+  - A small "D♠" card sits by the name of the player who took the queen of spades. The score column says where she is and whether hearts are open. To pass, he clicks 3 cards, then the button. The cards received carry a "Reçue" tag until he plays.
   - The computer players know only their own cards, the cards played, the voids shown and the cards they passed. Facile plays simple rules with some chance. Moyen plays careful rules: it ducks, chases the queen of spades with low spades and stops a moon. Difficile tries each card on 40 deals of the unseen cards that fit what it knows, plays each deal to the end with the Moyen rules, and keeps the card that costs it the fewest points. Each fitting deal is equally likely.
   - The same position always gets the same answer, so undo followed by the same card replays the same game.
   - "Annuler le dernier coup" takes back his last card and the cards played after it, within the hand, until "Manche suivante". During the pass, it takes back the last card chosen.
-  - The score sheet at the end of a hand stays on the table until "Manche suivante", also after a reload. The scores and the last trick are in the right column. A narrow window shows each total next to each player instead.
+  - The score sheet at the end of a hand stays on the table until "Manche suivante", also after a reload. The scores and the last trick are in the right column. A narrow window shows each total next to each player instead, his own in his seat above his hand.
 
 The design and the research behind it are in `docs/design.md`.
 

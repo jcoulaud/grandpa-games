@@ -109,7 +109,14 @@ const legalNames = G => D.legal(G).map(name).sort().join(' ');
   ok(G.phase === 'over' && G.result.winner === 1, 'a score of 100 or more ends the game: the lowest wins');
   G = midGame(['2D', 'AH', '3D', '4D'], { pts: [0, 25, 0, 0], tricks: 12, turn: 1, leader: 1, scores: [18, 44, 74, 46] });
   for (const c of ['AH', '3D', '4D', '2D']) G = D.play(G, card(c));
-  ok(G.phase === 'done' && G.scores.join() === '44,44,100,72', 'a tie for the lowest: another hand is played');
+  ok(G.phase === 'over' && G.scores.join() === '44,44,100,72' && G.result.winners.join() === '0,1' && G.result.winner === 0,
+    'a tie for the lowest ends the game too: he shares the win');
+  G = midGame(['2D', 'AH', '3D', '4D'], { pts: [0, 25, 0, 0], tricks: 12, turn: 1, leader: 1, scores: [50, 30, 4, 80] });
+  for (const c of ['AH', '3D', '4D', '2D']) G = D.play(G, card(c));
+  ok(G.phase === 'over' && G.result.winners.join() === '1,2' && G.result.winner === 1, 'two computer players tied for the lowest share the win');
+  G = midGame(['2S 3D', 'QS 4D', 'AS 5D', '3S 6D'], { pts: [0, 0, 0, 0], tricks: 11 });
+  for (const c of ['2S', 'QS', 'AS', '3S']) G = D.play(G, card(c));
+  ok(G.qsTo === 2 && G.pts[2] === 13, 'the game knows who took the queen of spades');
   G = midGame(['2D', '5D', '3D', 'AD'], { pts: [26, 0, 0, 0], tricks: 12, scores: [90, 80, 99, 95] });
   for (const c of ['2D', '5D', '3D', 'AD']) G = D.play(G, card(c));
   ok(G.phase === 'over' && G.result.winner === 0 && G.scores.join() === '90,106,125,121', 'his moon ends the game with him lowest');

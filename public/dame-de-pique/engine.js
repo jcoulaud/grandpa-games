@@ -24,7 +24,9 @@
 //   last     the last trick done: { leader, cards, winner, pts }, or null
 //   handPts  [4] the points scored by the hand once done, after the moon; moon: the seat that took
 //            all 26 points, or null
-//   result   null, or { winner } at the end of the game: the seat with the lowest score
+//   qsTo     the seat that took the queen of spades in this hand, or null
+//   result   null, or { winners, winner } at the end of the game: winners holds every seat with the
+//            lowest score (they share the win); winner is the player (0) if he is one of them
 //
 //   DDP.newGame(rnd)                  a new game, hand 0 dealt
 //   DDP.passTarget(G, seat)           the seat that receives this seat's cards, or null
@@ -57,7 +59,7 @@
     G.gave = null; G.trick = []; G.tricks = 0; G.broken = false; G.pts = [0, 0, 0, 0];
     G.log = []; G.voids = [0, 1, 2, 3].map(() => [false, false, false, false]); G.only = [null, null, null, null];
     G.seed = Math.floor(rnd() * 4294967296);
-    G.last = null; G.handPts = null; G.moon = null;
+    G.last = null; G.handPts = null; G.moon = null; G.qsTo = null;
     if (PASS_OFFSET[G.handNo % 4]) G.phase = 'pass';
     else startPlay(G);
     return G;
@@ -123,12 +125,13 @@
     g.handPts = moon >= 0 ? g.pts.map((_, s) => s === moon ? 0 : 26) : g.pts.slice();
     g.scores = g.scores.map((v, s) => v + g.handPts[s]);
     g.phase = 'done';
-    // The game ends once a score reaches 100, if one player alone has the lowest score.
-    // With a tie for the lowest, another hand is played.
+    // The game ends once a score reaches 100. The lowest score wins; players tied for it share the win,
+    // as in the French rules and in Windows.
     if (Math.max(...g.scores) >= 100) {
       const low = Math.min(...g.scores);
-      const at = g.scores.flatMap((v, s) => v === low ? [s] : []);
-      if (at.length === 1) { g.phase = 'over'; g.result = { winner: at[0] }; }
+      const winners = g.scores.flatMap((v, s) => v === low ? [s] : []);
+      g.phase = 'over';
+      g.result = { winners, winner: winners.includes(0) ? 0 : winners[0] };
     }
   }
 
@@ -149,6 +152,7 @@
     let p = 0;
     for (const c of g.trick) p += points(c);
     g.pts[winner] += p;
+    if (g.trick.includes(QS)) g.qsTo = winner;
     g.last = { leader: g.leader, cards: g.trick, winner, pts: p };
     g.trick = []; g.tricks++;
     g.leader = g.turn = winner;
@@ -341,7 +345,7 @@
     const p = g.handPts || g.pts;
     let others = 0;
     for (let s = 0; s < 4; s++) if (s !== seat) others += p[s];
-    const end = g.phase === 'over' ? (g.result.winner === seat ? -40 : 40) : 0;
+    const end = g.phase === 'over' ? (g.result.winners.includes(seat) ? -40 : 40) : 0;
     return p[seat] - others / 3 + end;
   }
   function rollout(g) {
