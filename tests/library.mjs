@@ -268,6 +268,24 @@ try {
   await phone.goto(BASE);
   check('no sideways scroll at 390 px', await phone.evaluate(() => document.documentElement.scrollWidth <= 390));
   await phone.screenshot({ path: join(OUT, 'library-phone.png'), fullPage: true });
+
+  // 8. Strangers: one network adds at most 5 PCs waiting for approval, and a PC unseen for a week goes.
+  const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const fakeId = () => Array.from({ length: 26 }, () => ABC[Math.floor(Math.random() * 32)]).join('');
+  for (let i = 0; i < 8; i++) await fetch(BASE + 'api/hello', { method: 'POST', headers: { 'X-Device': fakeId() } });
+  const waiting = sql('SELECT COUNT(*) AS n FROM devices WHERE approved = 0 AND player IS NULL')[0].n;
+  check('one network adds at most 5 waiting PCs', waiting === 5, String(waiting));
+  sql(`UPDATE devices SET last_seen = 0 WHERE approved = 0 AND player IS NULL`);
+  await fetch(BASE + 'api/hello', { method: 'POST', headers: { 'X-Device': fakeId() } });
+  const fresh = sql('SELECT COUNT(*) AS n FROM devices WHERE approved = 0 AND player IS NULL')[0].n;
+  check('waiting PCs unseen for a week are dropped', fresh === 1, String(fresh));
+
+  // 9. Ten wrong admin passwords lock this network out, also with the right password. Last, as it locks the admin.
+  const tryAdmin = pw => fetch(BASE + 'api/admin/overview', { headers: { Authorization: 'Bearer ' + pw } });
+  sql('DELETE FROM admin_failures'); // the earlier steps tried wrong passwords too
+  for (let i = 0; i < 9; i++) await tryAdmin('guess' + i);
+  check('a wrong password before the limit gets 401', (await tryAdmin('guess9')).status === 401);
+  check('the right password is refused once locked out', (await tryAdmin(ADMIN)).status === 429);
 } finally {
   await browser.close();
   dev.kill();

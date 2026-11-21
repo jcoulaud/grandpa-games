@@ -153,6 +153,19 @@ ok(await g(() => document.activeElement.textContent) === 'Continuer la partie', 
 await page.keyboard.press('Escape');
 ok(!(await g(() => dialogOpen())), 'Escape closes the dialog');
 
+// 9b. An ace taken back from the foundation onto a 2 stays there: auto-play leaves it alone.
+await g(() => {
+  S = { stock: [{ id: 5, up: false }], waste: [], found: [[], [], [], [{ id: 39, up: true }]],
+    tab: [[{ id: 0, up: false }, { id: 27, up: true }], [{ id: 12, up: true }], [], [], [], [], []], moves: 5, won: false, stuckShown: false };
+  render({ instant: true });
+  moveCards({ a: 'found', i: 3, k: 0 }, { a: 'tab', i: 0 });
+});
+await page.waitForTimeout(1500);
+ok(await g(() => last(S.tab[0]).id === 39 && !S.found[3].length), 'an ace taken back onto a 2 stays there');
+await g(() => moveCards({ a: 'tab', i: 0, k: 2 }, { a: 'found', i: 3 }));
+ok(await g(() => S.found[3].length === 1 && !S.found[3][0].kept), 'putting it home again clears the mark');
+await g(() => { clearTimeout(autoT); if (dialogOpen()) Kit.closeDialog(); }); // this made-up deal cannot be won
+
 // 10. Win
 await g(() => {
   S = { stock: [], waste: [], found: [0, 1, 2, 3].map(s => [...Array(12).keys()].map(r => ({ id: s * 13 + r, up: true }))), tab: [[{ id: 12, up: true }], [{ id: 25, up: true }], [{ id: 38, up: true }], [{ id: 51, up: true }], [], [], []], moves: 5, won: false, stuckShown: false };

@@ -60,10 +60,10 @@
 <div id="bar">
   <div id="title"><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#su0"/></svg>Solitaire</div>
   <button id="undoBtn" data-icon="undo" title="Annuler le dernier coup joué"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span></button>
-  <button id="hintBtn" class="primary" data-icon="bulb" title="Montrez-moi un bon coup à jouer"><span class="long">Montrez-moi un coup</span><span class="short">Aide</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre un bon coup à jouer maintenant"><span class="long">Quel coup jouer ?</span><span class="short">Aide</span></button>
   <span class="spacer"></span>
   <button id="helpBtn" data-icon="help">Règles</button>
-  <button id="newBtn" class="quiet">Nouvelle partie</button>
+  <button id="newBtn" class="game">Nouvelle partie</button>
 </div>
 <div id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div></div>
 <div id="table"></div>
@@ -84,7 +84,7 @@
     </section>
     <section class="page">
       <h3>Les boutons</h3>
-      <p>« Montrez-moi un coup » montre un bon coup à jouer. « Annuler le dernier coup » revient un coup en arrière, autant de fois que vous voulez. « Nouvelle partie » commence une autre partie. « Règles » ouvre ces explications.</p>
+      <p>« Quel coup jouer ? » montre un bon coup à jouer. « Annuler le dernier coup » revient un coup en arrière, autant de fois que vous voulez. « Nouvelle partie » commence une autre partie. « Règles » ouvre ces explications.</p>
       <h3>Bon à savoir</h3>
       <p>Si une carte ne peut pas aller quelque part, la ligne sous les boutons explique pourquoi.</p>
       <p>Toutes les parties peuvent être gagnées. Les cartes qui ne servent plus vont toutes seules au rangement. La partie est enregistrée à chaque coup : vous la retrouvez en rouvrant le jeu.</p>
@@ -353,6 +353,8 @@ function moveCards(loc, dst) {
     : `Vous avez posé ${name}${extra} sur ${t ? cardName(t.id) : 'la colonne vide'}.`;
   act(() => {
     const cards = pileOf(loc).splice(loc.k);
+    // A card the player takes back from the foundation stays where it is put: auto-play leaves it alone.
+    cards.forEach(c => { if (loc.a === 'found') c.kept = true; else if (dst.a === 'found') delete c.kept; });
     (dst.a === 'found' ? S.found[dst.i] : S.tab[dst.i]).push(...cards);
   }, text);
   flash(ids);
@@ -423,7 +425,7 @@ function autoStep() {
   S.tab.forEach((p, i) => { if (p.length) cands.push({ a: 'tab', i, k: p.length - 1 }); });
   for (const loc of cands) {
     const id = pileOf(loc)[loc.k].id;
-    if (canFound(id) && (finishing || sSafe(x, id))) {
+    if (canFound(id) && (finishing || (!pileOf(loc)[loc.k].kept && sSafe(x, id)))) {
       S.found[st(id)].push(pileOf(loc).pop());
       autoCount++;
       flipTops(); render(); save();
@@ -584,6 +586,10 @@ const RATIO = 1.3, UP = 0.3, DOWN = 0.08, LABEL = 30;
 function layout() {
   const W = table.clientWidth, H = table.clientHeight;
   const m = 26, g0 = Math.max(10, Math.round(W * 0.009)), pad = 12;
+  // Space under the message line, and between the labels of the top row and the columns.
+  // Neither changes the card size: long columns squeeze a little sooner instead.
+  const top = Math.max(24, Math.round(H * 0.035));
+  const rowGap = Math.max(22, Math.round(W * 0.025));
   const byWidth = (W - 2 * m - 6 * g0) / 7;
   // Height: the top row and its labels, then a column with six face-down and six face-up cards.
   // Longer columns squeeze (see colY), so the cards can stay large on a laptop.
@@ -594,7 +600,7 @@ function layout() {
   const gap = Math.round(Math.max(g0, Math.min(w * 0.3, (W - 2 * m - 7 * w) / 6)));
   const left = Math.max(m, Math.round((W - (7 * w + 6 * gap)) / 2));
   // Below the top row: the "Pioche", "Défausse" and "Rangement" labels, LABEL px high.
-  L = { W, H, gap, w, h, pad, top: pad, left, ty: pad + h + LABEL + g0 };
+  L = { W, H, gap, w, h, pad, top, left, ty: top + h + LABEL + rowGap };
   document.documentElement.style.setProperty('--w', w + 'px');
   document.documentElement.style.setProperty('--h', h + 'px');
   document.documentElement.style.setProperty('--gap', gap + 'px');

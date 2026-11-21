@@ -40,7 +40,7 @@ When a game changes its save format, it must still read the old format. His save
   - A wrong place keeps the card chosen and says why in one sentence.
   - "Règles" opens a three-page guide to the rules and the controls. It also opens by itself the first time the game is opened. A "Fermer" button closes it from every page.
   - Labels name the pioche, the défausse and the foundations ("Rangement").
-  - "Montrez-moi un coup" shows the next move of a winning plan as a sentence. Click the framed place or the ringed card.
+  - "Quel coup jouer ?" shows the next move of a winning plan as a sentence. Click the framed place or the ringed card.
   - Safe cards go to the foundations by themselves, one every 0.45 s. Once every card is face up, the game finishes itself at one card every 0.14 s.
   - The stock shows how many cards are left.
   - The suits, pips and court cards are inline SVG drawn for this game. They do not depend on a font.
@@ -65,7 +65,7 @@ https://jeux-papi.fr/admin/ shows:
 - the saved games of each player and when they were last saved.
 - the JavaScript errors of approved PCs, with the page, the stack and the app version. Every page reports its errors through `lib/store.js`: 5 per page at most, 50 per PC per day, 2,000 kept.
 
-The password is the `ADMIN_TOKEN` Worker secret. Use a long random password. To change it, run `bunx wrangler secret put ADMIN_TOKEN`.
+The password is the `ADMIN_TOKEN` Worker secret. Use a long random password. To change it, run `bunx wrangler secret put ADMIN_TOKEN`. After 10 wrong passwords from one network in 15 minutes, the admin API refuses that network until the oldest try is 15 minutes old.
 
 The same actions also exist as commands:
 

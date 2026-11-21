@@ -4,7 +4,7 @@
 //     <div id="title">Solitaire</div>
 //     <button id="undoBtn" data-icon="undo">Annuler le dernier coup</button>   icons: undo, bulb, help, close
 //     <span class="spacer"></span>
-//     <button id="newBtn" class="quiet">Nouvelle partie</button>
+//     <button id="newBtn" class="game">Nouvelle partie</button>
 //   </div>
 //   <div id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div></div>
 //   <div id="table"></div>

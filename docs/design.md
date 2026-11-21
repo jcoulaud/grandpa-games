@@ -49,7 +49,7 @@ All suits are inline SVG drawn for this game, so they do not depend on a Windows
 
 Flat and current, in the spirit of Windows 11 and recent macOS apps. No texture, no ornament, no serif. All UI type is "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", system-ui, at 20 px or more.
 
-- **Top bar.** Light surface #F6F8F7 with dark text #1B2422, a hairline and a soft shadow. Buttons are 54 px high with a 15 px radius, 21 px semibold text and 2 px line icons. "Montrez-moi un coup" is the only yellow button (#FFC83D). "Annuler le dernier coup" and "Règles" are light grey (#E4E9E7). "Nouvelle partie" is on the far right with an outline only. A disabled undo button is #5F6764 on #EEF1F0.
+- **Top bar.** Light surface #F6F8F7 with dark text #1B2422, a hairline and a soft shadow. Buttons are 54 px high with a 15 px radius, 21 px semibold text and 2 px line icons. "Quel coup jouer ?" is the only yellow button (#FFC83D). "Annuler le dernier coup" and "Règles" are light grey (#E4E9E7). "Nouvelle partie" is on the far right, white on the felt green (#0B6B5D). A disabled undo button is #5F6764 on #EEF1F0.
 - **Message line.** A white rounded strip under the bar, 46 px high, 22 px semibold dark text and a small chat icon. One line and one height, so the board never moves.
 - **Table.** One deep green-teal, #1A6A5F at the top to #0F4F47.
 - **Bank and slots.** No frame. Empty places are translucent white rounded shapes (9%). Labels are 20 px sans-serif. An empty foundation shows a soft suit and "As". An empty column says "Roi". The empty stock shows a white arrow and "Retourner la pioche". The stock count is a white pill.

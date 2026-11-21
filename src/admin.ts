@@ -1,12 +1,16 @@
 // The admin API, used by public/admin/. Every request needs `Authorization: Bearer <ADMIN_TOKEN>`.
 // ADMIN_TOKEN is a Worker secret (wrangler secret put ADMIN_TOKEN). Without it, the admin API is off.
 
+import { network } from './ip';
+
 export interface AdminEnv {
   DB: D1Database;
   ADMIN_TOKEN?: string;
 }
 
 const CODE = /^[A-Z2-9]{6}$/;
+const MAX_FAILURES = 10;
+const FAILURE_WINDOW_MS = 15 * 60_000;
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
@@ -30,9 +34,20 @@ const codeOf = (v: unknown) => (typeof v === 'string' ? v.toUpperCase().replace(
 
 export async function admin(request: Request, env: AdminEnv, path: string): Promise<Response> {
   if (!env.ADMIN_TOKEN) return json({ error: 'admin off' }, 503);
-  const auth = request.headers.get('Authorization') ?? '';
-  if (!auth.startsWith('Bearer ') || !(await sameSecret(auth.slice(7), env.ADMIN_TOKEN))) return json({ error: 'password' }, 401);
   const db = env.DB;
+  // After MAX_FAILURES wrong passwords from one network, it waits until the oldest is FAILURE_WINDOW_MS old.
+  const ip = network(request), now = Date.now();
+  const failures = await db.prepare('SELECT COUNT(*) AS n FROM admin_failures WHERE ip = ? AND at > ?')
+    .bind(ip, now - FAILURE_WINDOW_MS).first<{ n: number }>();
+  if ((failures?.n ?? 0) >= MAX_FAILURES) return json({ error: 'Trop d’essais. Réessayez dans 15 minutes.' }, 429);
+  const auth = request.headers.get('Authorization') ?? '';
+  if (!auth.startsWith('Bearer ') || !(await sameSecret(auth.slice(7), env.ADMIN_TOKEN))) {
+    await db.batch([
+      db.prepare('INSERT INTO admin_failures (ip, at) VALUES (?, ?)').bind(ip, now),
+      db.prepare('DELETE FROM admin_failures WHERE at <= ?').bind(now - FAILURE_WINDOW_MS),
+    ]);
+    return json({ error: 'password' }, 401);
+  }
 
   if (path === 'overview' && request.method === 'GET') {
     const [devices, saves, errors] = await db.batch([
