@@ -248,13 +248,12 @@ function winnableDeal() {
 }
 
 // Every undo step is saved. If the browser storage is full, the oldest steps go first.
-// The cloud backup keeps only the game and the wins, not the undo steps.
 function save() {
   const parts = [];
   if (S.moves > 0 && !isWon()) parts.push('Partie en cours');
   if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
   for (const n of [Infinity, 2000, 300]) {
-    if (GG.save('solitaire', { S, undo: undo.slice(-n), stats }, { cloud: { S, stats }, summary: parts.join(' · ') })) return;
+    if (GG.save('solitaire', { S, undo: undo.slice(-n), stats }, { summary: parts.join(' · ') })) return;
   }
 }
 function load() {
@@ -472,6 +471,7 @@ function newGame() {
   closeDialog();
   winnableDeal(); undo = [];
   save();
+  GG.track('solitaire', 'start');
   setMsg(HELLO);
   render({ deal: true });
   setTimeout(() => { busy = false; autoStep(); }, REDUCED ? 100 : 1600);
@@ -720,7 +720,7 @@ function shake(el) { el.classList.remove('shake'); void el.offsetWidth; el.class
 function celebrate() {
   if (S.done) return;
   S.done = true;
-  if (!S.won) { S.won = true; stats.won++; }
+  if (!S.won) { S.won = true; stats.won++; GG.track('solitaire', 'won'); }
   save(); render();
   setMsg('Bravo, vous avez gagné !');
   // The four finished piles hop one after the other, twice.

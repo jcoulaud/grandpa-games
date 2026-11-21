@@ -4,255 +4,72 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Administration</title>
+<title>Tableau de bord</title>
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
-<style>
-  :root {
-    --gold: #FFC83D; --accent: #0B6B5D; --text: #1B2422; --muted: #5F6764; --line: #E3E8E6;
-    --face: #FFFDF6; --red: #C4122F; --ok: #1B7F4B; --wait: #9A6400;
-    --ui: "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
-  }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; }
-  body { background: #EEF2F1; color: var(--text); font: 400 16px/1.45 var(--ui); -webkit-font-smoothing: antialiased; }
-  header {
-    background: radial-gradient(120% 140% at 30% 0%, #1A6A5F, #0F4F47 70%); color: #fff;
-    padding: 22px 32px; display: flex; align-items: center; gap: 16px;
-  }
-  header img { width: 44px; height: 44px; }
-  header h1 { margin: 0; font: 700 26px var(--ui); letter-spacing: -.01em; }
-  header .grow { flex: 1; }
-  header a { color: rgba(255,255,255,.85); font-weight: 600; }
-  main { max-width: 1180px; margin: 0 auto; padding: 24px 32px 48px; display: grid; gap: 22px; }
-  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-  .stat { background: #fff; border-radius: 16px; padding: 16px 20px; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
-  .stat b { display: block; font: 700 30px/1.1 var(--ui); }
-  .stat span { color: var(--muted); font-weight: 600; }
-  .stat.alert b { color: var(--red); }
-  section.card { background: #fff; border-radius: 18px; box-shadow: 0 1px 2px rgba(0,0,0,.06); overflow: hidden; }
-  section.card > h2 { margin: 0; padding: 16px 22px; font: 700 19px var(--ui); display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); }
-  section.card > h2 .grow { flex: 1; }
-  .empty { padding: 22px; color: var(--muted); }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; padding: 11px 22px; border-bottom: 1px solid var(--line); vertical-align: middle; }
-  th { font: 600 13px var(--ui); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; background: #FAFBFB; }
-  tr:last-child td { border-bottom: 0; }
-  .code { font: 700 15px ui-monospace, "Cascadia Mono", Consolas, monospace; letter-spacing: .06em; }
-  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font: 600 13px var(--ui); white-space: nowrap; }
-  .pill.ok { background: #E3F4EA; color: var(--ok); }
-  .pill.wait { background: #FFF1D1; color: var(--wait); }
-  .pill.off { background: #EEF1F0; color: var(--muted); }
-  .actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
-  button, select, input {
-    font: 600 14px var(--ui); border-radius: 10px; border: 1px solid #CDD5D2; background: #fff; color: var(--text);
-    padding: 7px 12px; min-height: 36px;
-  }
-  button { cursor: pointer; }
-  button:hover { background: #F2F5F4; }
-  button.primary { background: var(--gold); border-color: #E2AE20; color: #1F1A00; }
-  button.primary:hover { background: #FFD666; }
-  button.danger { color: var(--red); }
-  button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-  .muted { color: var(--muted); }
-  .err td { vertical-align: top; }
-  .err .msg { font-weight: 600; color: var(--red); word-break: break-word; }
-  details summary { cursor: pointer; color: var(--muted); font-weight: 600; margin-top: 4px; }
-  pre { margin: 8px 0 0; padding: 12px; background: #F6F8F7; border-radius: 10px; font: 12.5px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-word; max-height: 260px; overflow: auto; }
-  #login { max-width: 440px; margin: 10vh auto; background: #fff; border-radius: 20px; padding: 32px; box-shadow: 0 10px 40px rgba(0,0,0,.12); display: grid; gap: 14px; }
-  #login h2 { margin: 0; font: 700 24px var(--ui); }
-  #login input { font-size: 16px; padding: 12px 14px; }
-  #login button { padding: 12px; font-size: 16px; }
-  #loginErr { color: var(--red); font-weight: 600; }
-  #loginErr:empty { display: none; }
-  #toast { position: fixed; bottom: 22px; left: 50%; translate: -50% 0; background: var(--text); color: #fff; padding: 10px 18px; border-radius: 12px; font-weight: 600; opacity: 0; transition: opacity .2s; pointer-events: none; }
-  #toast.on { opacity: 1; }
-  [hidden] { display: none !important; }
-  @media (max-width: 800px) {
-    .stats { grid-template-columns: repeat(2, 1fr); }
-    main, header { padding-left: 16px; padding-right: 16px; }
-    th, td { padding: 10px 12px; }
-    .hide-sm { display: none; }
-  }
-</style>
+<link rel="stylesheet" href="admin.css">
 </head>
 <body>
-<header>
-  <img src="../icons/icon.svg" alt="">
-  <h1>Administration des jeux</h1>
-  <div class="grow"></div>
-  <a href="../">Voir la bibliothèque</a>
-  <button id="refresh" hidden>Actualiser</button>
-  <button id="logout" hidden>Se déconnecter</button>
-</header>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></symbol>
+  <symbol id="i-open" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4"/><path d="M10 16l-4-4 4-4M6 12h10"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+</svg>
 
-<form id="login" hidden>
-  <h2>Connexion</h2>
-  <label for="pw" class="muted">Mot de passe</label>
-  <input id="pw" type="password" autocomplete="current-password" required>
-  <button class="primary" type="submit">Se connecter</button>
-  <div id="loginErr"></div>
-</form>
+<div id="login" hidden>
+  <form>
+    <img src="../icons/icon.svg" alt="">
+    <h1>Tableau de bord</h1>
+    <p>Les jeux de Papi, en chiffres.</p>
+    <label for="pw">Mot de passe<input id="pw" type="password" autocomplete="current-password" required></label>
+    <button type="submit">Se connecter</button>
+    <div id="loginErr" role="alert"></div>
+  </form>
+</div>
 
-<main id="app" hidden>
-  <div class="stats">
-    <div class="stat"><b id="sLast">–</b><span>Dernière partie</span></div>
-    <div class="stat"><b id="sPcs">0</b><span>Ordinateurs approuvés</span></div>
-    <div class="stat"><b id="sWait">0</b><span>En attente</span></div>
-    <div class="stat" id="sErrBox"><b id="sErr">0</b><span>Erreurs</span></div>
-  </div>
+<div id="app" hidden>
+  <header><div class="in">
+    <div class="brand"><img src="../icons/icon.svg" alt=""><div><b>Tableau de bord</b><span id="total">Les jeux de Papi</span></div></div>
+    <div class="grow"></div>
+    <div class="seg" role="group" aria-label="Période du graphique">
+      <button data-range="7">7 j</button><button data-range="30">30 j</button><button data-range="90">90 j</button>
+    </div>
+    <a id="libLink" class="icon-btn" href="../" title="Voir la bibliothèque" aria-label="Voir la bibliothèque"><svg><use href="#i-open"/></svg></a>
+    <button id="refresh" class="icon-btn" title="Actualiser" aria-label="Actualiser"><svg><use href="#i-refresh"/></svg></button>
+    <button id="logout" class="icon-btn" title="Se déconnecter" aria-label="Se déconnecter"><svg><use href="#i-out"/></svg></button>
+  </div></header>
 
-  <section class="card">
-    <h2>Ordinateurs</h2>
-    <div id="pcs"></div>
-  </section>
+  <main>
+    <section class="kpis loading" id="kpis">
+      <div class="card kpi"><div class="label"><i></i>Aujourd’hui</div><div class="value num" id="kToday">0</div><svg class="spark" id="spToday"></svg><div class="foot" id="fToday">joueurs</div></div>
+      <div class="card kpi"><div class="label"><i></i>Joueurs sur 7 jours</div><div class="value num" id="k7">0</div><svg class="spark" id="sp7"></svg><div class="foot" id="f7">–</div></div>
+      <div class="card kpi"><div class="label"><i></i>Nouveaux sur 7 jours</div><div class="value num" id="kNew">0</div><div class="foot" id="fNew">–</div></div>
+      <div class="card kpi"><div class="label"><i class="g"></i>Parties sur 7 jours</div><div class="value num" id="kGames">0</div><svg class="spark" id="spGames"></svg><div class="foot" id="fGames">–</div></div>
+    </section>
 
-  <section class="card">
-    <h2>Parties</h2>
-    <div id="saves"></div>
-  </section>
+    <section class="card">
+      <div class="card-h"><h2>Activité</h2><span class="sub" id="rangeLabel"></span>
+        <div class="legend"><span><i></i>Joueurs</span><span><i class="g"></i>Parties commencées</span></div></div>
+      <div class="chart" id="chart"><svg id="chartSvg" role="img" aria-label="Joueurs et parties par jour"></svg><div class="tip" id="tip" hidden></div></div>
+    </section>
 
-  <section class="card">
-    <h2>Erreurs <span class="grow"></span><button id="clearErr" class="danger" hidden>Tout effacer</button></h2>
-    <div id="errors"></div>
-  </section>
-</main>
-<div id="toast"></div>
+    <div class="two">
+      <section class="card">
+        <div class="card-h"><h2>Jeux</h2><span class="sub">7 derniers jours</span></div>
+        <div class="games" id="games"></div>
+      </section>
+      <section class="card">
+        <div class="card-h"><h2>Erreurs</h2><span class="sub" id="errSub"></span><button id="clearErr" class="text-btn" hidden>Tout effacer</button></div>
+        <div class="errors" id="errors"></div>
+      </section>
+    </div>
 
-<script>
-'use strict';
-const KEY = 'gg-admin-token';
-const $ = id => document.getElementById(id);
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const token = () => { try { return localStorage.getItem(KEY) || ''; } catch (e) { return ''; } };
-const setToken = v => { try { v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY); } catch (e) {} };
+    <p class="note"><svg class="ico"><use href="#i-lock"/></svg>Un joueur est un ordinateur qui a ouvert le site. Les parties restent sur chaque ordinateur : le serveur ne garde que des nombres, sans nom ni adresse.</p>
+  </main>
+</div>
+<div id="toast" role="status"></div>
 
-const rtf = new Intl.RelativeTimeFormat('fr', { numeric: 'auto' });
-function ago(ms) {
-  if (!ms) return '–';
-  const s = (ms - Date.now()) / 1000, a = Math.abs(s);
-  if (a < 60) return 'à l’instant';
-  if (a < 3600) return rtf.format(Math.round(s / 60), 'minute');
-  if (a < 86400) return rtf.format(Math.round(s / 3600), 'hour');
-  return rtf.format(Math.round(s / 86400), 'day');
-}
-const when = ms => ms ? new Date(ms).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }) : '';
-const GAME_NAMES = { solitaire: 'Solitaire' };
-
-function toast(text) {
-  const t = $('toast'); t.textContent = text; t.classList.add('on');
-  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2200);
-}
-
-async function api(path, body) {
-  const r = await fetch('/api/admin/' + path, {
-    method: body ? 'POST' : 'GET',
-    headers: { Authorization: 'Bearer ' + token(), 'Content-Type': 'application/json' },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (r.status === 401) { showLogin('Mot de passe incorrect.'); throw new Error('401'); }
-  if (r.status === 429) { showLogin('Trop d’essais. Réessayez dans 15 minutes.'); throw new Error('429'); }
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok) { toast(data.error || 'Erreur ' + r.status); throw new Error(data.error); }
-  return data;
-}
-
-function showLogin(err) {
-  setToken('');
-  $('login').hidden = false; $('app').hidden = true;
-  $('refresh').hidden = $('logout').hidden = true;
-  $('loginErr').textContent = err || '';
-  $('pw').focus();
-}
-
-let data = null;
-async function load() {
-  data = await api('overview');
-  $('login').hidden = true; $('app').hidden = false;
-  $('refresh').hidden = $('logout').hidden = false;
-  render();
-}
-
-function render() {
-  const { devices, saves, errors } = data;
-  const approved = devices.filter(d => d.approved);
-  const name = d => d.name || 'Sans nom';
-  const byCode = Object.fromEntries(devices.map(d => [d.code, d]));
-  const playerName = p => { const d = devices.find(x => x.code === p) || devices.find(x => x.player === p); return d ? name(d) : p; };
-
-  $('sLast').textContent = saves.length ? ago(saves[0].updated_at) : '–';
-  $('sPcs').textContent = approved.length;
-  $('sWait').textContent = devices.length - approved.length;
-  $('sErr').textContent = errors.length;
-  $('sErrBox').classList.toggle('alert', errors.length > 0);
-
-  // PCs. A pending PC can be approved alone, or take over the saves of an approved PC.
-  const options = approved.map(d => `<option value="${esc(d.code)}">ses parties : ${esc(name(d))}</option>`).join('');
-  $('pcs').innerHTML = !devices.length ? '<div class="empty">Aucun ordinateur pour le moment. Ouvrez la bibliothèque sur son PC.</div>' :
-    `<table><thead><tr><th>Nom</th><th>Code</th><th>État</th><th class="hide-sm">Dernière visite</th><th></th></tr></thead><tbody>
-    ${devices.map(d => `<tr data-code="${esc(d.code)}">
-      <td><b>${esc(name(d))}</b>${d.player && d.player !== d.code ? `<div class="muted">parties de ${esc(playerName(d.player))}</div>` : ''}</td>
-      <td class="code">${esc(d.code.slice(0, 3))} ${esc(d.code.slice(3))}</td>
-      <td>${d.approved ? '<span class="pill ok">✓ Approuvé</span>' : d.player ? '<span class="pill off">Retiré</span>' : '<span class="pill wait">En attente</span>'}</td>
-      <td class="hide-sm" title="${esc(when(d.last_seen))}">${ago(d.last_seen)}</td>
-      <td><div class="actions">
-        <button data-act="rename">Renommer</button>
-        ${d.approved ? '<button data-act="revoke" class="danger">Retirer</button>' : `
-          ${options ? `<select data-as><option value="">${d.player ? 'les mêmes parties qu’avant' : 'ses propres parties'}</option>${options}</select>` : ''}
-          <button data-act="approve" class="primary">Approuver</button>
-          <button data-act="forget" class="danger">Oublier</button>`}
-      </div></td></tr>`).join('')}</tbody></table>`;
-
-  $('saves').innerHTML = !saves.length ? '<div class="empty">Aucune partie sauvegardée en ligne pour le moment.</div>' :
-    `<table><thead><tr><th>Joueur</th><th>Jeu</th><th>Résumé</th><th>Dernière sauvegarde</th></tr></thead><tbody>
-    ${saves.map(s => `<tr><td><b>${esc(playerName(s.player))}</b></td><td>${esc(GAME_NAMES[s.game] || s.game)}</td>
-      <td>${esc(s.summary || '–')}</td><td title="${esc(when(s.updated_at))}">${ago(s.updated_at)}</td></tr>`).join('')}</tbody></table>`;
-
-  $('clearErr').hidden = !errors.length;
-  $('errors').innerHTML = !errors.length ? '<div class="empty">Aucune erreur. Tout va bien.</div>' :
-    `<table class="err"><thead><tr><th>Quand</th><th>Ordinateur</th><th>Erreur</th></tr></thead><tbody>
-    ${errors.map(e => `<tr><td title="${esc(when(e.happened_at))}">${ago(e.happened_at)}</td>
-      <td>${esc(byCode[e.device_code] ? name(byCode[e.device_code]) : e.device_code)}<div class="muted">${esc(e.page)}</div></td>
-      <td><div class="msg">${esc(e.message)}</div>
-        <details><summary>Détails</summary><pre>${esc(e.stack || '(pas de pile)')}
-
-Version : ${esc(e.version || '?')}
-Navigateur : ${esc(e.agent)}</pre></details></td></tr>`).join('')}</tbody></table>`;
-}
-
-$('pcs').addEventListener('click', async e => {
-  const b = e.target.closest('button[data-act]');
-  if (!b) return;
-  const row = b.closest('tr'), code = row.dataset.code, act = b.dataset.act;
-  const d = data.devices.find(x => x.code === code);
-  if (act === 'rename') {
-    const n = prompt('Nom de cet ordinateur (par exemple « PC de Papi ») :', d.name || '');
-    if (n === null) return;
-    await api('rename', { code, name: n }); toast('Nom enregistré.');
-  } else if (act === 'approve') {
-    const as = (row.querySelector('select[data-as]') || {}).value || '';
-    await api('approve', { code, as }); toast(as ? 'Approuvé. Il reprend les parties choisies.' : 'Approuvé.');
-  } else if (act === 'revoke') {
-    if (!confirm('Retirer cet ordinateur ? Il pourra toujours jouer, mais ses parties ne seront plus sauvegardées en ligne.')) return;
-    await api('revoke', { code }); toast('Ordinateur retiré.');
-  } else if (act === 'forget') {
-    await api('forget', { code }); toast('Ordinateur oublié.');
-  }
-  load();
-});
-$('clearErr').onclick = async () => {
-  if (!confirm('Effacer toutes les erreurs ?')) return;
-  await api('errors/clear', {}); toast('Erreurs effacées.'); load();
-};
-$('refresh').onclick = () => load().then(() => toast('À jour.'));
-$('logout').onclick = () => showLogin();
-$('login').onsubmit = async e => {
-  e.preventDefault();
-  setToken($('pw').value.trim());
-  $('pw').value = '';
-  try { await load(); } catch (err) {}
-};
-
-if (token()) load().catch(() => {}); else showLogin();
-</script>
+<script src="admin.js"></script>
 </body>
 </html>
