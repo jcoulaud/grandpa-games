@@ -52,9 +52,11 @@ export async function admin(request: Request, env: AdminEnv, path: string): Prom
     db.prepare('INSERT INTO admin_failures (ip, at) VALUES (?, ?) RETURNING id').bind(ip, now),
     db.prepare('SELECT COUNT(*) AS n FROM admin_failures WHERE ip = ?').bind(ip),
   ]);
-  if ((count.results[0]?.n ?? 0) > MAX_FAILURES) return json({ error: 'Trop d’essais. Réessayez dans 15 minutes.' }, 429);
+  const forget = () => db.prepare('DELETE FROM admin_failures WHERE id = ?').bind(tried.results[0]?.id ?? -1).run();
+  // A refused try is not kept, so the lockout ends 15 minutes after the wrong passwords.
+  if ((count.results[0]?.n ?? 0) > MAX_FAILURES) { await forget(); return json({ error: 'Trop d’essais. Réessayez dans 15 minutes.' }, 429); }
   if (!(await sameSecret(given, env.ADMIN_TOKEN))) return json({ error: 'password' }, 401);
-  await db.prepare('DELETE FROM admin_failures WHERE id = ?').bind(tried.results[0]?.id ?? -1).run();
+  await forget();
 
   if (path === 'overview' && request.method === 'GET') {
     const [, devices, saves, errors] = await db.batch([

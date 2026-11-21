@@ -289,6 +289,7 @@ try {
   for (let i = 0; i < 9; i++) await tryAdmin('guess' + i);
   check('a wrong password before the limit gets 401', (await tryAdmin('guess9')).status === 401);
   check('the right password is refused once locked out', (await tryAdmin(ADMIN)).status === 429);
+  check('a refused try does not extend the lockout', sql('SELECT COUNT(*) AS n FROM admin_failures')[0].n === 10);
 } finally {
   await browser.close();
   dev.kill();

@@ -64,8 +64,11 @@ export default {
               AND (SELECT COUNT(*) FROM devices WHERE approved = 0 AND player IS NULL AND ip = ?4) < ?6`)
             .bind(id, id.slice(0, 6), now, ip, MAX_PENDING, PENDING_PER_NETWORK),
         ]);
-        // "full": the PC was not added, so the library does not show a code nobody can find.
-        return json({ approved: false, full: !added.meta.changes });
+        // "full": the PC is not on the list, so the library does not show a code nobody can find.
+        // An insert can also be skipped because another tab of this PC added it just before.
+        const listed = added.meta.changes > 0
+          || !!(await env.DB.prepare('SELECT 1 FROM devices WHERE id = ?').bind(id).first());
+        return json({ approved: false, full: !listed });
       }
       // A PC that waited before the network was recorded gets it now, so it counts in the limit.
       await env.DB.prepare('UPDATE devices SET last_seen = ?, ip = COALESCE(ip, ?) WHERE id = ?').bind(now, network(request), id).run();
