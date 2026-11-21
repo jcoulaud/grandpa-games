@@ -496,7 +496,7 @@ function finish(show) {
   const back = ['Annuler le dernier coup', doUndo];
   const games = ['Retour aux jeux', () => { location.href = $('home').href; }];
   if (r.winner === WHITE) {
-    later(() => Kit.dialog(title, `${resultText()} ${stats.won === 1 ? "C'est votre première victoire." : `C'est votre ${stats.won}e victoire.`}`,
+    later(() => Kit.dialog(title, `${resultText()}${!wonNow ? '' : stats.won === 1 ? " C'est votre première victoire." : ` C'est votre ${stats.won}e victoire.`}`,
       [['Nouvelle partie', askNewGame, true], games], true), REDUCED ? 0 : 700);
   } else {
     later(() => Kit.dialog(title, resultText(), [[back[0], back[1], true], ['Nouvelle partie', askNewGame], games]), REDUCED ? 0 : 500);
@@ -577,7 +577,7 @@ function build() {
 // The board fills the height of the table, in the middle. On a wide window, the computer's panel sits
 // on the left by its pieces and the player's on the right by his. Narrower, both go on the right.
 // On a very narrow window (a phone), the board is alone and fills the width.
-let twoCols = null;
+let twoCols = null, layoutMode = null;
 function layout() {
   const W = table.clientWidth, H = table.clientHeight;
   const panelW = 290, gap = 36;
@@ -595,16 +595,19 @@ function layout() {
   frame.style.width = frame.style.height = 10 * S + 2 * F + 'px';
   for (let n = 1; n <= 50; n++) { squares[n].style.left = colOf(n) * S + 'px'; squares[n].style.top = rowOf(n) * S + 'px'; }
   const L = $('colL'), R = $('colR');
-  if ((mode === 2) !== twoCols) {
-    twoCols = mode === 2;
+  if (mode !== layoutMode) {
+    layoutMode = mode; twoCols = mode === 2;
     if (twoCols) L.prepend($('whoB')); else R.prepend($('whoB'));
+    // On a narrow window the column is under the board: the draw warning goes first, so it is seen.
+    if (mode === 0) R.prepend($('drawNote')); else R.insertBefore($('drawNote'), $('whoW'));
   }
   if (mode) {
     R.style.left = BX + 10 * S + F + gap + 'px'; R.style.width = panelW + 'px';
     R.style.top = BY - F + 'px'; R.style.height = 10 * S + 2 * F + 'px';
   } else {
-    // Under the board, as wide as it: the window scrolls down to them.
-    R.style.left = BX - F + 'px'; R.style.width = 10 * S + 2 * F + 'px';
+    // Under the board, as wide as it (or a panel, if wider): the window scrolls down to them.
+    const w = Math.min(W - 16, Math.max(10 * S + 2 * F, panelW));
+    R.style.left = Math.round((W - w) / 2) + 'px'; R.style.width = w + 'px';
     R.style.top = BY + 10 * S + F + 16 + 'px'; R.style.height = 'auto';
   }
   R.style.justifyContent = twoCols ? 'flex-end' : mode ? 'space-between' : 'flex-start';
@@ -695,10 +698,10 @@ function drawNote() {
   if (end === null && quiet === null) return '';
   // The quiet count stops at a capture or a man's move; an ending's count never stops.
   const byEnd = end !== null && (quiet === null || end <= quiet);
-  // The plies left, counted in his own moves: on his turn, he plays the 1st, 3rd, 5th… of them.
+  // The moves left, his and the computer's together. With one left, the warning says whose it is.
   const plies = byEnd ? end : quiet;
-  const n = G.turn === WHITE ? Math.ceil(plies / 2) : Math.floor(plies / 2);
-  const when = n <= 1 ? 'Partie nulle après votre prochain coup' : `Partie nulle dans ${n} de vos coups`;
+  const when = plies > 1 ? `Partie nulle dans ${plies} coups, en comptant ceux de l'ordinateur`
+    : G.turn === WHITE ? 'Partie nulle après votre prochain coup' : "Partie nulle au prochain coup de l'ordinateur";
   return when + (byEnd ? ', si personne ne gagne avant.' : ', sauf si une pièce est prise ou si un pion avance.');
 }
 const say = Kit.say;
@@ -753,6 +756,8 @@ addEventListener('pointerup', e => {
     return;
   }
   if (!n || n !== d.n) return;
+  // A click while the computer plays only gets an answer: it does not count for a double-click.
+  if (phase !== 'player') return tap(n);
   // Two quick clicks on the same spot of one square are a double-click. On two squares, two clicks.
   const t = performance.now(), prev = lastTap;
   lastTap = { t, n, x: e.clientX, y: e.clientY };

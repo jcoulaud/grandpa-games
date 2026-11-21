@@ -191,9 +191,11 @@ ok(await g(() => G.turn === 1) && await g(() => undo.length) === undoLen, 'after
 
 // 13. The draw counter, and the level chosen for a new game.
 await setPos('K47,K48', 'K3');
-ok((await g(() => document.getElementById('drawNote').textContent)).includes('5 de vos coups'), 'a short ending says when it is drawn: ' + await g(() => document.getElementById('drawNote').textContent));
+ok((await g(() => document.getElementById('drawNote').textContent)).includes('dans 10 coups'), 'a short ending says when it is drawn: ' + await g(() => document.getElementById('drawNote').textContent));
 await g(() => { G.endLeft = 1; render(); });
-ok((await g(() => document.getElementById('drawNote').textContent)).startsWith('Partie nulle après votre prochain coup'), 'one ply left: the draw comes after his next move');
+ok((await g(() => document.getElementById('drawNote').textContent)).startsWith('Partie nulle après votre prochain coup'), 'one ply left on his turn: the draw comes after his next move');
+await g(() => { G.turn = -1; render(); });
+ok((await g(() => document.getElementById('drawNote').textContent)).startsWith("Partie nulle au prochain coup de l'ordinateur"), "one ply left on the computer's turn: the draw comes with its move");
 await page.screenshot({ path: `${OUT}/dames-ending.png` });
 await page.click('#newBtn');
 ok((await g(() => [...document.querySelectorAll('#overBtns button')].map(b => b.textContent).join())).includes('Facile,Moyen,Fort'), 'a new game offers three levels');
@@ -218,7 +220,12 @@ ok((await g(() => document.getElementById('home').href)).endsWith('/public/index
 await page.setViewportSize({ width: 360, height: 640 }); await wait(200);
 ok(await g(() => { const r = boardEl.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; }), 'a narrow window shows the whole board');
 await setPos('K47,K48', 'K3');
-ok(await g(() => { const d = document.getElementById('drawNote'); d.scrollIntoView(); const r = d.getBoundingClientRect(); return d.offsetParent && r.width > 100 && r.bottom <= innerHeight && r.top >= 0; }), 'a narrow window still shows the draw warning, under the board');
+ok(await g(() => { const d = document.getElementById('drawNote'); const r = d.getBoundingClientRect(); return d.offsetParent && r.width > 100 && r.bottom <= innerHeight && r.top >= 0; }), 'a narrow window shows the draw warning under the board, without scrolling');
+await page.setViewportSize({ width: 780, height: 1024 }); await wait(200);
+ok(await g(() => { const r = document.getElementById('drawNote').getBoundingClientRect(); return r.bottom <= innerHeight && r.top >= 0; }), 'an upright tablet shows the draw warning without scrolling');
+await page.setViewportSize({ width: 740, height: 360 }); await wait(200);
+ok(await g(() => [...document.querySelectorAll('.tray')].every(t => t.getBoundingClientRect().right <= t.parentElement.getBoundingClientRect().right + 1)), 'a short narrow window keeps the trays inside their panels');
+await page.setViewportSize({ width: 360, height: 640 }); await wait(200);
 await page.screenshot({ path: `${OUT}/dames-phone.png` });
 
 // 14. A wide screen gets larger squares.
