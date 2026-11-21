@@ -2,7 +2,7 @@
 
 A library of simple card games for my grandfather on Windows. No ads and no account. The text is in French, and the cards and buttons are large.
 
-The library is a website installed once as an app with Edge. It works offline. Each push to `main` publishes a new version. His PC downloads it in the background and starts it after the app window is closed, never during a game. His progress is saved on his PC.
+The library is a website installed once as an app with Edge. It works offline. Each push to `main` publishes a new version. When he opens the app, his PC downloads it in the background and the library reloads with it a few seconds later. A game window keeps its version until it closes. His progress is saved on his PC.
 
 ## How it works
 

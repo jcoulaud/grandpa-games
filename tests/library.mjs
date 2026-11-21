@@ -87,24 +87,34 @@ try {
   check('game opens offline', await page.locator('#table .card').count() > 50);
   await pc.setOffline(false);
 
-  // 4. A new version starts only after the app window is closed.
+  // 4. A new version starts when the library opens, never under an open game.
   const page3 = await pc.newPage();
   await page3.goto(BASE);
   await page3.waitForSelector('#saves svg');
   const v1 = await page3.evaluate(async () => (await caches.keys()).join());
   writeFileSync(versionFile, "self.VERSION = 'test-2';\n");
-  await page.close();
+  // page is the solitaire: a game is open in another window.
   await page3.reload();
   await page3.waitForFunction(async () => (await caches.keys()).includes('grandpa-games-test-2'), null, { timeout: 15000 });
+  await page3.waitForTimeout(1500);
   const during = await page3.evaluate(async () => (await caches.keys()).join());
-  check('old version kept while the window is open', v1.includes('test-1') && during.includes('test-1'), during);
+  check('old version kept while a game is open', v1.includes('test-1') && during.includes('test-1'), during);
+  await page.close();
   await page3.close();
-  await new Promise(r => setTimeout(r, 1000));
+  writeFileSync(versionFile, "self.VERSION = 'test-3';\n");
+  // The app opens again: one start is enough to get the newest version.
   const page4 = await pc.newPage();
   await page4.goto(BASE);
-  await page4.waitForFunction(async () => (await caches.keys()).join() === 'grandpa-games-test-2', null, { timeout: 15000 })
-    .then(() => check('new version starts after the window is closed', true))
-    .catch(async () => check('new version starts after the window is closed', false, await page4.evaluate(async () => (await caches.keys()).join())));
+  await page4.waitForFunction(async () => (await caches.keys()).join() === 'grandpa-games-test-3', null, { timeout: 15000 })
+    .then(() => check('the newest version starts at the first open', true))
+    .catch(async () => check('the newest version starts at the first open', false, await page4.evaluate(async () => (await caches.keys()).join())));
+  await page4.waitForTimeout(1000);
+  await page4.waitForSelector('#saves svg');
+  const ctl = await page4.evaluate(async () => {
+    const c = navigator.serviceWorker.controller;
+    return c ? (await (await fetch('version.js')).text()) : 'no controller';
+  });
+  check('the library is controlled by the new version', ctl.includes('test-3'), ctl);
   check('the game survives the update', await page4.evaluate(() => !!GG.load('solitaire')));
 
   // 5. Statistics: strangers can only add numbers, and only for known games.

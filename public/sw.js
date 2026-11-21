@@ -1,8 +1,9 @@
 // Offline copy and quiet updates.
 //
-// Each deploy writes version.js (see scripts/stamp.mjs). A new version downloads all CORE files
-// into a new cache in the background, and only starts once every window of the app is closed.
-// So the files of one version are always served together, and nothing changes during a game.
+// Each deploy writes version.js (see scripts/stamp.mjs). When the app opens, a new version downloads
+// all CORE files into a new cache in the background. The library page then asks it to start, and it
+// starts if every open window of the app shows the library. A game window keeps its version until it
+// is closed. So the files of one version are always served together, and nothing changes during a game.
 try { importScripts('version.js'); } catch (e) { self.VERSION = 'dev'; }
 const CACHE = 'grandpa-games-' + self.VERSION;
 const CORE = [
@@ -14,6 +15,13 @@ const CORE = [
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE.map(u => new Request(u, { cache: 'reload' })))));
+});
+self.addEventListener('message', e => {
+  if (e.data !== 'start') return;
+  const home = new URL(self.registration.scope).pathname;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(all => {
+    if (all.every(c => new URL(c.url).pathname === home)) return self.skipWaiting();
+  }));
 });
 self.addEventListener('activate', e => e.waitUntil((async () => {
   for (const name of await caches.keys()) if (name !== CACHE) await caches.delete(name);
