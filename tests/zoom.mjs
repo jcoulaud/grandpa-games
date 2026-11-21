@@ -32,7 +32,20 @@ try {
   ok(await zoomText() === '130 %', 'the size is kept after a reload');
   await minus.click(); await minus.click(); await minus.click(); await minus.click();
   ok(await zoomText() === '90 %', '"Réduire" makes the page smaller');
-  await plus.click(); await plus.click(); await plus.click(); await plus.click();
+  const columns = () => g(() => getComputedStyle(document.querySelector('#games')).gridTemplateColumns.split(' ').length);
+  ok(await columns() === 4, 'reducing the library fits four games across the window');
+  await plus.click();
+  ok(await columns() === 3, 'enlarging the tiles returns the library to three columns');
+  const full = page.getByRole('button', { name: 'Plein écran', exact: true });
+  await full.click();
+  await page.waitForFunction(() => document.fullscreenElement === document.documentElement);
+  await page.getByRole('button', { name: 'Quitter le plein écran' }).click();
+  await page.waitForFunction(() => !document.fullscreenElement);
+  ok(await full.isVisible(), 'the footer enters and leaves full screen');
+  await g(() => document.querySelector('main').scrollTo(0, 9999));
+  ok(await g(() => Math.abs(document.querySelector('footer').getBoundingClientRect().bottom - innerHeight) <= 1),
+    'the footer stays at the bottom when the games scroll');
+  await plus.click(); await plus.click(); await plus.click();
 
   // 2. Solitaire at 130 %: a click and a drag move the right card.
   await page.goto(gameUrl('solitaire'));

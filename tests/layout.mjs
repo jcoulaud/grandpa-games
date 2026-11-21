@@ -94,13 +94,22 @@ function audit({ minText, rulesFit }) {
   }
   const targets = [...document.querySelectorAll('button, a#home, a.tile')].filter(e => inScope(e) && shown(e));
   const rects = targets.map(e => e.getBoundingClientRect());
+  // A scrolling panel clips its buttons at the panel edge.
+  const visibleRects = targets.map((e, i) => {
+    const r = rects[i], panel = scroller(e);
+    if (!panel) return r;
+    const p = panel.getBoundingClientRect();
+    return { left: Math.max(r.left, p.left), right: Math.min(r.right, p.right),
+      top: Math.max(r.top, p.top), bottom: Math.min(r.bottom, p.bottom) };
+  });
   targets.forEach((e, i) => {
     const r = rects[i];
     if (r.height < 44) bad.push(`button under 44 px high (${Math.round(r.height)}): ${name(e)}`);
     if (!scroller(e) && (r.right > W + 1 || r.left < -1)) bad.push(`button past the side of the window: ${name(e)}`);
     for (let j = i + 1; j < targets.length; j++) {
-      const q = rects[j];
-      if (!targets[j].contains(e) && !e.contains(targets[j]) && r.left < q.right - 1 && q.left < r.right - 1 && r.top < q.bottom - 1 && q.top < r.bottom - 1)
+      const v = visibleRects[i], q = visibleRects[j];
+      if (v.right <= v.left || v.bottom <= v.top || q.right <= q.left || q.bottom <= q.top) continue;
+      if (!targets[j].contains(e) && !e.contains(targets[j]) && v.left < q.right - 1 && q.left < v.right - 1 && v.top < q.bottom - 1 && q.top < v.bottom - 1)
         bad.push(`buttons overlap: ${name(e)} and ${name(targets[j])}`);
     }
   });
