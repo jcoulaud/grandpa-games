@@ -598,7 +598,7 @@ function layout() {
   // Height: the top row and its labels, then a column with three face-down and five face-up cards.
   // Longer columns squeeze (see colY), so the cards can stay large on a laptop.
   // UP shows the whole corner index (the rank over its suit) of a covered card.
-  const byHeight = (H - 2 * pad - LABEL) / (2 + 4 * UP + 3 * DOWN) / RATIO;
+  const byHeight = (H - top - pad - LABEL - rowGap) / (2 + 4 * UP + 3 * DOWN) / RATIO;
   const w = Math.floor(Math.max(48, Math.min(byWidth, byHeight, 170)));
   const h = Math.round(w * RATIO);
   // A wide window spreads the columns, up to 30% of a card, so the board fills the felt.
@@ -621,7 +621,8 @@ function colY(pile) {
   const avail = L.H - L.ty - L.pad - L.h;
   if (nd * down + nu * up > avail) {
     if (nd) down = Math.max(L.h * 0.045, (avail - nu * up) / nd);
-    if (nu && nd * down + nu * up > avail) up = Math.max(L.h * 0.24, (avail - nd * down) / nu);
+    // Squeezed, a covered card still shows its rank; its suit may be cut.
+    if (nu && nd * down + nu * up > avail) up = Math.max(L.h * 0.185, (avail - nd * down) / nu);
   }
   const ys = []; let y = L.ty;
   pile.forEach(c => { ys.push(Math.round(y)); y += c.up ? up : down; });
@@ -759,7 +760,7 @@ addEventListener('pointermove', e => {
   if (!drag.started) {
     if (Math.hypot(dx, dy) < 16 || drag.id === null || !selectable(drag.id)) return;
     // A card with no place to go does not drag: the release counts as a click, which says so.
-    if (!destinations(locate(drag.id)).length) return;
+    if (!destinations(locate(drag.id)).length) { const id = drag.id; drag = null; return choose(id); }
     const loc = locate(drag.id), pile = pileOf(loc);
     drag.started = true; drag.loc = loc;
     if (sel !== drag.id) { clearSel(); sel = drag.id; }

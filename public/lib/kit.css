@@ -18,8 +18,8 @@ body {
 #bar { display: flex; align-items: center; gap: 12px; padding: 8px 18px; background: #F6F8F7; color: var(--text);
   border-bottom: 1px solid rgba(0,0,0,.14); box-shadow: 0 2px 14px rgba(0,0,0,.22); position: relative; z-index: 10; }
 #home { display: inline-flex; align-items: center; gap: 6px; min-height: 54px; padding: 8px 18px 8px 10px; border-radius: 15px;
-  font: 600 21px var(--ui); color: var(--text); text-decoration: none; background: #E4E9E7; }
-#home:hover { background: #D5DCD9; }
+  font: 600 21px var(--ui); color: #fff; text-decoration: none; background: #26302D; }
+#home:hover { background: #3A4542; }
 #home:focus-visible { outline: 4px solid #1B2422; outline-offset: 3px; }
 #home svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 #title { display: flex; align-items: center; gap: 10px; font: 700 28px var(--ui); letter-spacing: -.01em;
@@ -55,16 +55,16 @@ button.game { background: var(--accent); color: #fff; }
 button.game:hover { background: #0E7D6D; }
 button.game:active { background: #095A4E; }
 
-/* Message line: white text on a darker band of the felt, so it belongs to the table, not to the top bar. */
+/* Message line: dark text on a warm cream band, so it reads apart from the white top bar. */
 #msgRail { padding: 18px 18px 6px; display: flex; gap: 10px; }
 #msgRail #msg { flex: 1; min-width: 0; }
 #msg {
   height: 46px; padding: 0 18px; display: flex; align-items: center; gap: 12px;
-  background: rgba(0,0,0,.24); color: #fff; font: 600 22px/1.2 var(--ui);
-  border-radius: 15px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14);
+  background: #FFF4D6; color: var(--text); font: 600 22px/1.2 var(--ui);
+  border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,.25);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-#msg::before { content: ""; flex: none; width: 28px; height: 28px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FFC83D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 12a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.2-4.6A8.5 8.5 0 1 1 21 12z'/%3E%3C/svg%3E") center / contain no-repeat; }
+#msg::before { content: ""; flex: none; width: 28px; height: 28px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230B6B5D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 12a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.2-4.6A8.5 8.5 0 1 1 21 12z'/%3E%3C/svg%3E") center / contain no-repeat; }
 
 /* Rules guide */
 #help, #over { position: fixed; inset: 0; background: rgba(6,28,25,.6); display: none; align-items: center; justify-content: center; z-index: 5000; }

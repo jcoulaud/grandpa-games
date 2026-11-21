@@ -24,7 +24,7 @@ const [tx, ty] = await tablePos();
 const at = ([x, y]) => [tx + x, ty + y];
 const cardPt = id => g(`[pos[${id}][0] + L.w/2, pos[${id}][1] + 12]`).then(at);
 const pilePt = d => g(`(() => { const d = ${JSON.stringify(d)}; const q = d.a==='found'?S.found[d.i]:S.tab[d.i];
-  const [x,y] = q.length ? pos[last(q).id] : d.a==='found' ? foundXY(d.i) : [colX(d.i), L.top]; return [x + L.w/2, y + L.h/2]; })()`).then(at);
+  const [x,y] = q.length ? pos[last(q).id] : d.a==='found' ? foundXY(d.i) : [colX(d.i), L.ty]; return [x + L.w/2, y + L.h/2]; })()`).then(at);
 
 // Find a legal tableau or waste move, drawing until one exists. want: number of places the card must have (0 = any).
 async function findMove(want = 0) {
@@ -144,7 +144,14 @@ await g(() => {
 });
 await page.waitForTimeout(300);
 const strip = await g(() => { const ys = colY(S.tab[3]); return ys[ys.length - 1] - ys[ys.length - 2]; });
-ok(strip >= 30, `face-up strip in a long column is ${Math.round(strip)}px`);
+// Squeezed, a covered card still shows its whole rank.
+ok(strip >= 24, `face-up strip in a long column is ${Math.round(strip)}px`);
+// The longest usual column, six face-down and seven face-up cards, still fits in the table.
+const bottom = await g(() => {
+  const col = [...Array(6).keys()].map(id => ({ id, up: false })).concat([...Array(7).keys()].map(i => ({ id: 20 + i, up: true })));
+  return last(colY(col)) + L.h - L.H;
+});
+ok(bottom <= 0, `a column of 6 face-down and 7 face-up cards fits (${Math.round(bottom)}px past the table)`);
 ok(JSON.stringify(await g(() => [0, 1, 2, 3, 4, 5, 6].map(colX))) === JSON.stringify(colsBefore), 'long column does not move the board');
 await page.screenshot({ path: `${OUT}/5-long-column.png` });
 
