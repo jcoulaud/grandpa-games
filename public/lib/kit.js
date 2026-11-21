@@ -70,6 +70,19 @@
     (first || b.firstChild).focus();
   }
 
+  const levelNames = { facile: 'Facile', moyen: 'Moyen', fort: 'Difficile' };
+  function showLevel(level) {
+    $('newBtn').innerHTML = 'Nouvelle partie<small>Niveau ' + levelNames[level].toLowerCase() + '</small>';
+  }
+  function chooseLevel(level, playing, start) {
+    const buttons = Object.entries(levelNames).map(([key, label]) =>
+      [label, () => start(key), !playing && key === level]);
+    if (level) buttons.push(['Continuer la partie', null, playing]);
+    else buttons.push(['Retour aux jeux', () => { location.href = $('home').href; }]);
+    dialog('Nouvelle partie', (playing ? 'La partie en cours sera effacée. ' : '') +
+      'Choisissez le niveau de difficulté.', buttons);
+  }
+
   // Rules guide: short pages, so they never need scrolling. "Fermer" works from every page.
   const help = $('help');
   let pages = [], at = 0;
@@ -97,12 +110,29 @@
     next.focus();
   }
   function openHelp() { if (!help) return; remember(); help.classList.add('on'); showPage(0); }
-  function closeHelp() { if (help) { help.classList.remove('on'); giveBack(); } }
+  let firstStart = null;
+  function firstVisit(start) {
+    firstStart = start;
+    $('table').hidden = true;
+    openHelp();
+  }
+  function closeHelp() {
+    if (!helpOpen()) return;
+    help.classList.remove('on');
+    giveBack();
+    if (firstStart) chooseLevel(null, false, level => {
+      const start = firstStart;
+      firstStart = null;
+      $('table').hidden = false;
+      start(level);
+      $('newBtn').focus();
+    });
+  }
   const helpOpen = () => !!help && help.classList.contains('on');
   const isOpen = () => over.classList.contains('on') || helpOpen();
   function escape() {
     if (helpOpen()) { closeHelp(); return true; }
-    if (over.classList.contains('on')) { closeDialog(); return true; }
+    if (over.classList.contains('on')) { if (!firstStart) closeDialog(); return true; }
     return false;
   }
 
@@ -121,10 +151,10 @@
   // A window that is behind (another window or the backup saved a newer game) cannot save:
   // it asks to reload, at each refused save, until it is reloaded.
   addEventListener('gg-stale', () => {
-    if (!over.classList.contains('on')) dialog('Le jeu a changé ailleurs',
+    if (firstStart || !over.classList.contains('on')) dialog('Le jeu a changé ailleurs',
       'Ce jeu a été enregistré dans une autre fenêtre. Rechargez-le pour continuer la partie à jour.',
       [['Recharger le jeu', () => location.reload(), true]]);
   });
 
-  window.Kit = { say, dialog, closeDialog, openHelp, closeHelp, isOpen, escape, icon };
+  window.Kit = { firstVisit, levelNames, showLevel, chooseLevel, say, dialog, closeDialog, openHelp, closeHelp, isOpen, escape, icon };
 })();

@@ -11,6 +11,8 @@ await page.goto(URL);
 await page.waitForTimeout(2200);
 ok(await page.evaluate(() => help.classList.contains("on")), "rules open on the first visit");
 await page.keyboard.press("Escape");
+await page.getByRole('button', { name: 'Facile', exact: true }).click();
+await page.waitForFunction(() => !busy);
 ok(!(await page.evaluate(() => dialogOpen())), "Escape closes the rules");
 
 const g = fn => page.evaluate(fn);
@@ -245,13 +247,15 @@ ok(await g(() => lastTap === null), 'undo forgets the last click');
 const big = await browser.newPage({ viewport: { width: 1920, height: 1000 } });
 big.on('pageerror', e => errors.push(e.message));
 await big.goto(URL); await big.waitForTimeout(2200); await big.keyboard.press("Escape");
+await big.getByRole('button', { name: 'Facile', exact: true }).click();
 console.log('     1920x1000 card: ' + JSON.stringify(await big.evaluate(() => [L.w, L.h])));
 await big.screenshot({ path: `${OUT}/7-start-1920x1000.png` });
 
 // 12. A save from before the library shows its wins on the library tile.
 const old = await browser.newPage({ viewport: { width: 1366, height: 680 } });
 old.on('pageerror', e => errors.push(e.message));
-await old.goto(URL); await old.waitForTimeout(500);
+await old.goto(URL); await old.click("#helpClose");
+await old.getByRole('button', { name: 'Facile', exact: true }).click();
 await old.evaluate(() => {
   const st = JSON.parse(JSON.stringify(S)); st.moves = 4;
   localStorage.clear();

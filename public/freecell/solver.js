@@ -93,7 +93,7 @@ function solve(x0, budget) {
   const x = sClone(x0), pre = [];
   sNormalize(x, pre);
   const won = y => y.f.every(n => n === 13);
-  if (won(x)) return { win: true, path: pre };
+  if (won(x)) return { win: true, nodes: 0, path: pre };
   // A binary heap of [score, node]. A node keeps its parent and the moves that led to it.
   const heap = [], push = (s, n) => {
     heap.push([s, n]);
@@ -127,7 +127,7 @@ function solve(x0, budget) {
       if (won(y)) {
         const path = [];
         for (let n = child; n; n = n.up) path.unshift(...n.log);
-        return { win: true, path: pre.concat(path) };
+        return { win: true, nodes, path: pre.concat(path) };
       }
       push(sScore(y) + child.d * 0.5, child);
     }
