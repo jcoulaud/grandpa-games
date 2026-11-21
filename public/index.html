@@ -91,14 +91,17 @@
   a.tile:hover { transform: translateY(-4px); box-shadow: 0 4px 8px rgba(0,0,0,.2), 0 22px 44px rgba(0,0,0,.32); }
   a.tile:focus-visible { outline: 5px solid var(--gold); outline-offset: 4px; }
   .art {
-    height: 130px; position: relative; overflow: hidden;
+    height: 150px; position: relative; overflow: hidden;
     background: radial-gradient(90% 120% at 50% 0%, #1F7A6C, #12594F);
   }
   .art svg.board { position: absolute; left: 50%; bottom: -30px; width: 224px; height: 140px; margin-left: -112px;
     filter: drop-shadow(0 8px 12px rgba(0,0,0,.35)); transform: rotate(-5deg); }
-  .art svg.card { position: absolute; left: 50%; bottom: -40px; width: 86px; height: 120px; margin-left: -43px;
-    filter: drop-shadow(0 6px 10px rgba(0,0,0,.3)); transform-origin: 50% 120%; }
-  .art svg.card.front { bottom: -24px; }
+  /* The card games lay the cards of the games (lib/cards.css) on a 260 by 150 scene, centred:
+     what a tile crops on the sides is only felt. */
+  .art .scene { position: absolute; left: 50%; top: 0; width: 260px; height: 150px; margin-left: -130px; }
+  .art .card { transition: none; }
+  .art .card.lifted { box-shadow: 0 12px 22px rgba(0,0,0,.45); }
+  .art .slot { position: absolute; border-radius: 6px; background: rgb(0 0 0 / .14); border: 2px dashed rgb(255 255 255 / .45); }
   .body { padding: 12px 22px 18px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
   .body h3 { margin: 0; font: 700 31px var(--ui); letter-spacing: -.01em; }
   .body p { margin: 0; font: 500 20px/1.35 var(--ui); color: var(--muted); }
@@ -135,14 +138,9 @@
   }
   @media (prefers-reduced-motion: reduce) { .tile { transition: none; } a.tile:hover { transform: none; } }
 </style>
+<link rel="stylesheet" href="lib/cards.css">
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="su0" viewBox="0 0 100 100"><path d="M50 5C62 26 95 40 95 61c0 12-10 20-21 20-8 0-15-4-19-11 1 11 6 20 13 26H32c7-6 12-15 13-26-4 7-11 11-19 11C15 81 5 73 5 61 5 40 38 26 50 5z"/></symbol>
-  <symbol id="su1" viewBox="0 0 100 100"><path d="M50 92C22 66 5 50 5 31 5 17 16 7 29 7c9 0 17 5 21 14 4-9 12-14 21-14 13 0 24 10 24 24 0 19-17 35-45 61z"/></symbol>
-  <symbol id="su2" viewBox="0 0 100 100"><path d="M50 2Q69 29 91 50Q69 71 50 98Q31 71 9 50Q31 29 50 2z"/></symbol>
-  <symbol id="su3" viewBox="0 0 100 100"><circle cx="50" cy="26" r="21"/><circle cx="26" cy="58" r="21"/><circle cx="74" cy="58" r="21"/><path d="M40 40h20v20H40z"/><path d="M46 56c0 18-5 31-13 40h34c-8-9-13-22-13-40z"/></symbol>
-</svg>
 
 <div id="deco" aria-hidden="true">
   <svg viewBox="-5 -5 110 110" style="width:520px;left:-150px;bottom:-140px;transform:rotate(-16deg)"><path d="M50 5C62 26 95 40 95 61c0 12-10 20-21 20-8 0-15-4-19-11 1 11 6 20 13 26H32c7-6 12-15 13-26-4 7-11 11-19 11C15 81 5 73 5 61 5 40 38 26 50 5z"/></svg>
@@ -178,31 +176,57 @@
 </div></footer>
 
 <script src="lib/store.js"></script>
+<script src="lib/cards.js"></script>
 <script>
 'use strict';
 // The library. To add a game: put it in <id>/index.html, add it here, and add its folder to CORE in sw.js.
-// Each game has its own look: the felt of its table, and a picture made of cards, fanned or in a row,
-// or for the dames, a corner of the board with its pieces. The dame de pique stands in front of two hearts.
+// Each game has its own look: the felt of its table, and a scene drawn in its own way (see the scenes below).
+// The dames show a corner of the board with its pieces.
 const GAMES = [
   { id: 'solitaire', title: 'Solitaire', text: 'Rangez toutes les cartes, de l’as jusqu’au roi.',
-    felt: ['#1F7A6C', '#12594F'], cards: [['7', 2], ['A', 0], ['R', 1]] },
+    felt: ['#1F7A6C', '#12594F'], scene: solitaireScene },
   { id: 'freecell', title: 'FreeCell', text: 'Rangez les cartes avec l’aide de quatre cases libres.',
-    felt: ['#2E66A0', '#173F6B'], row: true, cards: [['A', 1], ['A', 0], ['A', 2], ['A', 3]] },
+    felt: ['#2E66A0', '#173F6B'], scene: freecellScene },
   { id: 'dames', title: 'Dames', text: 'Le jeu de dames sur 100 cases, contre l’ordinateur.',
-    felt: ['#8A3440', '#4C161E'], board: true },
+    felt: ['#8A3440', '#4C161E'], scene: boardArt },
   { id: 'dame-de-pique', title: 'Dame de pique', text: 'Évitez les cœurs et la dame de pique, à quatre.',
-    felt: ['#6A4488', '#2C1840'], queen: true },
+    felt: ['#6A4488', '#2C1840'], scene: piqueScene },
 ];
 
-const SUIT_RED = s => s === 1 || s === 2;
-function cardSvg([rank, suit], angle, dx) {
-  const col = SUIT_RED(suit) ? '#C4122F' : '#14171A';
-  return `<svg class="card" viewBox="0 0 80 112" style="transform: translateX(${dx}px) rotate(${angle}deg)">
-    <rect x="1" y="1" width="78" height="110" rx="8" fill="#FFFDF6" stroke="#D9D3C5" stroke-width="1"/>
-    <text x="8" y="27" fill="${col}" font-family="Segoe UI, system-ui, sans-serif" font-weight="700" font-size="24">${rank}</text>
-    <use href="#su${suit}" x="${rank.length > 1 ? 34 : 24}" y="9" width="20" height="20" fill="${col}"/>
-    <use href="#su${suit}" x="20" y="44" width="40" height="40" fill="${col}"/></svg>`;
+// A card as the games draw it, centred on (x, y), w wide, turned by rot degrees.
+// A card id is suit * 13 + rank - 1, with the suits pique, cœur, carreau, trèfle (see lib/cards.js).
+const PIQUE = 0, COEUR = 13, CARREAU = 26, TREFLE = 39;
+function card(id, x, y, w, rot = 0, cls = '') {
+  const h = w * 1.3, down = cls.includes('down');
+  return `<div class="card ${Cards.rd(id) ? 'red' : 'black'} ${cls}" style="--w: ${w}px; --h: ${h}px; left: ${x - w / 2}px; top: ${y - h / 2}px; transform: rotate(${rot}deg)">${down ? '' : Cards.faceHtml(id)}</div>`;
 }
+const back = (x, y, w, rot) => card(0, x, y, w, rot, 'down');
+// An empty place for a card: a dashed outline on the felt.
+const slot = (x, y, w) => `<div class="slot" style="left: ${x - w / 2}px; top: ${y - w * .65}px; width: ${w}px; height: ${w * 1.3}px"></div>`;
+const scene = inner => `<div class="scene" aria-hidden="true">${inner}</div>`;
+
+// Solitaire: the stock face down, a column going down from the roi in alternating colours,
+// and the as de cœur on its foundation.
+function solitaireScene() {
+  return scene(
+    back(48, 76, 58, -4) + back(50, 74, 58, -1) + back(52, 72, 58, 2)
+    + card(PIQUE + 12, 130, 42, 58) + card(COEUR + 11, 130, 63, 58) + card(TREFLE + 10, 130, 84, 58) + card(CARREAU + 9, 130, 105, 58)
+    + slot(212, 76, 58) + card(COEUR, 212, 74, 58, 5));
+}
+// FreeCell: the four free cells. One holds a card, two are free, and a roi drops into the last one.
+function freecellScene() {
+  return scene(
+    slot(43, 80, 54) + slot(101, 80, 54) + slot(159, 80, 54) + slot(217, 80, 54)
+    + card(TREFLE + 6, 43, 80, 54)
+    + card(COEUR + 12, 222, 62, 58, 9, 'lifted'));
+}
+// Dame de pique: a trick on the table, one card from each of the four players, and the dame de pique on top.
+function piqueScene() {
+  return scene(
+    card(TREFLE + 2, 130, 46, 58, 172) + card(COEUR + 8, 80, 78, 58, -78) + card(COEUR + 10, 180, 74, 58, 84)
+    + card(PIQUE + 11, 132, 94, 68, -7, 'lifted'));
+}
+
 // A corner of the dames board: 6 by 4 squares, a few pieces and a crowned one.
 function boardArt() {
   let sq = '<rect width="240" height="160" fill="#EEDCB6"/>';
@@ -217,16 +241,6 @@ function boardArt() {
   sq += piece(1, 0, false) + piece(3, 0, false) + piece(4, 1, false) + piece(2, 1, true, true) + piece(1, 2, true) + piece(3, 2, true) + piece(0, 3, true);
   return `<svg class="board" viewBox="0 0 240 150" aria-hidden="true"><rect x="-6" y="-6" width="252" height="172" rx="4" fill="#6A4127"/>${sq}</svg>`;
 }
-// The queen of spades, upright, in front of two hearts.
-const queenArt = () => cardSvg(['A', 1], -18, -54) + cardSvg(['R', 1], 18, 54) + cardSvg(['D', 0], 0, 0).replace('class="card"', 'class="card front"');
-// A fan of cards, or with row, the cards standing side by side.
-function art(cards, row) {
-  const n = cards.length;
-  return cards.map((c, i) => {
-    const t = n === 1 ? 0 : i / (n - 1) - 0.5;
-    return row ? cardSvg(c, 0, t * (n - 1) * 60) : cardSvg(c, t * 30, t * 110);
-  }).join('');
-}
 const ICON_PLAY = '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg>';
 const ICON_TROPHY = '<svg viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v4M8.5 20h7"/></svg>';
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -239,7 +253,7 @@ function render() {
     // The button already says a game is in progress: the line under the text shows only the wins.
     const wins = parts.filter(p => !/en cours/i.test(p)).join(' · ');
     return `<a class="tile" href="${g.id}/" data-id="${g.id}">
-      <div class="art" style="background: radial-gradient(90% 120% at 50% 0%, ${g.felt[0]}, ${g.felt[1]})">${g.board ? boardArt() : g.queen ? queenArt() : art(g.cards, g.row)}</div>
+      <div class="art" style="background: radial-gradient(90% 120% at 50% 0%, ${g.felt[0]}, ${g.felt[1]})">${g.scene()}</div>
       <div class="body">
         <h3>${esc(g.title)}</h3>
         <p>${esc(g.text)}</p>
