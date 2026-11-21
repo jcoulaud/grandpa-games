@@ -5,131 +5,250 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Solitaire</title>
 <style>
-  :root { --w: 100px; --h: 140px; --bar: 84px; }
+  :root {
+    --w: 110px; --h: 143px; --gap: 12px;
+    --gold: #FFC83D; --accent: #0B6B5D; --text: #1B2422;
+    --face: #FFFDF6; --ink: #14171A; --red: #C4122F; --back: #1F4470;
+    --ui: "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
   body {
-    background: radial-gradient(ellipse at 50% 35%, #2e8a4c 0%, #1d6a39 55%, #124a27 100%);
-    font-family: "Segoe UI", system-ui, Arial, sans-serif;
+    display: grid; grid-template-rows: auto auto 1fr;
+    background: radial-gradient(120% 100% at 50% 0%, #1A6A5F, #0F4F47 70%) #0F4F47; color: #fff;
+    font-family: var(--ui);
     overflow: hidden; user-select: none; -webkit-user-select: none; touch-action: none;
   }
 
-  /* Header */
-  #bar {
-    height: var(--bar); display: flex; align-items: center; gap: 14px; padding: 0 20px;
-    background: rgba(0,0,0,.18); box-shadow: 0 1px 0 rgba(255,255,255,.08);
-  }
-  #title { color: #fff; font: italic 700 34px Georgia, "Times New Roman", serif; margin-right: 18px; letter-spacing: .5px; }
+  /* Top bar: a light, flat surface with the buttons */
+  #bar { display: flex; align-items: center; gap: 12px; padding: 8px 18px; background: #F6F8F7; color: var(--text);
+    border-bottom: 1px solid rgba(0,0,0,.14); box-shadow: 0 2px 14px rgba(0,0,0,.22); position: relative; z-index: 10; }
+  #title { display: flex; align-items: center; gap: 10px; font: 700 28px var(--ui); letter-spacing: -.01em; margin-right: 14px; }
+  #title svg { width: 28px; height: 28px; fill: var(--accent); }
   button {
-    font: 600 24px "Segoe UI", system-ui, Arial, sans-serif; padding: 10px 24px; border-radius: 14px;
-    border: 0; background: #fff; color: #17321f; cursor: pointer;
-    box-shadow: 0 2px 0 #0b2e17, 0 4px 10px rgba(0,0,0,.25);
+    min-height: 54px; padding: 8px 22px; border-radius: 15px; border: 0; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 10px;
+    font: 600 21px var(--ui); background: #E4E9E7; color: var(--text);
+    transition: background-color .12s;
   }
-  button:hover { background: #f1f7f2; }
-  button:active { transform: translateY(2px); box-shadow: 0 0 0 #0b2e17; }
-  button:disabled { opacity: .45; cursor: default; transform: none; }
-  button.primary { background: #ffd84d; color: #3a2a00; }
-  button.primary:hover { background: #ffe27a; }
-  #stats { margin-left: auto; color: #e6f3ea; font-size: 22px; }
-  #stats b { color: #fff; font-size: 26px; }
+  button svg { width: 26px; height: 26px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  button:hover { background: #D5DCD9; }
+  button:active { background: #C6CFCB; }
+  button:focus-visible { outline: 4px solid #1B2422; outline-offset: 3px; box-shadow: 0 0 0 3px #fff; }
+  button:disabled, button:disabled:hover { background: #EEF1F0; color: #5F6764; cursor: default; }
+  button.primary { background: var(--gold); color: #1F1A00; }
+  button.primary:hover { background: #FFD666; }
+  button.primary:active { background: #F2BB2E; }
+  #wins { margin-left: auto; display: flex; align-items: center; gap: 8px; font: 600 20px var(--ui); color: var(--text); white-space: nowrap; padding-right: 8px; }
+  #wins:empty { visibility: hidden; }
+  #wins::before { content: ""; width: 26px; height: 26px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B2422' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 4h10v5a5 5 0 0 1-10 0z'/%3E%3Cpath d='M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v4M8.5 20h7'/%3E%3C/svg%3E") center / contain no-repeat; }
+  #newBtn { background: transparent; box-shadow: inset 0 0 0 2px #B9C2BF; }
+  #newBtn:hover { background: #E4E9E7; }
 
-  /* Table */
-  #table { position: absolute; left: 0; right: 0; top: var(--bar); bottom: 0; }
+  /* Message line: a white rounded strip on the table. One line, one height. */
+  #msgRail { padding: 8px 18px 0; }
+  #msg {
+    height: 46px; padding: 0 18px; display: flex; align-items: center; gap: 12px;
+    background: #fff; color: var(--text); font: 600 22px/1.2 var(--ui);
+    border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,.25);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #msg::before { content: ""; flex: none; width: 28px; height: 28px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230B6B5D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 12a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.2-4.6A8.5 8.5 0 1 1 21 12z'/%3E%3C/svg%3E") center / contain no-repeat; }
+
+  /* Table: one flat colour, lit softly from the top. Empty places are soft translucent shapes. */
+  #table { position: relative; overflow-x: hidden; overflow-y: auto; }
   .slot {
     position: absolute; width: var(--w); height: var(--h); border-radius: calc(var(--w) * .09);
-    border: 3px solid rgba(255,255,255,.22); background: rgba(0,0,0,.1);
-    color: rgba(255,255,255,.35); display: flex; align-items: center; justify-content: center;
-    font: 700 calc(var(--w) * .34) "Segoe UI", system-ui, sans-serif;
+    background: rgba(255,255,255,.09); color: rgba(255,255,255,.82);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(var(--w) * .04);
+    font: 600 calc(var(--w) * .2)/1 var(--ui); text-align: center;
+    transform: scale(.96); /* stays hidden under a card */
   }
-  .slot.click { cursor: pointer; }
-  .slot.click:hover { background: rgba(255,255,255,.08); }
+  .slot small { font-size: calc(var(--w) * .16); line-height: 1.2; }
+  .slot .s { width: calc(var(--w) * .4); height: calc(var(--w) * .4); opacity: .75; }
+  .slot .turn { width: calc(var(--w) * .4); height: calc(var(--w) * .4); fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .slot.can { cursor: pointer; background: rgba(255,255,255,.17); color: #fff; }
+  .slot.can:hover { background: rgba(255,255,255,.26); }
+  .plabel { position: absolute; width: var(--w); text-align: center; color: rgba(255,255,255,.88); font: 600 20px/24px var(--ui); white-space: nowrap; }
+  #foundLabel { width: calc(var(--w) * 2 + var(--gap)); }
+
+  /* Rules guide */
+  #help, #over { position: fixed; inset: 0; background: rgba(6,28,25,.6); display: none; align-items: center; justify-content: center; z-index: 5000; }
+  #help.on, #over.on { display: flex; }
+  #helpBox, #box { background: #fff; color: var(--text); border-radius: 24px; box-shadow: 0 30px 90px rgba(0,0,0,.45); }
+  #helpBox { width: min(840px, 94vw); max-height: 92vh; display: flex; flex-direction: column; }
+  #helpBox .head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px 2px 40px; }
+  #helpBox h2 { margin: 0; font: 700 32px var(--ui); letter-spacing: -.01em; }
+  #helpText { overflow-y: auto; padding: 0 40px; font: 400 22px/1.45 var(--ui); color: #26302D; }
+  #helpText h3 { margin: 18px 0 4px; font: 700 23px var(--ui); color: var(--accent); }
+  #helpText p { margin: 0 0 8px; }
+  #helpText .page { display: none; }
+  #helpText .page.on { display: block; }
+  #helpBox .end { padding: 16px 40px 28px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  #helpBox .end button, #overBtns button { min-height: 58px; padding: 8px 28px; justify-content: center; }
+  #helpBox .end button { min-width: 190px; }
+  #helpBox .end button[hidden] { visibility: hidden; display: block; }
+  #helpPage { font: 600 20px var(--ui); color: #55605C; }
+  #stockCount {
+    position: absolute; z-index: 90; pointer-events: none; width: var(--w); height: var(--h);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #stockCount span {
+    min-width: calc(var(--w) * .52); padding: calc(var(--w) * .07) calc(var(--w) * .1); text-align: center;
+    border-radius: calc(var(--w) * .3); background: #fff; color: var(--text);
+    box-shadow: 0 2px 8px rgba(0,0,0,.45);
+    font: 700 calc(var(--w) * .28)/1 var(--ui);
+  }
 
   /* Cards */
   .card {
     position: absolute; width: var(--w); height: var(--h); border-radius: calc(var(--w) * .09);
-    background: #fffdf7; border: 1px solid #bdb8ad; cursor: pointer;
-    box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 10px rgba(0,0,0,.18);
-    transition: left .24s cubic-bezier(.2,.7,.3,1), top .24s cubic-bezier(.2,.7,.3,1);
+    background: var(--face); border: 1px solid #7E786B;
+    box-shadow: 0 1px 2px rgba(0,0,0,.4), 0 3px 8px rgba(0,0,0,.22);
+    transition: left .3s cubic-bezier(.2,.7,.3,1), top .3s cubic-bezier(.2,.7,.3,1);
   }
   .instant .card { transition: none !important; }
-  .card.dragging { transition: none; box-shadow: 0 10px 26px rgba(0,0,0,.45); }
-  .card.red { color: #c8102e; }
-  .card.black { color: #15171c; }
-  .card .tl, .card .br {
-    position: absolute; font-weight: 700; line-height: 1; white-space: nowrap; letter-spacing: -1px;
-    font-size: calc(var(--w) * .3);
+  .card.dragging { transition: none; box-shadow: 0 12px 28px rgba(0,0,0,.5); }
+  .card.can { cursor: pointer; }
+  .card.can:hover { outline: 3px solid #fff; outline-offset: 0; }
+  .card.landed, .card.landed:hover { outline: 5px solid var(--gold); outline-offset: 0; }
+  .card.red { color: var(--red); }
+  .card.black { color: var(--ink); }
+  .ix {
+    position: absolute; top: calc(var(--w) * .035); left: calc(var(--w) * .07);
+    display: flex; align-items: center; gap: calc(var(--w) * .02);
+    font: 700 calc(var(--w) * .34)/1 "Segoe UI", Arial, sans-serif; white-space: nowrap; letter-spacing: -.02em;
   }
-  .card .tl { top: calc(var(--w) * .05); left: calc(var(--w) * .07); }
-  .card .br { bottom: calc(var(--w) * .05); right: calc(var(--w) * .07); transform: rotate(180deg); }
-  .card .c {
-    position: absolute; left: 0; right: 0; top: 22%; bottom: 16%;
-    display: flex; align-items: center; justify-content: center; font-size: calc(var(--w) * .5);
-  }
-  .card .c.ace { font-size: calc(var(--w) * .78); }
-  .card .c.face {
-    left: 18%; right: 18%; top: 26%; bottom: 20%; border-radius: calc(var(--w) * .05);
-    border: 2px solid currentColor; flex-direction: column; gap: 2px;
-  }
-  .card.red .c.face { background: #fdeef0; }
-  .card.black .c.face { background: #eef0f5; }
-  .card .c.face span { font: 700 calc(var(--w) * .42) Georgia, "Times New Roman", serif; line-height: 1; }
-  .card .c.face small { font-size: calc(var(--w) * .22); line-height: 1; }
-  .card.down { border: 1px solid #fff; background:
-      repeating-linear-gradient(45deg, rgba(255,255,255,.09) 0 5px, transparent 5px 10px),
-      repeating-linear-gradient(-45deg, rgba(255,255,255,.09) 0 5px, transparent 5px 10px),
-      #1f4c8f;
-    box-shadow: inset 0 0 0 calc(var(--w) * .05) #fff, 0 1px 2px rgba(0,0,0,.3), 0 4px 10px rgba(0,0,0,.18); }
-  .card.down .f { display: none; }
+  .s { width: calc(var(--w) * .3); height: calc(var(--w) * .3); flex: none; fill: currentColor; }
+  .c { position: absolute; left: 6%; right: 6%; top: 31%; bottom: 4%; }
+  .c svg { display: block; width: 100%; height: 100%; fill: currentColor; }
+  .card.down {
+    border: 1px solid #0B1D33;
+    background:
+      repeating-linear-gradient(45deg, rgba(255,210,74,.3) 0 1px, transparent 1px calc(var(--w) * .27)),
+      repeating-linear-gradient(-45deg, rgba(255,210,74,.3) 0 1px, transparent 1px calc(var(--w) * .27)),
+      repeating-linear-gradient(45deg, rgba(255,255,255,.12) 0 2px, transparent 2px calc(var(--w) * .09)),
+      repeating-linear-gradient(-45deg, rgba(255,255,255,.12) 0 2px, transparent 2px calc(var(--w) * .09)),
+      var(--back);
+    box-shadow: inset 0 0 0 calc(var(--w) * .04) var(--back), inset 0 0 0 calc(var(--w) * .06) var(--face),
+      inset 0 0 0 calc(var(--w) * .085) var(--back), inset 0 0 0 calc(var(--w) * .095) var(--gold),
+      0 1px 2px rgba(0,0,0,.4), 0 3px 8px rgba(0,0,0,.22); }
+  .card.down > * { display: none; }
+  /* A card buried in the stock, the waste or a foundation casts no shadow, so a thick pile has no dark halo. */
+  .card.under { box-shadow: none; }
+  .card.down.under { box-shadow: inset 0 0 0 calc(var(--w) * .04) var(--back), inset 0 0 0 calc(var(--w) * .06) var(--face),
+      inset 0 0 0 calc(var(--w) * .085) var(--back), inset 0 0 0 calc(var(--w) * .095) var(--gold); }
 
-  .hint { animation: glow 1s ease-in-out 3; }
-  @keyframes glow {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(255,216,77,0); }
-    50% { box-shadow: 0 0 0 5px #ffd84d, 0 0 26px 10px rgba(255,216,77,.75); }
+  /* Selection, destinations and hints: yellow, with a dark edge so it shows on a white card. */
+  #ring {
+    position: absolute; z-index: 2500; pointer-events: none; display: none;
+    border: 5px solid var(--gold); border-radius: calc(var(--w) * .13);
+    box-shadow: 0 0 0 2px rgba(6,28,25,.85), inset 0 0 0 2px rgba(6,28,25,.85), 0 0 24px 6px rgba(255,200,61,.55);
   }
+  .mark {
+    position: absolute; z-index: 2400; pointer-events: none; width: var(--w); height: var(--h);
+    border: 5px dashed var(--gold); border-radius: calc(var(--w) * .09); background: rgba(255,200,61,.26);
+    box-shadow: inset 0 0 0 1.5px rgba(6,28,25,.6), 0 0 0 1.5px rgba(6,28,25,.6);
+  }
+  .mark.over { border-style: solid; background: rgba(255,200,61,.48); }
+  .mark.hint { border: 6px solid var(--gold); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 50% { background: rgba(255,200,61,.52); } }
   .shake { animation: sh .3s; }
   @keyframes sh { 25% { translate: -8px 0; } 75% { translate: 8px 0; } }
 
   /* Dialog */
-  #over { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 5000; }
-  #over.on { display: flex; }
-  #box {
-    background: #fff; border-radius: 20px; padding: 34px 44px; text-align: center; max-width: min(640px, 90vw);
-    box-shadow: 0 20px 60px rgba(0,0,0,.4);
-  }
-  #box h2 { margin: 0 0 10px; font: 700 36px Georgia, "Times New Roman", serif; color: #17321f; }
-  #box p { margin: 0 0 26px; font-size: 24px; color: #333; }
+  #over.soft { background: rgba(6,28,25,.3); }
+  #box { padding: 40px 48px 40px; text-align: center; max-width: min(680px, 92vw); }
+  #box h2 { margin: 0 0 10px; font: 700 32px var(--ui); letter-spacing: -.01em; }
+  #box p { margin: 0 0 28px; font: 400 22px/1.4 var(--ui); color: #3A4542; }
   #box p:empty { display: none; }
-  #overBtns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-  #overBtns button { border: 2px solid #17321f; box-shadow: none; }
-  #overBtns button.primary { border-color: #c9a400; }
+  #overBtns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 6px; }
+  /* The win: a yellow badge with a check mark grows in once. */
+  #over.soft #box::before {
+    content: ""; display: block; width: 84px; height: 84px; margin: 0 auto 18px; border-radius: 50%;
+    background: var(--gold) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231F1A00' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 48px no-repeat; animation: pop .45s cubic-bezier(.2,1.4,.4,1) both;
+  }
+  @keyframes pop { from { transform: scale(.3); opacity: 0; } }
 
-  .confetti { position: fixed; top: -60px; z-index: 4000; font-size: 40px; pointer-events: none; animation: fall linear forwards; }
-  @keyframes fall { to { transform: translateY(110vh) rotate(540deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .card { transition: none; }
+    .mark.hint, .shake, #over.soft #box::before { animation: none; }
+  }
 </style>
 </head>
 <body>
 <div id="bar">
-  <div id="title">Solitaire</div>
+  <div id="title"><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#su0"/></svg>Solitaire</div>
+  <button id="undoBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>Annuler</button>
+  <button id="hintBtn" class="primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg>Voir un coup</button>
+  <div id="wins"></div>
+  <button id="helpBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 2-2.7 2.4-2.7 4.3"/><path d="M12 17.6v.1"/></svg>Règles</button>
   <button id="newBtn">Nouvelle partie</button>
-  <button id="undoBtn">Annuler</button>
-  <button id="hintBtn" class="primary">Aide</button>
-  <div id="stats"></div>
 </div>
+<div id="msgRail"><div id="msg" aria-live="polite"></div></div>
 <div id="table"></div>
-<div id="over"><div id="box"><h2 id="overTitle"></h2><p id="overText"></p><div id="overBtns"></div></div></div>
+<div id="help"><div id="helpBox" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="head"><h2 id="helpTitle">Comment jouer</h2><button id="helpClose"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>Fermer</button></div>
+  <div id="helpText">
+    <section class="page">
+      <h3>Le but</h3>
+      <p>Rangez toutes les cartes sur les quatre piles « Rangement », à gauche. Chaque pile reçoit une seule couleur : pique, cœur, carreau ou trèfle. On commence par l'as, puis le 2, le 3, et ainsi de suite jusqu'au roi.</p>
+      <h3>Les colonnes</h3>
+      <p>Dans les sept colonnes, une carte se pose sur une carte d'une valeur juste au-dessus et de l'autre couleur. Par exemple, un 7 rouge va sur un 8 noir, et un 7 noir sur un 8 rouge.</p>
+      <p>On peut déplacer une carte avec toutes les cartes posées dessus. Seul un roi peut aller sur une colonne vide. Une carte cachée se retourne toute seule quand elle est libérée.</p>
+    </section>
+    <section class="page">
+      <h3>La pioche et la défausse</h3>
+      <p>Cliquez sur la pioche pour tourner une carte sur la défausse, juste à côté. La carte de la défausse peut aller sur une colonne ou au rangement. Aucune carte ne peut être posée sur la défausse.</p>
+      <p>Quand la pioche est vide, cliquez dessus pour la retourner. Vous pouvez la retourner autant de fois que vous voulez.</p>
+      <h3>Déplacer une carte</h3>
+      <p>Cliquez sur la carte. Si elle n'a qu'une place possible, elle y va toute seule. Sinon, les places possibles sont entourées de jaune : cliquez sur celle que vous voulez. Vous pouvez aussi faire glisser la carte avec la souris.</p>
+    </section>
+    <section class="page">
+      <h3>Les boutons</h3>
+      <p>« Voir un coup » montre un bon coup à jouer. « Annuler » revient en arrière, sans limite. « Nouvelle partie » commence une autre partie. « Règles » ouvre ces explications.</p>
+      <h3>Bon à savoir</h3>
+      <p>Si une carte ne peut pas aller quelque part, la ligne sous les boutons explique pourquoi.</p>
+      <p>Toutes les parties peuvent être gagnées. Les cartes qui ne servent plus vont toutes seules au rangement. La partie est enregistrée à chaque coup : vous la retrouvez en rouvrant le jeu.</p>
+    </section>
+  </div>
+  <div class="end">
+    <button id="helpPrev">Précédent</button>
+    <span id="helpPage"></span>
+    <button id="helpNext" class="primary">Suivant</button>
+  </div>
+</div></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="su0" viewBox="0 0 100 100"><path d="M50 5C62 26 95 40 95 61c0 12-10 20-21 20-8 0-15-4-19-11 1 11 6 20 13 26H32c7-6 12-15 13-26-4 7-11 11-19 11C15 81 5 73 5 61 5 40 38 26 50 5z"/></symbol>
+  <symbol id="su1" viewBox="0 0 100 100"><path d="M50 92C22 66 5 50 5 31 5 17 16 7 29 7c9 0 17 5 21 14 4-9 12-14 21-14 13 0 24 10 24 24 0 19-17 35-45 61z"/></symbol>
+  <symbol id="su2" viewBox="0 0 100 100"><path d="M50 2Q69 29 91 50Q69 71 50 98Q31 71 9 50Q31 29 50 2z"/></symbol>
+  <symbol id="su3" viewBox="0 0 100 100"><circle cx="50" cy="26" r="21"/><circle cx="26" cy="58" r="21"/><circle cx="74" cy="58" r="21"/><path d="M40 40h20v20H40zM46 56c0 18-5 31-13 40h34c-8-9-13-22-13-40z"/></symbol>
+  <clipPath id="courtClip"><rect x="1" y="1" width="86" height="82" rx="7"/></clipPath>
+</defs></svg>
+<div id="over"><div id="box" role="dialog" aria-modal="true" aria-labelledby="overTitle"><h2 id="overTitle"></h2><p id="overText"></p><div id="overBtns"></div></div></div>
 
 <script>
 'use strict';
 /* ---------- Cards ---------- */
-const VS = '︎'; // forces text glyphs (no coloured emoji on Windows)
-const SUITS = ['♠' + VS, '♥' + VS, '♦' + VS, '♣' + VS];
 const RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'V', 'D', 'R'];
+const RANK_NAMES = ['', 'as', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'valet', 'dame', 'roi'];
+const SUIT_NAMES = ['pique', 'cœur', 'carreau', 'trèfle'];
+const SUIT_PLURALS = ['piques', 'cœurs', 'carreaux', 'trèfles'];
 const KEY = 'solitaire-grand-pere-v2';
 const rk = id => id % 13 + 1;
 const st = id => (id / 13) | 0;
 const rd = id => st(id) === 1 || st(id) === 2;
 const last = a => a[a.length - 1];
-let AUTO_DELAY = 170;
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const LAND_MS = 1000; // how long a card that just moved keeps its yellow outline
+const AUTO_DELAY = 450, FINISH_DELAY = 140; // between two automatic cards: in play, and once the game is decided
+
+const cap = s => s[0].toUpperCase() + s.slice(1);
+function cardName(id) {
+  const r = rk(id);
+  return (r === 1 ? "l'" : r === 12 ? 'la ' : 'le ') + RANK_NAMES[r] + ' de ' + SUIT_NAMES[st(id)];
+}
+const HELLO = "Cliquez sur la carte à déplacer. Si elle a plusieurs places possibles, cliquez ensuite sur celle que vous voulez.";
 
 /* ---------- Solver ----------
    Draw-one Klondike with unlimited redeals: every stock/waste card can be reached
@@ -243,8 +362,9 @@ function solve(x0, budget) {
 
 /* ---------- Game state ---------- */
 // S.found[s] holds suit s. Cards are { id, up }.
-let S, undo = [], stats = { won: 0 }, autoT = 0, zT = 0, winT = 0, busy = false;
-let drag = null, plan = null, hintTarget = null;
+// sel: the chosen card (it moves with the cards on top of it). hintDst / hintStock: the shown hint.
+let S, undo = [], stats = { won: 0 }, autoT = 0, zT = 0, winT = 0, busy = false, autoCount = 0;
+let drag = null, plan = null, sel = null, hintDst = null, hintStock = false, lastTap = null;
 
 function toSolver() {
   return {
@@ -262,17 +382,20 @@ function freshDeal() {
   for (let c = 0; c < 7; c++) { tab.push(d.splice(0, c + 1)); tab[c][c].up = true; }
   return { stock: d, waste: [], found: [[], [], [], []], tab, moves: 0, won: false, stuckShown: false };
 }
-// Deal only games the solver can win.
+// Deal only games the solver has won. Most deals pass on the first or second try.
 function winnableDeal() {
-  let s;
-  for (let tries = 0; tries < 60; tries++) {
-    s = freshDeal(); S = s;
-    if (solve(toSolver(), 30000).win) break;
+  for (;;) {
+    S = freshDeal();
+    if (solve(toSolver(), 30000).win) return S;
   }
-  return s;
 }
 
-function save() { try { localStorage.setItem(KEY, JSON.stringify({ S, undo: undo.slice(-150), stats })); } catch (e) {} }
+// Every undo step is saved. If the browser storage is full, the oldest steps go first.
+function save() {
+  for (const n of [Infinity, 2000, 300]) {
+    try { localStorage.setItem(KEY, JSON.stringify({ S, undo: undo.slice(-n), stats })); return; } catch (e) {}
+  }
+}
 function load() {
   try {
     const v = JSON.parse(localStorage.getItem(KEY));
@@ -294,43 +417,92 @@ function locate(id) {
   for (let i = 0; i < 4; i++) { const k = S.found[i].findIndex(c => c.id === id); if (k >= 0) return { a: 'found', i, k }; }
   for (let i = 0; i < 7; i++) { const k = S.tab[i].findIndex(c => c.id === id); if (k >= 0) return { a: 'tab', i, k }; }
 }
-// Ordered destinations for the card at loc.k (and the cards above it).
+const samePile = (p, q) => !!p && !!q && p.a === q.a && p.i === q.i;
+const pileAt = loc => loc.a === 'tab' || loc.a === 'found' ? { a: loc.a, i: loc.i } : { a: loc.a };
+// Destinations for the card at loc.k (and the cards above it).
 function destinations(loc) {
   const pile = pileOf(loc), c = pile[loc.k], out = [];
   if (!c.up || loc.a === 'stock') return out;
   if (loc.a !== 'tab' && loc.k !== pile.length - 1) return out;
   if (loc.a !== 'found' && loc.k === pile.length - 1 && canFound(c.id)) out.push({ a: 'found', i: st(c.id) });
-  let empty = null;
   for (let i = 0; i < 7; i++) {
     if (loc.a === 'tab' && loc.i === i) continue;
     if (!S.tab[i].length) {
-      if (rk(c.id) === 13 && !(loc.a === 'tab' && loc.k === 0) && !empty) empty = { a: 'tab', i };
+      if (rk(c.id) === 13 && !(loc.a === 'tab' && loc.k === 0)) out.push({ a: 'tab', i });
     } else if (canTab(c.id, i)) out.push({ a: 'tab', i });
   }
-  if (empty) out.push(empty);
   return out;
+}
+function selectable(id) {
+  const loc = locate(id), p = pileOf(loc);
+  if (!p[loc.k].up) return false;
+  return loc.a === 'tab' || ((loc.a === 'waste' || loc.a === 'found') && loc.k === p.length - 1);
+}
+// Why the chosen card cannot go to this pile, in one sentence.
+function why(loc, dst) {
+  const id = pileOf(loc)[loc.k].id;
+  if (dst.a === 'found') {
+    if (loc.a === 'tab' && loc.k !== S.tab[loc.i].length - 1) return 'Rangez une seule carte à la fois.';
+    if (dst.i !== st(id)) return `Cette pile reçoit les ${SUIT_PLURALS[dst.i]}.`;
+    return `Il faut d'abord ranger ${cardName(st(id) * 13 + S.found[dst.i].length)}.`;
+  }
+  if (dst.a === 'tab') {
+    const t = last(S.tab[dst.i]);
+    if (!t) return 'Seul un roi peut aller sur une colonne vide.';
+    if (rk(id) === 13) return 'Un roi va seulement sur une colonne vide.';
+    if (rd(t.id) === rd(id)) return 'Alternez les couleurs : une carte rouge sur une noire, une noire sur une rouge.';
+    const above = rk(id) + 1;
+    return `${cap(cardName(id))} va sur ${above === 12 ? 'une' : 'un'} ${RANK_NAMES[above]}.`;
+  }
+  if (dst.a === 'waste') return 'Aucune carte ne va sur la défausse. Posez les cartes sur les colonnes ou au rangement.';
+  return 'Aucune carte ne va sur la pioche. Posez les cartes sur les colonnes ou au rangement.';
+}
+
+/* ---------- Messages ---------- */
+const msgEl = document.getElementById('msg');
+function setMsg(text) { msgEl.textContent = text; }
+function chosenMsg(loc) {
+  const p = pileOf(loc), n = p.length - 1 - loc.k;
+  const name = cardName(p[loc.k].id);
+  const extra = n === 1 ? ' et la carte posée dessus' : n > 1 ? ` et les ${n} cartes posées dessus` : '';
+  return `Vous avez pris ${name}${extra}. Cliquez sur une place entourée de jaune.`;
 }
 
 /* ---------- Actions ---------- */
-function act(fn) {
+function act(fn, text) {
   const snap = JSON.stringify(S);
   if (fn() === false) return false;
   undo.push(snap);
-  if (undo.length > 400) undo.shift();
   S.moves++;
-  changed();
+  changed(text);
   return true;
 }
 function flipTops() { S.tab.forEach(p => { const t = last(p); if (t) t.up = true; }); }
-function changed() {
-  flipTops(); clearHint(); render(); save();
+function clearSel() { sel = null; hintDst = null; hintStock = false; }
+function changed(text) {
+  flipTops(); clearSel(); setMsg(text || HELLO); render(); save();
+  autoCount = 0;
   clearTimeout(autoT); autoT = setTimeout(autoStep, AUTO_DELAY);
 }
+// Moves the cards, says what happened and frames them in yellow where they landed.
 function moveCards(loc, dst) {
-  return act(() => {
+  const p = pileOf(loc), ids = p.slice(loc.k).map(c => c.id), n = ids.length - 1;
+  const name = cardName(ids[0]), t = dst.a === 'tab' ? last(S.tab[dst.i]) : null;
+  const extra = n === 1 ? ' et 1 autre carte' : n > 1 ? ` et ${n} autres cartes` : '';
+  const text = dst.a === 'found' ? `Vous avez rangé ${name}.`
+    : `Vous avez posé ${name}${extra} sur ${t ? cardName(t.id) : 'la colonne vide'}.`;
+  act(() => {
     const cards = pileOf(loc).splice(loc.k);
     (dst.a === 'found' ? S.found[dst.i] : S.tab[dst.i]).push(...cards);
-  });
+  }, text);
+  flash(ids);
+}
+let landT = 0;
+function flash(ids) {
+  clearTimeout(landT);
+  E.forEach(el => el.classList.remove('landed'));
+  ids.forEach(id => E[id].classList.add('landed'));
+  landT = setTimeout(() => ids.forEach(id => E[id].classList.remove('landed')), LAND_MS);
 }
 function clickStock() {
   if (!S.stock.length && !S.waste.length) return;
@@ -339,19 +511,50 @@ function clickStock() {
     else { S.stock = S.waste.reverse().map(c => ({ id: c.id, up: false })); S.waste = []; }
   });
 }
-function clickCard(id) {
+function choose(id) {
   const loc = locate(id);
-  if (loc.a === 'stock') return clickStock();
-  const d = destinations(loc);
-  // If this card is the hinted one, go where the hint showed.
-  const h = hintTarget && hintTarget.id === id && d.find(t => t.a === hintTarget.dst.a && t.i === hintTarget.dst.i);
-  if (d.length) moveCards(loc, h || d[0]); else shake(E[id]);
+  if (!destinations(loc).length) {
+    clearSel(); render();
+    setMsg(`${cap(cardName(id))} ne peut aller nulle part pour le moment.`);
+    return shake(E[id]);
+  }
+  clearSel(); sel = id;
+  setMsg(chosenMsg(loc)); render();
+}
+function unchoose() { clearSel(); setMsg(HELLO); render(); }
+// A click on a card. With one legal place, the card goes there at once.
+// With several, the card is chosen and the player picks the place.
+// A card on a foundation never leaves by one click: taking it back is rare and must be meant.
+function take(id) {
+  const loc = locate(id), ds = destinations(loc);
+  if (ds.length === 1 && loc.a !== 'found') return moveCards(loc, ds[0]);
+  choose(id);
+}
+
+// One click: id is the card under the pointer (or null), pile is the pile it belongs to.
+function onTap(id, pile) {
+  if (pile && pile.a === 'stock') { clearSel(); return clickStock(); }
+  if (sel === null) {
+    if (id !== null && selectable(id)) take(id);
+    else if (hintStock) unchoose();
+    return;
+  }
+  const loc = locate(sel);
+  // A hint is followed by a click on the framed place or on the ringed card.
+  if (hintDst && id === sel) return moveCards(loc, hintDst);
+  if (pile && destinations(loc).some(d => samePile(d, pile))) return moveCards(loc, pile);
+  if (id === sel || !pile) return unchoose();
+  // Another card that can move: play it instead. Otherwise explain the refusal.
+  if (id !== null && selectable(id) && destinations(locate(id)).length) return take(id);
+  if (samePile(pile, pileAt(loc))) return unchoose();
+  setMsg(why(loc, pile));
 }
 
 // Sends safe cards home one by one, and finishes the game once everything is face up.
+// It waits while the player holds a card, reads a hint or answers a question.
 function autoStep() {
   if (busy) return;
-  if (drag) { autoT = setTimeout(autoStep, 200); return; } // never move cards under the player's hand
+  if (drag || sel !== null || hintStock || dialogOpen()) { autoT = setTimeout(autoStep, AUTO_DELAY); return; }
   if (isWon()) return celebrate();
   const finishing = !S.stock.length && !S.waste.length && S.tab.every(p => p.every(c => c.up));
   const x = toSolver();
@@ -362,10 +565,16 @@ function autoStep() {
     const id = pileOf(loc)[loc.k].id;
     if (canFound(id) && (finishing || sSafe(x, id))) {
       S.found[st(id)].push(pileOf(loc).pop());
+      autoCount++;
       flipTops(); render(); save();
-      autoT = setTimeout(autoStep, AUTO_DELAY);
+      if (!finishing) flash([id]);
+      autoT = setTimeout(autoStep, finishing ? FINISH_DELAY : AUTO_DELAY);
       return;
     }
+  }
+  if (autoCount) {
+    setMsg(autoCount === 1 ? '1 carte rangée automatiquement.' : `${autoCount} cartes rangées automatiquement.`);
+    autoCount = 0;
   }
   checkStuck();
 }
@@ -379,13 +588,14 @@ function checkStuck() {
 }
 
 function newGame() {
-  busy = true; drag = null; plan = null;
-  clearTimeout(autoT); clearTimeout(winT); clearHint();
-  document.querySelectorAll('.confetti').forEach(e => e.remove());
-  S = winnableDeal(); undo = [];
+  busy = true; drag = null; plan = null; autoCount = 0;
+  clearTimeout(autoT); clearTimeout(winT); clearSel();
+  closeDialog();
+  winnableDeal(); undo = [];
   save();
+  setMsg(HELLO);
   render({ deal: true });
-  setTimeout(() => { busy = false; autoStep(); }, 1500);
+  setTimeout(() => { busy = false; autoStep(); }, REDUCED ? 100 : 1600);
 }
 // Restores an earlier position. A game that was won stays counted once.
 function restore(snap) {
@@ -395,10 +605,10 @@ function restore(snap) {
   S.done = false;
 }
 function doUndo() {
-  if (!undo.length || busy || drag || document.getElementById('over').classList.contains('on')) return;
+  if (!undo.length || busy || drag || dialogOpen()) return;
   clearTimeout(autoT); clearTimeout(winT);
   restore(undo.pop());
-  clearHint(); render(); save();
+  clearSel(); setMsg('Coup annulé.'); render(); save();
   if (isWon()) autoStep();
 }
 // Undo until the solver finds a way to win again.
@@ -409,21 +619,10 @@ function backToWinnable() {
     if (solve(toSolver(), 20000).win) break;
   }
   S.stuckShown = false;
-  clearHint(); render(); save();
+  clearSel(); setMsg('Vous êtes revenu à une position gagnante.'); render(); save();
 }
 
 /* ---------- Hint ---------- */
-let hinted = [];
-function clearHint() { hinted.forEach(el => el.classList.remove('hint')); hinted = []; hintTarget = null; }
-function glow(...els) {
-  clearHint();
-  els.filter(Boolean).forEach(el => { void el.offsetWidth; el.classList.add('hint'); hinted.push(el); });
-}
-function targetEl(dst) {
-  const p = dst.a === 'found' ? S.found[dst.i] : S.tab[dst.i];
-  return p.length ? E[last(p).id] : (dst.a === 'found' ? slotFound[dst.i] : slotTab[dst.i]);
-}
-function stockEl() { return S.stock.length ? E[last(S.stock).id] : slotStock; }
 // Next move of a winning plan. The plan is kept, so following the hints
 // never walks in circles: it is only recomputed when the player leaves it.
 // The plan key keeps column order, because plan moves name columns by number.
@@ -442,129 +641,258 @@ function hintMove() {
   for (const m of r.path) { const ky = planKey(y); if (!plan.has(ky)) plan.set(ky, m); y = sApply(y, m); }
   return { move: r.path[0] };
 }
+function hintText(m, dst) {
+  const name = cardName(m.id), go = ' Cliquez sur la place entourée de jaune.';
+  if (dst.a === 'found') return `Rangez ${name}.${go}`;
+  const t = last(S.tab[dst.i]);
+  const where = t ? `sur ${cardName(t.id)}` : 'sur la colonne vide';
+  if (m.k === 'ft') return `Reprenez ${name} et posez-le ${where}.${go}`;
+  return `Posez ${name} ${where}.${go}`;
+}
+function hintDraw() {
+  clearSel(); hintStock = true;
+  setMsg(S.stock.length ? 'Cliquez sur la pioche pour tourner une carte.' : 'Cliquez sur la pioche pour la retourner.');
+  render();
+}
 function showHint() {
   if (busy || drag || isWon()) return;
   const r = hintMove();
-  if (r.move) {
-    const m = r.move;
-    const dst = m.k === 'tf' || m.k === 'xf' ? { a: 'found', i: st(m.id) } : { a: 'tab', i: m.dst };
-    if ((m.k === 'xf' || m.k === 'xt') && last(S.waste)?.id !== m.id) return glow(stockEl());
-    glow(E[m.id], targetEl(dst));
-    hintTarget = { id: m.id, dst };
-    return;
-  }
-  if (r.win === false) {
+  let m = r.move;
+  if (!m && r.win === false) {
     return dialog('Partie perdue', 'Cette partie ne peut plus être gagnée.',
       [['Revenir en arrière', backToWinnable, true], ['Nouvelle partie', newGame], ['Fermer', null]]);
   }
-  // The solver ran out of time. Show only a move that cannot be undone by the next hint:
-  // a card going home, a move that turns a card over, or the waste card going down.
-  const x = toSolver();
-  const top = last(S.waste)?.id;
-  const m = sMoves(x).find(m =>
-    m.k === 'tf' || (m.k === 'xf' && m.id === top) || (m.k === 'xt' && m.id === top) ||
-    (m.k === 'tt' && m.n === 0 && x.cols[m.src].d.length > 0));
-  if (!m) return glow(stockEl());
+  if (!m) {
+    // The solver ran out of time. Show only a move that cannot be undone by the next hint:
+    // a card going home, a move that turns a card over, or the waste card going down.
+    const x = toSolver(), top = last(S.waste)?.id;
+    m = sMoves(x).find(m =>
+      m.k === 'tf' || (m.k === 'xf' && m.id === top) || (m.k === 'xt' && m.id === top) ||
+      (m.k === 'tt' && m.n === 0 && x.cols[m.src].d.length > 0));
+    if (!m) return hintDraw();
+  }
+  if ((m.k === 'xf' || m.k === 'xt') && last(S.waste)?.id !== m.id) return hintDraw();
   const dst = m.k === 'tf' || m.k === 'xf' ? { a: 'found', i: st(m.id) } : { a: 'tab', i: m.dst };
-  glow(E[m.id], targetEl(dst));
-  hintTarget = { id: m.id, dst };
+  clearSel(); sel = m.id; hintDst = dst;
+  setMsg(hintText(m, dst)); render();
 }
 
 /* ---------- Drawing ---------- */
 const table = document.getElementById('table');
-let L, E = [], slotStock, slotWaste, slotFound = [], slotTab = [];
+let L, E = [], slotStock, slotWaste, slotFound = [], slotTab = [], foundLabel, stockLabel, wasteLabel, stockCount, ring, marks = [], pos = [];
 
-function makeSlot(text) {
+function mk(cls, html) {
   const e = document.createElement('div');
-  e.className = 'slot'; e.textContent = text || '';
+  if (cls) e.className = cls;
+  if (html) e.innerHTML = html;
   table.appendChild(e); return e;
 }
+// The faces are drawn here. Suits are the SVG symbols su0..su3, so they look the same on every PC.
+const suitHtml = s => `<svg class="s" viewBox="0 0 100 100"><use href="#su${s}"/></svg>`;
+const pip = (s, x, y, d) => `<use href="#su${s}" x="${x - d / 2}" y="${y - d / 2}" width="${d}" height="${d}"/>`;
+// Pip places in an 88 x 84 box: [x, y] per pip, then the pip size.
+const PIPS = (() => {
+  const Lx = 18, C = 44, R = 70, pair = y => [[Lx, y], [R, y]];
+  const three = [12, 42, 72].flatMap(pair), four = [11, 31.5, 52, 72.5].flatMap(pair);
+  return {
+    2: [[[C, 20], [C, 64]], 32], 3: [[[C, 13], [C, 42], [C, 71]], 25],
+    4: [[...pair(18), ...pair(66)], 28], 5: [[...pair(16), [C, 42], ...pair(68)], 26],
+    6: [three, 23], 7: [[...three, [C, 27]], 22], 8: [[...three, [C, 27], [C, 57]], 22],
+    9: [[...four, [C, 42]], 19.5], 10: [[...four, [C, 21], [C, 62.5]], 19.5],
+  };
+})();
+// Court cards: a flat bust in the suit colour. The valet wears a feathered cap,
+// the dame long hair and a pearl diadem, the roi a tall crown and a beard.
+function court(r, s) {
+  const red = s === 1 || s === 2, P = red ? '#C4122F' : '#1C2B45', bg = red ? '#FCEDE9' : '#E9EDF3';
+  const G = '#E0A526', GD = '#8A5F00', SK = '#F2CFA8', SK2 = '#E0B58A', H = '#4A3222', IV = '#FFFDF6', INK = '#14171A';
+  const eyes = `<circle cx="39.6" cy="36.5" r="1.5" fill="${INK}"/><circle cx="48.4" cy="36.5" r="1.5" fill="${INK}"/>`;
+  const robe = `<path d="M8 82C9 63 26 56 44 56s35 7 36 26z" fill="${P}"/>`;
+  const neck = `<rect x="39" y="46" width="10" height="13" fill="${SK2}"/>`;
+  let fig;
+  if (r === 13) fig = `${robe}
+    <path d="M22 61c8-6 17-5 22 2 5-7 14-8 22-2l2 11c-8-6-18-5-24 3-6-8-16-9-24-3z" fill="${IV}" stroke="${INK}" stroke-width=".6"/>
+    <g fill="${INK}"><ellipse cx="29" cy="65" rx="1.1" ry="2"/><ellipse cx="36" cy="66.5" rx="1.1" ry="2"/><ellipse cx="52" cy="66.5" rx="1.1" ry="2"/><ellipse cx="59" cy="65" rx="1.1" ry="2"/></g>
+    <path d="M30 30c-2 10 0 18 4 23h20c4-5 6-13 4-23z" fill="${H}"/>${neck}
+    <ellipse cx="44" cy="38" rx="11.5" ry="13" fill="${SK}"/>
+    <path d="M32.5 39c.5 14 5.5 21 11.5 21s11-7 11.5-21c-2.5 5-6.5 6.5-11.5 6.5S35 44 32.5 39z" fill="${H}"/>
+    <path d="M40.5 48.5q3.5 2 7 0" fill="none" stroke="${SK}" stroke-width="1.5" stroke-linecap="round"/>${eyes}
+    <path d="M28 27L26 9l9 8 9-12 9 12 9-8-2 18z" fill="${G}" stroke="${GD}" stroke-width=".8" stroke-linejoin="round"/>
+    <rect x="27.5" y="23" width="33" height="5" rx="1" fill="${P}"/>
+    <g fill="${P}"><circle cx="26" cy="9" r="2.4"/><circle cx="44" cy="5" r="2.4"/><circle cx="62" cy="9" r="2.4"/></g><circle cx="44" cy="25.5" r="1.7" fill="${G}"/>`;
+  else if (r === 12) fig = `<path d="M26 39c0-18 8-25 18-25s18 7 18 25c0 12 3 20 9 26H17c6-6 9-14 9-26z" fill="${H}"/>${robe}
+    <path d="M32 57.5L44 73l12-15.5c-5-2-19-2-24 0z" fill="${SK}"/>${neck}
+    <path d="M34.5 59q9.5 9 19 0" fill="none" stroke="${G}" stroke-width="1.8"/>
+    <ellipse cx="44" cy="38.5" rx="10.5" ry="12.5" fill="${SK}"/>
+    <path d="M33.5 36c0-9 5-12 10.5-12s10.5 3 10.5 12c-3-5-6.5-7-10.5-7s-7.5 2-10.5 7z" fill="${H}"/>${eyes}
+    <circle cx="37.5" cy="42.5" r="2.2" fill="#E58F7C" opacity=".6"/><circle cx="50.5" cy="42.5" r="2.2" fill="#E58F7C" opacity=".6"/>
+    <path d="M41 45.5q3 2.6 6 0q-3 1-6 0z" fill="#C4122F" stroke="#C4122F" stroke-width=".8" stroke-linejoin="round"/>
+    <path d="M32 23l-1-11 6.5 5L44 8l6.5 9 6.5-5-1 11z" fill="${G}" stroke="${GD}" stroke-width=".8" stroke-linejoin="round"/>
+    <g fill="${IV}" stroke="${GD}" stroke-width=".7"><circle cx="31" cy="12" r="2"/><circle cx="44" cy="8" r="2"/><circle cx="57" cy="12" r="2"/></g>`;
+  else fig = `${robe}
+    <path d="M27 59l17 6 17-6 2 9-19 8-19-8z" fill="${IV}" stroke="${INK}" stroke-width=".6" stroke-linejoin="round"/>
+    <path d="M30 31c-2 10-1 17 2 23h24c3-6 4-13 2-23z" fill="${H}"/>${neck}
+    <ellipse cx="44" cy="39" rx="11" ry="13" fill="${SK}"/>${eyes}
+    <path d="M40.5 46q3.5 2.6 7 0" fill="none" stroke="${INK}" stroke-width="1.3" stroke-linecap="round"/>
+    <path d="M58 22C60 9 70 3 81 5c-4 7-10 14-21 20z" fill="${IV}" stroke="${INK}" stroke-width=".6" stroke-linejoin="round"/>
+    <path d="M59.5 23.5Q68 11 79 6" fill="none" stroke="${G}" stroke-width="1.1"/>
+    <path d="M29 29C25 15 38 8 49 10s15 9 11 19z" fill="${P}"/>
+    <rect x="28" y="26" width="33" height="5" rx="1" fill="${G}" stroke="${GD}" stroke-width=".7"/>`;
+  // The bust is enlarged from its top edge and cut by the frame. The suit sits on a brooch at the collar.
+  return `<rect x="1" y="1" width="86" height="82" rx="7" fill="${bg}"/>
+    <g clip-path="url(#courtClip)"><g transform="translate(44 4) scale(1.15) translate(-44 -4)">${fig}</g></g>
+    <circle cx="44" cy="75.5" r="6.8" fill="${IV}" stroke="${G}" stroke-width="1.5"/><g fill="${P}">${pip(s, 44, 75.5, 9.5)}</g>
+    <rect x="1" y="1" width="86" height="82" rx="7" fill="none" stroke="${P}" stroke-width="1.6"/>`;
+}
+function faceSvg(id) {
+  const s = st(id), r = rk(id);
+  let g;
+  if (r === 1) g = `<circle cx="44" cy="42" r="39" fill="none" stroke="currentColor" stroke-width="1.2"/>
+    <circle cx="44" cy="42" r="35" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray=".1 4.3" stroke-linecap="round"/>${pip(s, 44, 42, 50)}`;
+  else if (r > 10) g = court(r, s);
+  else g = PIPS[r][0].map(([x, y]) => pip(s, x, y, PIPS[r][1])).join('');
+  return `<svg viewBox="0 0 88 84" aria-hidden="true">${g}</svg>`;
+}
 function makeCard(id) {
-  const s = st(id), r = rk(id), lab = RANKS[r] + SUITS[s];
-  const el = document.createElement('div');
-  el.className = 'card down ' + (rd(id) ? 'red' : 'black');
-  const center = r === 1 ? `<div class="c ace">${SUITS[s]}</div>`
-    : r > 10 ? `<div class="c face"><span>${RANKS[r]}</span><small>${SUITS[s]}</small></div>`
-    : `<div class="c">${SUITS[s]}</div>`;
-  el.innerHTML = `<div class="f"><div class="tl">${lab}</div>${center}<div class="br">${lab}</div></div>`;
-  el.addEventListener('pointerdown', e => onDown(e, id));
-  table.appendChild(el);
+  const s = st(id), r = rk(id);
+  const el = mk('card down ' + (rd(id) ? 'red' : 'black'), `<div class="ix">${RANKS[r]}${suitHtml(s)}</div><div class="c">${faceSvg(id)}</div>`);
+  el.dataset.id = id;
   return el;
 }
 function build() {
-  slotStock = makeSlot(); slotStock.onclick = clickStock;
-  slotWaste = makeSlot();
-  for (let s = 0; s < 4; s++) slotFound.push(makeSlot('A' + SUITS[s]));
-  for (let i = 0; i < 7; i++) slotTab.push(makeSlot());
+  slotStock = mk('slot');
+  slotWaste = mk('slot');
+  stockLabel = mk('plabel', 'Pioche');
+  wasteLabel = mk('plabel', 'Défausse');
+  foundLabel = mk('plabel', 'Rangement'); foundLabel.id = 'foundLabel';
+  for (let s = 0; s < 4; s++) slotFound.push(mk('slot', suitHtml(s) + 'As'));
+  for (let i = 0; i < 7; i++) slotTab.push(mk('slot', 'Roi'));
   for (let id = 0; id < 52; id++) E.push(makeCard(id));
+  stockCount = mk(); stockCount.id = 'stockCount';
+  ring = mk(); ring.id = 'ring';
 }
 
+// Card size depends only on the window, so the board never moves during a game.
+// Left: the stock, the waste and the four foundations. Right: the seven columns.
+const RATIO = 1.3, UP = 0.3, DOWN = 0.08, LABEL = 30;
 function layout() {
-  const W = innerWidth, H = innerHeight - parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bar'));
-  const gap = Math.max(8, Math.round(W * 0.013));
-  let w = Math.floor((W - gap * 8) / 7);
-  // Cards get smaller when a column grows, so every rank stays readable.
-  let f = 1.1;
-  if (S) S.tab.forEach(p => { f = Math.max(f, p.slice(0, -1).reduce((s, c) => s + (c.up ? UP : DOWN), 0)); });
-  w = Math.max(40, Math.min(w, Math.floor((H - gap * 4 - 4) / (2 + f) / 1.4), 165));
-  const h = Math.round(w * 1.4);
-  L = { W, H, gap, w, h, left: Math.round((W - (w * 7 + gap * 6)) / 2), yTop: gap + 4, yTab: gap * 3 + h + 4 };
+  const W = table.clientWidth, H = table.clientHeight;
+  const m = 26, g0 = Math.max(10, Math.round(W * 0.009)), pad = 12;
+  const byWidth = (W - 2 * m - 7 * g0 - 3 * g0) / 9;
+  const byHeight = (H - 2 * pad) / (1 + 9 * UP + 3 * DOWN) / RATIO; // room for a run of ten cards
+  const w = Math.floor(Math.max(48, Math.min(byWidth, byHeight, 170)));
+  const h = Math.round(w * RATIO);
+  // A wide window spreads the columns, up to 18% of a card, so the board fills the felt.
+  const gap = Math.round(Math.max(g0, Math.min(w * 0.18, (W - 2 * m - 9 * w) / 10)));
+  const bankGap = gap * 2 + Math.round(Math.min(pad - 2, gap * 0.8)); // the bank stands a little apart
+  const left = Math.max(m, Math.round((W - (9 * w + 7 * gap + bankGap)) / 2));
+  // Below the top row: the "Pioche" and "Défausse" labels, then the "Rangement" label, LABEL px each.
+  L = { W, H, gap, w, h, pad, top: pad, left, cx: left + 2 * w + gap + bankGap, fy: pad + h + gap + 2 * LABEL };
   document.documentElement.style.setProperty('--w', w + 'px');
   document.documentElement.style.setProperty('--h', h + 'px');
+  document.documentElement.style.setProperty('--gap', gap + 'px');
 }
-const X = i => L.left + i * (L.w + L.gap);
-const UP = 0.3, DOWN = 0.12;
+const colX = i => L.cx + i * (L.w + L.gap);
+const bankX = j => L.left + j * (L.w + L.gap);
+const foundXY = s => [bankX(s % 2), L.fy + (s >> 1) * (L.h + L.gap)];
+// A long column squeezes face-down cards first, then face-up ones down to a readable strip.
+// Past that, the table scrolls.
 function colY(pile) {
+  const nd = pile.slice(0, -1).filter(c => !c.up).length, nu = Math.max(0, pile.length - 1 - nd);
   let down = L.h * DOWN, up = L.h * UP;
-  const need = pile.slice(0, -1).reduce((s, c) => s + (c.up ? up : down), 0);
-  const avail = L.H - L.yTab - L.gap - L.h;
-  if (need > avail && need > 0) { const k = avail / need; down *= k; up *= k; }
-  const ys = []; let y = L.yTab;
+  const avail = L.H - 2 * L.pad - L.h;
+  if (nd * down + nu * up > avail) {
+    if (nd) down = Math.max(L.h * 0.045, (avail - nu * up) / nd);
+    if (nu && nd * down + nu * up > avail) up = Math.max(L.h * 0.24, (avail - nd * down) / nu);
+  }
+  const ys = []; let y = L.top;
   pile.forEach(c => { ys.push(Math.round(y)); y += c.up ? up : down; });
   return ys;
 }
 function put(el, x, y) { el.style.left = x + 'px'; el.style.top = y + 'px'; }
+// The pile under a point of the table. A column takes the whole height below it.
+function hitPile(x, y) {
+  const g = L.gap / 2;
+  const inside = (rx, ry) => x >= rx - g && x <= rx + L.w + g && y >= ry - g && y <= ry + L.h + g;
+  if (inside(bankX(0), L.top)) return { a: 'stock' };
+  if (inside(bankX(1), L.top)) return { a: 'waste' };
+  for (let s = 0; s < 4; s++) if (inside(...foundXY(s))) return { a: 'found', i: s };
+  for (let i = 0; i < 7; i++) if (x >= colX(i) - g && x <= colX(i) + L.w + g && y >= L.top - g) return { a: 'tab', i };
+  return null;
+}
 
 function render(opts = {}) {
   layout();
-  put(slotStock, X(0), L.yTop); put(slotWaste, X(1), L.yTop);
-  slotStock.textContent = !S.stock.length && S.waste.length ? '↻' : '';
-  slotStock.classList.toggle('click', !S.stock.length && S.waste.length > 0);
-  slotFound.forEach((e, s) => put(e, X(3 + s), L.yTop));
-  slotTab.forEach((e, i) => put(e, X(i), L.yTab));
+  put(slotStock, bankX(0), L.top); put(slotWaste, bankX(1), L.top);
+  const recycle = !S.stock.length && S.waste.length > 0;
+  slotStock.innerHTML = recycle ? '<svg class="turn" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20.5 3.5v5h-5"/></svg><small>Retourner<br>la pioche</small>' : '';
+  slotStock.classList.toggle('can', recycle);
+  put(stockCount, bankX(0), L.top);
+  stockCount.innerHTML = S.stock.length ? `<span>${S.stock.length}</span>` : '';
+  document.getElementById('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
+  put(stockLabel, bankX(0), L.top + L.h + 4); put(wasteLabel, bankX(1), L.top + L.h + 4);
+  put(foundLabel, bankX(0), L.fy - LABEL);
+  slotFound.forEach((e, s) => put(e, ...foundXY(s)));
+  slotTab.forEach((e, i) => put(e, colX(i), L.top));
 
   const spots = [];
-  S.stock.forEach((c, k) => spots.push([c, X(0), L.yTop, 1 + k]));
-  S.waste.forEach((c, k) => spots.push([c, X(1), L.yTop, 100 + k]));
-  S.found.forEach((f, s) => f.forEach((c, k) => spots.push([c, X(3 + s), L.yTop, 200 + k])));
-  S.tab.forEach((p, i) => { const ys = colY(p); p.forEach((c, k) => spots.push([c, X(i), ys[k], 300 + k])); });
+  const under = new Set();
+  const flat = (pile, x, y, z) => pile.forEach((c, k) => { spots.push([c, x, y, z + k]); if (k < pile.length - 2) under.add(c.id); });
+  flat(S.stock, bankX(0), L.top, 1);
+  flat(S.waste, bankX(1), L.top, 100);
+  S.found.forEach((f, s) => flat(f, ...foundXY(s), 200));
+  S.tab.forEach((p, i) => { const ys = colY(p); p.forEach((c, k) => spots.push([c, colX(i), ys[k], 300 + k])); });
 
   if (opts.deal) {
     table.classList.add('instant');
-    spots.forEach(([c], n) => { const el = E[c.id]; el.classList.add('down'); put(el, X(0), L.yTop); el.style.zIndex = n; });
+    spots.forEach(([c], n) => { const el = E[c.id]; el.classList.add('down'); put(el, bankX(0), L.top); el.style.zIndex = n; });
     void table.offsetWidth;
     table.classList.remove('instant');
   }
   let order = 0;
+  const stockTop = last(S.stock)?.id;
   for (const [c, x, y, z] of spots) {
     const el = E[c.id];
     const wasDown = el.classList.contains('down');
     el.classList.toggle('down', !c.up);
+    el.classList.toggle('under', under.has(c.id));
     const moved = el.style.left !== x + 'px' || el.style.top !== y + 'px';
-    if (opts.deal && z >= 300) el.style.transitionDelay = (order++ * 0.035) + 's';
+    if (opts.deal && z >= 300 && !REDUCED) el.style.transitionDelay = (order++ * 0.035) + 's';
     put(el, x, y);
+    pos[c.id] = [x, y];
     el.dataset.z = z;
     el.style.zIndex = moved && !opts.instant ? 1000 + z : z;
-    if (wasDown && c.up && !opts.instant) el.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: 200, easing: 'ease-out' });
+    el.classList.toggle('can', c.id === stockTop || (c.up && selectable(c.id)));
+    if (wasDown && c.up && !opts.instant && !REDUCED) el.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: 220, easing: 'ease-out' });
   }
   clearTimeout(zT);
   zT = setTimeout(() => E.forEach(el => {
     if (!el.classList.contains('dragging')) el.style.zIndex = el.dataset.z;
     el.style.transitionDelay = '';
-  }), opts.deal ? 1600 : 300);
+  }), opts.deal ? 1700 : 360);
 
+  drawMarks();
   document.getElementById('undoBtn').disabled = !undo.length;
-  document.getElementById('stats').innerHTML = `Parties gagnées : <b>${stats.won}</b>`;
+}
+// The yellow ring around the chosen cards, and a yellow frame on each place they can go.
+function drawMarks() {
+  ring.style.display = 'none';
+  marks.forEach(m => m.remove()); marks = [];
+  const addMark = (x, y, cls, key) => { const m = mk('mark ' + cls); put(m, x, y); m.dataset.key = key; marks.push(m); };
+  if (hintStock) addMark(bankX(0), L.top, 'hint', 'stock');
+  if (sel === null) return;
+  const loc = locate(sel), p = pileOf(loc);
+  if (!(drag && drag.started)) {
+    const [x, y] = pos[sel], yEnd = pos[last(p).id][1] + L.h;
+    put(ring, x - 8, y - 8);
+    ring.style.width = L.w + 16 + 'px'; ring.style.height = yEnd - y + 16 + 'px';
+    ring.style.display = 'block';
+  }
+  for (const d of hintDst ? [hintDst] : destinations(loc)) {
+    const q = d.a === 'found' ? S.found[d.i] : S.tab[d.i];
+    const [x, y] = q.length ? pos[last(q).id] : d.a === 'found' ? foundXY(d.i) : [colX(d.i), L.top];
+    addMark(x, y, hintDst ? 'hint' : '', d.a + d.i);
+  }
 }
 
 function shake(el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
@@ -575,86 +903,125 @@ function celebrate() {
   S.done = true;
   if (!S.won) { S.won = true; stats.won++; }
   save(); render();
-  const syms = SUITS.concat(SUITS);
-  for (let n = 0; n < 70; n++) {
-    const e = document.createElement('div');
-    e.className = 'confetti';
-    e.textContent = syms[n % syms.length];
-    e.style.color = n % 2 ? '#ffd84d' : (n % 4 === 1 ? '#ff6b7f' : '#ffffff');
-    e.style.left = Math.random() * 100 + 'vw';
-    e.style.animationDuration = 2.5 + Math.random() * 2 + 's';
-    e.style.animationDelay = Math.random() * 1.2 + 's';
-    document.body.appendChild(e);
-    setTimeout(() => e.remove(), 6000);
-  }
+  setMsg('Bravo, vous avez gagné !');
+  // The four finished piles hop one after the other, twice.
+  if (!REDUCED) S.found.forEach((f, s) => E[last(f).id].animate(
+    [{ translate: '0 0' }, { translate: `0 ${-L.h * 0.14}px` }, { translate: '0 0' }],
+    { duration: 500, delay: s * 120, iterations: 2, easing: 'ease-in-out' }));
   clearTimeout(winT);
-  winT = setTimeout(() => dialog('Bravo !', `Vous avez gagné. C'est votre victoire numéro ${stats.won}.`, [['Nouvelle partie', newGame, true]]), 900);
+  winT = setTimeout(() => dialog('Bravo, vous avez gagné !', `C'est votre victoire numéro ${stats.won}.`,
+    [['Nouvelle partie', newGame, true], ['Regarder le jeu', null]], true), REDUCED ? 0 : 1500);
 }
 
-function dialog(title, text, buttons) {
+/* ---------- Dialog ---------- */
+const over = document.getElementById('over');
+const help = document.getElementById('help');
+const dialogOpen = () => over.classList.contains('on') || help.classList.contains('on');
+// The rules come in short pages, so they never need scrolling.
+const helpPages = [...document.querySelectorAll('#helpText .page')];
+let helpAt = 0;
+function showHelpPage(n) {
+  helpAt = n;
+  helpPages.forEach((e, k) => e.classList.toggle('on', k === n));
+  document.getElementById('helpPage').textContent = `Page ${n + 1} sur ${helpPages.length}`;
+  document.getElementById('helpPrev').hidden = n === 0;
+  const next = document.getElementById('helpNext');
+  next.textContent = n === helpPages.length - 1 ? "J'ai compris" : 'Suivant';
+  next.focus();
+}
+function openHelp() { if (drag) return; help.classList.add('on'); showHelpPage(0); }
+function closeHelp() { help.classList.remove('on'); }
+function closeDialog() { over.classList.remove('on', 'soft'); }
+function dialog(title, text, buttons, soft) {
   document.getElementById('overTitle').textContent = title;
   document.getElementById('overText').textContent = text;
   const b = document.getElementById('overBtns'); b.innerHTML = '';
+  let first = null;
   buttons.forEach(([label, fn, primary]) => {
     const e = document.createElement('button');
-    e.textContent = label; if (primary) e.className = 'primary';
-    e.onclick = () => { document.getElementById('over').classList.remove('on'); if (fn) fn(); };
+    e.textContent = label; if (primary) { e.className = 'primary'; first = first || e; }
+    e.onclick = () => { closeDialog(); if (fn) fn(); };
     b.appendChild(e);
   });
-  document.getElementById('over').classList.add('on');
+  over.classList.toggle('soft', !!soft);
+  over.classList.add('on');
+  (first || b.firstChild).focus();
 }
 
 /* ---------- Mouse and touch ---------- */
-function onDown(e, id) {
-  if (e.button !== 0 || busy) return;
-  e.preventDefault();
-  drag = { id, x0: e.clientX, y0: e.clientY, started: false };
+// A press and release that moves less than 16 px is a click, so a shaky hand still clicks.
+// Moving further drags the card.
+function tablePoint(e) {
+  const r = table.getBoundingClientRect();
+  return [e.clientX - r.left + table.scrollLeft, e.clientY - r.top + table.scrollTop];
 }
+table.addEventListener('pointerdown', e => {
+  if (e.button !== 0 || busy || dialogOpen()) return;
+  e.preventDefault();
+  const [x, y] = tablePoint(e), el = e.target.closest('.card');
+  let id = el ? +el.dataset.id : null;
+  let pile = id !== null ? pileAt(locate(id)) : hitPile(x, y);
+  if (pile && pile.a === 'stock') id = null;
+  drag = { id, pile, x0: e.clientX, y0: e.clientY, started: false };
+});
 addEventListener('pointermove', e => {
   if (!drag) return;
   const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
   if (!drag.started) {
-    if (Math.hypot(dx, dy) < 8) return;
+    if (Math.hypot(dx, dy) < 16 || drag.id === null || !selectable(drag.id)) return;
     const loc = locate(drag.id), pile = pileOf(loc);
-    const ok = loc.a === 'tab' ? pile[loc.k].up : (loc.a === 'waste' || loc.a === 'found') && loc.k === pile.length - 1;
-    if (!ok) { drag.dead = true; return; }
-    clearHint();
     drag.started = true; drag.loc = loc;
+    if (sel !== drag.id) { clearSel(); sel = drag.id; }
+    setMsg(chosenMsg(loc));
     drag.els = pile.slice(loc.k).map((c, n) => {
       const el = E[c.id];
       el.classList.add('dragging'); el.style.zIndex = 3000 + n;
       return { el, x: parseFloat(el.style.left), y: parseFloat(el.style.top) };
     });
+    drawMarks();
   }
-  if (drag.started) drag.els.forEach(d => put(d.el, d.x + dx, d.y + dy));
+  drag.els.forEach(d => put(d.el, d.x + dx, d.y + dy));
+  const under = hitPile(...tablePoint(e)), key = under ? under.a + under.i : '';
+  marks.forEach(m => m.classList.toggle('over', m.dataset.key === key));
 });
 addEventListener('pointerup', e => {
   if (!drag) return;
   const d = drag; drag = null;
-  if (!d.started) { if (!d.dead) clickCard(d.id); return; }
-  d.els.forEach(o => o.el.classList.remove('dragging'));
-  const r = table.getBoundingClientRect();
-  const px = e.clientX - r.left, py = e.clientY - r.top;
-  // Drop on the column under the pointer; the top row right side is the foundations.
-  const col = Math.floor((px - L.left + L.gap / 2) / (L.w + L.gap));
-  let dst = null;
-  if (col >= 0 && col < 7) {
-    if (py < L.yTab - L.gap) { if (col >= 3) dst = { a: 'found', i: st(d.id) }; }
-    else dst = { a: 'tab', i: col };
+  const hit = hitPile(...tablePoint(e));
+  if (!d.started) {
+    const stock = !!d.pile && d.pile.a === 'stock';
+    // The stock draws only when the press and the release are both on it.
+    if (stock && !(hit && hit.a === 'stock')) return;
+    // A double-click counts as one click: the second click at the same spot is ignored.
+    const t = performance.now(), prev = lastTap;
+    lastTap = { t, x: e.clientX, y: e.clientY };
+    if (prev && t - prev.t < (stock ? 300 : 500) && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) < 24) return;
+    return onTap(d.id, d.pile);
   }
-  const ok = dst && destinations(d.loc).some(t => t.a === dst.a && t.i === dst.i);
-  if (ok) moveCards(d.loc, dst);
-  else { render(); }
+  d.els.forEach(o => o.el.classList.remove('dragging'));
+  if (hit && destinations(d.loc).some(t => samePile(t, hit))) return moveCards(d.loc, hit);
+  // A missed drop puts the cards back and keeps them chosen.
+  render();
+  if (hit && !samePile(hit, pileAt(d.loc))) setMsg(why(d.loc, hit));
 });
 addEventListener('pointercancel', () => { if (drag && drag.started) { drag.els.forEach(o => o.el.classList.remove('dragging')); render(); } drag = null; });
 
 document.getElementById('newBtn').onclick = () => {
-  if (S.moves > 0 && !isWon()) dialog('Nouvelle partie ?', 'La partie en cours sera perdue.', [['Oui, nouvelle partie', newGame, true], ['Non, continuer', null]]);
+  if (S.moves > 0 && !isWon()) dialog('Commencer une nouvelle partie ?', 'La partie en cours sera perdue.',
+    [['Continuer la partie', null, true], ['Nouvelle partie', newGame]]);
   else newGame();
 };
 document.getElementById('undoBtn').onclick = doUndo;
 document.getElementById('hintBtn').onclick = showHint;
-addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); doUndo(); } });
+document.getElementById('helpBtn').onclick = openHelp;
+document.getElementById('helpClose').onclick = closeHelp;
+document.getElementById('helpPrev').onclick = () => showHelpPage(Math.max(0, helpAt - 1));
+document.getElementById('helpNext').onclick = () => helpAt < helpPages.length - 1 ? showHelpPage(helpAt + 1) : closeHelp();
+help.addEventListener('click', e => { if (e.target === help) closeHelp(); });
+addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); doUndo(); }
+  else if (e.key === 'Escape') { if (help.classList.contains('on')) closeHelp(); else if (dialogOpen()) closeDialog(); else if (sel !== null || hintStock) unchoose(); }
+});
 addEventListener('resize', () => {
   if (drag && drag.started) drag.els.forEach(o => o.el.classList.remove('dragging'));
   drag = null;
@@ -662,7 +1029,8 @@ addEventListener('resize', () => {
 });
 
 build();
-if (load()) { render({ instant: true }); autoStep(); } else newGame();
+// The rules open by themselves the first time the game is opened.
+if (load()) { setMsg(HELLO); render({ instant: true }); autoStep(); } else { newGame(); openHelp(); }
 </script>
 </body>
 </html>

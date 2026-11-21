@@ -1,0 +1,175 @@
+// Plays the game with a real mouse: moves, drag, hints, undo, layout and the win.
+import { launch, URL, OUT } from './harness.mjs';
+const browser = await launch();
+let fails = 0;
+const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++; };
+
+const page = await browser.newPage({ viewport: { width: 1366, height: 680 } });
+const errors = [];
+page.on('pageerror', e => errors.push(e.message));
+await page.goto(URL);
+await page.waitForTimeout(2200);
+ok(await page.evaluate(() => help.classList.contains("on")), "rules open on the first visit");
+await page.keyboard.press("Escape");
+ok(!(await page.evaluate(() => dialogOpen())), "Escape closes the rules");
+
+const g = fn => page.evaluate(fn);
+const L = await g(() => L);
+ok(L.w >= 100, `card width at 1366x680 is ${L.w}px, height ${L.h}px`);
+const rankPx = await g(() => parseFloat(getComputedStyle(document.querySelector('.ix')).fontSize));
+ok(rankPx >= 31, `rank text is ${rankPx}px`);
+const tablePos = () => g(() => { const r = table.getBoundingClientRect(); return [r.left, r.top]; });
+const [tx, ty] = await tablePos();
+const at = ([x, y]) => [tx + x, ty + y];
+const cardPt = id => g(`[pos[${id}][0] + L.w/2, pos[${id}][1] + 12]`).then(at);
+const pilePt = d => g(`(() => { const d = ${JSON.stringify(d)}; const q = d.a==='found'?S.found[d.i]:S.tab[d.i];
+  const [x,y] = q.length ? pos[last(q).id] : d.a==='found' ? foundXY(d.i) : [colX(d.i), L.top]; return [x + L.w/2, y + L.h/2]; })()`).then(at);
+
+// Find a legal tableau or waste move, drawing until one exists. want: number of places the card must have (0 = any).
+async function findMove(want = 0) {
+  for (let n = 0; n < 60; n++) {
+    const m = await g(`(() => { const want = ${want};
+      const locs = [];
+      if (S.waste.length) locs.push({ a: 'waste', k: S.waste.length - 1 });
+      S.tab.forEach((p, i) => p.forEach((c, k) => { if (c.up) locs.push({ a: 'tab', i, k }); }));
+      for (const loc of locs) { const d = destinations(loc); if (want ? d.length === want : d.length) return { id: pileOf(loc)[loc.k].id, d: d[0], loc }; }
+      return null; })()`);
+    if (m) return m;
+    await page.mouse.click(...await g(() => [bankX(0) + L.w / 2, L.top + L.h / 2]).then(at));
+    await page.waitForTimeout(600);
+  }
+}
+
+const colsBefore = await g(() => [0, 1, 2, 3, 4, 5, 6].map(colX));
+await page.screenshot({ path: `${OUT}/1-start-1366x680.png` });
+ok(await g(() => document.getElementById('stockCount').textContent) === '24', 'the stock shows 24 cards left');
+
+// 1. One click moves a card that has one legal place. A double-click counts as one click.
+let m = await findMove(1);
+const moves0 = await g(() => S.moves);
+const p1 = await cardPt(m.id);
+await page.mouse.click(...p1);
+await page.mouse.click(...p1);
+await page.waitForTimeout(100);
+ok(await g(() => S.moves) === moves0 + 1 && await g(() => sel) === null, 'one click moves a card with a single place, and the double-click is ignored');
+ok((await g(() => msgEl.textContent)).startsWith('Vous avez '), 'the line says what moved: ' + await g(() => msgEl.textContent));
+ok(await g(`E[${m.id}].classList.contains('landed')`), 'the moved card is outlined where it landed');
+await page.screenshot({ path: `${OUT}/2-one-click-landed.png` });
+await page.waitForTimeout(1500);
+
+// 2. Two places: the first click chooses, the second click moves. A wrong place explains and keeps the choice.
+const real = await g(() => JSON.stringify(S));
+await g(() => {
+  const used = [6, 20, 33, 51, 36]; // 7 pique, 8 coeur, 8 carreau, roi de trefle, jack of diamonds
+  const rest = [...Array(52).keys()].filter(i => !used.includes(i));
+  S = { stock: rest.map(id => ({ id, up: false })), waste: [], found: [[], [], [], []], moves: 3, won: false, stuckShown: true,
+    tab: [[{ id: 6, up: true }], [{ id: 20, up: true }], [{ id: 33, up: true }], [{ id: 51, up: true }], [{ id: 36, up: true }], [], []] };
+  render({ instant: true });
+});
+await page.waitForTimeout(600);
+await page.mouse.click(...await cardPt(6));
+ok(await g(() => sel) === 6, 'with two places, the first click chooses the card');
+ok(await g(() => document.getElementById('ring').style.display) === 'block', 'yellow ring shows');
+ok(await g(() => marks.length) === 2, `destination frames show (${await g(() => marks.length)})`);
+await page.screenshot({ path: `${OUT}/3-chosen.png` });
+await page.mouse.click(...await pilePt({ a: 'tab', i: 3 }));
+ok(await g(() => sel) === 6, 'wrong target keeps the card chosen');
+console.log('     message: ' + await g(() => msgEl.textContent));
+await page.keyboard.press('Escape');
+ok(await g(() => sel) === null, 'Escape drops the choice');
+await page.waitForTimeout(600);
+await page.mouse.click(...await cardPt(6));
+await page.mouse.click(...await pilePt({ a: 'tab', i: 2 }));
+await page.waitForTimeout(300);
+ok(await g(() => S.moves) === 4 && await g(() => S.tab[2].length) === 2, 'second click moves the card');
+await g(`S = JSON.parse(${JSON.stringify(real)}); undo.pop(); render({ instant: true }); save();`);
+await page.waitForTimeout(700);
+
+// 3. Shaky stock click (10 px drift)
+const w0 = await g(() => S.waste.length + S.stock.length * 1000);
+const sp = await g(() => [bankX(0) + L.w / 2, L.top + L.h / 2]).then(at);
+await page.mouse.move(...sp); await page.mouse.down(); await page.mouse.move(sp[0] + 7, sp[1] + 7, { steps: 4 }); await page.mouse.up();
+await page.waitForTimeout(300);
+ok(await g(() => S.waste.length + S.stock.length * 1000) !== w0, 'stock click with 10 px drift still draws');
+
+// 4. Drag
+await page.waitForTimeout(1200);
+m = await findMove();
+const moves1 = await g(() => S.moves);
+const from = await cardPt(m.id), to = await pilePt(m.d);
+await page.mouse.move(...from); await page.mouse.down(); await page.mouse.move(...to, { steps: 12 });
+ok(await g(() => marks.some(x => x.classList.contains('over'))), 'drop target lights up during drag');
+await page.mouse.up(); await page.waitForTimeout(300);
+ok(await g(() => S.moves) === moves1 + 1, 'drag and drop moves the card');
+
+// 5. Hint, then follow it with one click
+await page.waitForTimeout(1500);
+await page.click('#hintBtn');
+const hint = await g(() => ({ sel, hintDst, hintStock, msg: msgEl.textContent }));
+console.log('     hint: ' + hint.msg);
+ok(hint.msg.length > 10 && (hint.sel !== null || hint.hintStock), 'hint shows a sentence and a target');
+await page.screenshot({ path: `${OUT}/4-hint.png` });
+const moves2 = await g(() => S.moves);
+if (hint.hintStock) await page.mouse.click(...sp); else await page.mouse.click(...await pilePt(hint.hintDst));
+await page.waitForTimeout(300);
+ok(await g(() => S.moves) === moves2 + 1, 'one click on the yellow place follows the hint');
+
+// 6. Undo
+await page.click('#undoBtn'); await page.waitForTimeout(200);
+ok(await g(() => S.moves) === moves2, 'Annuler goes back one move');
+ok(await g(() => msgEl.textContent) === 'Coup annulé.', 'undo says so');
+await page.keyboard.press('Control+z'); await page.waitForTimeout(200);
+ok(await g(() => S.moves) < moves2, 'Ctrl+Z goes back one more move');
+// A hint is also followed by a click on the ringed card.
+await page.click('#hintBtn');
+const h2 = await g(() => ({ sel, hintStock, moves: S.moves }));
+if (h2.sel !== null) {
+  await page.mouse.click(...await cardPt(h2.sel)); await page.waitForTimeout(300);
+  ok(await g(() => S.moves) === h2.moves + 1, 'a click on the ringed card follows the hint');
+} else { console.log('SKIP hint points at the stock'); await page.keyboard.press('Escape'); }
+
+// 7. Columns never move
+ok(JSON.stringify(await g(() => [0, 1, 2, 3, 4, 5, 6].map(colX))) === JSON.stringify(colsBefore), 'columns stayed at the same x');
+
+// 8. Long column: 2 face-down + 11 face-up
+await g(() => {
+  const all = [...Array(52).keys()];
+  const run = [12, 11 + 13 * 1, 10, 9 + 13, 8, 7 + 13, 6, 5 + 13, 4, 3 + 13, 2]; // R♠ D♥ V♠ 10♥ ... 3♠
+  const rest = all.filter(i => !run.includes(i));
+  S = { stock: [], waste: [], found: [[], [], [], []], tab: [[], [], [], [], [], [], []], moves: 1, won: false, stuckShown: true };
+  S.tab[3] = [{ id: rest.pop(), up: false }, { id: rest.pop(), up: false }, ...run.map(id => ({ id, up: true }))];
+  rest.forEach((id, n) => S.tab[n % 7 === 3 ? 0 : n % 7].push({ id, up: true }));
+  render({ instant: true });
+});
+await page.waitForTimeout(300);
+const strip = await g(() => { const ys = colY(S.tab[3]); return ys[ys.length - 1] - ys[ys.length - 2]; });
+ok(strip >= 30, `face-up strip in a long column is ${Math.round(strip)}px`);
+ok(JSON.stringify(await g(() => [0, 1, 2, 3, 4, 5, 6].map(colX))) === JSON.stringify(colsBefore), 'long column does not move the board');
+await page.screenshot({ path: `${OUT}/5-long-column.png` });
+
+// 9. New game dialog focuses "Continuer la partie"
+await page.click('#newBtn');
+ok(await g(() => document.activeElement.textContent) === 'Continuer la partie', 'restart dialog focuses Continuer la partie');
+await page.keyboard.press('Escape');
+ok(!(await g(() => dialogOpen())), 'Escape closes the dialog');
+
+// 10. Win
+await g(() => {
+  S = { stock: [], waste: [], found: [0, 1, 2, 3].map(s => [...Array(12).keys()].map(r => ({ id: s * 13 + r, up: true }))), tab: [[{ id: 12, up: true }], [{ id: 25, up: true }], [{ id: 38, up: true }], [{ id: 51, up: true }], [], [], []], moves: 5, won: false, stuckShown: false };
+  render({ instant: true }); autoStep();
+});
+await page.waitForTimeout(3500);
+ok(await g(() => dialogOpen() && document.getElementById('overTitle').textContent.includes('Bravo')), 'win dialog shows');
+await page.screenshot({ path: `${OUT}/6-win.png` });
+
+// 11. Big screen
+const big = await browser.newPage({ viewport: { width: 1920, height: 1000 } });
+big.on('pageerror', e => errors.push(e.message));
+await big.goto(URL); await big.waitForTimeout(2200); await big.keyboard.press("Escape");
+console.log('     1920x1000 card: ' + JSON.stringify(await big.evaluate(() => [L.w, L.h])));
+await big.screenshot({ path: `${OUT}/7-start-1920x1000.png` });
+
+ok(errors.length === 0, 'no page errors ' + errors.join(' | '));
+await browser.close();
+console.log(fails ? `${fails} FAILED` : 'ALL PASSED');
+process.exit(fails ? 1 : 0);
