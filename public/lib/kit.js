@@ -6,7 +6,7 @@
 //     <span class="spacer"></span>
 //     <button id="newBtn" class="game">Nouvelle partie</button>
 //   </div>
-//   <div id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div></div>
+//   <div id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div><div class="zoom"></div></div>
 //   <div id="table"></div>
 //   <div id="help" data-title="Comment jouer"><section class="page">…</section>…</div>
 //
@@ -33,12 +33,33 @@
 
   // Top bar: the way back to the library first, then icons on the buttons that ask for one.
   const bar = $('bar');
+  // For a screen reader: the bar, the name of the game as the heading of the page, the message line,
+  // and the table as the main part.
+  if (bar) bar.setAttribute('role', 'banner');
+  if ($('title')) { $('title').setAttribute('role', 'heading'); $('title').setAttribute('aria-level', '1'); }
+  if ($('msgRail')) { $('msgRail').setAttribute('role', 'region'); $('msgRail').setAttribute('aria-label', 'Messages du jeu'); }
+  if ($('table')) $('table').setAttribute('role', 'main');
   if (bar && !$('home')) {
     // Opened from a file, the folder alone would show a list of files: name the library page.
     const home = location.protocol === 'file:' ? libRoot + 'index.html' : libRoot;
     bar.insertAdjacentHTML('afterbegin', `<a id="home" href="${home}" aria-label="Retour aux jeux">${icon('back')}Jeux</a>`);
   }
   document.querySelectorAll('button[data-icon]').forEach(b => b.insertAdjacentHTML('afterbegin', icon(b.dataset.icon)));
+
+  // Each label stays on one line: the bar takes the long labels if they fit, else the short ones, else one
+  // word each, and last, without the name of the game (its felt still tells it). A phone puts its buttons
+  // on two rows instead (kit.css).
+  function fitBar() {
+    if (!bar || innerWidth < 700) return;
+    bar.classList.remove('fit-short', 'fit-tiny', 'fit-bare');
+    const over = () => bar.scrollWidth > bar.clientWidth + 1;
+    if (over()) bar.classList.add('fit-short');
+    if (over()) { bar.classList.remove('fit-short'); bar.classList.add('fit-tiny'); }
+    if (over()) bar.classList.add('fit-bare');
+  }
+  fitBar();
+  addEventListener('resize', fitBar);
+  if (document.fonts) document.fonts.ready.then(fitBar);
 
   // Message line
   // One line in the usual size. A text too long for the window takes two lines, a little smaller, in the
@@ -100,6 +121,7 @@
       e = $('level');
     }
     e.textContent = 'Niveau ' + levelNames[level].toLowerCase();
+    fitBar();
   }
   // The levels, one under the other, each with a line that says what it means. During a game the safe
   // choice comes first and is yellow: "Continuer la partie". Otherwise the last level played is yellow,

@@ -5,7 +5,7 @@
 // would break. Each font replaces Segoe UI in the page, so the result is the same on any machine.
 //
 // Windows: his laptop in Edge, the same laptop with the text at 125%, a 1920 by 1080 monitor, the same
-// monitor at 150%, and a phone.
+// monitor at 150%, a phone, and the laptop and the monitor enlarged with the size buttons of the page.
 //
 // Rules, on each screen:
 //   - nothing goes past the sides of the window;
@@ -32,6 +32,9 @@ const WINDOWS = [
   { name: 'monitor', width: 1920, height: 1000, minText: 20, rulesFit: true },
   { name: 'monitor-150', width: 1280, height: 620, minText: 20, rulesFit: true },
   { name: 'phone', width: 390, height: 760, isMobile: true, hasTouch: true, minText: 13 },
+  // The size buttons (lib/zoom.js) at the largest size each window holds: about 1050 by 540 px of page.
+  { name: 'laptop-zoom-130', width: 1366, height: 680, minText: 20, zoom: 1.3 },
+  { name: 'monitor-zoom-175', width: 1920, height: 1000, minText: 20, zoom: 1.75 },
 ];
 const GAMES = ['solitaire', 'freecell', 'dames', 'dame-de-pique'];
 // The longest kind of message a game says, to check the message line never cuts it.
@@ -61,7 +64,8 @@ function audit({ minText, rulesFit }) {
   // A scrolling panel may hold more than it shows: what it hides is reached by scrolling.
   const scroller = e => { for (let p = e.parentElement; p && p !== document.body; p = p.parentElement) {
     const s = getComputedStyle(p); if (/(auto|scroll)/.test(s.overflowX + s.overflowY)) return p; } return null; };
-  const decor = e => e.closest('.card, .art, .backs, #deco, svg');
+  // Pictures, and text only for a screen reader (.sr), are not text he reads.
+  const decor = e => e.closest('.card, .art, .backs, #deco, svg, .sr');
   const texts = [...document.querySelectorAll('body *')].filter(e => inScope(e) && shown(e) && !decor(e)
     && [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()));
   for (const e of texts) {
@@ -75,6 +79,18 @@ function audit({ minText, rulesFit }) {
   for (const e of document.querySelectorAll('button, #msg, .tile .body')) {
     if (!inScope(e) || !shown(e)) continue;
     if (e.scrollWidth > e.clientWidth + 2) bad.push(`text wider than its box: ${name(e)}`);
+  }
+  // A label in the bar stays on one line, apart from a phone, where its three game buttons share a row.
+  if (W >= 700) for (const e of document.querySelectorAll('#bar button, #bar #title, #home')) {
+    if (!inScope(e) || !shown(e)) continue;
+    const tops = new Set();
+    for (const walk = document.createTreeWalker(e, NodeFilter.SHOW_TEXT); walk.nextNode();) {
+      if (!walk.currentNode.textContent.trim() || !shown(walk.currentNode.parentElement)) continue;
+      const range = document.createRange(); range.selectNodeContents(walk.currentNode);
+      for (const r of range.getClientRects()) if (r.width > 1) tops.add(Math.round(r.top / 4));
+    }
+    if (e.id !== 'title' && tops.size > 1) bad.push(`label on two lines: ${name(e)}`);
+    if (e.id === 'title' && e.querySelector('#level') && tops.size > 2) bad.push(`label on three lines: ${name(e)}`);
   }
   const targets = [...document.querySelectorAll('button, a#home, a.tile')].filter(e => inScope(e) && shown(e));
   const rects = targets.map(e => e.getBoundingClientRect());
@@ -106,6 +122,7 @@ try {
   for (const [fontName, faces] of Object.entries(FONTS)) for (const win of WINDOWS) {
     const ctx = await browser.newContext({ viewport: { width: win.width, height: win.height }, isMobile: win.isMobile, hasTouch: win.hasTouch, reducedMotion: 'reduce' });
     await ctx.addInitScript(useFont, faces);
+    if (win.zoom) await ctx.addInitScript(z => localStorage.setItem('gg:zoom', String(z)), win.zoom);
     const page = await ctx.newPage();
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
@@ -114,6 +131,7 @@ try {
       await page.waitForTimeout(settle);
       await page.evaluate(() => document.fonts.ready);
       // The test font must be the one drawing the page.
+      if (win.zoom && await page.evaluate(() => Zoom.z()) !== win.zoom) { failed++; console.log(`FAIL ${tag} ${screen}: the page is not at ${win.zoom * 100} %`); }
       const used = await page.evaluate(() => document.fonts.check('20px "Segoe UI"') && [...document.fonts].some(f => f.family === 'Segoe UI' && f.status === 'loaded'));
       const bad = used ? await page.evaluate(audit, { ...win, rulesFit: win.rulesFit && fontName === 'segoe' }) : ['the test font did not load'];
       await page.screenshot({ path: join(shots, `${fontName}-${win.name}-${screen}.png`) });

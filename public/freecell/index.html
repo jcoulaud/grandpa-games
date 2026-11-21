@@ -53,6 +53,7 @@
 
   @media (prefers-reduced-motion: reduce) { .mark.hint { animation: none; } }
 </style>
+<script src="../lib/zoom.js"></script>
 </head>
 <body>
 <div id="bar">
@@ -63,7 +64,7 @@
   <button id="helpBtn" data-icon="help">Règles</button>
   <button id="newBtn" class="game">Nouvelle partie</button>
 </div>
-<div id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div></div>
+<div id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div><div class="zoom"></div></div>
 <div id="table"></div>
 <div id="help" data-title="Comment jouer">
     <section class="page">
@@ -651,8 +652,9 @@ function openHelp() { if (!drag) Kit.openHelp(); }
 // A press and release that moves less than 16 px is a click, so a shaky hand still clicks.
 // Moving further drags the card.
 function tablePoint(e) {
-  const r = table.getBoundingClientRect();
-  return [e.clientX - r.left + table.scrollLeft, e.clientY - r.top + table.scrollTop];
+  // The mouse counts in screen pixels; the table in page pixels, which the size buttons enlarge.
+  const r = table.getBoundingClientRect(), z = Zoom.z();
+  return [(e.clientX - r.left) / z + table.scrollLeft, (e.clientY - r.top) / z + table.scrollTop];
 }
 table.addEventListener('pointerdown', e => {
   if (e.button !== 0 || busy || dialogOpen() || drag) return;
@@ -680,7 +682,7 @@ addEventListener('pointermove', e => {
     });
     drawMarks();
   }
-  drag.els.forEach(d => put(d.el, d.x + dx, d.y + dy));
+  drag.els.forEach(d => put(d.el, d.x + dx / Zoom.z(), d.y + dy / Zoom.z()));
   const under = hitPile(...tablePoint(e)), key = under ? under.a + under.i : '';
   marks.forEach(m => m.classList.toggle('over', m.dataset.key === key));
 });

@@ -190,6 +190,7 @@
     .card.hand.hint, .dots i, .seat.took { animation: none; }
   }
 </style>
+<script src="../lib/zoom.js"></script>
 </head>
 <body>
 <div id="bar">
@@ -200,7 +201,7 @@
   <button id="helpBtn" data-icon="help">Règles</button>
   <button id="newBtn" class="game">Nouvelle partie</button>
 </div>
-<div id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div></div>
+<div id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div><div class="zoom"></div></div>
 <div id="table">
   <div id="mid"></div>
   <div id="mySlot">À vous</div>
@@ -763,7 +764,7 @@ function render() {
       : over ? (G.result.winners.includes(0) ? (G.result.winners.length > 1 ? `Vous partagez la victoire avec ${names(G.result.winners.filter(s => s))}.` : 'Vous avez le moins de points : vous gagnez !')
         : `${names(G.result.winners)} ${verb(G.result.winners, 'a', 'ont')} le moins de points.`)
       : '';
-    $('scoreTable').innerHTML = '<tr><th></th><th>Cette manche</th><th>Total</th></tr>' + [0, 1, 2, 3].map(s =>
+    $('scoreTable').innerHTML = '<tr><th><span class="sr">Joueur</span></th><th>Cette manche</th><th>Total</th></tr>' + [0, 1, 2, 3].map(s =>
       `<tr class="${s === 0 ? 'me' : ''} ${G.scores[s] === low ? 'best' : ''}"><td>${PLAYERS[s].name}</td><td class="n">+${G.handPts[s]}</td><td class="n"><b>${G.scores[s]}</b></td></tr>`).join('');
     $('nextBtn').textContent = over ? 'Nouvelle partie' : 'Manche suivante';
     place(ss, cx, cy);
@@ -776,7 +777,7 @@ function render() {
     side.style.left = L.W - pad - L.sideW + 'px'; side.style.width = L.sideW + 'px'; side.style.top = '10px';
     side.classList.remove('tight');
     const low = Math.min(...G.scores);
-    $('scoreSide').innerHTML = '<tr><th></th><th>Manche</th><th>Total</th></tr>' + [0, 1, 2, 3].map(s =>
+    $('scoreSide').innerHTML = '<tr><th><span class="sr">Joueur</span></th><th>Manche</th><th>Total</th></tr>' + [0, 1, 2, 3].map(s =>
       `<tr class="${s === 0 ? 'me' : ''}"><td><span class="who"><span class="dot" style="background:${PLAYERS[s].color}"></span>${PLAYERS[s].name}</span></td>
        <td class="n">${G.phase === 'done' || G.phase === 'over' ? '+' + G.handPts[s] : G.pts[s]}</td><td class="n"><b>${G.scores[s]}</b></td></tr>`).join('');
     // Where the queen of spades is, and whether hearts may lead.

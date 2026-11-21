@@ -47,6 +47,8 @@
     --k: 1;
   }
   @media (min-width: 1800px) and (min-height: 1050px) { :root { --k: 1.2; } }
+  /* Enlarged with the size buttons (lib/zoom.js): the zoom alone sets the size. */
+  :root.zoomed { --k: 1; }
   * { box-sizing: border-box; }
   html, body { margin: 0; min-height: 100%; }
   body {
@@ -66,6 +68,8 @@
   /* Greeting */
   header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 6px; }
   h1 { margin: 0; font: 700 calc(50px * var(--k))/1.05 var(--ui); letter-spacing: -.02em; }
+  /* The size of the page (lib/zoom.js), on the right, before the clock. */
+  header .zoom { margin-left: auto; }
   #tagline { margin: 6px 0 0; font: 500 calc(25px * var(--k)) var(--ui); color: rgba(255,255,255,.78); }
   #now { text-align: right; }
   #time { font: 600 calc(46px * var(--k))/1 var(--ui); letter-spacing: -.01em; color: rgba(255,255,255,.92); font-variant-numeric: tabular-nums; }
@@ -107,7 +111,7 @@
   .art .card.lifted { box-shadow: 0 12px 22px rgba(0,0,0,.45); }
   .art .slot { position: absolute; border-radius: 6px; background: rgb(0 0 0 / .14); border: 2px dashed rgb(255 255 255 / .45); }
   .body { padding: calc(12px * var(--k)) calc(22px * var(--k)) calc(18px * var(--k)); display: flex; flex-direction: column; gap: 6px; flex: 1; }
-  .body h3 { margin: 0; font: 700 calc(31px * var(--k)) var(--ui); letter-spacing: -.01em; }
+  .body h2 { margin: 0; font: 700 calc(31px * var(--k)) var(--ui); letter-spacing: -.01em; }
   .body p { margin: 0; font: 500 calc(20px * var(--k))/1.35 var(--ui); color: var(--muted); }
   .status { display: flex; align-items: center; gap: 9px; min-height: 30px; font: 600 calc(21px * var(--k)) var(--ui); color: var(--accent); }
   .status svg { width: 26px; height: 26px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -120,7 +124,7 @@
   a.tile.opening { opacity: .85; transform: none; }
 
   /* Footer band: where the saves are on the left, the install button on the right */
-  body { display: flex; flex-direction: column; min-height: 100vh; }
+  body { display: flex; flex-direction: column; min-height: calc(100vh / var(--z, 1)); }
   main { flex: 1; }
   footer { background: rgba(0,0,0,.18); border-top: 1px solid rgba(255,255,255,.08); }
   footer .in { max-width: calc(1320px * var(--k)); margin: 0 auto; padding: 14px 40px; display: flex; align-items: center; justify-content: space-between; gap: 24px;
@@ -142,6 +146,7 @@
   @media (prefers-reduced-motion: reduce) { .tile { transition: none; } a.tile:hover { transform: none; } }
 </style>
 <link rel="stylesheet" href="lib/cards.css">
+<script src="lib/zoom.js"></script>
 </head>
 <body>
 
@@ -158,6 +163,7 @@
       <h1 id="hello">Bonjour Papi !</h1>
       <p id="tagline">Des jeux simples, gratuits et sans publicité.</p>
     </div>
+    <div class="zoom"></div>
     <div id="now">
       <div id="time"></div>
       <div id="date"></div>
@@ -257,7 +263,7 @@ function render() {
     return `<a class="tile" href="${g.id}/" data-id="${g.id}">
       <div class="art" style="background: radial-gradient(90% 120% at 50% 0%, ${g.felt[0]}, ${g.felt[1]})">${g.scene()}</div>
       <div class="body">
-        <h3>${esc(g.title)}</h3>
+        <h2>${esc(g.title)}</h2>
         <p>${esc(g.text)}</p>
         <div class="status">${wins ? ICON_TROPHY + esc(wins) : ''}</div>
         <div class="play">${playing ? 'Reprendre la partie' : 'Jouer'}</div>
