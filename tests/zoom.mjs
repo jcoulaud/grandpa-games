@@ -27,6 +27,19 @@ try {
   for (let n = 0; n < 8 && await plus.isEnabled(); n++) await plus.click();
   ok(await zoomText() === '130 %', 'on a 1366 by 680 window, "Agrandir" stops at 130 %: ' + await zoomText());
   ok(await g(() => document.documentElement.style.zoom) === '1.3', 'the page is drawn at 130 %');
+  await g(() => dispatchEvent(new Event('beforeinstallprompt')));
+  const footerFits = () => g(() => {
+    const controls = [...document.querySelectorAll('footer button')].map(b => b.getBoundingClientRect());
+    const mid = r => r.top + r.height / 2;
+    return controls.every(r => r.width > 0 && r.left >= 0 && r.right <= innerWidth && Math.abs(mid(r) - mid(controls[0])) < 2);
+  });
+  ok(await footerFits(), 'the install and display buttons share one row at maximum laptop zoom');
+  await page.setViewportSize({ width: 2400, height: 1200 });
+  await page.waitForFunction(() => !document.querySelector('[data-dir="1"]').disabled);
+  while (await plus.isEnabled()) await plus.click();
+  ok(await zoomText() === '200 %' && await footerFits(), 'all footer buttons fit at 200 %');
+  await page.setViewportSize({ width: 1366, height: 680 });
+  await page.waitForFunction(() => Zoom.z() === 1.3);
   await page.screenshot({ path: `${OUT}/zoom-library-130.png` });
   await page.reload();
   ok(await zoomText() === '130 %', 'the size is kept after a reload');
