@@ -13,6 +13,7 @@
 html, body { margin: 0; height: 100%; }
 body {
   display: grid; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); /* never wider than the window */
+  row-gap: clamp(6px, 2%, 20px);
   background: radial-gradient(120% 100% at 50% 0%, var(--felt-top), var(--felt) 70%) var(--felt); color: #fff;
   font-family: var(--ui);
   overflow: hidden; user-select: none; -webkit-user-select: none; touch-action: none;
