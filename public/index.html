@@ -52,7 +52,7 @@
       radial-gradient(120% 90% at 50% 0%, #1A6A5F, #0F4F47 70%) #0F4F47 fixed;
     color: #fff; font-family: var(--ui); -webkit-font-smoothing: antialiased;
   }
-  main { max-width: 1240px; margin: 0 auto; padding: 18px 40px 16px; display: flex; flex-direction: column; gap: 18px; width: 100%; }
+  main { max-width: 1320px; margin: 0 auto; padding: 18px 40px 16px; display: flex; flex-direction: column; gap: 18px; width: 100%; }
 
   /* Large suit outlines behind the page */
   #deco { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
@@ -80,7 +80,8 @@
 
 
   /* Game tiles */
-  #games { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 26px; }
+  /* Four games side by side on a laptop: each tile is at least 250 px wide. */
+  #games { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 22px; }
   .tile {
     position: relative; display: flex; flex-direction: column; border-radius: 28px; overflow: hidden;
     background: var(--face); color: var(--text); text-decoration: none;
@@ -93,19 +94,20 @@
     height: 130px; position: relative; overflow: hidden;
     background: radial-gradient(90% 120% at 50% 0%, #1F7A6C, #12594F);
   }
-  .art svg.board { position: absolute; left: 50%; bottom: -34px; width: 250px; height: 156px; margin-left: -125px;
+  .art svg.board { position: absolute; left: 50%; bottom: -30px; width: 224px; height: 140px; margin-left: -112px;
     filter: drop-shadow(0 8px 12px rgba(0,0,0,.35)); transform: rotate(-5deg); }
-  .art svg.card { position: absolute; left: 50%; bottom: -44px; width: 96px; height: 134px; margin-left: -48px;
+  .art svg.card { position: absolute; left: 50%; bottom: -40px; width: 86px; height: 120px; margin-left: -43px;
     filter: drop-shadow(0 6px 10px rgba(0,0,0,.3)); transform-origin: 50% 120%; }
-  .body { padding: 18px 26px 24px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
-  .body h3 { margin: 0; font: 700 34px var(--ui); letter-spacing: -.01em; }
-  .body p { margin: 0; font: 500 21px/1.35 var(--ui); color: var(--muted); }
+  .art svg.card.front { bottom: -24px; }
+  .body { padding: 12px 22px 18px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .body h3 { margin: 0; font: 700 31px var(--ui); letter-spacing: -.01em; }
+  .body p { margin: 0; font: 500 20px/1.35 var(--ui); color: var(--muted); }
   .status { display: flex; align-items: center; gap: 9px; min-height: 30px; font: 600 21px var(--ui); color: var(--accent); }
   .status svg { width: 26px; height: 26px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .status:empty { display: none; }
   .play {
-    margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 60px;
-    border-radius: 16px; background: var(--gold); color: #1F1A00; font: 700 24px var(--ui);
+    margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 60px; white-space: nowrap;
+    border-radius: 16px; background: var(--gold); color: #1F1A00; font: 700 22px var(--ui);
   }
   a.tile:hover .play { background: #FFD666; }
   .play svg { width: 26px; height: 26px; fill: currentColor; }
@@ -115,7 +117,7 @@
   body { display: flex; flex-direction: column; min-height: 100vh; }
   main { flex: 1; }
   footer { background: rgba(0,0,0,.18); border-top: 1px solid rgba(255,255,255,.08); }
-  footer .in { max-width: 1240px; margin: 0 auto; padding: 14px 40px; display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  footer .in { max-width: 1320px; margin: 0 auto; padding: 14px 40px; display: flex; align-items: center; justify-content: space-between; gap: 24px;
     font: 500 20px var(--ui); color: rgba(255,255,255,.85); }
   #saves { display: flex; align-items: center; gap: 10px; }
   #saves svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -180,7 +182,7 @@
 'use strict';
 // The library. To add a game: put it in <id>/index.html, add it here, and add its folder to CORE in sw.js.
 // Each game has its own look: the felt of its table, and a picture made of cards, fanned or in a row,
-// or for the dames, a corner of the board with its pieces.
+// or for the dames, a corner of the board with its pieces. The dame de pique stands in front of two hearts.
 const GAMES = [
   { id: 'solitaire', title: 'Solitaire', text: 'Rangez toutes les cartes, de l’as jusqu’au roi.',
     felt: ['#1F7A6C', '#12594F'], cards: [['7', 2], ['A', 0], ['R', 1]] },
@@ -188,6 +190,8 @@ const GAMES = [
     felt: ['#2E66A0', '#173F6B'], row: true, cards: [['A', 1], ['A', 0], ['A', 2], ['A', 3]] },
   { id: 'dames', title: 'Dames', text: 'Le jeu de dames sur 100 cases, contre l’ordinateur.',
     felt: ['#8A3440', '#4C161E'], board: true },
+  { id: 'dame-de-pique', title: 'Dame de pique', text: 'Évitez les cœurs et la dame de pique, à quatre.',
+    felt: ['#6A4488', '#2C1840'], queen: true },
 ];
 
 const SUIT_RED = s => s === 1 || s === 2;
@@ -213,12 +217,14 @@ function boardArt() {
   sq += piece(1, 0, false) + piece(3, 0, false) + piece(4, 1, false) + piece(2, 1, true, true) + piece(1, 2, true) + piece(3, 2, true) + piece(0, 3, true);
   return `<svg class="board" viewBox="0 0 240 150" aria-hidden="true"><rect x="-6" y="-6" width="252" height="172" rx="4" fill="#6A4127"/>${sq}</svg>`;
 }
+// The queen of spades, upright, in front of two hearts.
+const queenArt = () => cardSvg(['A', 1], -18, -54) + cardSvg(['R', 1], 18, 54) + cardSvg(['D', 0], 0, 0).replace('class="card"', 'class="card front"');
 // A fan of cards, or with row, the cards standing side by side.
 function art(cards, row) {
   const n = cards.length;
   return cards.map((c, i) => {
     const t = n === 1 ? 0 : i / (n - 1) - 0.5;
-    return row ? cardSvg(c, 0, t * (n - 1) * 78) : cardSvg(c, t * 30, t * 120);
+    return row ? cardSvg(c, 0, t * (n - 1) * 60) : cardSvg(c, t * 30, t * 110);
   }).join('');
 }
 const ICON_PLAY = '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg>';
@@ -233,7 +239,7 @@ function render() {
     // The button already says a game is in progress: the line under the text shows only the wins.
     const wins = parts.filter(p => !/en cours/i.test(p)).join(' · ');
     return `<a class="tile" href="${g.id}/" data-id="${g.id}">
-      <div class="art" style="background: radial-gradient(90% 120% at 50% 0%, ${g.felt[0]}, ${g.felt[1]})">${g.board ? boardArt() : art(g.cards, g.row)}</div>
+      <div class="art" style="background: radial-gradient(90% 120% at 50% 0%, ${g.felt[0]}, ${g.felt[1]})">${g.board ? boardArt() : g.queen ? queenArt() : art(g.cards, g.row)}</div>
       <div class="body">
         <h3>${esc(g.title)}</h3>
         <p>${esc(g.text)}</p>

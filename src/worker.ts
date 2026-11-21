@@ -9,7 +9,7 @@
 import { admin, type AdminEnv } from './admin';
 import { json, utcDay, VISIT_DAYS } from './util';
 
-const GAMES = ['solitaire', 'freecell', 'dames'];         // add each new game here
+const GAMES = ['solitaire', 'freecell', 'dames', 'dame-de-pique'];         // add each new game here
 const ERRORS_PER_DAY = 20;           // per PC
 const KEEP_ERRORS = 2_000;           // in all
 

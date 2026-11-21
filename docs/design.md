@@ -82,3 +82,17 @@ The jeu de dames is international draughts on the 10x10 board, as the FMJD and t
 - **The computer's move.** It waits at least 0.7 s, so his own move is seen landing first. Its piece then travels one landing at a time, 0.52 s apart, crossing out what it takes. Its start and end squares stay lit until he chooses a piece, and the message line says what it took.
 - **Levels.** Facile searches 2 plies and, 40% of the time, picks a move that loses at most 0.9 of a man against the best one. It still never misses a compulsory capture. Moyen and Fort search deeper with alpha-beta and follow every compulsory capture past the depth limit, so they do not give pieces away.
 - **No settings.** The level is the only choice, at "Nouvelle partie", and it is kept.
+
+## Dame de pique
+
+The dame de pique is Hearts for four, in the Windows rules that French players know. Two second opinions (GPT-6.2 Sol and GPT-6.2 Astra) checked the rules, the computer players and the edge cases of the input and the saves.
+
+- **Its own look.** A deep plum felt (#5E3B78 to #2C1840). Its library tile shows the queen of spades upright in front of two hearts. Four tiles now share one row of the library.
+- **The table.** His hand runs along the bottom. Each card shows its top 80%, so the corner with the rank and the suit is always in view, and the cards stay large: 125 px wide at 1366x680. The trick lies in a cross in the middle, each card in front of its player. Paul sits on top, Jeanne on the left and Louise on the right, each with an initial in a coloured circle, a small fan of backs for the cards left, and the points taken in this hand.
+- **Whose turn.** The seat of the player who plays has a lilac border and "Paul joue". Yellow keeps its meaning: chosen, or the hint.
+- **One click plays.** A card he cannot play now is darker but still readable. A click on it says why: "Vous avez du trèfle : vous devez en poser un." A slip can be taken back with undo.
+- **The pass.** A sheet in the middle names the receiver with an arrow: "Donnez 3 cartes à Jeanne, à votre gauche". Chosen cards rise with a yellow outline. The button names the receiver again. The cards received carry a white "Reçue" tag, so they cannot be mistaken for chosen cards.
+- **Pace.** The others play one card every 0.75 s. A full trick stays 1.5 s, the winner's card framed in lilac, then slides to the winner. The message line names each card and who took the trick, with how many points. The last trick stays in the right column.
+- **The end of a hand.** A score sheet on the table, not a dialog, so Escape cannot lose the "Manche suivante" button. The player in the lead is marked "en tête".
+- **Levels.** Facile, Moyen and Difficile, chosen at "Nouvelle partie". In the tests, Moyen takes 2.7 points a hand fewer than Facile players, and Difficile 5.7 fewer than Moyen players. Difficile takes less than 60 ms a card.
+

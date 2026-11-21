@@ -4,7 +4,7 @@ import { gameUrl, launch } from './harness.mjs';
 
 const browser = await launch();
 try {
-  for (const game of ['solitaire', 'freecell', 'dames']) {
+  for (const game of ['solitaire', 'freecell', 'dames', 'dame-de-pique']) {
     const page = await browser.newPage({ reducedMotion: 'reduce' });
     await page.goto(gameUrl(game));
     assert.equal(await page.evaluate(id => GG.load(id), game), null);
@@ -16,7 +16,7 @@ try {
       if (!first) await page.click('#newBtn');
       assert.deepEqual(await choices.allTextContents(), ['Facile', 'Moyen', 'Difficile', first ? 'Retour aux jeux' : 'Continuer la partie']);
       const choice = choices.getByText(label, { exact: true });
-      if (game === 'dames') {
+      if (game === 'dames' || game === 'dame-de-pique') {
         await choice.click();
       } else {
         // Inspect the chosen deal in the click handler's turn, before automatic moves.
@@ -36,7 +36,7 @@ try {
       assert.equal(await page.locator('#newBtn small').innerText(), levelText);
       assert.equal(await page.locator('#over').isVisible(), false);
     }
-    if (game !== 'dames') {
+    if (game === 'solitaire' || game === 'freecell') {
       assert.ok(await page.evaluate(() => Object.entries(fallbackSeeds).every(([key, seeds]) =>
         seeds.every(seed => {
           S = freshDeal(Cards.seededRandom(seed));

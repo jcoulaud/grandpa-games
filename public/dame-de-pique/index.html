@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dame de pique · Jeux de Papi</title>
+<meta name="description" content="La dame de pique en grand, pour les grands-parents : à quatre autour de la table, contre trois joueurs de l'ordinateur, en facile, moyen ou difficile. Gratuit, sans publicité, sans compte.">
+<link rel="canonical" href="https://jeux-papi.fr/dame-de-pique/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Jeux de Papi">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://jeux-papi.fr/dame-de-pique/">
+<meta property="og:title" content="Dame de pique · Jeux de Papi">
+<meta property="og:description" content="La dame de pique en grand, contre trois joueurs de l'ordinateur. Gratuit, sans publicité, sans compte.">
+<meta property="og:image" content="https://jeux-papi.fr/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../lib/kit.css">
+<link rel="stylesheet" href="../lib/cards.css">
+<style>
+  /* The dame de pique plays on a deep plum felt, so it does not look like the other games. */
+  :root { --felt-top: #5E3B78; --felt: #2C1840; --shade: 26,12,38; --accent: #6A3F8C; }
+  #title svg { width: 30px; height: 30px; }
+
+  /* clip, not hidden: a focused card must never scroll the table. */
+  #table { position: relative; overflow: clip; }
+  /* The cards of the table: his hand, the trick, and the trick being taken away. */
+  .card { z-index: 10; }
+  .card.hand { transition: left .3s cubic-bezier(.2,.7,.3,1), top .3s cubic-bezier(.2,.7,.3,1), transform .15s; }
+  .card.hand.can { cursor: pointer; }
+  .card.hand.can:hover { transform: translateY(calc(var(--h) * -.1)); outline: 3px solid #fff; }
+  /* A card he may not play now: a little darker, still readable and still clickable for the reason. */
+  .card.hand.no { cursor: pointer; filter: brightness(.72) saturate(.8); }
+  .card.hand.picked, .card.hand.picked:hover { transform: translateY(calc(var(--h) * -.2)); outline: 5px solid var(--gold); }
+  .card.hand.hint, .card.hand.hint:hover { transform: translateY(calc(var(--h) * -.14)); outline: 5px solid var(--gold);
+    box-shadow: 0 0 0 2px rgba(var(--shade),.8), 0 0 26px 8px rgba(255,200,61,.7); animation: glow 1.4s ease-in-out infinite; }
+  @keyframes glow { 50% { box-shadow: 0 0 0 2px rgba(var(--shade),.8), 0 0 34px 14px rgba(255,200,61,.9); } }
+  /* The cards just received: a small white tag over the card until he plays his first card. */
+  .card.hand .got { position: absolute; left: 50%; top: calc(var(--h) * -.17); translate: -50% 0; z-index: 3;
+    padding: 2px 10px; border-radius: 10px; background: #fff; color: var(--text); font: 700 18px/1.25 var(--ui);
+    box-shadow: 0 2px 6px rgba(0,0,0,.3); white-space: nowrap; }
+  .card.hand.picked .got { display: none; }
+  .card.trick { transition: left .45s cubic-bezier(.2,.7,.3,1), top .45s cubic-bezier(.2,.7,.3,1), opacity .45s, transform .45s; }
+  .card.trick.won { outline: 5px solid #B98AE0; outline-offset: 0; }
+  .card.away { opacity: 0; transform: scale(.55); }
+
+  /* The three players of the computer. Each sits by its place on the table. */
+  .seat {
+    position: absolute; z-index: 20; display: grid; grid-template-columns: auto auto; align-items: center; column-gap: 14px; row-gap: 10px; padding: 12px 18px 12px 12px;
+    background: #FFFDF6; color: var(--text); border-radius: 20px; border: 3px solid transparent;
+    box-shadow: 0 4px 18px rgba(0,0,0,.32); transition: border-color .2s;
+  }
+  .seat.turn { border-color: #B98AE0; box-shadow: 0 0 0 4px rgba(185,138,224,.35), 0 4px 18px rgba(0,0,0,.32); }
+  .seat.took { animation: took .6s ease-out; }
+  @keyframes took { 40% { transform: scale(1.06); } }
+  .ava { width: 52px; height: 52px; border-radius: 50%; flex: none; display: grid; place-items: center;
+    font: 700 26px var(--ui); color: #fff; box-shadow: inset 0 -3px 0 rgba(0,0,0,.18); }
+  .seat b { display: block; font: 700 24px/1.15 var(--ui); }
+  .seat .where { display: block; font: 500 20px/1.3 var(--ui); color: #5A6461; }
+  .seat .pts { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; font: 600 20px/1.2 var(--ui); color: #3A4542; }
+  .seat .pts svg, #scores .s, .mini .s { width: 18px; height: 18px; fill: var(--red); }
+  .seat .now { display: none; align-items: center; gap: 8px; font: 600 19px var(--ui); color: #4B2E69; }
+  .seat.turn .now { display: flex; }
+  .seat.turn .pts { display: none; }
+  .dots { display: inline-flex; gap: 5px; }
+  .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: dot 1.2s infinite; }
+  .dots i:nth-child(2) { animation-delay: .2s; } .dots i:nth-child(3) { animation-delay: .4s; }
+  @keyframes dot { 50% { opacity: .2; } }
+  /* How many cards each one holds: a small fan of backs. */
+  .backs { position: relative; height: 36px; }
+  /* Jeanne and Louise, on the sides, are narrow: their cards go under their name. */
+  #seat1 .backs, #seat3 .backs { grid-column: 1 / -1; justify-self: center; }
+  #seat2 { grid-template-columns: auto auto auto; min-width: 390px; }
+  #seat1, #seat3 { min-width: 270px; }
+  /* His own points, top left, when the window is too narrow for the score column. */
+  #seat0 { padding: 10px 16px 10px 10px; }
+  #seat0 .ava { width: 44px; height: 44px; font-size: 22px; }
+  .seat .pts, .seat .now { white-space: nowrap; }
+  .backs i { position: absolute; top: 0; width: 26px; height: 36px; border-radius: 4px; border: 1px solid #0B1D33;
+    background: repeating-linear-gradient(45deg, rgba(255,210,74,.35) 0 1px, transparent 1px 6px), repeating-linear-gradient(-45deg, rgba(255,210,74,.35) 0 1px, transparent 1px 6px), var(--back);
+    box-shadow: inset 0 0 0 2px var(--back), inset 0 0 0 3px rgba(255,255,255,.7); }
+
+  /* The middle of the table: where the trick is played, and the sheets for the pass and the score. */
+  #mid { position: absolute; z-index: 5; border-radius: 50%; background: radial-gradient(closest-side, rgba(255,255,255,.07), transparent); pointer-events: none; }
+  .sheet {
+    position: absolute; z-index: 300; transform-origin: 50% 0; display: none; flex-direction: column; align-items: center; gap: 14px; text-align: center;
+    background: #FFFDF6; color: var(--text); border-radius: 24px; padding: 24px 32px 26px; box-shadow: 0 18px 50px rgba(0,0,0,.45);
+  }
+  .sheet.on { display: flex; }
+  .sheet h2 { margin: 0; font: 700 28px/1.2 var(--ui); letter-spacing: -.01em; }
+  #passSheet { padding: 20px 24px 22px; gap: 10px; }
+  #passSheet .head { display: flex; align-items: center; gap: 16px; text-align: left; }
+  #passSheet .arrow { flex: none; width: 56px; height: 56px; }
+  .sheet p { margin: 0; font: 400 22px/1.4 var(--ui); color: #3A4542; }
+  .sheet button { min-height: 58px; padding: 8px 28px; justify-content: center; }
+  .sheet .arrow { width: 64px; height: 64px; border-radius: 50%; background: #F1E9F8; display: grid; place-items: center; }
+  .sheet .arrow svg { width: 40px; height: 40px; fill: none; stroke: #4B2E69; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  .sheet table { border-collapse: collapse; font: 600 22px/1.2 var(--ui); }
+  .sheet th { font: 600 19px var(--ui); color: #5A6461; padding: 0 18px 8px; }
+  .sheet td { padding: 9px 18px; border-top: 1px solid #E6E0D2; }
+  .sheet td:first-child { text-align: left; }
+  .sheet td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .sheet tr.me td { background: #FFF4D6; }
+  .sheet tr.best td:first-child::after { content: " · en tête"; font: 600 18px var(--ui); color: #6A3F8C; }
+  .sheet .note { font: 600 21px/1.35 var(--ui); color: #4B2E69; max-width: 520px; }
+
+  /* The side column: the scores, then the last trick. */
+  #side { position: absolute; z-index: 20; display: flex; flex-direction: column; gap: 14px; }
+  .box { background: #FFFDF6; color: var(--text); border-radius: 22px; padding: 16px 20px 18px; box-shadow: 0 4px 18px rgba(0,0,0,.32); }
+  .box h3 { margin: 0 0 8px; font: 700 23px var(--ui); color: #4B2E69; }
+  #scores table { width: 100%; border-collapse: collapse; font: 600 21px/1.2 var(--ui); }
+  #scores th { font: 600 18px var(--ui); color: #5A6461; text-align: right; padding: 0 0 6px 8px; }
+  #scores td { padding: 5px 0; border-top: 1px solid #E6E0D2; }
+  /* A short window: the scores keep their place, the reminder of the goal goes. */
+  #side.tight .goal { display: none; }
+  #scores td.n { text-align: right; padding-left: 8px; font-variant-numeric: tabular-nums; }
+  #scores td.n b { font-weight: 700; }
+  #scores tr.me td { color: #1B2422; }
+  #scores .who { display: flex; align-items: center; gap: 8px; }
+  #scores .dot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+  #scores .goal { margin: 10px 0 0; font: 500 19px/1.35 var(--ui); color: #55605C; }
+  #lastCards { display: flex; gap: 8px; }
+  .mini { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .mini .f { width: 100%; height: 56px; border-radius: 9px; background: #fff; border: 1px solid #C9C1AE; display: flex; align-items: center;
+    justify-content: center; gap: 2px; font: 700 25px var(--ui); letter-spacing: -.04em; }
+  .mini .f.red { color: var(--red); } .mini .f.black { color: var(--ink); }
+  .mini .f.red .s { fill: var(--red); } .mini .f.black .s { fill: var(--ink); }
+  .mini .f .s { width: 22px; height: 22px; }
+  .mini.won .f { outline: 4px solid #B98AE0; outline-offset: -1px; }
+  .mini span { font: 600 17px var(--ui); color: #55605C; }
+  #lastText { margin: 10px 0 0; font: 600 20px/1.3 var(--ui); color: #3A4542; }
+
+  #helpText .demo { display: flex; gap: 22px; align-items: center; margin: 6px 0 10px; }
+  #helpText .demo .pair { display: flex; gap: 10px; flex: none; }
+  #helpText .tag { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 10px; background: #fff;
+    border: 1px solid #C9C1AE; font: 700 26px var(--ui); }
+  #helpText .tag svg { width: 24px; height: 24px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card.hand, .card.trick { transition: none; }
+    .card.hand.hint, .dots i, .seat.took { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div id="bar">
+  <div id="title"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="3" fill="#FFFDF6" stroke="#6A3F8C" stroke-width="1.4"/><path transform="translate(6.5 6) scale(.11)" fill="#14171A" d="M50 5C62 26 95 40 95 61c0 12-10 20-21 20-8 0-15-4-19-11 1 11 6 20 13 26H32c7-6 12-15 13-26-4 7-11 11-19 11C15 81 5 73 5 61 5 40 38 26 50 5z"/></svg>Dame de pique</div>
+  <button id="undoBtn" data-icon="undo" title="Reprend votre dernière carte et celles jouées après"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre une bonne carte à jouer maintenant"><span class="long">Quelle carte jouer ?</span><span class="short">Aide</span></button>
+  <span class="spacer"></span>
+  <button id="helpBtn" data-icon="help">Règles</button>
+  <button id="newBtn" class="game">Nouvelle partie</button>
+</div>
+<div id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div></div>
+<div id="table">
+  <div id="mid"></div>
+  <div class="seat" id="seat0"></div>
+  <div class="seat" id="seat1"></div>
+  <div class="seat" id="seat2"></div>
+  <div class="seat" id="seat3"></div>
+  <div class="sheet" id="passSheet" role="group" aria-labelledby="passTitle">
+    <div class="head"><div class="arrow" id="passArrow"></div><h2 id="passTitle"></h2></div>
+    <p id="passText"></p>
+    <button id="passBtn" class="primary"></button>
+  </div>
+  <div class="sheet" id="scoreSheet" role="group" aria-labelledby="scoreTitle">
+    <h2 id="scoreTitle"></h2>
+    <p class="note" id="scoreNote"></p>
+    <table id="scoreTable"></table>
+    <button id="nextBtn" class="primary"></button>
+  </div>
+  <aside id="side">
+    <div class="box" id="scores"><h3>Les points</h3><table id="scoreSide"></table><p class="goal">La partie s'arrête quand un joueur atteint 100 points. Le moins de points gagne.</p></div>
+    <div class="box" id="lastBox"><h3>Le dernier pli</h3><div id="lastCards"></div><p id="lastText"></p></div>
+  </aside>
+</div>
+<div id="help" data-title="Comment jouer">
+  <section class="page">
+    <h3>Le but</h3>
+    <p>Vous jouez à quatre : vous, en bas, et trois joueurs de l'ordinateur, Jeanne à gauche, Paul en face et Louise à droite.</p>
+    <div class="demo">
+      <div class="pair"><span class="tag" style="color:#C4122F"><svg viewBox="0 0 100 100" fill="#C4122F"><use href="#su1"/></svg></span><span class="tag">D<svg viewBox="0 0 100 100" fill="#14171A"><use href="#su0"/></svg></span></div>
+      <p>Chaque cœur que vous ramassez vaut 1 point. La dame de pique vaut 13 points. Il faut en prendre le moins possible.</p>
+    </div>
+    <p>La partie s'arrête quand un joueur atteint 100 points. Celui qui a le moins de points gagne.</p>
+  </section>
+  <section class="page">
+    <h3>Donner trois cartes</h3>
+    <p>Au début de chaque manche, chacun donne 3 cartes à un voisin : à gauche, puis à droite, puis en face. À la quatrième manche, on garde ses cartes.</p>
+    <p>Cliquez sur 3 cartes : elles montent. Cliquez encore sur une carte pour la reprendre. Puis cliquez sur « Donner ces 3 cartes ». Les cartes reçues portent l'étiquette « Reçue ».</p>
+  </section>
+  <section class="page">
+    <h3>Jouer un pli</h3>
+    <p>Celui qui a le 2 de trèfle commence. Chacun pose une carte, à tour de rôle. Il faut jouer la même couleur que la première carte du pli si vous en avez. Sinon, posez la carte de votre choix.</p>
+    <p>La plus forte carte de la couleur demandée ramasse le pli et commence le suivant. L'as est la plus forte.</p>
+    <p>Pour jouer, cliquez sur une carte. Les cartes un peu sombres ne peuvent pas être jouées maintenant.</p>
+  </section>
+  <section class="page">
+    <h3>Deux règles de plus</h3>
+    <p>Au premier pli, on ne donne pas de point : ni cœur, ni dame de pique. On ne commence pas un pli par un cœur tant que personne n'a joué de cœur, sauf si on n'a plus que des cœurs.</p>
+    <h3>Le grand chelem</h3>
+    <p>Un joueur qui ramasse tous les cœurs et la dame de pique dans la même manche marque 0, et chacun des autres 26 points.</p>
+  </section>
+  <section class="page">
+    <h3>Les boutons</h3>
+    <p>« Quelle carte jouer ? » montre une bonne carte. « Annuler le dernier coup » reprend votre dernière carte et celles posées après. « Nouvelle partie » vous permet de choisir le niveau.</p>
+    <p>Les points de chacun sont à droite, avec le dernier pli. La partie est enregistrée à chaque carte.</p>
+  </section>
+</div>
+
+<script src="../lib/store.js"></script>
+<script src="../lib/cards.js"></script>
+<script src="../lib/kit.js"></script>
+<script src="engine.js"></script>
+<script>
+'use strict';
+const { suit, power, points, legal, refusal, play, passTarget, doPass, choosePlay, choosePass, nextHand, QS, TWO_CLUBS } = DDP;
+const { cardName, suitHtml, faceHtml, rd, cap, SUIT_NAMES, SUIT_PLURALS, RANKS } = Cards;
+const $ = id => document.getElementById(id);
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const STEP_MS = 750;       // between two cards of the computer players
+const FIRST_MS = 650;      // before the first one answers his card
+const SHOW_MS = 1500;      // a full trick stays on the table before it is taken away
+const AWAY_MS = 500;       // the trick slides to the player who took it
+
+const PLAYERS = [
+  { name: 'Vous', where: '', color: '#C9951A' },
+  { name: 'Jeanne', where: 'à votre gauche', color: '#D9705E', pro: 'elle' },
+  { name: 'Paul', where: 'en face', color: '#4F86B8', pro: 'il' },
+  { name: 'Louise', where: 'à votre droite', color: '#5E9E55', pro: 'elle' },
+];
+// To whom the cards go, as he sees it.
+const TO = { 1: 'à Jeanne, à votre gauche', 2: 'à Paul, en face de vous', 3: 'à Louise, à votre droite' };
+const ARROWS = { 1: '<path d="M19 12H5M11 6l-6 6 6 6"/>', 2: '<path d="M12 19V5M6 11l6-6 6 6"/>', 3: '<path d="M5 12h14M13 6l6 6-6 6"/>' };
+const HEART = '<svg viewBox="0 0 100 100" aria-hidden="true"><use href="#su1"/></svg>';
+
+/* ---------- State ----------
+   G: the game (see engine.js). picks: the cards he chose to pass. got: the cards he received, tagged
+   until he plays his first card. undo: the games before each of his cards in this hand: one undo takes
+   back his last card and the computers' cards after it. hint: the card or cards shown by the hint.
+   wonNow: this game is counted as won, so a win counts once. */
+let G, picks = [], got = [], undo = [], level = 'facile', stats = { won: 0 }, wonNow = false, started = false;
+let hint = [], busy = false, gen = 0, timers = [], lastTap = null;
+// What the table shows while the game is ahead of it: a full trick before it is taken away.
+let shown = null;
+// The line about the trick just taken: it stays, and his turn is added to it.
+let note = '';
+let stale = false;
+addEventListener('gg-stale', () => { stale = true; cancelAll(); render(); });
+
+const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
+const ptsText = n => n === 0 ? 'aucun point' : plural(n, 'point', 'points');
+const listNames = cards => {
+  const names = cards.map(cardName);
+  return names.length > 1 ? names.slice(0, -1).join(', ') + ' et ' + names[names.length - 1] : names[0] || '';
+};
+
+/* ---------- Saves ---------- */
+function save() {
+  if (stale) return false;
+  const parts = [];
+  if (started && G.phase !== 'over') parts.push('Partie en cours');
+  if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
+  for (const n of [Infinity, 4, 0]) {
+    const data = { v: 1, G, picks, got, undo: n ? undo.slice(-n) : [], level, stats, wonNow, started };
+    if (GG.save('dame-de-pique', data, { summary: parts.join(' · ') })) return true;
+    if (stale) return false;
+  }
+  Kit.say("La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.");
+  return false;
+}
+function load() {
+  try {
+    const v = GG.load('dame-de-pique');
+    if (!v || !v.G || !Array.isArray(v.G.hands) || v.G.hands.length !== 4) return false;
+    G = v.G; stats = v.stats || stats; undo = Array.isArray(v.undo) ? v.undo : [];
+    level = Object.hasOwn(DDP.LEVELS, v.level) ? v.level : 'facile';
+    wonNow = !!v.wonNow; started = v.started !== false;
+    picks = G.phase === 'pass' && Array.isArray(v.picks) ? v.picks.filter(c => G.hands[0].includes(c)).slice(0, 3) : [];
+    got = Array.isArray(v.got) ? v.got.filter(c => G.hands[0].includes(c)) : [];
+    return true;
+  } catch (e) { return false; }
+}
+
+// Every change of the game goes through here: a win is counted once, and only when it is saved.
+function commit(next) {
+  G = next;
+  const firstWin = G.phase === 'over' && G.result.winner === 0 && !wonNow;
+  if (firstWin) { wonNow = true; stats.won++; }
+  if (save()) { if (firstWin) GG.track('dame-de-pique', 'won'); }
+  else if (firstWin) { wonNow = false; stats.won--; }
+}
+
+/* ---------- Messages ---------- */
+const REFUSE = {
+  two: 'Le premier pli commence par le 2 de trèfle : cliquez dessus.',
+  first: 'Au premier pli, on ne donne pas de point : ni cœur, ni dame de pique.',
+  hearts: "Personne n'a encore joué de cœur : commencez par une autre couleur.",
+};
+function turnMessage() {
+  if (G.phase === 'pass') {
+    const left = 3 - picks.length;
+    return left ? `Choisissez ${left === 3 ? '3 cartes' : left === 1 ? 'encore 1 carte' : 'encore 2 cartes'} à donner ${TO[passTarget(G, 0)]}.`
+      : 'Cliquez sur « Donner ces 3 cartes », ou sur une carte pour la reprendre.';
+  }
+  if (G.phase !== 'play' || G.turn !== 0) return '';
+  const hand = G.hands[0];
+  if (!G.trick.length) {
+    if (G.tricks === 0) return 'Vous avez le 2 de trèfle : cliquez dessus pour commencer.';
+    if (!G.broken && hand.every(c => suit(c) === 1)) return "Vous n'avez plus que des cœurs : posez celui de votre choix.";
+    return 'À vous de commencer le pli : cliquez sur une carte.';
+  }
+  const led = suit(G.trick[0]);
+  if (hand.some(c => suit(c) === led)) return `À vous : posez un ${SUIT_NAMES[led]}.`;
+  if (G.tricks === 0 && legal(G).every(c => !points(c))) return `Vous n'avez pas de ${SUIT_NAMES[led]} : posez une carte sans point.`;
+  return `Vous n'avez pas de ${SUIT_NAMES[led]} : posez la carte de votre choix.`;
+}
+const say = Kit.say;
+
+/* ---------- His cards ---------- */
+function tapCard(c) {
+  if (stale) return;
+  if (busy || (G.phase === 'play' && G.turn !== 0)) return say('Attendez un instant : les autres joueurs posent leurs cartes.');
+  if (G.phase === 'pass') {
+    hint = [];
+    if (picks.includes(c)) picks = picks.filter(x => x !== c);
+    else if (picks.length < 3) picks.push(c);
+    else { shake(c); say('Vous avez déjà choisi 3 cartes : cliquez sur une carte levée pour la reprendre.'); return; }
+    say(turnMessage()); render(); save();
+    return;
+  }
+  if (G.phase !== 'play') return;
+  const why = refusal(G, c);
+  if (why) {
+    shake(c);
+    return say(why === 'suit' ? `Vous avez du ${SUIT_NAMES[suit(G.trick[0])]} : vous devez en poser un.` : REFUSE[why]);
+  }
+  // A step still waiting (after a trick, a pass or a deal) must not start a second round of turns.
+  cancelAll();
+  undo.push(JSON.stringify({ G, got }));
+  got = []; hint = [];
+  const before = G;
+  commit(play(G, c));
+  afterCard(before, 0, c);
+}
+
+function confirmPass() {
+  if (busy || stale || G.phase !== 'pass' || picks.length !== 3) return;
+  cancelAll();
+  const mine = picks.slice(), before = G.hands[0];
+  const all = [0, 1, 2, 3].map(s => s ? choosePass(G, s, level) : mine);
+  const from = [1, 2, 3].find(s => passTarget(G, s) === 0);
+  started = true;
+  picks = []; hint = [];
+  const next = doPass(G, all);
+  got = next.hands[0].filter(c => !before.includes(c));
+  commit(next);
+  say(`${PLAYERS[from].name} vous a donné ${listNames(got)}.`);
+  render();
+  later(step, 1400);
+}
+
+/* ---------- The play ----------
+   After each card, the trick is shown. A full trick stays a moment, then slides to the player who took
+   it. Then step() goes on: the next computer card, his turn, or the end of the hand. */
+function afterCard(before, seat, card) {
+  started = true;
+  const full = before.trick.length === 3;
+  say(seat === 0 ? `Vous posez ${cardName(card)}.` : `${PLAYERS[seat].name} pose ${cardName(card)}.`);
+  if (!full) { render(); return later(step, seat === 0 ? FIRST_MS : STEP_MS); }
+  shown = { leader: before.leader, cards: [...before.trick, card], winner: G.last.winner };
+  busy = true;
+  render();
+  later(() => {
+    shown.away = true; render();
+    later(() => {
+      shown = null; busy = false;
+      const w = G.last.winner, p = G.last.pts;
+      note = w === 0 ? `Vous ramassez le pli : ${ptsText(p)}.` : `${PLAYERS[w].name} ramasse le pli : ${ptsText(p)}.`;
+      say(note);
+      const el = $('seat' + w); if (el) { el.classList.remove('took'); void el.offsetWidth; el.classList.add('took'); }
+      render();
+      later(step, G.phase === 'play' && G.turn !== 0 ? STEP_MS : 700);
+    }, REDUCED ? 0 : AWAY_MS);
+  }, REDUCED ? 900 : SHOW_MS);
+}
+
+function step() {
+  if (stale || busy) return;
+  if (G.phase === 'done' || G.phase === 'over') return handOver(true);
+  if (G.phase !== 'play') { render(); return; }
+  if (G.turn === 0) {
+    say((note ? note + ' ' : '') + turnMessage());
+    note = '';
+    render();
+    return;
+  }
+  // A computer player: it chooses, the card is saved, then shown.
+  render();
+  const seat = G.turn, my = gen;
+  later(() => {
+    if (my !== gen) return;
+    const before = G, c = choosePlay(G, level);
+    note = '';
+    commit(play(G, c));
+    afterCard(before, seat, c);
+  }, 30);
+}
+
+/* ---------- End of a hand ---------- */
+function handOver(fresh) {
+  render();
+  const lowest = Math.min(...G.scores);
+  if (G.phase === 'over') {
+    const won = G.result.winner === 0;
+    say(won ? 'Bravo, vous avez gagné la partie !' : `${PLAYERS[G.result.winner].name} a gagné la partie.`);
+    if (!fresh) return;
+    const games = ['Retour aux jeux', () => { location.href = $('home').href; }];
+    // He may already have opened "Nouvelle partie" from the score sheet: then no result dialog over it.
+    if (won) later(() => Kit.isOpen() || Kit.dialog('Bravo, vous avez gagné !', `Vous finissez avec ${ptsText(G.scores[0])}, le moins de tous.` +
+      (!wonNow ? '' : stats.won === 1 ? " C'est votre première victoire." : ` C'est votre ${stats.won}e victoire.`),
+      [['Nouvelle partie', askNewGame, true], games], true), REDUCED ? 0 : 700);
+    else later(() => Kit.isOpen() || Kit.dialog(`${PLAYERS[G.result.winner].name} a gagné`, `${PLAYERS[G.result.winner].name} finit avec ${ptsText(lowest)}, et vous avec ${ptsText(G.scores[0])}.`,
+      [['Nouvelle partie', askNewGame, true], games]), REDUCED ? 0 : 500);
+    return;
+  }
+  const me = G.handPts[0];
+  say(G.moon === 0 ? 'Grand chelem ! Vous avez pris tous les points : chacun des autres marque 26 points.'
+    : G.moon !== null ? `${PLAYERS[G.moon].name} a pris tous les points : vous marquez 26 points.`
+    : `Fin de la manche : vous marquez ${ptsText(me)}.`);
+}
+function nextHandNow() {
+  if (busy || stale || G.phase !== 'done') return;
+  cancelAll();
+  undo = []; picks = []; got = []; hint = [];
+  commit(nextHand(G));
+  if (G.phase === 'pass') { say(turnMessage()); render(); }
+  else { say('Cette manche, on garde ses cartes.'); render(); later(step, 1200); }
+}
+
+/* ---------- Buttons ---------- */
+function cancelAll() { gen++; timers.forEach(clearTimeout); timers = []; busy = false; shown = null; }
+function later(fn, ms) { const my = gen; const t = setTimeout(() => { timers = timers.filter(x => x !== t); if (my === gen) fn(); }, ms); timers.push(t); return t; }
+
+// Takes back his last card and every card played after it, even while the others are playing.
+function doUndo() {
+  if (stale) return;
+  if (G.phase === 'pass') { if (picks.length) { picks.pop(); hint = []; say(turnMessage()); render(); save(); } return; }
+  if (!undo.length) return;
+  cancelAll();
+  Kit.closeDialog();
+  const u = JSON.parse(undo.pop());
+  G = u.G; got = u.got || []; hint = [];
+  save();
+  say('Coup annulé. ' + turnMessage());
+  render();
+}
+
+function showHint() {
+  if (busy || stale || Kit.isOpen()) return;
+  if (G.phase === 'pass') {
+    picks = choosePass(G, 0, 'moyen'); hint = picks.slice();
+    say('Voici 3 cartes à donner : cliquez sur « Donner ces 3 cartes ».');
+    render(); save();
+    return;
+  }
+  if (G.phase !== 'play' || G.turn !== 0) return;
+  say("Recherche d'une bonne carte…");
+  busy = true; render();
+  const my = gen;
+  setTimeout(() => {
+    if (my !== gen) return;
+    const c = choosePlay(G, 'fort', DDP.seeded(G.seed ^ 0x5bd1e995 ^ G.log.length), { trials: 80 });
+    busy = false; hint = [c];
+    say(`Posez ${cardName(c)} : la carte entourée de jaune.`);
+    render();
+  }, 40);
+}
+
+function askNewGame() {
+  Kit.chooseLevel(level, started && G.phase !== 'over', newGame);
+}
+function newGame(lv) {
+  cancelAll();
+  if (lv) level = lv;
+  Kit.showLevel(level);
+  G = DDP.newGame(); picks = []; got = []; undo = []; hint = []; wonNow = false; started = false;
+  // A stale window cannot save, so it does not count a game either.
+  if (save()) GG.track('dame-de-pique', 'start');
+  if (G.phase === 'pass') say(turnMessage());
+  render();
+}
+
+/* ---------- Drawing ---------- */
+const table = $('table');
+const els = new Map();   // card -> its element
+let L = null;            // the layout: sizes and places
+function cardEl(c) {
+  let e = els.get(c);
+  if (!e) {
+    e = document.createElement('div');
+    e.className = 'card ' + (rd(c) ? 'red' : 'black');
+    e.innerHTML = faceHtml(c);
+    e.dataset.c = c;
+    table.appendChild(e);
+    els.set(c, e);
+  }
+  return e;
+}
+
+// The sizes come from the window: his hand along the bottom, the trick in the middle, the three
+// players around it, and the scores on the right when there is room.
+function layout() {
+  const W = table.clientWidth, H = table.clientHeight;
+  const sideW = W >= 1180 ? 300 : 0, pad = 18;
+  const PW = W - 2 * pad - (sideW ? sideW + 22 : 0);
+  // Paul's seat on top, the trick (1.62 card heights), room for a card to rise, then his hand, whose
+  // cards show their top 80%: the corner with the rank and the suit is always in view.
+  const topH = 92;
+  const byW = (PW - 10) / 7.4, byH = (H - topH - 26) / (1.3 * (1.62 + .14 + .8));
+  const w = Math.floor(Math.max(56, Math.min(byW, byH, 170)));
+  const h = Math.round(w * 1.3);
+  document.documentElement.style.setProperty('--w', w + 'px');
+  document.documentElement.style.setProperty('--h', h + 'px');
+  const handTop = Math.round(H - h * .8);
+  const cx = pad + PW / 2;
+  const bandTop = topH + 14, bandBot = handTop - Math.round(h * .14);
+  const cy = Math.round((bandTop + bandBot) / 2);
+  return { W, H, w, h, pad, PW, sideW, handTop, cx, cy, topH };
+}
+// Where each seat's card lies in the trick: his below the middle, Jeanne's left, Paul's above, Louise's right.
+function trickXY(seat) {
+  const { w, h, cx, cy } = L;
+  if (seat === 0) return [cx - w / 2, cy - h * .19];
+  if (seat === 1) return [cx - w * 1.62, cy - h / 2];
+  if (seat === 2) return [cx - w / 2, cy - h * .81];
+  return [cx + w * .62, cy - h / 2];
+}
+// The point a trick slides to, and a computer card comes from: the middle of the seat.
+function seatXY(seat) {
+  if (seat === 0) return [L.cx - L.w / 2, L.handTop];
+  const e = $('seat' + seat);
+  return [e.offsetLeft + e.offsetWidth / 2 - L.w / 2, e.offsetTop + e.offsetHeight / 2 - L.h / 2];
+}
+
+function render() {
+  if (!G) return;
+  L = layout();
+  const { w, h, pad, PW, handTop, cx, cy } = L;
+  const playing = G.phase === 'play' && G.turn === 0 && !busy && !stale;
+  const ok = new Set(playing ? legal(G) : []);
+
+  // The three players of the computer.
+  const turnSeat = !busy && G.phase === 'play' ? G.turn : -1;
+  for (const s of [1, 2, 3]) {
+    const e = $('seat' + s), p = PLAYERS[s], n = G.hands[s].length;
+    const backs = Array.from({ length: n }, (_, i) => `<i style="left:${i * 7}px"></i>`).join('');
+    e.innerHTML = `<div class="ava" style="background:${p.color}">${p.name[0]}</div>
+      <div><b>${p.name}</b><span class="where">${cap(p.where)}</span>
+      <span class="pts">${HEART}${ptsText(G.pts[s])} pris${L.sideW ? '' : ` · total ${G.scores[s]}`}</span>
+      <span class="now"><span class="dots"><i></i><i></i><i></i></span>${p.name} joue</span></div>
+      <div class="backs" style="width:${n ? 26 + (n - 1) * 7 : 0}px">${backs}</div>`;
+    e.classList.toggle('turn', turnSeat === s || (busy && !shown && G.phase === 'play' && G.turn === s));
+  }
+  const s0 = $('seat0');
+  s0.style.display = L.sideW ? 'none' : '';
+  if (!L.sideW) {
+    s0.innerHTML = `<div class="ava" style="background:${PLAYERS[0].color}">V</div>
+      <div><b>Vous</b><span class="where">Total : ${G.scores[0]}</span><span class="pts">${HEART}${ptsText(G.pts[0])} pris</span></div>`;
+    s0.style.left = pad + 'px'; s0.style.top = '10px';
+  }
+  const s1 = $('seat1'), s2 = $('seat2'), s3 = $('seat3');
+  s2.style.left = Math.round(Math.max(cx - s2.offsetWidth / 2, L.sideW ? 0 : s0.offsetLeft + s0.offsetWidth + 12)) + 'px'; s2.style.top = '10px';
+  // The side seats sit close to the trick, or at the edge when the window is narrow.
+  const near = w * 1.62 + Math.max(24, w * .3);
+  s1.style.left = Math.round(Math.max(pad, cx - near - s1.offsetWidth)) + 'px'; s1.style.top = Math.round(cy - s1.offsetHeight / 2) + 'px';
+  s3.style.left = Math.round(Math.min(pad + PW - s3.offsetWidth, cx + near)) + 'px'; s3.style.top = Math.round(cy - s3.offsetHeight / 2) + 'px';
+  const mid = $('mid'), md = Math.round(w * 3.6);
+  mid.style.left = cx - md / 2 + 'px'; mid.style.top = cy - md / 2 + 'px'; mid.style.width = mid.style.height = md + 'px';
+
+  // The cards: his hand, then the trick (the one on the table, or a full one about to go).
+  const live = new Set();
+  const hand = G.hands[0];
+  const n = hand.length;
+  const stepX = n > 1 ? Math.min(w * .64, (PW - w) / (n - 1)) : 0;
+  const x0 = cx - (w + stepX * (n - 1)) / 2;
+  hand.forEach((c, i) => {
+    const e = cardEl(c); live.add(c);
+    e.className = 'card hand ' + (rd(c) ? 'red' : 'black');
+    if (G.phase === 'pass' && !stale && !busy) e.classList.add(picks.includes(c) ? 'picked' : 'can');
+    else if (playing) e.classList.add(ok.has(c) ? 'can' : 'no');
+    if (hint.includes(c) && !(G.phase === 'pass' && !picks.includes(c))) e.classList.add('hint');
+    e.style.left = x0 + i * stepX + 'px'; e.style.top = handTop + 'px'; e.style.zIndex = 100 + i;
+    e.tabIndex = playing || G.phase === 'pass' ? 0 : -1;
+    e.setAttribute('role', 'button'); e.setAttribute('aria-label', cardName(c));
+    let tag = e.querySelector('.got');
+    if (got.includes(c) && !tag) e.insertAdjacentHTML('beforeend', '<span class="got">Reçue</span>');
+    else if (!got.includes(c) && tag) tag.remove();
+  });
+  const tr = shown || { leader: G.leader, cards: G.phase === 'play' ? G.trick : [] };
+  tr.cards.forEach((c, i) => {
+    const seat = (tr.leader + i) % 4;
+    const fresh = !els.has(c);
+    const e = cardEl(c); live.add(c);
+    e.querySelector('.got')?.remove();
+    if (fresh && seat !== 0) {
+      // A computer card comes from its player: put it there first, without sliding.
+      const [fx, fy] = seatXY(seat);
+      e.className = 'card trick away ' + (rd(c) ? 'red' : 'black');
+      e.style.left = fx + 'px'; e.style.top = fy + 'px';
+      void e.offsetWidth;
+    }
+    e.className = 'card trick ' + (rd(c) ? 'red' : 'black');
+    e.removeAttribute('role'); e.tabIndex = -1;
+    let [x, y] = trickXY(seat);
+    if (shown && shown.away) { [x, y] = seatXY(shown.winner); e.classList.add('away'); }
+    else if (shown && seat === shown.winner) e.classList.add('won');
+    e.style.left = x + 'px'; e.style.top = y + 'px'; e.style.zIndex = 40 + i;
+  });
+  for (const [c, e] of els) if (!live.has(c)) { e.remove(); els.delete(c); }
+
+  // The pass sheet, over the middle of the table.
+  const ps = $('passSheet');
+  const passing = G.phase === 'pass';
+  ps.classList.toggle('on', passing);
+  if (passing) {
+    const to = passTarget(G, 0);
+    $('passArrow').innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${ARROWS[{ 1: 1, 2: 2, 3: 3 }[to]]}</svg>`;
+    $('passTitle').textContent = `Donnez 3 cartes ${TO[to]}`;
+    $('passText').textContent = picks.length === 3 ? 'Les 3 cartes levées partiront.' : `Cliquez sur ${plural(3 - picks.length, 'carte', 'cartes')} de votre jeu.`;
+    const b = $('passBtn');
+    b.textContent = picks.length === 3 ? `Donner ces 3 cartes à ${PLAYERS[to].name}` : `Encore ${plural(3 - picks.length, 'carte', 'cartes')} à choisir`;
+    b.disabled = picks.length !== 3 || stale;
+    ps.style.width = Math.round(Math.max(w * 3.3, 380)) + 'px';
+    const top = $('seat2').offsetTop + $('seat2').offsetHeight + 12, bottom = handTop - h * .24 - 8;
+    place(ps, cx, Math.max(top + ps.offsetHeight / 2, Math.min(cy, bottom - ps.offsetHeight / 2)), bottom);
+  }
+
+  // The score sheet at the end of a hand, and at the end of the game.
+  const ss = $('scoreSheet');
+  const ended = (G.phase === 'done' || G.phase === 'over') && !busy;
+  ss.classList.toggle('on', ended);
+  if (ended) {
+    const over = G.phase === 'over', low = Math.min(...G.scores);
+    $('scoreTitle').textContent = over ? 'Fin de la partie' : `Fin de la manche ${G.handNo + 1}`;
+    const tie = !over && Math.max(...G.scores) >= 100;
+    $('scoreNote').textContent = G.moon === 0 ? 'Grand chelem ! Vous avez pris tous les points : les autres marquent 26 chacun.'
+      : G.moon !== null ? `${PLAYERS[G.moon].name} a pris tous les points : ${PLAYERS[G.moon].pro} marque 0, et chacun des autres 26.`
+      : tie ? "Un joueur a atteint 100 points, mais deux joueurs ont le moins de points : on joue une manche de plus."
+      : over ? (G.result.winner === 0 ? 'Vous avez le moins de points : vous gagnez !' : `${PLAYERS[G.result.winner].name} a le moins de points.`)
+      : '';
+    $('scoreTable').innerHTML = '<tr><th></th><th>Cette manche</th><th>Total</th></tr>' + [0, 1, 2, 3].map(s =>
+      `<tr class="${s === 0 ? 'me' : ''} ${G.scores[s] === low ? 'best' : ''}"><td>${PLAYERS[s].name}</td><td class="n">+${G.handPts[s]}</td><td class="n"><b>${G.scores[s]}</b></td></tr>`).join('');
+    $('nextBtn').textContent = over ? 'Nouvelle partie' : 'Manche suivante';
+    place(ss, cx, cy);
+  }
+
+  // The side column.
+  const side = $('side');
+  side.style.display = L.sideW ? 'flex' : 'none';
+  if (L.sideW) {
+    side.style.left = L.W - pad - L.sideW + 'px'; side.style.width = L.sideW + 'px'; side.style.top = '10px';
+    side.classList.remove('tight');
+    const low = Math.min(...G.scores);
+    $('scoreSide').innerHTML = '<tr><th></th><th>Manche</th><th>Total</th></tr>' + [0, 1, 2, 3].map(s =>
+      `<tr class="${s === 0 ? 'me' : ''}"><td><span class="who"><span class="dot" style="background:${PLAYERS[s].color}"></span>${PLAYERS[s].name}</span></td>
+       <td class="n">${G.phase === 'done' || G.phase === 'over' ? '+' + G.handPts[s] : G.pts[s]}</td><td class="n"><b>${G.scores[s]}</b></td></tr>`).join('');
+    const last = G.phase === 'play' || G.phase === 'done' || G.phase === 'over' ? G.last : null;
+    $('lastBox').style.display = last && !(shown && !shown.away) ? '' : 'none';
+    if (last) {
+      $('lastCards').innerHTML = last.cards.map((c, i) => {
+        const seat = (last.leader + i) % 4;
+        return `<div class="mini${seat === last.winner ? ' won' : ''}"><div class="f ${rd(c) ? 'red' : 'black'}">${RANKS[c % 13 + 1]}${suitHtml(suit(c))}</div><span>${PLAYERS[seat].name}</span></div>`;
+      }).join('');
+      $('lastText').textContent = (last.winner === 0 ? 'Vous l\'avez ramassé' : `${PLAYERS[last.winner].name} l'a ramassé`) + ` : ${ptsText(last.pts)}.`;
+    }
+    if (side.offsetHeight > L.H - 14) side.classList.add('tight');
+  }
+
+  $('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
+  $('undoBtn').disabled = stale || (G.phase === 'pass' ? !picks.length : !undo.length);
+  $('hintBtn').disabled = stale || busy || !(G.phase === 'pass' || (G.phase === 'play' && G.turn === 0));
+}
+// A sheet stays inside the table, above `bottom`, so its button is always in view: in a short window
+// it is made smaller. The pass sheet stays above his raised cards, so it never hides one.
+function place(el, x, y, bottom = L.H - 8) {
+  const fit = Math.min(1, (bottom - 8) / el.offsetHeight), h = el.offsetHeight * fit;
+  el.style.transform = fit < 1 ? `scale(${fit})` : '';
+  el.style.left = Math.round(x - el.offsetWidth / 2) + 'px';
+  el.style.top = Math.round(Math.max(8, Math.min(y - h / 2, bottom - h))) + 'px';
+}
+function shake(c) {
+  const e = els.get(c);
+  if (!e) return;
+  e.classList.remove('shake'); void e.offsetWidth; e.classList.add('shake');
+}
+
+/* ---------- Mouse, touch and keys ----------
+   A press and release on the same card is a click, if the pointer moved less than 16 px. A second
+   click within half a second near the same spot is a double-click: it counts as one click. */
+let press = null;
+table.addEventListener('pointerdown', e => {
+  if (e.button !== 0 || Kit.isOpen()) return;
+  const el = e.target.closest('.card.hand');
+  press = el ? { c: +el.dataset.c, x: e.clientX, y: e.clientY, id: e.pointerId, turn: G.log.length + ':' + G.phase } : null;
+});
+addEventListener('pointerup', e => {
+  const p = press; press = null;
+  if (!p || e.pointerId !== p.id || Kit.isOpen()) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('.card.hand');
+  if (!el || +el.dataset.c !== p.c || Math.hypot(e.clientX - p.x, e.clientY - p.y) > 16) return;
+  if (p.turn !== G.log.length + ':' + G.phase) return;
+  const t = performance.now(), prev = lastTap;
+  lastTap = { t, c: p.c, x: e.clientX, y: e.clientY };
+  if (prev && prev.c === p.c && t - prev.t < 500 && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) < 24) return;
+  tapCard(p.c);
+});
+addEventListener('pointercancel', () => { press = null; });
+table.addEventListener('keydown', e => {
+  const el = e.target.closest && e.target.closest('.card.hand');
+  if (!el || (e.key !== 'Enter' && e.key !== ' ')) return;
+  e.preventDefault();
+  tapCard(+el.dataset.c);
+});
+
+$('undoBtn').onclick = doUndo;
+$('hintBtn').onclick = showHint;
+$('helpBtn').onclick = () => Kit.openHelp();
+$('newBtn').onclick = askNewGame;
+$('passBtn').onclick = confirmPass;
+$('nextBtn').onclick = () => G.phase === 'over' ? askNewGame() : nextHandNow();
+addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (!Kit.isOpen()) doUndo(); }
+  else if (e.key === 'Escape' && !Kit.escape() && hint.length && G.phase === 'play') { hint = []; say(turnMessage()); render(); }
+});
+addEventListener('resize', () => render());
+
+// The rules open by themselves the first time the game is opened.
+if (load()) {
+  Kit.showLevel(level);
+  if (G.phase === 'done' || G.phase === 'over') handOver(false);
+  else if (G.phase === 'play' && G.turn !== 0) { render(); later(step, 600); }
+  else { say(got.length && G.log.length === 0 ? `Vous avez reçu ${listNames(got)}. ${turnMessage()}` : turnMessage()); render(); }
+} else {
+  Kit.firstVisit(newGame);
+}
+</script>
+</body>
+</html>

@@ -12,6 +12,7 @@ const CORE = [
   'solitaire/', 'solitaire/icon.svg',
   'freecell/', 'freecell/solver.js', 'freecell/icon.svg',
   'dames/', 'dames/engine.js', 'dames/icon.svg',
+  'dame-de-pique/', 'dame-de-pique/engine.js', 'dame-de-pique/icon.svg',
 ];
 
 self.addEventListener('install', e => {
