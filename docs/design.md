@@ -82,3 +82,20 @@ The jeu de dames is international draughts on the 10x10 board, as the FMJD and t
 - **The computer's move.** It waits at least 0.7 s, so his own move is seen landing first. Its piece then travels one landing at a time, 0.52 s apart, crossing out what it takes. Its start and end squares stay lit until he chooses a piece, and the message line says what it took.
 - **Levels.** Facile searches 2 plies and, 40% of the time, picks a move that loses at most 0.9 of a man against the best one. It still never misses a compulsory capture. Moyen and Fort search deeper with alpha-beta and follow every compulsory capture past the depth limit, so they do not give pieces away.
 - **No settings.** The level is the only choice, at "Nouvelle partie", and it is kept.
+
+## Dame de pique
+
+The dame de pique is Hearts for four, in the Windows rules that French players know. Two second opinions (GPT-6.2 Sol and GPT-6.2 Astra) checked the rules, the computer players and the edge cases of the input and the saves.
+
+- **Its own look.** A deep plum felt (#5E3B78 to #2C1840). Its library tile shows the queen of spades upright in front of two hearts. Four tiles now share one row of the library.
+- **The table.** His hand runs along the bottom. Each card shows its top 80%, so the corner with the rank and the suit is always in view, and the cards stay large: 125 px wide at 1366x680. The trick lies in a cross in the middle, each card in front of its player. Paul sits on top, Jeanne on the left and Louise on the right, each with an initial in a coloured circle, a small fan of backs for the cards left, and the points taken in this hand.
+- **Whose turn.** The seat of the player who plays has a lilac border and "Paul joue". His own seat is a strip above the left end of his hand. On his turn it says "À vous de jouer", and his place in the trick is a dashed lilac card with "À vous". Yellow keeps its meaning: chosen, or the hint. A disabled yellow button turns grey and dashed in every game, so yellow always means "press me".
+- **One click plays.** A card he cannot play now is darker but still readable. A click on it says why, in a bubble just above the card for 3 s and in the message line, which flashes once: "Vous avez du trèfle : vous devez en poser un." A slip can be taken back with undo.
+- **What a player follows.** A "D♠" card by a name shows who took the queen of spades. The score column says "La dame de pique : chez Paul" or "pas encore jouée", and whether hearts are open. The first card of a trick, which sets the suit, has a "1er" tag, in the trick and in the last trick.
+- **The pass.** A sheet in the middle names the receiver with an arrow: "Donnez 3 cartes à Jeanne, à votre gauche". Chosen cards rise with a yellow outline. The button names the receiver again. The cards received carry a white "Reçue" tag, so they cannot be mistaken for chosen cards.
+- **Pace.** The others play one card every 0.75 s. A full trick stays 1.5 s, the winner's card framed in lilac, then slides to the winner. The message line names each card and who took the trick, with how many points. The last trick stays in the right column.
+- **The end of a hand.** A score sheet on the table, not a dialog, so Escape cannot lose the "Manche suivante" button. The player in the lead is marked "en tête".
+- **The end of the game.** A tie for the lowest score is a shared win, as in the French rules and in Windows, so no game drags on. The dialog says who reached 100 points, his score, and the four totals, one fact per line. The score sheet hides behind it.
+- **Compared with other Hearts games.** The rules match regles-du-jeu.net and Windows Hearts. Speed settings and "claim the rest" buttons from other apps are left out: they add choices. His only legal card is not played for him.
+- **Levels.** Facile, Moyen and Difficile, chosen at "Nouvelle partie". In the tests, Moyen takes 2.7 points a hand fewer than Facile players, and Difficile 5.7 fewer than Moyen players. Difficile takes less than 60 ms a card.
+

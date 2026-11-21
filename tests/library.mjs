@@ -49,6 +49,7 @@ try {
   check('tile for solitaire', await page.locator('a.tile[data-id="solitaire"]').count() === 1);
   check('tile for freecell', await page.locator('a.tile[data-id="freecell"]').count() === 1);
   check('tile for dames', await page.locator('a.tile[data-id="dames"]').count() === 1);
+  check('tile for dame de pique', await page.locator('a.tile[data-id="dame-de-pique"]').count() === 1);
   check('no "Nouveau" badge on the games', await page.locator('a.tile .badge').count() === 0);
   check('note from message.json', await page.locator('#note.on').count() === 1);
   check('says the saves stay on this PC', (await page.textContent('#saves')).includes('sur cet ordinateur'));
@@ -96,6 +97,12 @@ try {
   await page.evaluate(() => { tap(32); tap(28); });
   await page.waitForFunction(() => G.turn === 1 && phase === 'player', null, { timeout: 8000 }).catch(() => {});
   check('the computer answers offline, in its worker', await page.evaluate(() => G.turn === 1 && workerOk && !!worker));
+  // The dame de pique was never opened either: it opens offline and deals.
+  await page.goto(BASE + 'dame-de-pique/');
+  await page.waitForTimeout(800);
+  await page.click('#helpClose');
+  await page.getByRole('button', { name: 'Facile', exact: true }).click();
+  check('dame de pique opens offline before its first visit', await page.locator('.card.hand').count() === 13);
   await pc.setOffline(false);
 
   // 4. A new version starts when the library opens, never under an open game.

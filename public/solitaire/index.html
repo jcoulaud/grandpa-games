@@ -281,14 +281,22 @@ function winnableDeal() {
 
 // Every undo step is saved. If the browser storage is full, the oldest steps go first.
 // A win counts as soon as the last card is home, before the celebration, so an undo cannot lose it.
+// Returns true if the game was saved. A win is counted, and sent, only once it is saved: a stale window
+// cannot save, so it cannot count a win a second time.
 function save() {
-  if (isWon() && !S.won) { S.won = true; stats.won++; GG.track('solitaire', 'won'); }
+  const firstWin = isWon() && !S.won;
+  if (firstWin) { S.won = true; stats.won++; }
   const parts = [];
   if (S.moves > 0 && !isWon()) parts.push('Partie en cours');
   if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
   for (const n of [Infinity, 2000, 300, 50, 0]) {
-    if (GG.save('solitaire', { S, level, undo: n ? undo.slice(-n) : [], stats }, { summary: parts.join(' · ') })) return;
+    if (GG.save('solitaire', { S, level, undo: n ? undo.slice(-n) : [], stats }, { summary: parts.join(' · ') })) {
+      if (firstWin) GG.track('solitaire', 'won');
+      return true;
+    }
   }
+  if (firstWin) { S.won = false; stats.won--; }
+  return false;
 }
 function load() {
   try {
@@ -537,8 +545,8 @@ function newGame(nextLevel = level) {
   closeDialog();
   winnableDeal(); undo = [];
   flash([]); // the outline of the last move does not carry over to the new deal
-  save();
-  GG.track('solitaire', 'start');
+  // A stale window cannot save, so it does not count a game either.
+  if (save()) GG.track('solitaire', 'start');
   setMsg(HELLO);
   render({ deal: true });
   dealT = setTimeout(() => { busy = false; autoStep(); }, REDUCED ? 100 : 1600);

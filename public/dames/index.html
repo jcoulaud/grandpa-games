@@ -553,8 +553,8 @@ function newGame(lv) {
   if (lv) level = lv;
   Kit.showLevel(level);
   G = freshGame(); last = null; undo = []; sel = null; hint = null; wonNow = false; started = false; phase = 'player';
-  GG.track('dames', 'start');
-  save();
+  // A stale window cannot save, so it does not count a game either.
+  if (save()) GG.track('dames', 'start');
   say(turnMessage());
   render();
 }
