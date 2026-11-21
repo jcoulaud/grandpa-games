@@ -6,6 +6,7 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "related_applications": [{ "platform": "webapp", "url": "https://jeux-papi.fr/manifest.webmanifest" }],
   "background_color": "#0F4F47",
   "theme_color": "#0F4F47",
   "icons": [
