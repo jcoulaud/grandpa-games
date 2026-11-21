@@ -109,16 +109,6 @@
   }
   a.tile:hover .play { background: #FFD666; }
   .play svg { width: 26px; height: 26px; fill: currentColor; }
-  .badge {
-    position: absolute; top: 16px; right: 18px; z-index: 2; padding: 6px 16px; border-radius: 999px;
-    background: var(--gold); color: #1F1A00; font: 700 20px var(--ui); box-shadow: 0 3px 10px rgba(0,0,0,.25);
-  }
-
-  /* A game that is coming */
-  .tile.soon { background: #246A60; color: #fff; box-shadow: none; border: 2px dashed rgba(255,255,255,.3); }
-  .tile.soon .art { background: none; }
-  .tile.soon .body p { color: rgba(255,255,255,.75); }
-  .tile.soon .badge { background: rgba(255,255,255,.16); color: #fff; box-shadow: none; }
   a.tile.opening { opacity: .85; transform: none; }
 
   /* Footer band: where the saves are on the left, the install button on the right */
@@ -150,9 +140,6 @@
   <symbol id="su1" viewBox="0 0 100 100"><path d="M50 92C22 66 5 50 5 31 5 17 16 7 29 7c9 0 17 5 21 14 4-9 12-14 21-14 13 0 24 10 24 24 0 19-17 35-45 61z"/></symbol>
   <symbol id="su2" viewBox="0 0 100 100"><path d="M50 2Q69 29 91 50Q69 71 50 98Q31 71 9 50Q31 29 50 2z"/></symbol>
   <symbol id="su3" viewBox="0 0 100 100"><circle cx="50" cy="26" r="21"/><circle cx="26" cy="58" r="21"/><circle cx="74" cy="58" r="21"/><path d="M40 40h20v20H40z"/><path d="M46 56c0 18-5 31-13 40h34c-8-9-13-22-13-40z"/></symbol>
-  <pattern id="lattice" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-    <path d="M0 0H10M0 0V10" stroke="rgba(255,255,255,.22)" stroke-width="1.2"/>
-  </pattern>
 </svg>
 
 <div id="deco" aria-hidden="true">
@@ -202,19 +189,9 @@ const GAMES = [
   { id: 'dames', title: 'Dames', text: 'Le jeu de dames sur 100 cases, contre l’ordinateur.',
     felt: ['#8A3440', '#4C161E'], board: true },
 ];
-// Games shown as coming soon, with a "Bientôt" badge. Empty while the three games fill the laptop
-// screen: a fourth tile would wrap to a second row and make the page scroll.
-const SOON = [];
 
 const SUIT_RED = s => s === 1 || s === 2;
-function cardSvg([rank, suit], angle, dx, back) {
-  if (back) {
-    return `<svg class="card" viewBox="0 0 80 112" style="transform: translateX(${dx}px) rotate(${angle}deg)">
-      <rect x="1" y="1" width="78" height="110" rx="8" fill="#FFFDF6"/>
-      <rect x="6" y="6" width="68" height="100" rx="5" fill="${'#1F4470'}"/>
-      <rect x="6" y="6" width="68" height="100" rx="5" fill="url(#lattice)"/>
-      <rect x="10" y="10" width="60" height="92" rx="3" fill="none" stroke="#E0A526" stroke-width="1.2"/></svg>`;
-  }
+function cardSvg([rank, suit], angle, dx) {
   const col = SUIT_RED(suit) ? '#C4122F' : '#14171A';
   return `<svg class="card" viewBox="0 0 80 112" style="transform: translateX(${dx}px) rotate(${angle}deg)">
     <rect x="1" y="1" width="78" height="110" rx="8" fill="#FFFDF6" stroke="#D9D3C5" stroke-width="1"/>
@@ -222,23 +199,26 @@ function cardSvg([rank, suit], angle, dx, back) {
     <use href="#su${suit}" x="${rank.length > 1 ? 34 : 24}" y="9" width="20" height="20" fill="${col}"/>
     <use href="#su${suit}" x="20" y="44" width="40" height="40" fill="${col}"/></svg>`;
 }
-// A fan of cards, or with row, the cards standing side by side.
 // A corner of the dames board: 6 by 4 squares, a few pieces and a crowned one.
 function boardArt() {
-  let sq = '<rect width="240" height="160" fill="#F0E2C4"/>';
-  for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) if ((r + c) % 2) sq += `<rect x="${c * 40}" y="${r * 40}" width="40" height="40" fill="#A06D48"/>`;
-  const piece = (c, r, white, king) => `<g transform="translate(${c * 40 + 20} ${r * 40 + 20})">
-    <circle r="16.5" fill="${white ? '#F4EEDF' : '#24211F'}" stroke="${white ? '#B5AC97' : '#77706A'}" stroke-width="1.5"/>
-    <circle r="11.5" fill="none" stroke="${white ? '#C9C0AC' : '#5C5550'}" stroke-width="1.2"/>
-    ${king ? '<path d="M-9 -4l4.2 3.6L0 -9l4.3 7.1 4.2-3.6-1.8 10H-7.2z" fill="#D69B1E" stroke="#6B4A0A" stroke-width="1"/>' : ''}</g>`;
+  let sq = '<rect width="240" height="160" fill="#EEDCB6"/>';
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) if ((r + c) % 2) sq += `<rect x="${c * 40}" y="${r * 40}" width="40" height="40" fill="#8F5B39"/>`;
+  // As on the game's board: a disc with its edge below, two grooves, and a crown on a king.
+  const piece = (c, r, white, king) => `<g transform="translate(${c * 40 + 20} ${r * 40 + 18})">
+    <circle cy="2.5" r="16" fill="${white ? '#C8BB9C' : '#0E0D0C'}"/>
+    <circle r="16" fill="${white ? '#F8F2E4' : '#2C2826'}" stroke="${white ? '#9C8C6C' : '#5B544E'}" stroke-width="1"/>
+    <circle r="12" fill="none" stroke="${white ? '#C9BFA8' : '#141211'}" stroke-width="1.2"/>
+    <circle r="7.5" fill="none" stroke="${white ? '#C9BFA8' : '#141211'}" stroke-width="1.2"/>
+    ${king ? '<path d="M-9 -4l4.2 3.6L0 -9l4.3 7.1 4.2-3.6-1.8 10H-7.2z" fill="#E2A82C" stroke="#5E3F06" stroke-width="1"/>' : ''}</g>`;
   sq += piece(1, 0, false) + piece(3, 0, false) + piece(4, 1, false) + piece(2, 1, true, true) + piece(1, 2, true) + piece(3, 2, true) + piece(0, 3, true);
-  return `<svg class="board" viewBox="0 0 240 150" aria-hidden="true"><rect x="-6" y="-6" width="252" height="172" rx="4" fill="#5A3822"/>${sq}</svg>`;
+  return `<svg class="board" viewBox="0 0 240 150" aria-hidden="true"><rect x="-6" y="-6" width="252" height="172" rx="4" fill="#6A4127"/>${sq}</svg>`;
 }
-function art(cards, back, row) {
+// A fan of cards, or with row, the cards standing side by side.
+function art(cards, row) {
   const n = cards.length;
   return cards.map((c, i) => {
     const t = n === 1 ? 0 : i / (n - 1) - 0.5;
-    return row ? cardSvg(c, 0, t * (n - 1) * 78, back && i === 0) : cardSvg(c, t * 30, t * 120, back && i === 0);
+    return row ? cardSvg(c, 0, t * (n - 1) * 78) : cardSvg(c, t * 30, t * 120);
   }).join('');
 }
 const ICON_PLAY = '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg>';
@@ -253,7 +233,7 @@ function render() {
     // The button already says a game is in progress: the line under the text shows only the wins.
     const wins = parts.filter(p => !/en cours/i.test(p)).join(' · ');
     return `<a class="tile" href="${g.id}/" data-id="${g.id}">
-      <div class="art" style="background: radial-gradient(90% 120% at 50% 0%, ${g.felt[0]}, ${g.felt[1]})">${g.board ? boardArt() : art(g.cards, false, g.row)}</div>
+      <div class="art" style="background: radial-gradient(90% 120% at 50% 0%, ${g.felt[0]}, ${g.felt[1]})">${g.board ? boardArt() : art(g.cards, g.row)}</div>
       <div class="body">
         <h3>${esc(g.title)}</h3>
         <p>${esc(g.text)}</p>
@@ -261,11 +241,7 @@ function render() {
         <div class="play">${ICON_PLAY}${playing ? 'Reprendre la partie' : 'Jouer'}</div>
       </div></a>`;
   });
-  const soon = SOON.map(g => `<div class="tile soon">
-      <span class="badge">Bientôt</span>
-      <div class="art">${art(g.cards, true)}</div>
-      <div class="body"><h3>${esc(g.title)}</h3><p>${esc(g.text)}</p></div></div>`);
-  document.getElementById('games').innerHTML = tiles.concat(soon).join('');
+  document.getElementById('games').innerHTML = tiles.join('');
 }
 document.getElementById('games').addEventListener('click', e => {
   const t = e.target.closest('a.tile');

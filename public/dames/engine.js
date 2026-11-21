@@ -147,6 +147,15 @@
     return a === null ? c : c === null ? a : Math.min(a, c);
   }
 
+  // The plies left before an ending is drawn, after a move that leads to board nb. Once the count has
+  // started, a capture never stops it, even when the pieces left are no longer such an ending: the
+  // original deadline stays (FMJD article 6.3). A smaller ending may bring the deadline nearer.
+  function nextEnd(prev, nb) {
+    const lim = endLimit(nb);
+    if (prev === null) return lim;
+    return lim === null ? prev - 1 : Math.min(prev - 1, lim);
+  }
+
   function newGame() {
     const b = startBoard();
     return { b, turn: WHITE, quiet: 0, endLeft: null, reps: { [key(b, WHITE)]: 1 }, result: null };
@@ -164,9 +173,7 @@
     reps[k] = (reps[k] || 0) + 1;
     // An ending's count starts after the move that makes it. A capture that leads to a smaller
     // ending keeps the earlier deadline when it is nearer.
-    const lim = endLimit(b);
-    let endLeft = null;
-    if (lim !== null) endLeft = G.endLeft === null ? lim : Math.min(G.endLeft - 1, lim);
+    const endLeft = nextEnd(G.endLeft, b);
     let result = null;
     if (!moves(b, turn).length) result = { winner: G.turn, why: hasPieces(b, turn) ? 'blocked' : 'taken' };
     else if (reps[k] >= 3) result = { winner: 0, why: 'repeat' };
@@ -254,8 +261,7 @@
         for (const m of order(b, ms)) {
           const nb = apply(b, m);
           const reset = m.caps.length > 0 || Math.abs(b[m.from]) === 1;
-          const lim = endLimit(nb);
-          const el = lim === null ? null : endLeft === null ? lim : Math.min(endLeft - 1, lim);
+          const el = nextEnd(endLeft, nb);
           const v = -search(nb, -turn, nextDepth, -beta, -alpha, ply + 1, reset ? 0 : quiet + 1, el, depth > 0 ? ext : ext + 1);
           if (v > best) best = v;
           if (v > alpha) alpha = v;
@@ -270,8 +276,7 @@
     const rootScore = (m, depth, alpha, beta) => {
       const nb = apply(G.b, m);
       const reset = m.caps.length > 0 || Math.abs(G.b[m.from]) === 1;
-      const lim = endLimit(nb);
-      const el = lim === null ? null : G.endLeft === null ? lim : Math.min(G.endLeft - 1, lim);
+      const el = nextEnd(G.endLeft, nb);
       // A move that brings back a position seen twice already draws at once.
       if (!reset && histKeys.includes(key(nb, -G.turn))) return 0;
       if (!moves(nb, -G.turn).length) return WIN;

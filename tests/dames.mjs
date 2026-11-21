@@ -93,7 +93,7 @@ await setPos('K46,31', '23,24');
 ok((await msg()).startsWith('Vous devez prendre'), 'the line says a capture is compulsory: ' + await msg());
 ok(await g(() => document.querySelectorAll('.pc.must').length === 1), 'the piece that must take is circled');
 await click(31);
-ok((await msg()).includes('prendre'), 'a man that cannot take is refused: ' + await msg());
+ok((await msg()).includes('obligatoire'), 'a man that cannot take is refused: ' + await msg());
 await click(46);
 ok(JSON.stringify(await goes()) === '[19]', 'only the landing that keeps the most pieces is framed');
 await click(14);
@@ -121,6 +121,19 @@ ok(await g(() => stats.won === 1), 'winning the same game again counts once');
 ok(await g(() => GG.meta('dames').summary.includes('1 victoire')), 'the library tile shows the win: ' + await g(() => GG.meta('dames').summary));
 await g(() => Kit.closeDialog());
 
+// 7b. Undo during a hint, with a capture half done, takes back only the landings clicked.
+await setPos('K46,31', '23,24,1');
+await g(() => { undo.push(JSON.stringify({ G, last })); save(); });
+await click(46); await click(19);
+await page.click('#hintBtn'); await page.click('#undoBtn'); await wait(1500);
+ok(await g(() => undo.length === 1 && sel === null && phase === 'player' && G.b[46] === 2), 'undo during a hint keeps the turn before');
+
+// 7c. Two quick clicks on two squares are two clicks: the move is played.
+await setPos('32', '1');
+await page.mouse.click(...await at(32)); await wait(120); await page.mouse.click(...await at(28)); await wait(200);
+ok(await g(() => G.b[28] === 1), 'a quick second click on another square plays the move');
+await waitTurn();
+
 // 8. The most pieces: a king that can take one piece is refused when a man can take two.
 await setPos('12,K28', '17,27,K39,1');
 await click(28);
@@ -143,6 +156,7 @@ await g(() => newGame('facile'));
 await page.click('#hintBtn');
 await wait(1600);
 ok(await g(() => document.querySelectorAll('.pc.hint').length === 1 && document.querySelectorAll('.sq.hint').length === 1), 'the hint frames a piece and a square');
+ok(await g(() => boardEl.classList.contains('hinting')), 'the hint hides the other frames');
 await page.screenshot({ path: `${OUT}/dames-hint.png` });
 const hs = await g(() => +document.querySelector('.sq.hint').dataset.n);
 await click(hs);
@@ -177,6 +191,22 @@ await page.click('#overBtns button:nth-child(2)');
 ok(await g(() => level === 'moyen' && document.getElementById('levelB').textContent === 'Niveau moyen'), 'the level is chosen and shown');
 await page.reload(); await wait(300);
 ok(await g(() => level === 'moyen'), 'the level is kept');
+
+// 13b. Undo while the strongest level thinks, then play again: its old watchdog leaves the worker alone.
+await g(() => newGame('fort'));
+await click(32); await click(28);
+await page.click('#undoBtn');
+await click(33); await click(29);
+await wait(7000);
+await waitTurn();
+ok(await g(() => workerOk && G.turn === 1), 'after an undo, the computer still thinks in its worker');
+
+// 13c. Opened as a file, the way back names the library page.
+ok((await g(() => document.getElementById('home').href)).endsWith('/public/index.html'), 'the way back to the games works from a file');
+
+// 13d. A phone-sized window shows the whole board.
+await page.setViewportSize({ width: 360, height: 640 }); await wait(200);
+ok(await g(() => { const r = boardEl.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; }), 'a narrow window shows the whole board');
 
 // 14. A wide screen gets larger squares.
 await page.setViewportSize({ width: 1920, height: 1000 }); await wait(200);

@@ -764,7 +764,7 @@ function celebrate() {
     [{ translate: '0 0' }, { translate: `0 ${-L.h * 0.14}px` }, { translate: '0 0' }],
     { duration: 500, delay: s * 120, iterations: 2, easing: 'ease-in-out' }));
   clearTimeout(winT);
-  winT = setTimeout(() => isWon() && dialog('Bravo, vous avez gagné !', `C'est votre victoire numéro ${stats.won}.`,
+  winT = setTimeout(() => isWon() && dialog('Bravo, vous avez gagné !', stats.won === 1 ? "C'est votre première victoire." : `C'est votre ${stats.won}e victoire.`,
     [['Nouvelle partie', newGame, true], ['Retour aux jeux', () => { location.href = document.getElementById('home').href; }]], true), REDUCED ? 0 : 1500);
 }
 
@@ -840,7 +840,7 @@ addEventListener('pointercancel', e => {
 
 document.getElementById('newBtn').onclick = () => {
   if (drag) return;
-  if (S.moves > 0 && !isWon()) dialog('Commencer une nouvelle partie ?', 'La partie en cours sera perdue.',
+  if (S.moves > 0 && !isWon()) dialog('Commencer une nouvelle partie ?', 'La partie en cours sera effacée.',
     [['Continuer la partie', null, true], ['Nouvelle partie', newGame]]);
   else newGame();
 };

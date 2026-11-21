@@ -143,6 +143,10 @@ const playStr = (G, s) => {
   let G = game('K18,K23,K33', 'K17', -1, { endLeft: 7 });
   G = playStr(G, '17x39');
   ok(!G.result && G.endLeft === 6, 'a capture keeps the earlier deadline: 6 plies left', 'got ' + G.endLeft);
+  // A capture that leaves no such ending keeps the deadline: here black takes the only white king.
+  G = game('K18,46,47', 'K12', -1, { endLeft: 1 });
+  G = playStr(G, '12x23');
+  ok(G.result && G.result.why === 'ending', 'a capture out of the ending keeps its deadline', JSON.stringify(G.result) + ' ' + G.endLeft);
   // A win on the last allowed ply is a win.
   G = game('K32', 'K23', 1, { endLeft: 1 });
   G = playStr(G, '32x19');
