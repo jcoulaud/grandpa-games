@@ -7,7 +7,7 @@
 try { importScripts('version.js'); } catch (e) { self.VERSION = 'dev'; }
 const CACHE = 'grandpa-games-' + self.VERSION;
 const CORE = [
-  './', 'lib/store.js', 'lib/kit.js', 'lib/kit.css', 'lib/zoom.js', 'lib/cards.js', 'lib/cards.css', 'manifest.webmanifest', 'message.json',
+  './', 'lib/store.js', 'lib/kit.js', 'lib/kit.css', 'lib/zoom.js', 'lib/cards.js', 'lib/cards.css', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
   'solitaire/', 'solitaire/icon.svg',
   'freecell/', 'freecell/solver.js', 'freecell/icon.svg',
@@ -34,11 +34,6 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/api/') || url.pathname.startsWith('/admin')) return;
   e.respondWith(caches.open(CACHE).then(async cache => {
-    // The note changes between versions: show the newest one when online.
-    if (url.pathname.endsWith('/message.json')) {
-      try { const r = await fetch(e.request); if (r.ok) cache.put(e.request, r.clone()); return r; }
-      catch (err) { return (await cache.match(e.request)) || Response.error(); }
-    }
     const cached = await cache.match(e.request, { ignoreSearch: true });
     if (cached) return cached;
     const r = await fetch(e.request);

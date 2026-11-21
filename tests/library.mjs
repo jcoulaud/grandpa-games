@@ -31,7 +31,7 @@ for (let i = 0; i < 60; i++) {
 
 const browser = await launch();
 try {
-  // 1. A new PC: the library shows the game and the note. It sends only anonymous statistics.
+  // 1. A new PC: the library shows the available games. It sends only anonymous statistics.
   const pc = await browser.newContext({ viewport: { width: 1366, height: 680 } });
   const page = await pc.newPage();
   const calls = [];
@@ -51,7 +51,7 @@ try {
   check('tile for dames', await page.locator('a.tile[data-id="dames"]').count() === 1);
   check('tile for dame de pique', await page.locator('a.tile[data-id="dame-de-pique"]').count() === 1);
   check('no "Nouveau" badge on the games', await page.locator('a.tile .badge').count() === 0);
-  check('note from message.json', await page.locator('#note.on').count() === 1);
+  check('games follow the library header', await page.locator('header + #games').count() === 1);
   check('says the saves stay on this PC', (await page.textContent('#saves')).includes('sur cet ordinateur'));
   check('old backup data is removed', await page.evaluate(() => !localStorage.getItem('gg:cloud:old') && !localStorage.getItem('gg:approved')));
   check('old games are kept', await page.evaluate(() => GG.load('old').n === 1));

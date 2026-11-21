@@ -148,13 +148,7 @@ try {
       if (bad.length) { failed++; console.log(`FAIL ${tag} ${screen}`); for (const b of bad) console.log('     ' + b); }
     };
 
-    // The library, with a note from the family.
     await page.goto(gameUrl('.'));
-    await page.evaluate(() => {
-      document.getElementById('noteFrom').textContent = 'Un mot de Julien';
-      document.getElementById('noteText').textContent = "Bonne partie ! Amuse-toi bien ! Appelle-moi s'il y a un problème.";
-      document.getElementById('note').classList.add('on');
-    });
     await check('library');
 
     for (const game of GAMES) {
