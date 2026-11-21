@@ -6,8 +6,8 @@
 //     <span class="spacer"></span>
 //     <button id="newBtn" class="game">Nouvelle partie</button>
 //   </div>
-//   <div id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div><div class="zoom"></div></div>
 //   <div id="table"></div>
+//   <footer id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div><div class="zoom"></div></footer>
 //   <div id="help" data-title="Comment jouer"><section class="page">…</section>…</div>
 //
 // This file adds the "Jeux" button that goes back to the library, the button icons, the frame and
@@ -37,7 +37,6 @@
   // and the table as the main part.
   if (bar) bar.setAttribute('role', 'banner');
   if ($('title')) { $('title').setAttribute('role', 'heading'); $('title').setAttribute('aria-level', '1'); }
-  if ($('msgRail')) { $('msgRail').setAttribute('role', 'region'); $('msgRail').setAttribute('aria-label', 'Messages du jeu'); }
   if ($('table')) $('table').setAttribute('role', 'main');
   if (bar && !$('home')) {
     // Opened from a file, the folder alone would show a list of files: name the library page.

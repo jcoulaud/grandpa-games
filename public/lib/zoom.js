@@ -5,7 +5,7 @@
 //   Zoom.z()   the size in use, 1 for 100 %. Positions from the mouse are divided by it.
 //
 // Media queries see the window, not the size of the page in it. So the page gets classes for what they
-// would say: "zoomed" when the size is not 100 %, "narrow" when the page is 1340 px wide or less, where
+// would say: "narrow" when the page is 1340 px wide or less, where
 // the win count goes, and "short" and "low" when it is 660 or 600 px high or less,
 // where the dialogs close up. The size is also in --z: a length in vw or vh is divided by it.
 //
@@ -29,7 +29,6 @@
     z = next;
     const root = document.documentElement;
     root.style.zoom = z === 1 ? '' : String(z);
-    root.classList.toggle('zoomed', z !== 1);
     root.classList.toggle('narrow', innerWidth / z <= 1340);
     root.classList.toggle('short', innerHeight / z <= 660);
     root.classList.toggle('low', innerHeight / z <= 600);
@@ -63,10 +62,29 @@
   function draw(box) {
     if (!box.firstChild) {
       box.setAttribute('role', 'group');
-      box.setAttribute('aria-label', 'Taille de l’affichage');
+      box.setAttribute('aria-label', 'Affichage');
       box.innerHTML = `<button type="button" data-dir="-1" title="Tout afficher en plus petit">${glass(-1)}Réduire</button>`
         + `<button type="button" data-dir="1" title="Tout afficher en plus grand">${glass(1)}Agrandir</button>`;
-      box.addEventListener('click', e => { const b = e.target.closest('button'); if (b) step(+b.dataset.dir); });
+      box.addEventListener('click', e => {
+        const button = e.target.closest('[data-dir]');
+        if (button) step(+button.dataset.dir);
+      });
+      if (document.fullscreenEnabled) {
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        const update = () => { toggle.textContent = document.fullscreenElement ? 'Quitter le plein écran' : 'Plein écran'; };
+        update();
+        document.addEventListener('fullscreenchange', update);
+        toggle.addEventListener('click', async () => {
+          try {
+            if (document.fullscreenElement) await document.exitFullscreen();
+            else await document.documentElement.requestFullscreen();
+          } catch {
+            update();
+          }
+        });
+        box.append(toggle);
+      }
     }
     const at = STEPS.indexOf(z);
     box.querySelector('[data-dir="-1"]').disabled = at <= 0 || STEPS[at - 1] < min();
