@@ -62,7 +62,7 @@ const real = await g(() => JSON.stringify(S));
 await g(() => {
   const used = [6, 20, 33, 51, 36]; // 7 pique, 8 coeur, 8 carreau, roi de trefle, jack of diamonds
   const rest = [...Array(52).keys()].filter(i => !used.includes(i));
-  S = { stock: rest.map(id => ({ id, up: false })), waste: [], found: [[], [], [], []], moves: 3, won: false, stuckShown: true,
+  S = { stock: rest.map(id => ({ id, up: false })), waste: [], found: [[], [], [], []], moves: 3, won: false, stuckShown: true, lostShown: true,
     tab: [[{ id: 6, up: true }], [{ id: 20, up: true }], [{ id: 33, up: true }], [{ id: 51, up: true }], [{ id: 36, up: true }], [], []] };
   render({ instant: true });
 });
@@ -136,7 +136,7 @@ await g(() => {
   const all = [...Array(52).keys()];
   const run = [12, 11 + 13 * 1, 10, 9 + 13, 8, 7 + 13, 6, 5 + 13, 4, 3 + 13, 2]; // R♠ D♥ V♠ 10♥ ... 3♠
   const rest = all.filter(i => !run.includes(i));
-  S = { stock: [], waste: [], found: [[], [], [], []], tab: [[], [], [], [], [], [], []], moves: 1, won: false, stuckShown: true };
+  S = { stock: [], waste: [], found: [[], [], [], []], tab: [[], [], [], [], [], [], []], moves: 1, won: false, stuckShown: true, lostShown: true };
   S.tab[3] = [{ id: rest.pop(), up: false }, { id: rest.pop(), up: false }, ...run.map(id => ({ id, up: true }))];
   rest.forEach((id, n) => S.tab[n % 7 === 3 ? 0 : n % 7].push({ id, up: true }));
   render({ instant: true });

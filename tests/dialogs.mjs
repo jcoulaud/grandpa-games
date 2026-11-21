@@ -93,6 +93,32 @@ await page.click('text=Nouvelle partie >> nth=-1');
 await page.waitForTimeout(2000);
 ok(!(await g(() => dialogOpen())) && await g(() => S.moves) === 0, 'Nouvelle partie from the stuck dialog deals a new game');
 
+// Lost dialog: cards can still move, but the solver proves the game cannot be won.
+// The position comes from random play on a winnable deal.
+await g(() => {
+  winnableDeal();
+  const good = JSON.stringify(S);
+  const x = { f: [7, 6, 8, 8], t: [9, 34], cols: [
+    { d: [], u: [38, 50, 36, 48, 21, 7] }, { d: [], u: [] }, { d: [], u: [51, 24, 10] }, { d: [], u: [12, 37, 49, 35, 8, 20] },
+    { d: [], u: [25] }, { d: [], u: [] }, { d: [19, 47, 11, 22], u: [23] }] };
+  S = { stock: x.t.map(id => ({ id, up: false })), waste: [], moves: 9, won: false, stuckShown: false, lostShown: false,
+    found: x.f.map((n, s) => [...Array(n).keys()].map(r => ({ id: s * 13 + r, up: true }))),
+    tab: x.cols.map(c => [...c.d.map(id => ({ id, up: false })), ...c.u.map(id => ({ id, up: true }))]) };
+  undo = [good];
+  render({ instant: true }); autoStep();
+});
+await page.waitForTimeout(300);
+ok(await g(() => sMoves(toSolver()).length > 0), 'lost position still has moves');
+ok(await g(() => dialogOpen() && document.getElementById('overTitle').textContent === 'Partie perdue'), 'lost dialog shows while cards can still move');
+await page.screenshot({ path: `${OUT}/c2-lost.png` });
+ok(await g(() => document.activeElement.textContent) === 'Revenir en arrière', 'lost dialog focuses Revenir en arrière');
+await page.click('#overBtns >> text=Revenir en arrière');
+await page.waitForTimeout(300);
+ok(await g(() => !dialogOpen() && S.moves === 0 && solve(toSolver(), 20000).win), 'Revenir en arrière goes back to a winnable position');
+await g(() => { clickStock(); });
+await page.waitForTimeout(800);
+ok(!(await g(() => dialogOpen())), 'no lost dialog in a winnable game');
+
 // Win: the piles hop, then the dialog shows
 await g(() => {
   S = { stock: [], waste: [], found: [0, 1, 2, 3].map(s => [...Array(12).keys()].map(r => ({ id: s * 13 + r, up: true }))), tab: [[{ id: 12, up: true }], [{ id: 25, up: true }], [{ id: 38, up: true }], [{ id: 51, up: true }], [], [], []], moves: 5, won: false, stuckShown: false };

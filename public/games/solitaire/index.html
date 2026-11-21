@@ -236,7 +236,7 @@ function freshDeal() {
   for (let i = d.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [d[i], d[j]] = [d[j], d[i]]; }
   const tab = [];
   for (let c = 0; c < 7; c++) { tab.push(d.splice(0, c + 1)); tab[c][c].up = true; }
-  return { stock: d, waste: [], found: [[], [], [], []], tab, moves: 0, won: false, stuckShown: false };
+  return { stock: d, waste: [], found: [[], [], [], []], tab, moves: 0, won: false, stuckShown: false, lostShown: false };
 }
 // Deal only games the solver has won. Most deals pass on the first or second try.
 function winnableDeal() {
@@ -437,6 +437,7 @@ function autoStep() {
     autoCount = 0;
   }
   checkStuck();
+  checkLost();
 }
 function checkStuck() {
   if (S.stuckShown || isWon()) return;
@@ -444,6 +445,19 @@ function checkStuck() {
   if (x.f.every(n => n === 13) || sMoves(x).length) return;
   S.stuckShown = true; save();
   dialog('Plus aucun coup possible', 'Aucune carte ne peut plus bouger.',
+    [['Revenir en arrière', backToWinnable, true], ['Nouvelle partie', newGame]]);
+}
+// After each move, once the automatic cards are home, say so as soon as the game is surely lost.
+// When the solver runs out of time, it says nothing. A lost position only stops being lost by undo,
+// and the undo step does not carry the flag, so the warning comes once per lost line of play.
+function checkLost() {
+  if (S.lostShown || dialogOpen() || isWon()) return;
+  if (solve(toSolver(), 20000).win !== false) return;
+  S.lostShown = true; save();
+  lostDialog();
+}
+function lostDialog() {
+  dialog('Partie perdue', 'Cette partie ne peut plus être gagnée. « Revenir en arrière » annule vos derniers coups.',
     [['Revenir en arrière', backToWinnable, true], ['Nouvelle partie', newGame]]);
 }
 
@@ -518,10 +532,7 @@ function showHint() {
   if (busy || drag || isWon()) return;
   const r = hintMove();
   let m = r.move;
-  if (!m && r.win === false) {
-    return dialog('Partie perdue', 'Cette partie ne peut plus être gagnée.',
-      [['Revenir en arrière', backToWinnable, true], ['Nouvelle partie', newGame], ['Fermer', null]]);
-  }
+  if (!m && r.win === false) return lostDialog();
   if (!m) {
     // The solver ran out of time. Show only a move that cannot be undone by the next hint:
     // a card going home, a move that turns a card over, or the waste card going down.
