@@ -8,7 +8,7 @@ The library is a website installed once as an app with Edge. It works offline. E
 
 ```
 public/                  the site, served as static files
-  index.html             the library: greeting, a note from me, one tile per game
+  index.html             the library: clock and one tile per game
   og.jpg                 the link preview image, drawn in scripts/og.html (node scripts/icons.mjs)
   <id>/index.html        one game per folder, at jeux-papi.fr/<id>/
   lib/store.js           saves for every game, in the browser of the PC, and the statistics
@@ -16,7 +16,6 @@ public/                  the site, served as static files
   lib/zoom.js            the size buttons, "Réduire" and "Agrandir", on the library and in every game
   lib/cards.css, cards.js  playing cards: French names, suits, pips, court cards, back
   sw.js                  offline copy and quiet updates
-  message.json           the note on the library screen ("text": "" hides it)
   admin/                 the admin dashboard, behind the ADMIN_TOKEN password
 src/worker.ts            the statistics and error API, a Cloudflare Worker with a D1 database
 src/admin.ts             the admin API, behind the ADMIN_TOKEN secret
