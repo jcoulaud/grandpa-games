@@ -6,7 +6,7 @@
 //     <span class="spacer"></span>
 //     <button id="newBtn" class="game">Nouvelle partie</button>
 //   </div>
-//   <div id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div></div>
+//   <div id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div><div class="zoom"></div></div>
 //   <div id="table"></div>
 //   <div id="help" data-title="Comment jouer"><section class="page">…</section>…</div>
 //
@@ -33,6 +33,12 @@
 
   // Top bar: the way back to the library first, then icons on the buttons that ask for one.
   const bar = $('bar');
+  // For a screen reader: the bar, the name of the game as the heading of the page, the message line,
+  // and the table as the main part.
+  if (bar) bar.setAttribute('role', 'banner');
+  if ($('title')) { $('title').setAttribute('role', 'heading'); $('title').setAttribute('aria-level', '1'); }
+  if ($('msgRail')) { $('msgRail').setAttribute('role', 'region'); $('msgRail').setAttribute('aria-label', 'Messages du jeu'); }
+  if ($('table')) $('table').setAttribute('role', 'main');
   if (bar && !$('home')) {
     // Opened from a file, the folder alone would show a list of files: name the library page.
     const home = location.protocol === 'file:' ? libRoot + 'index.html' : libRoot;
@@ -40,9 +46,32 @@
   }
   document.querySelectorAll('button[data-icon]').forEach(b => b.insertAdjacentHTML('afterbegin', icon(b.dataset.icon)));
 
+  // Each label stays on one line: the bar takes the long labels if they fit, else the short ones, else one
+  // word each, and last, without the name of the game (its felt still tells it). A phone puts its buttons
+  // on two rows instead (kit.css).
+  function fitBar() {
+    if (!bar || innerWidth < 700) return;
+    bar.classList.remove('fit-short', 'fit-tiny', 'fit-bare');
+    const over = () => bar.scrollWidth > bar.clientWidth + 1;
+    if (over()) bar.classList.add('fit-short');
+    if (over()) { bar.classList.remove('fit-short'); bar.classList.add('fit-tiny'); }
+    if (over()) bar.classList.add('fit-bare');
+  }
+  fitBar();
+  addEventListener('resize', fitBar);
+  if (document.fonts) document.fonts.ready.then(fitBar);
+
   // Message line
+  // One line in the usual size. A text too long for the window takes two lines, a little smaller, in the
+  // same height, so the board never moves. Only a very narrow window (a phone) lets the line grow.
   const msg = $('msg');
-  const say = text => { if (msg) msg.textContent = text; };
+  const fit = () => {
+    if (!msg) return;
+    msg.classList.remove('long');
+    if (msg.scrollWidth > msg.clientWidth + 1) msg.classList.add('long');
+  };
+  const say = text => { if (msg) { msg.textContent = text; fit(); } };
+  addEventListener('resize', fit);
 
   // Dialog
   if (!$('over')) document.body.insertAdjacentHTML('beforeend',
@@ -59,28 +88,53 @@
     $('overText').textContent = text;
     const b = $('overBtns'); b.innerHTML = '';
     let first = null;
-    buttons.forEach(([label, fn, primary]) => {
+    buttons.forEach(([label, fn, primary, note]) => {
       const e = document.createElement('button');
       e.textContent = label; if (primary) { e.className = 'primary'; first = first || e; }
+      // A line under the label says what the choice means. It is drawn by the style sheet, so the
+      // text of the button stays its label.
+      // The label stays its name for a screen reader; the line is read as its description.
+      if (note) { e.classList.add('choice'); e.dataset.note = note; e.setAttribute('aria-label', label); e.setAttribute('aria-description', note); }
       e.onclick = () => { closeDialog(); if (fn) fn(); };
       b.appendChild(e);
     });
+    $('box').classList.remove('levels'); $('overText').classList.remove('warn');
     over.classList.toggle('soft', !!soft);
     over.classList.add('on');
     (first || b.firstChild).focus();
   }
 
   const levelNames = { facile: 'Facile', moyen: 'Moyen', fort: 'Difficile' };
+  const levelNotes = { facile: 'Pour commencer en douceur', moyen: 'Un peu plus de réflexion', fort: 'Pour les joueurs habitués' };
+  // The level is said under the name of the game, on the left of the bar: the "Nouvelle partie" button
+  // only says what it does.
   function showLevel(level) {
-    $('newBtn').innerHTML = 'Nouvelle partie<small>Niveau ' + levelNames[level].toLowerCase() + '</small>';
+    const title = $('title');
+    let e = $('level');
+    if (!e) {
+      const name = [...title.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim());
+      const box = document.createElement('span'); box.className = 'name';
+      box.innerHTML = '<span></span><small id="level"></small>';
+      box.firstChild.textContent = name.map(n => n.textContent.trim()).join(' ');
+      name.forEach(n => n.remove());
+      title.appendChild(box);
+      e = $('level');
+    }
+    e.textContent = 'Niveau ' + levelNames[level].toLowerCase();
+    fitBar();
   }
+  // The levels, one under the other, each with a line that says what it means. During a game the safe
+  // choice comes first and is yellow: "Continuer la partie". Otherwise the last level played is yellow,
+  // or Facile the first time.
   function chooseLevel(level, playing, start) {
-    const buttons = Object.entries(levelNames).map(([key, label]) =>
-      [label, () => start(key), !playing && key === level]);
-    if (level) buttons.push(['Continuer la partie', null, playing]);
-    else buttons.push(['Retour aux jeux', () => { location.href = $('home').href; }]);
-    dialog('Nouvelle partie', (playing ? 'La partie en cours sera effacée. ' : '') +
-      'Choisissez le niveau de difficulté.', buttons);
+    const levels = Object.entries(levelNames).map(([key, label]) =>
+      [label, () => start(key), !playing && key === (level || 'facile'), levelNotes[key]]);
+    const buttons = playing ? [['Continuer la partie', null, true], ...levels]
+      : [...levels, level ? ['Continuer la partie', null] : ['Retour aux jeux', () => { location.href = $('home').href; }]];
+    dialog('Nouvelle partie', playing ? 'Attention : la partie en cours sera effacée si vous choisissez un niveau.'
+      : 'Choisissez le niveau de difficulté.', buttons);
+    $('box').classList.add('levels');
+    $('overText').classList.toggle('warn', playing);
   }
 
   // Rules guide: short pages, so they never need scrolling. "Fermer" works from every page.

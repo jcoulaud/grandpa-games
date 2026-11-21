@@ -28,7 +28,7 @@
     position: absolute; width: var(--w); height: var(--h); border-radius: calc(var(--w) * .09);
     background: rgba(255,255,255,.09); color: rgba(255,255,255,.82);
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(var(--w) * .04);
-    font: 600 calc(var(--w) * .2)/1 var(--ui); text-align: center;
+    font: 600 max(min(20px, calc(var(--w) * .34)), calc(var(--w) * .2))/1 var(--ui); text-align: center;
     transform: scale(.96); /* stays hidden under a card */
   }
   .slot small { font-size: calc(var(--w) * .16); line-height: 1.2; }
@@ -47,7 +47,7 @@
     min-width: calc(var(--w) * .52); padding: calc(var(--w) * .07) calc(var(--w) * .1); text-align: center;
     border-radius: calc(var(--w) * .3); background: #fff; color: var(--text);
     box-shadow: 0 2px 8px rgba(0,0,0,.45);
-    font: 700 calc(var(--w) * .28)/1 var(--ui);
+    font: 700 max(min(20px, calc(var(--w) * .4)), calc(var(--w) * .28))/1 var(--ui);
   }
 
   /* Selection, destinations and hints: yellow, with a dark edge so it shows on a white card. */
@@ -68,22 +68,23 @@
 
   @media (prefers-reduced-motion: reduce) { .mark.hint { animation: none; } }
 </style>
+<script src="../lib/zoom.js"></script>
 </head>
 <body>
 <div id="bar">
   <div id="title"><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#su0"/></svg>Solitaire</div>
-  <button id="undoBtn" data-icon="undo" title="Annuler le dernier coup joué"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span></button>
-  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre un bon coup à jouer maintenant"><span class="long">Quel coup jouer ?</span><span class="short">Aide</span></button>
+  <button id="undoBtn" data-icon="undo" title="Annuler le dernier coup joué"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span><span class="tiny">Annuler</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre un bon coup à jouer maintenant"><span class="long">Quel coup jouer ?</span><span class="short">Aide</span><span class="tiny">Aide</span></button>
   <span class="spacer"></span>
   <button id="helpBtn" data-icon="help">Règles</button>
   <button id="newBtn" class="game">Nouvelle partie</button>
 </div>
-<div id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div></div>
+<div id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div><div class="zoom"></div></div>
 <div id="table"></div>
 <div id="help" data-title="Comment jouer">
     <section class="page">
       <h3>Le but</h3>
-      <p>Rangez toutes les cartes sur les quatre piles « Rangement », à gauche. Chaque pile reçoit une seule couleur : pique, cœur, carreau ou trèfle. On commence par l'as, puis le 2, le 3, et ainsi de suite jusqu'au roi.</p>
+      <p>Rangez toutes les cartes sur les quatre piles « Rangement », en haut à droite. Chaque pile reçoit une seule couleur : pique, cœur, carreau ou trèfle. On commence par l'as, puis le 2, le 3, et ainsi de suite jusqu'au roi.</p>
       <h3>Les colonnes</h3>
       <p>Dans les sept colonnes, une carte se pose sur une carte d'une valeur juste au-dessus et de l'autre couleur. Par exemple, un 7 rouge va sur un 8 noir, et un 7 noir sur un 8 rouge.</p>
       <p>On peut déplacer une carte avec toutes les cartes posées dessus. Seul un roi peut aller sur une colonne vide. Une carte cachée se retourne toute seule quand elle est libérée.</p>
@@ -661,7 +662,8 @@ function build() {
 const RATIO = 1.3, UP = 0.3, DOWN = 0.08, LABEL = 30;
 function layout() {
   const W = table.clientWidth, H = table.clientHeight;
-  const m = 26, g0 = Math.max(10, Math.round(W * 0.009)), pad = 12;
+  // A phone has narrow margins and gaps, so every column fits across it.
+  const narrow = W < 700, m = narrow ? 6 : 26, g0 = narrow ? 4 : Math.max(10, Math.round(W * 0.009)), pad = 12;
   // Space under the message line, and between the labels of the top row and the columns.
   // Neither changes the card size: long columns squeeze a little sooner instead. Both stay small
   // on a short window, so a long column still fits on a laptop.
@@ -672,7 +674,7 @@ function layout() {
   // Longer columns squeeze (see colY), so the cards can stay large on a laptop.
   // UP shows the whole corner index (the rank over its suit) of a covered card.
   const byHeight = (H - top - pad - LABEL - rowGap) / (2 + 4 * UP + 3 * DOWN) / RATIO;
-  const w = Math.floor(Math.max(48, Math.min(byWidth, byHeight, 170)));
+  const w = Math.floor(Math.max(narrow ? 30 : 48, Math.min(byWidth, byHeight, 170)));
   const h = Math.round(w * RATIO);
   // A wide window spreads the columns, up to 30% of a card, so the board fills the felt.
   const gap = Math.round(Math.max(g0, Math.min(w * 0.3, (W - 2 * m - 7 * w) / 6)));
@@ -724,6 +726,8 @@ function render(opts = {}) {
   stockCount.innerHTML = S.stock.length ? `<span>${S.stock.length}</span>` : '';
   document.getElementById('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
   put(stockLabel, bankX(0), L.top + L.h + 4); put(wasteLabel, bankX(1), L.top + L.h + 4);
+  // Cards too narrow for their name under them (a phone): the stock shows its count, the names go.
+  stockLabel.hidden = wasteLabel.hidden = L.w + L.gap < 88;
   put(foundLabel, colX(3), L.top + L.h + 4);
   slotFound.forEach((e, s) => put(e, ...foundXY(s)));
   slotTab.forEach((e, i) => put(e, colX(i), L.ty));
@@ -815,8 +819,9 @@ function openHelp() { if (!drag) Kit.openHelp(); }
 // A press and release that moves less than 16 px is a click, so a shaky hand still clicks.
 // Moving further drags the card.
 function tablePoint(e) {
-  const r = table.getBoundingClientRect();
-  return [e.clientX - r.left + table.scrollLeft, e.clientY - r.top + table.scrollTop];
+  // The mouse counts in screen pixels; the table in page pixels, which the size buttons enlarge.
+  const r = table.getBoundingClientRect(), z = Zoom.z();
+  return [(e.clientX - r.left) / z + table.scrollLeft, (e.clientY - r.top) / z + table.scrollTop];
 }
 table.addEventListener('pointerdown', e => {
   if (e.button !== 0 || busy || dialogOpen() || drag) return;
@@ -845,7 +850,7 @@ addEventListener('pointermove', e => {
     });
     drawMarks();
   }
-  drag.els.forEach(d => put(d.el, d.x + dx, d.y + dy));
+  drag.els.forEach(d => put(d.el, d.x + dx / Zoom.z(), d.y + dy / Zoom.z()));
   const under = hitPile(...tablePoint(e)), key = under ? under.a + under.i : '';
   marks.forEach(m => m.classList.toggle('over', m.dataset.key === key));
 });

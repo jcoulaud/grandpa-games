@@ -10,14 +10,12 @@
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></symbol>
-  <symbol id="i-open" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
   <symbol id="i-out" viewBox="0 0 24 24"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4"/><path d="M10 16l-4-4 4-4M6 12h10"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
   <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
 </svg>
 
-<div id="login" hidden>
+<div id="login" role="main" hidden>
   <form>
     <img src="../icons/icon.svg" alt="">
     <h1>Tableau de bord</h1>
@@ -30,14 +28,12 @@
 
 <div id="app" hidden>
   <header><div class="in">
-    <div class="brand"><img src="../icons/icon.svg" alt=""><div><b>Tableau de bord</b><span id="total">Les jeux de Papi</span></div></div>
+    <div class="brand"><a id="libLink" href="../" title="Voir la bibliothèque" aria-label="Voir la bibliothèque"><img src="../icons/icon.svg" alt=""></a><div><b>Tableau de bord</b><span id="total">Les jeux de Papi</span></div></div>
     <div class="grow"></div>
     <div class="seg" role="group" aria-label="Période du graphique">
       <button data-range="7">7 j</button><button data-range="30">30 j</button><button data-range="90">90 j</button>
     </div>
-    <a id="libLink" class="icon-btn" href="../" title="Voir la bibliothèque" aria-label="Voir la bibliothèque"><svg><use href="#i-open"/></svg></a>
-    <button id="refresh" class="icon-btn" title="Actualiser" aria-label="Actualiser"><svg><use href="#i-refresh"/></svg></button>
-    <button id="logout" class="icon-btn" title="Se déconnecter" aria-label="Se déconnecter"><svg><use href="#i-out"/></svg></button>
+    <button id="logout" class="signout"><svg class="ico"><use href="#i-out"/></svg>Se déconnecter</button>
   </div></header>
 
   <main>

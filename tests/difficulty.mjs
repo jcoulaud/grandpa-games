@@ -14,7 +14,13 @@ try {
     for (const label of ['Facile', 'Moyen', 'Difficile']) {
       const first = label === 'Facile';
       if (!first) await page.click('#newBtn');
-      assert.deepEqual(await choices.allTextContents(), ['Facile', 'Moyen', 'Difficile', first ? 'Retour aux jeux' : 'Continuer la partie']);
+      // During a game "Continuer la partie" comes first; otherwise the levels come first.
+      const texts = await choices.allTextContents();
+      const back = first ? 'Retour aux jeux' : 'Continuer la partie';
+      assert.ok([['Facile', 'Moyen', 'Difficile', back], [back, 'Facile', 'Moyen', 'Difficile']].some(o => o.join() === texts.join()), texts.join());
+      // The yellow button: Facile the first time, "Continuer la partie" during a game.
+      if (first) assert.equal(await page.locator('#overBtns button.primary').textContent(), 'Facile');
+      if (texts[0] === back) assert.equal(await page.locator('#overBtns button.primary').textContent(), back);
       const choice = choices.getByText(label, { exact: true });
       if (game === 'dames' || game === 'dame-de-pique') {
         await choice.click();
@@ -28,12 +34,12 @@ try {
         assert.ok(valid, game + ' ' + label);
       }
       const levelText = 'Niveau ' + label.toLowerCase();
-      assert.equal(await page.locator('#newBtn small').innerText(), levelText);
+      assert.equal(await page.locator('#level').innerText(), levelText);
       await page.reload();
-      assert.equal(await page.locator('#newBtn small').innerText(), levelText);
+      assert.equal(await page.locator('#level').innerText(), levelText);
       await page.click('#newBtn');
       await choices.getByText('Continuer la partie').click();
-      assert.equal(await page.locator('#newBtn small').innerText(), levelText);
+      assert.equal(await page.locator('#level').innerText(), levelText);
       assert.equal(await page.locator('#over').isVisible(), false);
     }
     if (game === 'solitaire' || game === 'freecell') {

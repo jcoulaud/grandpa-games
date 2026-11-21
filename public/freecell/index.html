@@ -29,7 +29,7 @@
     position: absolute; width: var(--w); height: var(--h); border-radius: calc(var(--w) * .09);
     background: rgba(255,255,255,.09); color: rgba(255,255,255,.82);
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(var(--w) * .04);
-    font: 600 calc(var(--w) * .2)/1 var(--ui); text-align: center;
+    font: 600 max(min(20px, calc(var(--w) * .34)), calc(var(--w) * .2))/1 var(--ui); text-align: center;
     transform: scale(.96); /* stays hidden under a card */
   }
   .slot .s { width: calc(var(--w) * .4); height: calc(var(--w) * .4); opacity: .75; }
@@ -53,17 +53,18 @@
 
   @media (prefers-reduced-motion: reduce) { .mark.hint { animation: none; } }
 </style>
+<script src="../lib/zoom.js"></script>
 </head>
 <body>
 <div id="bar">
   <div id="title"><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#su1"/></svg>FreeCell</div>
-  <button id="undoBtn" data-icon="undo" title="Annuler le dernier coup joué"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span></button>
-  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre un bon coup à jouer maintenant"><span class="long">Quel coup jouer ?</span><span class="short">Aide</span></button>
+  <button id="undoBtn" data-icon="undo" title="Annuler le dernier coup joué"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span><span class="tiny">Annuler</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre un bon coup à jouer maintenant"><span class="long">Quel coup jouer ?</span><span class="short">Aide</span><span class="tiny">Aide</span></button>
   <span class="spacer"></span>
   <button id="helpBtn" data-icon="help">Règles</button>
   <button id="newBtn" class="game">Nouvelle partie</button>
 </div>
-<div id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div></div>
+<div id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div><div class="zoom"></div></div>
 <div id="table"></div>
 <div id="help" data-title="Comment jouer">
     <section class="page">
@@ -511,7 +512,8 @@ function build() {
 const RATIO = 1.3, UP = 0.3, LABEL = 30;
 function layout() {
   const W = table.clientWidth, H = table.clientHeight;
-  const m = 26, g0 = Math.max(10, Math.round(W * 0.009)), pad = 12;
+  // A phone has narrow margins and gaps, so every column fits across it.
+  const narrow = W < 700, m = narrow ? 6 : 26, g0 = narrow ? 4 : Math.max(10, Math.round(W * 0.009)), pad = 12;
   const top = Math.round(Math.max(pad, Math.min(32, H * 0.03)));
   const rowGap = Math.round(Math.max(g0, Math.min(W * 0.025, H * 0.035)));
   const byWidth = (W - 2 * m - 7 * g0) / 8;
@@ -519,7 +521,7 @@ function layout() {
   // squeeze a little on a laptop (see colY), so the cards can stay large.
   // UP shows the whole corner index of a covered card.
   const byHeight = (H - top - pad - LABEL - rowGap) / (2 + 5 * UP) / RATIO;
-  const w = Math.floor(Math.max(48, Math.min(byWidth, byHeight, 170)));
+  const w = Math.floor(Math.max(narrow ? 30 : 48, Math.min(byWidth, byHeight, 170)));
   const h = Math.round(w * RATIO);
   // A wide window spreads the columns, up to 30% of a card, so the board fills the felt.
   const gap = Math.round(Math.max(g0, Math.min(w * 0.3, (W - 2 * m - 8 * w) / 7)));
@@ -650,8 +652,9 @@ function openHelp() { if (!drag) Kit.openHelp(); }
 // A press and release that moves less than 16 px is a click, so a shaky hand still clicks.
 // Moving further drags the card.
 function tablePoint(e) {
-  const r = table.getBoundingClientRect();
-  return [e.clientX - r.left + table.scrollLeft, e.clientY - r.top + table.scrollTop];
+  // The mouse counts in screen pixels; the table in page pixels, which the size buttons enlarge.
+  const r = table.getBoundingClientRect(), z = Zoom.z();
+  return [(e.clientX - r.left) / z + table.scrollLeft, (e.clientY - r.top) / z + table.scrollTop];
 }
 table.addEventListener('pointerdown', e => {
   if (e.button !== 0 || busy || dialogOpen() || drag) return;
@@ -679,7 +682,7 @@ addEventListener('pointermove', e => {
     });
     drawMarks();
   }
-  drag.els.forEach(d => put(d.el, d.x + dx, d.y + dy));
+  drag.els.forEach(d => put(d.el, d.x + dx / Zoom.z(), d.y + dy / Zoom.z()));
   const under = hitPile(...tablePoint(e)), key = under ? under.a + under.i : '';
   marks.forEach(m => m.classList.toggle('over', m.dataset.key === key));
 });

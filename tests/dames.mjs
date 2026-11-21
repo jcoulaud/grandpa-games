@@ -200,7 +200,7 @@ ok((await g(() => document.getElementById('drawNote').textContent)).startsWith("
 await page.screenshot({ path: `${OUT}/dames-ending.png` });
 await page.click('#newBtn');
 ok((await g(() => [...document.querySelectorAll('#overBtns button')].map(b => b.textContent).join())).includes('Facile,Moyen,Difficile'), 'a new game offers three levels');
-await page.click('#overBtns button:nth-child(2)');
+await page.click('#overBtns button:text-is("Moyen")');
 ok(await g(() => level === 'moyen' && document.getElementById('levelB').textContent === 'Niveau moyen'), 'the level is chosen and shown');
 await page.reload(); await wait(300);
 ok(await g(() => level === 'moyen'), 'the level is kept');
@@ -221,7 +221,11 @@ ok((await g(() => document.getElementById('home').href)).endsWith('/public/index
 await page.setViewportSize({ width: 360, height: 640 }); await wait(200);
 ok(await g(() => { const r = boardEl.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; }), 'a narrow window shows the whole board');
 await setPos('K47,K48', 'K3');
-ok(await g(() => { const d = document.getElementById('drawNote'); const r = d.getBoundingClientRect(); return d.offsetParent && r.width > 100 && r.bottom <= innerHeight && r.top >= 0; }), 'a narrow window shows the draw warning under the board, without scrolling');
+// The bar takes two rows on a phone: the warning is the first thing under the board, one scroll of the table away.
+ok(await g(() => { const d = document.getElementById('drawNote'); d.parentElement.firstElementChild === d && d.scrollIntoView({ block: 'nearest' });
+  const r = d.getBoundingClientRect(); return d.parentElement.firstElementChild === d && d.offsetParent && r.width > 100 && r.bottom <= innerHeight + 1 && r.top >= 0; }),
+  'a narrow window shows the draw warning first under the board');
+await g(() => { table.scrollTop = 0; });
 await page.setViewportSize({ width: 780, height: 1024 }); await wait(200);
 ok(await g(() => { const r = document.getElementById('drawNote').getBoundingClientRect(); return r.bottom <= innerHeight && r.top >= 0; }), 'an upright tablet shows the draw warning without scrolling');
 await page.setViewportSize({ width: 740, height: 360 }); await wait(200);
