@@ -89,6 +89,8 @@
     filter: drop-shadow(0 8px 12px rgba(0,0,0,.35)); transform: rotate(-5deg); }
   /* The card games lay the cards of the games (lib/cards.css) on a 260 by 150 scene, centred:
      what a tile crops on the sides is only felt. */
+  .art svg.field { position: absolute; left: 50%; top: 50%; width: calc(210px * var(--k)); height: calc(147px * var(--k)); translate: -50% -50%;
+    filter: drop-shadow(0 10px 12px rgba(0,0,0,.4)); }
   .art .scene { position: absolute; left: 50%; top: 0; width: 260px; height: 150px; margin-left: -130px; transform: scale(var(--k)); transform-origin: 50% 0; }
   .art .card { transition: none; }
   .art .card.lifted { box-shadow: 0 12px 22px rgba(0,0,0,.45); }
@@ -187,6 +189,8 @@ const GAMES = [
     felt: ['#8A3440', '#4C161E'], scene: boardArt },
   { id: 'dame-de-pique', title: 'Dame de pique', text: 'Évitez les cœurs et la dame de pique, à quatre.',
     felt: ['#6A4488', '#2C1840'], scene: piqueScene },
+  { id: 'demineur', title: 'Démineur', text: 'Trouvez les mines cachées, sans jamais deviner.',
+    felt: ['#8A6234', '#4A3217'], scene: mineArt },
 ];
 
 // A card as the games draw it, centred on (x, y), w wide, turned by rot degrees.
@@ -236,6 +240,40 @@ function boardArt() {
     ${king ? '<path d="M-9 -4l4.2 3.6L0 -9l4.3 7.1 4.2-3.6-1.8 10H-7.2z" fill="#E2A82C" stroke="#5E3F06" stroke-width="1"/>' : ''}</g>`;
   sq += piece(1, 0, false) + piece(3, 0, false) + piece(4, 1, false) + piece(2, 1, true, true) + piece(1, 2, true) + piece(3, 2, true) + piece(0, 3, true);
   return `<svg class="board" viewBox="-6 -6 252 172" aria-hidden="true"><rect x="-6" y="-6" width="252" height="172" rx="4" fill="#6A4127"/>${sq}</svg>`;
+}
+// The démineur: a small island of turf blocks seen from above. The squares opened are sunken sand with
+// their numbers painted on the ground, and two flags stand on mines. The numbers fit the mines.
+function mineArt() {
+  const W = 4, H = 3, mines = ['0,0', '0,3', '2,3'], flags = ['0,0', '0,3'];
+  const open = ['1,0', '1,1', '1,2', '2,0', '2,1', '2,2'];
+  const colour = ['', '#1F4FB8', '#1C7128', '#C4122F'];
+  const p = (c, r, z) => `${(c - r) * 26},${(c + r) * 13 - z}`;
+  const poly = (pts, fill, extra = '') => `<polygon points="${pts.join(' ')}" fill="${fill}" ${extra}/>`;
+  let out = poly([p(0, H, 0), p(W, H, 0), p(W, H, -14), p(0, H, -14)], '#6B4A26')
+    + poly([p(W, 0, 0), p(W, H, 0), p(W, H, -14), p(W, 0, -14)], '#4F3519');
+  const cells = [];
+  for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) cells.push([r, c]);
+  cells.sort((a, b) => a[0] + a[1] - b[0] - b[1]);
+  for (const [r, c] of cells) {
+    const key = r + ',' + c, [cx, cy] = p(c + .5, r + .5, 0).split(',').map(Number);
+    if (open.includes(key)) {
+      let n = 0;
+      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) if (mines.includes((r + dr) + ',' + (c + dc))) n++;
+      out += poly([p(c, r, 0), p(c + 1, r, 0), p(c + 1, r + 1, 0), p(c, r + 1, 0)], '#F1E4C3', 'stroke="#D2BF94" stroke-width="1"');
+      if (n) out += `<text transform="translate(${cx} ${cy + 1}) scale(1 .78)" text-anchor="middle" dominant-baseline="central" font-family="Segoe UI, sans-serif" font-weight="700" font-size="24" fill="${colour[n]}">${n}</text>`;
+      continue;
+    }
+    out += poly([p(c + 1, r, 7), p(c + 1, r + 1, 7), p(c + 1, r + 1, 0), p(c + 1, r, 0)], '#3F7A2B')
+      + poly([p(c, r + 1, 7), p(c + 1, r + 1, 7), p(c + 1, r + 1, 0), p(c, r + 1, 0)], '#559A3A')
+      + poly([p(c, r, 7), p(c + 1, r, 7), p(c + 1, r + 1, 7), p(c, r + 1, 7)], '#7CC152', 'stroke="#3B6E28" stroke-width="1"')
+      + poly([p(c + .15, r + .15, 7), p(c + .85, r + .15, 7), p(c + .5, r + .5, 7)], 'rgba(255,255,255,.18)');
+    if (flags.includes(key)) {
+      const y = cy - 7;
+      out += `<ellipse cx="${cx}" cy="${y}" rx="7" ry="3.5" fill="rgba(0,0,0,.25)"/><path d="M${cx} ${y}V${y - 28}" stroke="#2A1A0B" stroke-width="2.6" stroke-linecap="round"/>`
+        + `<path d="M${cx + 1} ${y - 28}l17 6.5-17 6.5z" fill="#E0322F" stroke="#7A0D0B" stroke-width="1.3" stroke-linejoin="round"/>`;
+    }
+  }
+  return `<svg class="field" viewBox="-84 -28 194 136" aria-hidden="true">${out}</svg>`;
 }
 const ICON_TROPHY = '<svg viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v4M8.5 20h7"/></svg>';
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

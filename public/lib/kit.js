@@ -51,7 +51,7 @@
   function fitBar() {
     if (!bar || innerWidth < 700) return;
     bar.classList.remove('fit-short', 'fit-tiny', 'fit-bare');
-    const over = () => bar.scrollWidth > bar.clientWidth + 1;
+    const over = () => bar.scrollWidth > bar.clientWidth;
     if (over()) bar.classList.add('fit-short');
     if (over()) { bar.classList.remove('fit-short'); bar.classList.add('fit-tiny'); }
     if (over()) bar.classList.add('fit-bare');

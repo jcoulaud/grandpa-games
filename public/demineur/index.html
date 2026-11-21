@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Démineur · Jeux de Papi</title>
+<meta name="description" content="Le démineur en grand, pour les grands-parents : de grandes cases, trois niveaux, et chaque partie se gagne sans deviner. Gratuit, sans publicité, sans compte.">
+<link rel="canonical" href="https://jeux-papi.fr/demineur/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Jeux de Papi">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://jeux-papi.fr/demineur/">
+<meta property="og:title" content="Démineur · Jeux de Papi">
+<meta property="og:description" content="Le démineur en grand. Chaque partie se gagne sans deviner. Gratuit, sans publicité, sans compte.">
+<meta property="og:image" content="https://jeux-papi.fr/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../lib/kit.css">
+<style>
+  /* The démineur plays on brown earth, around a field of green turf. An open square is pale sand. */
+  :root {
+    --felt-top: #8A6234; --felt: #4A3217; --shade: 40,26,10; --accent: #2F6B2A;
+    --s: 50px; --f: 10px;
+  }
+  #title svg { width: 32px; height: 32px; }
+
+  #table { position: relative; overflow: hidden; }
+  #frame {
+    position: absolute; border-radius: 12px;
+    background: linear-gradient(160deg, rgba(255,255,255,.12), transparent 40%, rgba(0,0,0,.25)), #5A3D1E;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.2), inset 0 0 0 1px rgba(0,0,0,.4), 0 24px 60px rgba(0,0,0,.45), 0 6px 14px rgba(0,0,0,.3);
+  }
+  #board {
+    position: absolute; display: grid; touch-action: none; background: #3B5E2A;
+    grid-template-columns: repeat(var(--cols), var(--s)); grid-auto-rows: var(--s);
+    box-shadow: 0 0 0 2px #2A1A0B;
+  }
+  /* On a tall, narrow window (a phone), the board turns a quarter: its rows become columns. */
+  #board.turned { grid-auto-flow: column; grid-template-columns: none; grid-template-rows: repeat(var(--cols), var(--s)); grid-auto-columns: var(--s); }
+
+  /* A closed square: a raised tile of turf. */
+  .c {
+    position: relative; display: grid; place-items: center; cursor: pointer;
+    background: linear-gradient(155deg, #8CCB63, #6AAE45 55%, #5B9C3A);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.35), inset 0 -3px 0 rgba(0,0,0,.22), inset 0 0 0 1px rgba(30,60,15,.55);
+    font: 700 max(20px, calc(var(--s) * .62)) / 1 var(--ui);
+  }
+  .c:hover { background: linear-gradient(155deg, #A2DA7C, #7FC058 55%, #6AAE45); }
+  /* An open square: flat sand, with its number in a strong colour. */
+  .c.o { cursor: default; background: #F1E4C3; box-shadow: inset 0 0 0 1px rgba(120,90,40,.35); }
+  .c.o.n { cursor: pointer; }
+  .c.o:hover { background: #F1E4C3; }
+  .c.n1 { color: #1F4FB8; } .c.n2 { color: #1C7128; } .c.n3 { color: #C4122F; } .c.n4 { color: #182F7A; }
+  .c.n5 { color: #7A1C1C; } .c.n6 { color: #0B6B6B; } .c.n7 { color: #1B1B1B; } .c.n8 { color: #5A5A5A; }
+  .c svg { width: 72%; height: 72%; pointer-events: none; }
+  /* The mine that went off: red, with the mine drawn on it. */
+  .c.boom { background: #E0322F; box-shadow: inset 0 0 0 3px #7A0D0B; }
+  /* The hint: the squares it is about are framed in yellow, the numbers it uses get a yellow ring. */
+  .c.hint::after {
+    content: ""; position: absolute; inset: 2px; border: 5px solid var(--gold); border-radius: 6px; z-index: 2;
+    box-shadow: inset 0 0 0 1.5px rgba(var(--shade),.8), 0 0 0 1.5px rgba(var(--shade),.8); animation: pulse 1.4s ease-in-out infinite;
+  }
+  .c.ring::after {
+    content: ""; position: absolute; inset: 3px; border: 4px solid var(--gold); border-radius: 50%; z-index: 2;
+    box-shadow: 0 0 0 1.5px rgba(var(--shade),.8), inset 0 0 0 1.5px rgba(var(--shade),.8);
+  }
+  @keyframes pulse { 50% { background: rgba(255,200,61,.45); } }
+  .c.shake { animation: sh .3s; z-index: 3; }
+
+  /* The flag button stays pressed while it waits for a square. */
+  #flagBtn[aria-pressed="true"] { background: var(--gold); border-color: #C9951A; box-shadow: 0 0 0 4px rgba(255,200,61,.45), 0 3px 0 #C9951A; }
+  #flagBtn svg path:first-child { fill: #C4122F; stroke: #7A0D0B; }
+  #board.arming .c:not(.o):hover { background: linear-gradient(155deg, #FFE08A, #F2C14A); }
+
+  /* The flags put, out of the mines: a chip beside the message line. */
+  #flags { flex: none; height: 46px; padding: 0 18px; display: flex; align-items: center; gap: 10px;
+    background: #fff; color: var(--text); font: 600 21px var(--ui); white-space: nowrap;
+    border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,.25); }
+  #flags svg { width: 26px; height: 26px; flex: none; }
+  #flags:empty { display: none; }
+  /* A page 1340 px wide or less: the count goes, like the wins. The message after each flag still says it. */
+  html.narrow #flags { display: none; }
+
+  #helpText .demo { display: flex; gap: 24px; align-items: center; margin: 6px 0 10px; }
+  #helpText .demo svg { width: 150px; height: 150px; flex: none; border-radius: 6px; }
+
+  @media (max-width: 700px) {
+    #flagBtn { order: 1; flex: 1 1 0; min-width: 0; padding: 4px 8px; gap: 6px; justify-content: center;
+      font-size: 20px; line-height: 1.05; white-space: normal; text-align: left; }
+    #flagBtn svg { width: 22px; height: 22px; }
+    /* Four buttons share the row: each puts its icon above its word. */
+    #undoBtn, #hintBtn, #flagBtn, #helpBtn { flex-direction: column; gap: 0; padding: 3px 2px; text-align: center; font-size: 18px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .c.hint::after, .c.shake { animation: none; } }
+</style>
+<script src="../lib/zoom.js"></script>
+</head>
+<body>
+<div id="bar">
+  <div id="title"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="4" fill="#6AAE45"/><path d="M9 18V5.5l8 3.5-8 3.5" fill="#C4122F" stroke="#7A0D0B" stroke-width="1" stroke-linejoin="round"/><path d="M9 18V5" stroke="#2A1A0B" stroke-width="1.6" stroke-linecap="round"/><path d="M6 18.5h6" stroke="#2A1A0B" stroke-width="1.6" stroke-linecap="round"/></svg>Démineur</div>
+  <button id="undoBtn" data-icon="undo" title="Reprend votre dernier coup"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span><span class="tiny">Annuler</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre une case sûre et explique pourquoi">Aide</button>
+  <button id="flagBtn" aria-pressed="false" title="Le prochain clic pose un drapeau, ou le retire"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 20V4.5l11 4.5-11 4.5"/><path d="M7 21V4M4 21h7"/></svg><span class="long">Poser un drapeau</span><span class="short">Drapeau</span><span class="tiny">Drapeau</span></button>
+  <span class="spacer"></span>
+  <button id="helpBtn" data-icon="help">Règles</button>
+  <button id="newBtn" class="game">Nouvelle partie</button>
+</div>
+<div id="table">
+  <div id="frame"></div>
+  <div id="board" role="grid" aria-label="Terrain"></div>
+</div>
+<footer id="msgRail"><div id="msg" aria-live="polite"></div><div id="flags"></div><div id="wins"></div><div class="zoom"></div></footer>
+<div id="help" data-title="Comment jouer">
+  <section class="page">
+    <h3>Le but</h3>
+    <p>Des mines sont cachées sous les cases vertes. Pour gagner, ouvrez toutes les cases qui n'ont pas de mine.</p>
+    <h3>Ouvrir une case</h3>
+    <p>Cliquez sur une case verte pour l'ouvrir. La première case ne cache jamais de mine, et elle ouvre tout un coin du terrain.</p>
+    <p>Chaque partie se gagne sans deviner : il y a toujours une case dont on peut être sûr.</p>
+  </section>
+  <section class="page">
+    <h3>Les chiffres</h3>
+    <div class="demo">
+      <svg viewBox="0 0 3 3" aria-hidden="true"><rect width="3" height="3" fill="#F1E4C3"/><rect x="2" width="1" height="1" fill="#6AAE45" stroke="#3B5E2A" stroke-width=".04"/><path d="M2.4.82V.2l.4.17-.4.18" fill="#C4122F" stroke="#7A0D0B" stroke-width=".03"/><path d="M2.4.84V.2" stroke="#2A1A0B" stroke-width=".06"/><text x="1.5" y="1.5" font-family="Segoe UI, sans-serif" font-weight="700" font-size=".66" fill="#1F4FB8" text-anchor="middle" dominant-baseline="central">1</text><text x="1.5" y="2.5" font-family="Segoe UI, sans-serif" font-weight="700" font-size=".66" fill="#1F4FB8" text-anchor="middle" dominant-baseline="central">1</text><path d="M0 1h3M0 2h3M1 0v3M2 0v3" stroke="rgba(120,90,40,.35)" stroke-width=".03"/></svg>
+      <p>Un chiffre dit combien de mines touchent sa case, en comptant les huit cases autour, en diagonale aussi.</p>
+    </div>
+    <p>Une case ouverte sans chiffre ne touche aucune mine : les cases autour d'elle s'ouvrent toutes seules.</p>
+  </section>
+  <section class="page">
+    <h3>Les drapeaux</h3>
+    <p>Quand une case cache une mine à coup sûr, posez-y un drapeau : cliquez sur « Drapeau », puis sur la case. Le clic droit de la souris pose aussi un drapeau. Un clic sur un drapeau le retire.</p>
+    <p>Quand un chiffre touche autant de drapeaux que sa valeur, un clic sur ce chiffre ouvre les autres cases autour de lui.</p>
+  </section>
+  <section class="page">
+    <h3>Les boutons</h3>
+    <p>« Aide » encadre une case sûre, ou une mine, et dit pourquoi.</p>
+    <p>Si une mine saute, « Annuler le dernier coup » reprend la partie juste avant. « Nouvelle partie » vous permet de choisir le niveau. La partie est enregistrée à chaque coup.</p>
+  </section>
+</div>
+
+<script src="../lib/store.js"></script>
+<script src="../lib/kit.js"></script>
+<script src="engine.js"></script>
+<script>
+'use strict';
+const D = Demineur;
+const $ = id => document.getElementById(id);
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const FLAG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 19V4.5l10 4.2-10 4.2" fill="#C4122F" stroke="#7A0D0B" stroke-width="1.2" stroke-linejoin="round"/><path d="M8 20V4" stroke="#2A1A0B" stroke-width="2" stroke-linecap="round"/><path d="M4.5 20.5h7" stroke="#2A1A0B" stroke-width="2" stroke-linecap="round"/></svg>';
+const MINE = '<svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#141211" stroke-width="2.2" stroke-linecap="round"><path d="M12 2.5v19M2.5 12h19M5.3 5.3l13.4 13.4M18.7 5.3 5.3 18.7"/></g><circle cx="12" cy="12" r="6.6" fill="#141211"/><circle cx="9.7" cy="9.7" r="1.9" fill="#fff"/></svg>';
+
+/* ---------- State ----------
+   G: the game (see engine.js). undo: the games before each of his moves, as JSON. hint: the step the
+   hint shows, until his next move. arming: the next click puts or takes off a flag.
+   wonNow: this game is counted as won (undo keeps it, so a win counts once). */
+let G, undo = [], level = 'facile', stats = { won: 0 }, wonNow = false, hint = null, arming = false, lastTap = null, timers = [];
+let stale = false;
+addEventListener('gg-stale', () => { stale = true; });
+
+const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
+const playing = () => G.first >= 0 && !G.result;
+
+/* ---------- Saves ---------- */
+function save() {
+  const parts = [];
+  if (playing()) parts.push('Partie en cours');
+  if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
+  for (const n of [Infinity, 200, 40, 0]) {
+    const data = { v: 1, G, undo: n ? undo.slice(-n) : [], level, stats, wonNow };
+    if (GG.save('demineur', data, { summary: parts.join(' · ') })) return true;
+    if (stale) return false;
+  }
+  Kit.say("La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.");
+  return false;
+}
+function valid(g) {
+  const L = g && D.LEVELS[g.level];
+  return !!L && g.w === L.w && g.h === L.h && typeof g.cells === 'string' && g.cells.length === L.w * L.h
+    && (g.first < 0 ? !g.layout : Array.isArray(g.layout) && g.layout.length === L.mines);
+}
+function load() {
+  try {
+    const v = GG.load('demineur');
+    if (!v || !valid(v.G)) return false;
+    G = v.G; undo = Array.isArray(v.undo) ? v.undo : []; stats = v.stats || stats; wonNow = !!v.wonNow;
+    level = G.level;
+    return true;
+  } catch (e) { return false; }
+}
+
+/* ---------- His moves ---------- */
+const say = Kit.say;
+const nb = i => D.neighbours(G.w, G.h)[i];
+const flagsLeft = () => G.mines - D.flags(G);
+
+function play(next, text) {
+  undo.push(JSON.stringify(G));
+  G = next; hint = null;
+  // A win counts once, and only when it is saved: a stale window cannot count it a second time.
+  const firstWin = G.result === 'won' && !wonNow;
+  if (firstWin) { wonNow = true; stats.won++; }
+  if (save()) { if (firstWin) GG.track('demineur', 'won'); }
+  else if (firstWin) { wonNow = false; stats.won--; }
+  render();
+  if (G.result) return finish(true);
+  say(text);
+}
+
+// A click on square i. how: 'open' (the left button) or 'flag' (the right button, or after "Drapeau").
+function tap(i, how) {
+  if (Kit.isOpen()) return;
+  if (arming) { how = 'flag'; setArming(false); }
+  if (G.result) return say(G.result === 'won' ? 'Cette partie est gagnée : cliquez sur « Nouvelle partie » pour en commencer une autre.'
+    : 'Une mine a sauté : cliquez sur « Annuler le dernier coup » pour reprendre juste avant, ou commencez une nouvelle partie.');
+  const c = G.cells[i];
+  if (how === 'flag') {
+    if (G.first < 0) return refuse(i, "Ouvrez d'abord une case : la première ne cache jamais de mine.");
+    if (c === 'o') return refuse(i, 'Cette case est déjà ouverte : un drapeau se pose sur une case verte.');
+    if (c === 'f') return play(D.flag(G, i), 'Drapeau retiré.');
+    if (!flagsLeft()) return refuse(i, `Vous avez posé ${G.mines} drapeaux, autant que de mines : retirez-en un d'abord.`);
+    const k = flagsLeft() - 1;
+    return play(D.flag(G, i), k ? `Drapeau posé. Il reste ${plural(k, 'drapeau', 'drapeaux')} à poser.` : 'Drapeau posé. Tous les drapeaux sont posés.');
+  }
+  if (c === 'f') return play(D.flag(G, i), 'Drapeau retiré. Cliquez encore sur la case pour l\'ouvrir.');
+  if (c === 'o') {
+    const n = D.number(G, i);
+    if (!n) return say('Cette case est déjà ouverte.');
+    const closed = nb(i).filter(j => G.cells[j] === '.').length, flags = nb(i).filter(j => G.cells[j] === 'f').length;
+    if (!closed) return say(`Les cases autour de ce ${n} sont déjà toutes ouvertes ou marquées.`);
+    if (flags !== n) return refuse(i, `Ce ${n} touche ${flags ? plural(flags, 'drapeau', 'drapeaux') : 'aucun drapeau'} : il en faut ${n} pour ouvrir d'un clic les cases autour.`);
+    const next = D.openAround(G, i);
+    return play(next, 'Les cases autour du ' + n + ' sont ouvertes. ' + nextText());
+  }
+  const first = G.first < 0;
+  const next = D.open(G, i);
+  const opened = [...next.cells].filter((x, j) => x === 'o' && G.cells[j] !== 'o').length;
+  play(next, first ? 'Bien joué ! Chaque chiffre dit combien de mines touchent sa case.'
+    : opened > 1 ? 'Plusieurs cases se sont ouvertes : une case sans chiffre ne touche aucune mine. ' + nextText() : nextText());
+}
+const nextText = () => 'À vous : ouvrez une case sûre, ou posez un drapeau sur une mine.';
+function refuse(i, text) { shake(i); say(text); }
+
+function setArming(on) {
+  arming = on;
+  $('flagBtn').setAttribute('aria-pressed', String(on));
+  $('board').classList.toggle('arming', on);
+}
+function flagButton() {
+  if (arming) { setArming(false); return say('Drapeau annulé : un clic ouvre de nouveau les cases.'); }
+  if (G.first < 0) return say("Ouvrez d'abord une case : la première ne cache jamais de mine.");
+  setArming(true);
+  say(flagsLeft() ? 'Cliquez sur la case où poser le drapeau, ou sur un drapeau pour le retirer.'
+    : `Les ${G.mines} drapeaux sont posés : cliquez sur un drapeau pour le retirer.`);
+}
+
+/* ---------- End of the game ---------- */
+function finish(show) {
+  hint = null; setArming(false);
+  render();
+  if (G.result === 'won') {
+    say(`Bravo, vous avez gagné : les ${G.mines} mines sont trouvées.`);
+    if (show) later(() => Kit.dialog('Bravo, vous avez gagné !', `Vous avez trouvé les ${G.mines} mines sans en toucher une.${!wonNow ? '' : stats.won === 1 ? " C'est votre première victoire." : ` C'est votre ${stats.won}e victoire.`}`,
+      [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', home]], true), REDUCED ? 0 : 600);
+  } else {
+    say('Perdu : il y avait une mine sous cette case. « Annuler le dernier coup » reprend juste avant.');
+    if (show) later(() => Kit.dialog('Une mine a sauté', 'Il y avait une mine sous cette case. Vous pouvez reprendre la partie juste avant ce coup.',
+      [['Annuler le dernier coup', doUndo, true], ['Nouvelle partie', askNewGame], ['Retour aux jeux', home]]), REDUCED ? 0 : 500);
+  }
+}
+const home = () => { location.href = $('home').href; };
+
+/* ---------- Buttons ---------- */
+function later(fn, ms) { const t = setTimeout(() => { timers = timers.filter(x => x !== t); fn(); }, ms); timers.push(t); return t; }
+function doUndo() {
+  if (!undo.length) return;
+  timers.forEach(clearTimeout); timers = [];
+  Kit.closeDialog();
+  G = JSON.parse(undo.pop()); hint = null; setArming(false);
+  save(); render();
+  say(G.first < 0 ? 'Coup annulé. Cliquez sur une case pour commencer.' : 'Coup annulé. ' + nextText());
+}
+
+// One sentence for each step of the reasoning (engine.js): the numbers it uses get a yellow ring,
+// the squares it is about a yellow frame.
+function hintText(h) {
+  const many = h.cells && h.cells.length > 1;
+  const them = many ? 'les cases encadrées sont sûres, ouvrez-les' : 'la case encadrée est sûre, ouvrez-la';
+  const flagIt = many ? 'posez un drapeau sur chaque case encadrée' : 'posez un drapeau sur la case encadrée';
+  const na = h.a >= 0 ? D.number(G, h.a) : 0, nb2 = h.b >= 0 ? D.number(G, h.b) : 0;
+  const left = i => D.number(G, i) - nb(i).filter(j => G.cells[j] === 'f').length;
+  switch (h.kind + '-' + h.rule) {
+    case 'safe-one': return `Le ${na} entouré a déjà ${na === 1 ? 'son drapeau' : `ses ${na} drapeaux`} : ${them}.`;
+    case 'mine-one': {
+      const k = h.cells.length;
+      return k === 1 ? `Le ${na} entouré n'a plus qu'une case fermée pour sa mine : ${flagIt}.`
+        : `Le ${na} entouré n'a plus que ${k} cases fermées pour ${k} mines : ${flagIt}.`;
+    }
+    case 'safe-two': return `Il manque autant de mines au ${nb2} qu'au ${na}, tous deux entourés, et toutes les cases fermées du ${na} touchent le ${nb2} : ${them}.`;
+    case 'mine-two': {
+      const d = left(h.b) - left(h.a);
+      return `Il manque ${plural(d, 'mine', 'mines')} de plus au ${nb2} qu'au ${na}, tous deux entourés, et seule${many ? 's les cases encadrées touchent' : ' la case encadrée touche'} le ${nb2} sans toucher le ${na} : ${flagIt}.`;
+    }
+    case 'safe-count': return `Toutes les mines ont leur drapeau : ${them}.`;
+    case 'mine-count': return `Il reste ${plural(h.left, 'mine', 'mines')} et ${plural(h.left, 'case fermée', 'cases fermées')} : ${flagIt}.`;
+    default: return `La case encadrée est sûre : ouvrez-la.`;
+  }
+}
+function showHint() {
+  if (G.result || Kit.isOpen()) return;
+  setArming(false);
+  const h = D.hint(G);
+  if (!h) return;
+  if (h.kind === 'start') { hint = null; render(); return say("Cliquez sur n'importe quelle case : la première ne cache jamais de mine."); }
+  if (h.kind === 'wrong') { hint = { cells: [h.cell] }; render(); return say("Il n'y a pas de mine sous le drapeau encadré : cliquez dessus pour le retirer."); }
+  hint = { cells: h.cells, ring: [h.a, h.b].filter(x => x >= 0) };
+  render();
+  say(hintText(h));
+}
+
+function askNewGame() {
+  Kit.chooseLevel(level, playing(), newGame);
+}
+function newGame(lv) {
+  timers.forEach(clearTimeout); timers = [];
+  if (lv) level = lv;
+  Kit.showLevel(level);
+  const seed = crypto.getRandomValues(new Uint32Array(1))[0];
+  G = D.newGame(level, seed); undo = []; hint = null; wonNow = false; setArming(false);
+  // A stale window cannot save, so it does not count a game either.
+  if (save()) GG.track('demineur', 'start');
+  render();
+  say("Cliquez sur une case pour commencer : la première n'a jamais de mine.");
+}
+
+/* ---------- Drawing ---------- */
+const table = $('table'), boardEl = $('board');
+let squares = [], built = '', S = 50;
+function build() {
+  const key = G.w + 'x' + G.h;
+  if (built === key) return;
+  built = key; boardEl.innerHTML = ''; squares = [];
+  for (let i = 0; i < G.w * G.h; i++) {
+    const e = document.createElement('div');
+    e.className = 'c'; e.dataset.i = i; e.setAttribute('role', 'gridcell');
+    boardEl.appendChild(e); squares.push(e);
+  }
+}
+// The board fills the table, in the middle, with squares as large as fit (72 px at most). A tall,
+// narrow window (a phone) turns a wide board a quarter, so its squares stay large.
+function layout() {
+  const W = table.clientWidth, H = table.clientHeight;
+  const turned = H > W && G.w > G.h;
+  const cols = turned ? G.h : G.w, rows = turned ? G.w : G.h;
+  const room = (len, n) => (len - 32) / (n + .4);
+  // A phone scrolls down to the rest of the board rather than make its squares too small.
+  S = Math.floor(Math.max(24, Math.min(room(W, cols), innerWidth < 700 ? 72 : room(H, rows), 72)));
+  const F = Math.max(8, Math.round(S * .2));
+  const BX = Math.round((W - cols * S) / 2), BY = Math.max(F + 8, Math.round((H - rows * S) / 2));
+  const root = document.documentElement.style;
+  root.setProperty('--s', S + 'px'); root.setProperty('--cols', String(G.w));
+  boardEl.classList.toggle('turned', turned);
+  boardEl.style.left = BX + 'px'; boardEl.style.top = BY + 'px';
+  const frame = $('frame');
+  frame.style.left = BX - F + 'px'; frame.style.top = BY - F + 'px';
+  frame.style.width = cols * S + 2 * F + 'px'; frame.style.height = rows * S + 2 * F + 'px';
+  table.style.overflowY = BY + rows * S + F > H ? 'auto' : 'hidden';
+}
+
+function render() {
+  if (!G) return;
+  build(); layout();
+  const framed = new Set(hint ? hint.cells : []), ringed = new Set(hint && hint.ring ? hint.ring : []);
+  for (let i = 0; i < squares.length; i++) {
+    const e = squares[i], c = G.cells[i];
+    const n = c === 'o' ? D.number(G, i) : 0;
+    const boom = i === G.boom;
+    let cls = 'c' + (c === 'o' ? ' o' : '') + (n ? ' n n' + n : '') + (boom ? ' boom' : '');
+    if (framed.has(i)) cls += ' hint';
+    if (ringed.has(i)) cls += ' ring';
+    const html = boom ? MINE : c === 'f' ? FLAG : n ? String(n) : '';
+    if (e.className.replace(' shake', '') !== cls) e.className = cls;
+    if (e.dataset.html !== html) { e.innerHTML = html; e.dataset.html = html; }
+    const r = Math.floor(i / G.w) + 1, k = i % G.w + 1;
+    e.setAttribute('aria-label', `Ligne ${r}, colonne ${k} : ${boom ? 'mine' : c === 'f' ? 'drapeau' : c === 'o' ? (n ? n + (n === 1 ? ' mine autour' : ' mines autour') : 'vide') : 'fermée'}`);
+  }
+  $('flags').innerHTML = FLAG + `Drapeaux : ${D.flags(G)} sur ${G.mines}`;
+  $('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
+  $('undoBtn').disabled = !undo.length;
+  $('hintBtn').disabled = !!G.result;
+  $('flagBtn').disabled = !!G.result;
+}
+function shake(i) {
+  const e = squares[i];
+  if (!e) return;
+  e.classList.remove('shake'); void e.offsetWidth; e.classList.add('shake');
+}
+
+/* ---------- Mouse and touch ----------
+   A press and release on the same square is a click; the hand may move up to 16 px. The left button
+   opens, the right button puts or takes off a flag. A second click on the same square with the same
+   button within half a second is a double-click: it counts as one click. */
+const squareOf = e => { const el = e.target.closest && e.target.closest('.c'); return el ? +el.dataset.i : -1; };
+let press = null;
+boardEl.addEventListener('contextmenu', e => e.preventDefault());
+boardEl.addEventListener('pointerdown', e => {
+  if ((e.button !== 0 && e.button !== 2) || Kit.isOpen()) return;
+  e.preventDefault();
+  press = { i: squareOf(e), button: e.button, x: e.clientX, y: e.clientY, pointer: e.pointerId };
+});
+addEventListener('pointerup', e => {
+  if (!press || e.pointerId !== press.pointer || e.button !== press.button) return;
+  const p = press; press = null;
+  const el = document.elementFromPoint(e.clientX, e.clientY), i = el && el.closest('.c') ? +el.closest('.c').dataset.i : -1;
+  if (p.i < 0 || (i !== p.i && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 16)) return;
+  const t = performance.now(), prev = lastTap;
+  lastTap = { t, i: p.i, button: p.button };
+  if (prev && prev.i === p.i && prev.button === p.button && t - prev.t < 500) return;
+  tap(p.i, p.button === 2 ? 'flag' : 'open');
+});
+addEventListener('pointercancel', () => { press = null; });
+
+$('undoBtn').onclick = doUndo;
+$('hintBtn').onclick = showHint;
+$('flagBtn').onclick = flagButton;
+$('helpBtn').onclick = () => Kit.openHelp();
+$('newBtn').onclick = askNewGame;
+addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (!Kit.isOpen()) doUndo(); }
+  else if (e.key === 'Escape' && !Kit.escape() && arming) { setArming(false); say('Drapeau annulé : un clic ouvre de nouveau les cases.'); }
+});
+addEventListener('resize', render);
+
+// The rules open by themselves the first time the game is opened.
+if (load()) {
+  Kit.showLevel(level);
+  if (G.result) finish(false);
+  else { render(); say(G.first < 0 ? "Cliquez sur une case pour commencer : la première n'a jamais de mine." : nextText()); }
+} else {
+  Kit.firstVisit(newGame);
+}
+</script>
+</body>
+</html>
