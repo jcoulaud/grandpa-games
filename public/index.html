@@ -3,10 +3,40 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Jeux</title>
+<title>Jeux de Papi · Jeux simples, gratuits et sans publicité</title>
+<meta name="description" content="Des jeux simples pour les grands-parents : cartes, lettres, chiffres et réflexion, en grand et tout en français. Gratuit, sans publicité, sans compte et open source. S'installe sur l'ordinateur et marche sans internet.">
+<link rel="canonical" href="https://jeux-papi.fr/">
 <meta name="theme-color" content="#0F4F47">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Jeux de Papi">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://jeux-papi.fr/">
+<meta property="og:title" content="Jeux de Papi · Des jeux simples pour nos grands-parents">
+<meta property="og:description" content="Cartes, lettres, chiffres et réflexion, en grand et tout en français. Gratuit, sans publicité, sans compte et open source.">
+<meta property="og:image" content="https://jeux-papi.fr/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Une carte, un domino, des lettres et un dé sur un tapis vert, et le texte : des jeux simples pour nos grands-parents. Gratuit, sans publicité, sans compte, open source.">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Jeux de Papi",
+  "url": "https://jeux-papi.fr/",
+  "description": "Des jeux simples pour les grands-parents : cartes, lettres, chiffres et réflexion, en grand et tout en français.",
+  "inLanguage": "fr",
+  "applicationCategory": "GameApplication",
+  "operatingSystem": "Windows, macOS, Linux, Android, iOS",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+  "image": "https://jeux-papi.fr/og.jpg",
+  "sameAs": ["https://github.com/jcoulaud/grandpa-games"]
+}
+</script>
 <style>
   :root {
     --gold: #FFC83D; --accent: #0B6B5D; --text: #1B2422; --muted: #4E5A57;
@@ -30,8 +60,9 @@
   @media (max-width: 700px) { #deco { display: none; } }
 
   /* Greeting */
-  header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 14px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 6px; }
   h1 { margin: 0; font: 700 50px/1.05 var(--ui); letter-spacing: -.02em; }
+  #tagline { margin: 6px 0 0; font: 500 25px var(--ui); color: rgba(255,255,255,.78); }
   #now { text-align: right; }
   #time { font: 600 46px/1 var(--ui); letter-spacing: -.01em; color: rgba(255,255,255,.92); font-variant-numeric: tabular-nums; }
   #date { margin-top: 6px; font: 500 25px var(--ui); color: rgba(255,255,255,.78); }
@@ -129,7 +160,10 @@
 
 <main>
   <header>
-    <h1 id="hello">Bonjour Papi !</h1>
+    <div>
+      <h1 id="hello">Bonjour Papi !</h1>
+      <p id="tagline">Des jeux simples, gratuits et sans publicité.</p>
+    </div>
     <div id="now">
       <div id="time"></div>
       <div id="date"></div>
@@ -152,7 +186,7 @@
 <script src="lib/store.js"></script>
 <script>
 'use strict';
-// The library. To add a game: put it in games/<id>/index.html, add it here, and add its folder to CORE in sw.js.
+// The library. To add a game: put it in <id>/index.html, add it here, and add its folder to CORE in sw.js.
 // Each game has its own look: the felt of its table, and a picture made of cards, fanned or in a row.
 const GAMES = [
   { id: 'solitaire', title: 'Solitaire', text: 'Rangez toutes les cartes, de l’as jusqu’au roi.',
@@ -199,7 +233,7 @@ function render() {
     const playing = parts.some(p => /en cours/i.test(p));
     // The button already says a game is in progress: the line under the text shows only the wins.
     const wins = parts.filter(p => !/en cours/i.test(p)).join(' · ');
-    return `<a class="tile" href="games/${g.id}/" data-id="${g.id}">
+    return `<a class="tile" href="${g.id}/" data-id="${g.id}">
       <div class="art" style="background: radial-gradient(90% 120% at 50% 0%, ${g.felt[0]}, ${g.felt[1]})">${art(g.cards, false, g.row)}</div>
       <div class="body">
         <h3>${esc(g.title)}</h3>

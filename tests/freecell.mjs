@@ -6,7 +6,7 @@ let fails = 0;
 const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++; };
 
 // 1. The solver's plans follow the rules, on 40 random deals.
-require('../public/games/freecell/solver.js');
+require('../public/freecell/solver.js');
 const { solve, sApply } = globalThis.Solver;
 const rk = id => id % 13 + 1, st = id => (id / 13) | 0, rd = id => st(id) === 1 || st(id) === 2;
 const fits = (a, b) => rd(a) !== rd(b) && rk(b) === rk(a) + 1;

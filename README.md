@@ -9,7 +9,8 @@ The library is a website installed once as an app with Edge. It works offline. E
 ```
 public/                  the site, served as static files
   index.html             the library: greeting, a note from me, one tile per game
-  games/<id>/index.html  one game per folder
+  og.jpg                 the link preview image, drawn in scripts/og.html (node scripts/icons.mjs)
+  <id>/index.html        one game per folder, at jeux-papi.fr/<id>/
   lib/store.js           saves for every game, in the browser of the PC, and the statistics
   lib/kit.css, kit.js    shared look and behaviour: top bar, "Jeux" button, message line, rules guide, dialogs
   lib/cards.css, cards.js  playing cards: French names, suits, pips, court cards, back
@@ -24,11 +25,11 @@ migrations/              the database tables
 
 ## Add a game
 
-1. Make `public/games/<id>/index.html` like the solitaire: link `../../lib/kit.css` (and `../../lib/cards.css` for a card game), write the top bar, the message line, the table and the rules pages, then load `../../lib/store.js`, `../../lib/cards.js` and `../../lib/kit.js` before the game's own script. The top of `lib/kit.js` shows the markup.
+1. Make `public/<id>/index.html` like the solitaire: link `../lib/kit.css` (and `../lib/cards.css` for a card game), write the top bar, the message line, the table and the rules pages, then load `../lib/store.js`, `../lib/cards.js` and `../lib/kit.js` before the game's own script. The top of `lib/kit.js` shows the markup.
 2. The kit adds the "Jeux" button, the button icons (`data-icon="undo"`, `bulb`, `help`, `close`), the rules guide frame and the dialog. Use `Kit.say`, `Kit.dialog`, `Kit.openHelp` and `Kit.escape`.
 3. Save with `GG.save('<id>', data, { summary })` and read with `GG.load('<id>')`. `summary` is the line on the tile, for example "Partie en cours · 3 victoires".
-4. Give the game its own browser tab icon: `public/games/<id>/icon.svg`, linked with `<link rel="icon" href="icon.svg">`.
-5. Add the game to `GAMES` in `public/index.html` and in `src/worker.ts`, and its folder and icon to `CORE` in `public/sw.js`.
+4. Give the game its own browser tab icon: `public/<id>/icon.svg`, linked with `<link rel="icon" href="icon.svg">`.
+5. Add the game to `GAMES` in `public/index.html` and in `src/worker.ts`, its folder and icon to `CORE` in `public/sw.js`, and its address to `public/sitemap.xml`. Copy the description, canonical and `og:` tags from the solitaire page.
 6. Count its games with `GG.track('<id>', 'start')` when a game begins and `GG.track('<id>', 'won')` when it is won.
 7. Give the game its own look. Each game has its own felt colour: set `--felt-top`, `--felt`, `--shade` and `--accent` on `:root` in the game page, and the same felt in `GAMES`. Give its tile a different picture of cards. The solitaire is green with a fan of three cards. FreeCell is blue with four aces in a row.
 
@@ -36,7 +37,7 @@ When a game changes its save format, it must still read the old format. His save
 
 ## Games
 
-- `public/games/solitaire/`: draw-one Klondike.
+- `public/solitaire/`: draw-one Klondike.
   - A solver deals only games that it has won.
   - Click a card. With one legal place, it goes there at once. With several, click one of the places framed in yellow. Dragging also works.
   - The game says where the card went, and the card keeps a yellow outline for 1 s.
@@ -52,7 +53,7 @@ When a game changes its save format, it must still read the old format. His save
   - The game saves after each move.
   - The card size depends only on the window, so the board does not move during a game.
 
-- `public/games/freecell/`: FreeCell, with four free cells and eight columns.
+- `public/freecell/`: FreeCell, with four free cells and eight columns.
   - All the cards are face up from the start. The solver in `solver.js` deals only games that it has won.
   - The clicks, drag, hint, undo, automatic cards, saves and statistics work as in the solitaire.
   - The empty free cells count as one place, and so do the empty columns. So a card that fits nowhere else goes to a free cell with one click. The game frames only the first empty free cell and the first empty column, but a click or a drop on another one also works.
