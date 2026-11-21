@@ -1,0 +1,43 @@
+/* Playing cards: the face, the index, the pips, the court cards and the back.
+   Size comes from --w and --h, set by the game. Drawn by lib/cards.js. */
+:root { --w: 110px; --h: 143px; }
+/* Cards */
+.card {
+  position: absolute; width: var(--w); height: var(--h); border-radius: calc(var(--w) * .09);
+  background: var(--face); border: 1px solid #7E786B;
+  box-shadow: 0 1px 2px rgba(0,0,0,.4), 0 3px 8px rgba(0,0,0,.22);
+  transition: left .3s cubic-bezier(.2,.7,.3,1), top .3s cubic-bezier(.2,.7,.3,1);
+}
+.instant .card { transition: none !important; }
+.card.dragging { transition: none; box-shadow: 0 12px 28px rgba(0,0,0,.5); }
+.card.can { cursor: pointer; }
+.card.can:hover { outline: 3px solid #fff; outline-offset: 0; }
+.card.landed, .card.landed:hover { outline: 5px solid var(--gold); outline-offset: 0; }
+.card.red { color: var(--red); }
+.card.black { color: var(--ink); }
+.ix {
+  position: absolute; top: calc(var(--w) * .035); left: calc(var(--w) * .07);
+  display: flex; align-items: center; gap: calc(var(--w) * .02);
+  font: 700 calc(var(--w) * .34)/1 "Segoe UI", Arial, sans-serif; white-space: nowrap; letter-spacing: -.02em;
+}
+.s { width: calc(var(--w) * .3); height: calc(var(--w) * .3); flex: none; fill: currentColor; }
+.c { position: absolute; left: 6%; right: 6%; top: 31%; bottom: 4%; }
+.c svg { display: block; width: 100%; height: 100%; fill: currentColor; }
+.card.down {
+  border: 1px solid #0B1D33;
+  background:
+    repeating-linear-gradient(45deg, rgba(255,210,74,.3) 0 1px, transparent 1px calc(var(--w) * .27)),
+    repeating-linear-gradient(-45deg, rgba(255,210,74,.3) 0 1px, transparent 1px calc(var(--w) * .27)),
+    repeating-linear-gradient(45deg, rgba(255,255,255,.12) 0 2px, transparent 2px calc(var(--w) * .09)),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,.12) 0 2px, transparent 2px calc(var(--w) * .09)),
+    var(--back);
+  box-shadow: inset 0 0 0 calc(var(--w) * .04) var(--back), inset 0 0 0 calc(var(--w) * .06) var(--face),
+    inset 0 0 0 calc(var(--w) * .085) var(--back), inset 0 0 0 calc(var(--w) * .095) var(--gold),
+    0 1px 2px rgba(0,0,0,.4), 0 3px 8px rgba(0,0,0,.22); }
+.card.down > * { display: none; }
+/* A card buried in the stock, the waste or a foundation casts no shadow, so a thick pile has no dark halo. */
+.card.under { box-shadow: none; }
+.card.down.under { box-shadow: inset 0 0 0 calc(var(--w) * .04) var(--back), inset 0 0 0 calc(var(--w) * .06) var(--face),
+    inset 0 0 0 calc(var(--w) * .085) var(--back), inset 0 0 0 calc(var(--w) * .095) var(--gold); }
+
+@media (prefers-reduced-motion: reduce) { .card { transition: none; } }

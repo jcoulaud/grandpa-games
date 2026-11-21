@@ -4,56 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Solitaire</title>
+<link rel="stylesheet" href="../../lib/kit.css">
+<link rel="stylesheet" href="../../lib/cards.css">
 <style>
-  :root {
-    --w: 110px; --h: 143px; --gap: 12px;
-    --gold: #FFC83D; --accent: #0B6B5D; --text: #1B2422;
-    --face: #FFFDF6; --ink: #14171A; --red: #C4122F; --back: #1F4470;
-    --ui: "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
-  }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; }
-  body {
-    display: grid; grid-template-rows: auto auto 1fr;
-    background: radial-gradient(120% 100% at 50% 0%, #1A6A5F, #0F4F47 70%) #0F4F47; color: #fff;
-    font-family: var(--ui);
-    overflow: hidden; user-select: none; -webkit-user-select: none; touch-action: none;
-  }
-
-  /* Top bar: a light, flat surface with the buttons */
-  #bar { display: flex; align-items: center; gap: 12px; padding: 8px 18px; background: #F6F8F7; color: var(--text);
-    border-bottom: 1px solid rgba(0,0,0,.14); box-shadow: 0 2px 14px rgba(0,0,0,.22); position: relative; z-index: 10; }
-  #title { display: flex; align-items: center; gap: 10px; font: 700 28px var(--ui); letter-spacing: -.01em; margin-right: 14px; }
-  #title svg { width: 28px; height: 28px; fill: var(--accent); }
-  button {
-    min-height: 54px; padding: 8px 22px; border-radius: 15px; border: 0; cursor: pointer;
-    display: inline-flex; align-items: center; gap: 10px;
-    font: 600 21px var(--ui); background: #E4E9E7; color: var(--text);
-    transition: background-color .12s;
-  }
-  button svg { width: 26px; height: 26px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  button:hover { background: #D5DCD9; }
-  button:active { background: #C6CFCB; }
-  button:focus-visible { outline: 4px solid #1B2422; outline-offset: 3px; box-shadow: 0 0 0 3px #fff; }
-  button:disabled, button:disabled:hover { background: #EEF1F0; color: #5F6764; cursor: default; }
-  button.primary { background: var(--gold); color: #1F1A00; }
-  button.primary:hover { background: #FFD666; }
-  button.primary:active { background: #F2BB2E; }
-  #wins { margin-left: auto; display: flex; align-items: center; gap: 8px; font: 600 20px var(--ui); color: var(--text); white-space: nowrap; padding-right: 8px; }
-  #wins:empty { visibility: hidden; }
-  #wins::before { content: ""; width: 26px; height: 26px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B2422' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 4h10v5a5 5 0 0 1-10 0z'/%3E%3Cpath d='M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v4M8.5 20h7'/%3E%3C/svg%3E") center / contain no-repeat; }
-  #newBtn { background: transparent; box-shadow: inset 0 0 0 2px #B9C2BF; }
-  #newBtn:hover { background: #E4E9E7; }
-
-  /* Message line: a white rounded strip on the table. One line, one height. */
-  #msgRail { padding: 8px 18px 0; }
-  #msg {
-    height: 46px; padding: 0 18px; display: flex; align-items: center; gap: 12px;
-    background: #fff; color: var(--text); font: 600 22px/1.2 var(--ui);
-    border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,.25);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  #msg::before { content: ""; flex: none; width: 28px; height: 28px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230B6B5D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 12a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.2-4.6A8.5 8.5 0 1 1 21 12z'/%3E%3C/svg%3E") center / contain no-repeat; }
+  :root { --gap: 12px; }
 
   /* Table: one flat colour, lit softly from the top. Empty places are soft translucent shapes. */
   #table { position: relative; overflow-x: hidden; overflow-y: auto; }
@@ -70,25 +24,8 @@
   .slot.can { cursor: pointer; background: rgba(255,255,255,.17); color: #fff; }
   .slot.can:hover { background: rgba(255,255,255,.26); }
   .plabel { position: absolute; width: var(--w); text-align: center; color: rgba(255,255,255,.88); font: 600 20px/24px var(--ui); white-space: nowrap; }
-  #foundLabel { width: calc(var(--w) * 2 + var(--gap)); }
+  #foundLabel { width: calc(var(--w) * 4 + var(--gap) * 3); }
 
-  /* Rules guide */
-  #help, #over { position: fixed; inset: 0; background: rgba(6,28,25,.6); display: none; align-items: center; justify-content: center; z-index: 5000; }
-  #help.on, #over.on { display: flex; }
-  #helpBox, #box { background: #fff; color: var(--text); border-radius: 24px; box-shadow: 0 30px 90px rgba(0,0,0,.45); }
-  #helpBox { width: min(840px, 94vw); max-height: 92vh; display: flex; flex-direction: column; }
-  #helpBox .head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px 2px 40px; }
-  #helpBox h2 { margin: 0; font: 700 32px var(--ui); letter-spacing: -.01em; }
-  #helpText { overflow-y: auto; padding: 0 40px; font: 400 22px/1.45 var(--ui); color: #26302D; }
-  #helpText h3 { margin: 18px 0 4px; font: 700 23px var(--ui); color: var(--accent); }
-  #helpText p { margin: 0 0 8px; }
-  #helpText .page { display: none; }
-  #helpText .page.on { display: block; }
-  #helpBox .end { padding: 16px 40px 28px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  #helpBox .end button, #overBtns button { min-height: 58px; padding: 8px 28px; justify-content: center; }
-  #helpBox .end button { min-width: 190px; }
-  #helpBox .end button[hidden] { visibility: hidden; display: block; }
-  #helpPage { font: 600 20px var(--ui); color: #55605C; }
   #stockCount {
     position: absolute; z-index: 90; pointer-events: none; width: var(--w); height: var(--h);
     display: flex; align-items: center; justify-content: center;
@@ -99,45 +36,6 @@
     box-shadow: 0 2px 8px rgba(0,0,0,.45);
     font: 700 calc(var(--w) * .28)/1 var(--ui);
   }
-
-  /* Cards */
-  .card {
-    position: absolute; width: var(--w); height: var(--h); border-radius: calc(var(--w) * .09);
-    background: var(--face); border: 1px solid #7E786B;
-    box-shadow: 0 1px 2px rgba(0,0,0,.4), 0 3px 8px rgba(0,0,0,.22);
-    transition: left .3s cubic-bezier(.2,.7,.3,1), top .3s cubic-bezier(.2,.7,.3,1);
-  }
-  .instant .card { transition: none !important; }
-  .card.dragging { transition: none; box-shadow: 0 12px 28px rgba(0,0,0,.5); }
-  .card.can { cursor: pointer; }
-  .card.can:hover { outline: 3px solid #fff; outline-offset: 0; }
-  .card.landed, .card.landed:hover { outline: 5px solid var(--gold); outline-offset: 0; }
-  .card.red { color: var(--red); }
-  .card.black { color: var(--ink); }
-  .ix {
-    position: absolute; top: calc(var(--w) * .035); left: calc(var(--w) * .07);
-    display: flex; align-items: center; gap: calc(var(--w) * .02);
-    font: 700 calc(var(--w) * .34)/1 "Segoe UI", Arial, sans-serif; white-space: nowrap; letter-spacing: -.02em;
-  }
-  .s { width: calc(var(--w) * .3); height: calc(var(--w) * .3); flex: none; fill: currentColor; }
-  .c { position: absolute; left: 6%; right: 6%; top: 31%; bottom: 4%; }
-  .c svg { display: block; width: 100%; height: 100%; fill: currentColor; }
-  .card.down {
-    border: 1px solid #0B1D33;
-    background:
-      repeating-linear-gradient(45deg, rgba(255,210,74,.3) 0 1px, transparent 1px calc(var(--w) * .27)),
-      repeating-linear-gradient(-45deg, rgba(255,210,74,.3) 0 1px, transparent 1px calc(var(--w) * .27)),
-      repeating-linear-gradient(45deg, rgba(255,255,255,.12) 0 2px, transparent 2px calc(var(--w) * .09)),
-      repeating-linear-gradient(-45deg, rgba(255,255,255,.12) 0 2px, transparent 2px calc(var(--w) * .09)),
-      var(--back);
-    box-shadow: inset 0 0 0 calc(var(--w) * .04) var(--back), inset 0 0 0 calc(var(--w) * .06) var(--face),
-      inset 0 0 0 calc(var(--w) * .085) var(--back), inset 0 0 0 calc(var(--w) * .095) var(--gold),
-      0 1px 2px rgba(0,0,0,.4), 0 3px 8px rgba(0,0,0,.22); }
-  .card.down > * { display: none; }
-  /* A card buried in the stock, the waste or a foundation casts no shadow, so a thick pile has no dark halo. */
-  .card.under { box-shadow: none; }
-  .card.down.under { box-shadow: inset 0 0 0 calc(var(--w) * .04) var(--back), inset 0 0 0 calc(var(--w) * .06) var(--face),
-      inset 0 0 0 calc(var(--w) * .085) var(--back), inset 0 0 0 calc(var(--w) * .095) var(--gold); }
 
   /* Selection, destinations and hints: yellow, with a dark edge so it shows on a white card. */
   #ring {
@@ -153,43 +51,23 @@
   .mark.over { border-style: solid; background: rgba(255,200,61,.48); }
   .mark.hint { border: 6px solid var(--gold); animation: pulse 1.6s ease-in-out infinite; }
   @keyframes pulse { 50% { background: rgba(255,200,61,.52); } }
-  .shake { animation: sh .3s; }
-  @keyframes sh { 25% { translate: -8px 0; } 75% { translate: 8px 0; } }
 
-  /* Dialog */
-  #over.soft { background: rgba(6,28,25,.3); }
-  #box { padding: 40px 48px 40px; text-align: center; max-width: min(680px, 92vw); }
-  #box h2 { margin: 0 0 10px; font: 700 32px var(--ui); letter-spacing: -.01em; }
-  #box p { margin: 0 0 28px; font: 400 22px/1.4 var(--ui); color: #3A4542; }
-  #box p:empty { display: none; }
-  #overBtns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 6px; }
-  /* The win: a yellow badge with a check mark grows in once. */
-  #over.soft #box::before {
-    content: ""; display: block; width: 84px; height: 84px; margin: 0 auto 18px; border-radius: 50%;
-    background: var(--gold) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231F1A00' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 48px no-repeat; animation: pop .45s cubic-bezier(.2,1.4,.4,1) both;
-  }
-  @keyframes pop { from { transform: scale(.3); opacity: 0; } }
 
-  @media (prefers-reduced-motion: reduce) {
-    .card { transition: none; }
-    .mark.hint, .shake, #over.soft #box::before { animation: none; }
-  }
+  @media (prefers-reduced-motion: reduce) { .mark.hint { animation: none; } }
 </style>
 </head>
 <body>
 <div id="bar">
   <div id="title"><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#su0"/></svg>Solitaire</div>
-  <button id="undoBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>Annuler</button>
-  <button id="hintBtn" class="primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg>Voir un coup</button>
-  <div id="wins"></div>
-  <button id="helpBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 2-2.7 2.4-2.7 4.3"/><path d="M12 17.6v.1"/></svg>Règles</button>
-  <button id="newBtn">Nouvelle partie</button>
+  <button id="undoBtn" data-icon="undo" title="Annuler le dernier coup joué"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Montrez-moi un bon coup à jouer"><span class="long">Montrez-moi un coup</span><span class="short">Aide</span></button>
+  <span class="spacer"></span>
+  <button id="helpBtn" data-icon="help">Règles</button>
+  <button id="newBtn" class="quiet">Nouvelle partie</button>
 </div>
-<div id="msgRail"><div id="msg" aria-live="polite"></div></div>
+<div id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div></div>
 <div id="table"></div>
-<div id="help"><div id="helpBox" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
-  <div class="head"><h2 id="helpTitle">Comment jouer</h2><button id="helpClose"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>Fermer</button></div>
-  <div id="helpText">
+<div id="help" data-title="Comment jouer">
     <section class="page">
       <h3>Le but</h3>
       <p>Rangez toutes les cartes sur les quatre piles « Rangement », à gauche. Chaque pile reçoit une seule couleur : pique, cœur, carreau ou trèfle. On commence par l'as, puis le 2, le 3, et ainsi de suite jusqu'au roi.</p>
@@ -206,48 +84,26 @@
     </section>
     <section class="page">
       <h3>Les boutons</h3>
-      <p>« Voir un coup » montre un bon coup à jouer. « Annuler » revient en arrière, sans limite. « Nouvelle partie » commence une autre partie. « Règles » ouvre ces explications.</p>
+      <p>« Montrez-moi un coup » montre un bon coup à jouer. « Annuler le dernier coup » revient un coup en arrière, autant de fois que vous voulez. « Nouvelle partie » commence une autre partie. « Règles » ouvre ces explications.</p>
       <h3>Bon à savoir</h3>
       <p>Si une carte ne peut pas aller quelque part, la ligne sous les boutons explique pourquoi.</p>
       <p>Toutes les parties peuvent être gagnées. Les cartes qui ne servent plus vont toutes seules au rangement. La partie est enregistrée à chaque coup : vous la retrouvez en rouvrant le jeu.</p>
     </section>
-  </div>
-  <div class="end">
-    <button id="helpPrev">Précédent</button>
-    <span id="helpPage"></span>
-    <button id="helpNext" class="primary">Suivant</button>
-  </div>
-</div></div>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-  <symbol id="su0" viewBox="0 0 100 100"><path d="M50 5C62 26 95 40 95 61c0 12-10 20-21 20-8 0-15-4-19-11 1 11 6 20 13 26H32c7-6 12-15 13-26-4 7-11 11-19 11C15 81 5 73 5 61 5 40 38 26 50 5z"/></symbol>
-  <symbol id="su1" viewBox="0 0 100 100"><path d="M50 92C22 66 5 50 5 31 5 17 16 7 29 7c9 0 17 5 21 14 4-9 12-14 21-14 13 0 24 10 24 24 0 19-17 35-45 61z"/></symbol>
-  <symbol id="su2" viewBox="0 0 100 100"><path d="M50 2Q69 29 91 50Q69 71 50 98Q31 71 9 50Q31 29 50 2z"/></symbol>
-  <symbol id="su3" viewBox="0 0 100 100"><circle cx="50" cy="26" r="21"/><circle cx="26" cy="58" r="21"/><circle cx="74" cy="58" r="21"/><path d="M40 40h20v20H40zM46 56c0 18-5 31-13 40h34c-8-9-13-22-13-40z"/></symbol>
-  <clipPath id="courtClip"><rect x="1" y="1" width="86" height="82" rx="7"/></clipPath>
-</defs></svg>
-<div id="over"><div id="box" role="dialog" aria-modal="true" aria-labelledby="overTitle"><h2 id="overTitle"></h2><p id="overText"></p><div id="overBtns"></div></div></div>
+</div>
 
+<script src="../../lib/store.js"></script>
+<script src="../../lib/cards.js"></script>
+<script src="../../lib/kit.js"></script>
 <script>
 'use strict';
 /* ---------- Cards ---------- */
-const RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'V', 'D', 'R'];
-const RANK_NAMES = ['', 'as', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'valet', 'dame', 'roi'];
-const SUIT_NAMES = ['pique', 'cœur', 'carreau', 'trèfle'];
-const SUIT_PLURALS = ['piques', 'cœurs', 'carreaux', 'trèfles'];
+const { RANKS, RANK_NAMES, SUIT_NAMES, SUIT_PLURALS, rk, st, rd, cap, cardName, suitHtml, pip, faceSvg } = Cards;
 const KEY = 'solitaire-grand-pere-v2';
-const rk = id => id % 13 + 1;
-const st = id => (id / 13) | 0;
-const rd = id => st(id) === 1 || st(id) === 2;
 const last = a => a[a.length - 1];
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const LAND_MS = 1000; // how long a card that just moved keeps its yellow outline
 const AUTO_DELAY = 450, FINISH_DELAY = 140; // between two automatic cards: in play, and once the game is decided
 
-const cap = s => s[0].toUpperCase() + s.slice(1);
-function cardName(id) {
-  const r = rk(id);
-  return (r === 1 ? "l'" : r === 12 ? 'la ' : 'le ') + RANK_NAMES[r] + ' de ' + SUIT_NAMES[st(id)];
-}
 const HELLO = "Cliquez sur la carte à déplacer. Si elle a plusieurs places possibles, cliquez ensuite sur celle que vous voulez.";
 
 /* ---------- Solver ----------
@@ -391,14 +247,19 @@ function winnableDeal() {
 }
 
 // Every undo step is saved. If the browser storage is full, the oldest steps go first.
+// The cloud backup keeps only the game and the wins, not the undo steps.
 function save() {
+  const parts = [];
+  if (S.moves > 0 && !isWon()) parts.push('Partie en cours');
+  if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
   for (const n of [Infinity, 2000, 300]) {
-    try { localStorage.setItem(KEY, JSON.stringify({ S, undo: undo.slice(-n), stats })); return; } catch (e) {}
+    if (GG.save('solitaire', { S, undo: undo.slice(-n), stats }, { cloud: { S, stats }, summary: parts.join(' · ') })) return;
   }
 }
 function load() {
   try {
-    const v = JSON.parse(localStorage.getItem(KEY));
+    let v = GG.load('solitaire');
+    if (!v) v = JSON.parse(localStorage.getItem(KEY)); // saves from before the library
     if (v && v.stats) stats = v.stats;
     if (v && v.S) { S = v.S; undo = v.undo || []; return true; }
   } catch (e) {}
@@ -459,8 +320,7 @@ function why(loc, dst) {
 }
 
 /* ---------- Messages ---------- */
-const msgEl = document.getElementById('msg');
-function setMsg(text) { msgEl.textContent = text; }
+const setMsg = Kit.say;
 function chosenMsg(loc) {
   const p = pileOf(loc), n = p.length - 1 - loc.k;
   const name = cardName(p[loc.k].id);
@@ -687,72 +547,6 @@ function mk(cls, html) {
   if (html) e.innerHTML = html;
   table.appendChild(e); return e;
 }
-// The faces are drawn here. Suits are the SVG symbols su0..su3, so they look the same on every PC.
-const suitHtml = s => `<svg class="s" viewBox="0 0 100 100"><use href="#su${s}"/></svg>`;
-const pip = (s, x, y, d) => `<use href="#su${s}" x="${x - d / 2}" y="${y - d / 2}" width="${d}" height="${d}"/>`;
-// Pip places in an 88 x 84 box: [x, y] per pip, then the pip size.
-const PIPS = (() => {
-  const Lx = 18, C = 44, R = 70, pair = y => [[Lx, y], [R, y]];
-  const three = [12, 42, 72].flatMap(pair), four = [11, 31.5, 52, 72.5].flatMap(pair);
-  return {
-    2: [[[C, 20], [C, 64]], 32], 3: [[[C, 13], [C, 42], [C, 71]], 25],
-    4: [[...pair(18), ...pair(66)], 28], 5: [[...pair(16), [C, 42], ...pair(68)], 26],
-    6: [three, 23], 7: [[...three, [C, 27]], 22], 8: [[...three, [C, 27], [C, 57]], 22],
-    9: [[...four, [C, 42]], 19.5], 10: [[...four, [C, 21], [C, 62.5]], 19.5],
-  };
-})();
-// Court cards: a flat bust in the suit colour. The valet wears a feathered cap,
-// the dame long hair and a pearl diadem, the roi a tall crown and a beard.
-function court(r, s) {
-  const red = s === 1 || s === 2, P = red ? '#C4122F' : '#1C2B45', bg = red ? '#FCEDE9' : '#E9EDF3';
-  const G = '#E0A526', GD = '#8A5F00', SK = '#F2CFA8', SK2 = '#E0B58A', H = '#4A3222', IV = '#FFFDF6', INK = '#14171A';
-  const eyes = `<circle cx="39.6" cy="36.5" r="1.5" fill="${INK}"/><circle cx="48.4" cy="36.5" r="1.5" fill="${INK}"/>`;
-  const robe = `<path d="M8 82C9 63 26 56 44 56s35 7 36 26z" fill="${P}"/>`;
-  const neck = `<rect x="39" y="46" width="10" height="13" fill="${SK2}"/>`;
-  let fig;
-  if (r === 13) fig = `${robe}
-    <path d="M22 61c8-6 17-5 22 2 5-7 14-8 22-2l2 11c-8-6-18-5-24 3-6-8-16-9-24-3z" fill="${IV}" stroke="${INK}" stroke-width=".6"/>
-    <g fill="${INK}"><ellipse cx="29" cy="65" rx="1.1" ry="2"/><ellipse cx="36" cy="66.5" rx="1.1" ry="2"/><ellipse cx="52" cy="66.5" rx="1.1" ry="2"/><ellipse cx="59" cy="65" rx="1.1" ry="2"/></g>
-    <path d="M30 30c-2 10 0 18 4 23h20c4-5 6-13 4-23z" fill="${H}"/>${neck}
-    <ellipse cx="44" cy="38" rx="11.5" ry="13" fill="${SK}"/>
-    <path d="M32.5 39c.5 14 5.5 21 11.5 21s11-7 11.5-21c-2.5 5-6.5 6.5-11.5 6.5S35 44 32.5 39z" fill="${H}"/>
-    <path d="M40.5 48.5q3.5 2 7 0" fill="none" stroke="${SK}" stroke-width="1.5" stroke-linecap="round"/>${eyes}
-    <path d="M28 27L26 9l9 8 9-12 9 12 9-8-2 18z" fill="${G}" stroke="${GD}" stroke-width=".8" stroke-linejoin="round"/>
-    <rect x="27.5" y="23" width="33" height="5" rx="1" fill="${P}"/>
-    <g fill="${P}"><circle cx="26" cy="9" r="2.4"/><circle cx="44" cy="5" r="2.4"/><circle cx="62" cy="9" r="2.4"/></g><circle cx="44" cy="25.5" r="1.7" fill="${G}"/>`;
-  else if (r === 12) fig = `<path d="M26 39c0-18 8-25 18-25s18 7 18 25c0 12 3 20 9 26H17c6-6 9-14 9-26z" fill="${H}"/>${robe}
-    <path d="M32 57.5L44 73l12-15.5c-5-2-19-2-24 0z" fill="${SK}"/>${neck}
-    <path d="M34.5 59q9.5 9 19 0" fill="none" stroke="${G}" stroke-width="1.8"/>
-    <ellipse cx="44" cy="38.5" rx="10.5" ry="12.5" fill="${SK}"/>
-    <path d="M33.5 36c0-9 5-12 10.5-12s10.5 3 10.5 12c-3-5-6.5-7-10.5-7s-7.5 2-10.5 7z" fill="${H}"/>${eyes}
-    <circle cx="37.5" cy="42.5" r="2.2" fill="#E58F7C" opacity=".6"/><circle cx="50.5" cy="42.5" r="2.2" fill="#E58F7C" opacity=".6"/>
-    <path d="M41 45.5q3 2.6 6 0q-3 1-6 0z" fill="#C4122F" stroke="#C4122F" stroke-width=".8" stroke-linejoin="round"/>
-    <path d="M32 23l-1-11 6.5 5L44 8l6.5 9 6.5-5-1 11z" fill="${G}" stroke="${GD}" stroke-width=".8" stroke-linejoin="round"/>
-    <g fill="${IV}" stroke="${GD}" stroke-width=".7"><circle cx="31" cy="12" r="2"/><circle cx="44" cy="8" r="2"/><circle cx="57" cy="12" r="2"/></g>`;
-  else fig = `${robe}
-    <path d="M27 59l17 6 17-6 2 9-19 8-19-8z" fill="${IV}" stroke="${INK}" stroke-width=".6" stroke-linejoin="round"/>
-    <path d="M30 31c-2 10-1 17 2 23h24c3-6 4-13 2-23z" fill="${H}"/>${neck}
-    <ellipse cx="44" cy="39" rx="11" ry="13" fill="${SK}"/>${eyes}
-    <path d="M40.5 46q3.5 2.6 7 0" fill="none" stroke="${INK}" stroke-width="1.3" stroke-linecap="round"/>
-    <path d="M58 22C60 9 70 3 81 5c-4 7-10 14-21 20z" fill="${IV}" stroke="${INK}" stroke-width=".6" stroke-linejoin="round"/>
-    <path d="M59.5 23.5Q68 11 79 6" fill="none" stroke="${G}" stroke-width="1.1"/>
-    <path d="M29 29C25 15 38 8 49 10s15 9 11 19z" fill="${P}"/>
-    <rect x="28" y="26" width="33" height="5" rx="1" fill="${G}" stroke="${GD}" stroke-width=".7"/>`;
-  // The bust is enlarged from its top edge and cut by the frame. The suit sits on a brooch at the collar.
-  return `<rect x="1" y="1" width="86" height="82" rx="7" fill="${bg}"/>
-    <g clip-path="url(#courtClip)"><g transform="translate(44 4) scale(1.15) translate(-44 -4)">${fig}</g></g>
-    <circle cx="44" cy="75.5" r="6.8" fill="${IV}" stroke="${G}" stroke-width="1.5"/><g fill="${P}">${pip(s, 44, 75.5, 9.5)}</g>
-    <rect x="1" y="1" width="86" height="82" rx="7" fill="none" stroke="${P}" stroke-width="1.6"/>`;
-}
-function faceSvg(id) {
-  const s = st(id), r = rk(id);
-  let g;
-  if (r === 1) g = `<circle cx="44" cy="42" r="39" fill="none" stroke="currentColor" stroke-width="1.2"/>
-    <circle cx="44" cy="42" r="35" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray=".1 4.3" stroke-linecap="round"/>${pip(s, 44, 42, 50)}`;
-  else if (r > 10) g = court(r, s);
-  else g = PIPS[r][0].map(([x, y]) => pip(s, x, y, PIPS[r][1])).join('');
-  return `<svg viewBox="0 0 88 84" aria-hidden="true">${g}</svg>`;
-}
 function makeCard(id) {
   const s = st(id), r = rk(id);
   const el = mk('card down ' + (rd(id) ? 'red' : 'black'), `<div class="ix">${RANKS[r]}${suitHtml(s)}</div><div class="c">${faceSvg(id)}</div>`);
@@ -773,39 +567,41 @@ function build() {
 }
 
 // Card size depends only on the window, so the board never moves during a game.
-// Left: the stock, the waste and the four foundations. Right: the seven columns.
+// Classic layout: the top row holds the stock, the waste and, over the last four columns, the four
+// foundations. The seven columns fill the width below.
 const RATIO = 1.3, UP = 0.3, DOWN = 0.08, LABEL = 30;
 function layout() {
   const W = table.clientWidth, H = table.clientHeight;
   const m = 26, g0 = Math.max(10, Math.round(W * 0.009)), pad = 12;
-  const byWidth = (W - 2 * m - 7 * g0 - 3 * g0) / 9;
-  const byHeight = (H - 2 * pad) / (1 + 9 * UP + 3 * DOWN) / RATIO; // room for a run of ten cards
+  const byWidth = (W - 2 * m - 6 * g0) / 7;
+  // Height: the top row and its labels, then a column with six face-down and six face-up cards.
+  // Longer columns squeeze (see colY), so the cards can stay large on a laptop.
+  const byHeight = (H - 2 * pad - LABEL - g0) / (2 + 5 * UP + 3 * DOWN) / RATIO;
   const w = Math.floor(Math.max(48, Math.min(byWidth, byHeight, 170)));
   const h = Math.round(w * RATIO);
-  // A wide window spreads the columns, up to 18% of a card, so the board fills the felt.
-  const gap = Math.round(Math.max(g0, Math.min(w * 0.18, (W - 2 * m - 9 * w) / 10)));
-  const bankGap = gap * 2 + Math.round(Math.min(pad - 2, gap * 0.8)); // the bank stands a little apart
-  const left = Math.max(m, Math.round((W - (9 * w + 7 * gap + bankGap)) / 2));
-  // Below the top row: the "Pioche" and "Défausse" labels, then the "Rangement" label, LABEL px each.
-  L = { W, H, gap, w, h, pad, top: pad, left, cx: left + 2 * w + gap + bankGap, fy: pad + h + gap + 2 * LABEL };
+  // A wide window spreads the columns, up to 30% of a card, so the board fills the felt.
+  const gap = Math.round(Math.max(g0, Math.min(w * 0.3, (W - 2 * m - 7 * w) / 6)));
+  const left = Math.max(m, Math.round((W - (7 * w + 6 * gap)) / 2));
+  // Below the top row: the "Pioche", "Défausse" and "Rangement" labels, LABEL px high.
+  L = { W, H, gap, w, h, pad, top: pad, left, ty: pad + h + LABEL + g0 };
   document.documentElement.style.setProperty('--w', w + 'px');
   document.documentElement.style.setProperty('--h', h + 'px');
   document.documentElement.style.setProperty('--gap', gap + 'px');
 }
-const colX = i => L.cx + i * (L.w + L.gap);
-const bankX = j => L.left + j * (L.w + L.gap);
-const foundXY = s => [bankX(s % 2), L.fy + (s >> 1) * (L.h + L.gap)];
+const colX = i => L.left + i * (L.w + L.gap);
+const bankX = j => colX(j);
+const foundXY = s => [colX(3 + s), L.top];
 // A long column squeezes face-down cards first, then face-up ones down to a readable strip.
 // Past that, the table scrolls.
 function colY(pile) {
   const nd = pile.slice(0, -1).filter(c => !c.up).length, nu = Math.max(0, pile.length - 1 - nd);
   let down = L.h * DOWN, up = L.h * UP;
-  const avail = L.H - 2 * L.pad - L.h;
+  const avail = L.H - L.ty - L.pad - L.h;
   if (nd * down + nu * up > avail) {
     if (nd) down = Math.max(L.h * 0.045, (avail - nu * up) / nd);
     if (nu && nd * down + nu * up > avail) up = Math.max(L.h * 0.24, (avail - nd * down) / nu);
   }
-  const ys = []; let y = L.top;
+  const ys = []; let y = L.ty;
   pile.forEach(c => { ys.push(Math.round(y)); y += c.up ? up : down; });
   return ys;
 }
@@ -817,7 +613,7 @@ function hitPile(x, y) {
   if (inside(bankX(0), L.top)) return { a: 'stock' };
   if (inside(bankX(1), L.top)) return { a: 'waste' };
   for (let s = 0; s < 4; s++) if (inside(...foundXY(s))) return { a: 'found', i: s };
-  for (let i = 0; i < 7; i++) if (x >= colX(i) - g && x <= colX(i) + L.w + g && y >= L.top - g) return { a: 'tab', i };
+  for (let i = 0; i < 7; i++) if (x >= colX(i) - g && x <= colX(i) + L.w + g && y >= L.ty - g) return { a: 'tab', i };
   return null;
 }
 
@@ -831,9 +627,9 @@ function render(opts = {}) {
   stockCount.innerHTML = S.stock.length ? `<span>${S.stock.length}</span>` : '';
   document.getElementById('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
   put(stockLabel, bankX(0), L.top + L.h + 4); put(wasteLabel, bankX(1), L.top + L.h + 4);
-  put(foundLabel, bankX(0), L.fy - LABEL);
+  put(foundLabel, colX(3), L.top + L.h + 4);
   slotFound.forEach((e, s) => put(e, ...foundXY(s)));
-  slotTab.forEach((e, i) => put(e, colX(i), L.top));
+  slotTab.forEach((e, i) => put(e, colX(i), L.ty));
 
   const spots = [];
   const under = new Set();
@@ -890,7 +686,7 @@ function drawMarks() {
   }
   for (const d of hintDst ? [hintDst] : destinations(loc)) {
     const q = d.a === 'found' ? S.found[d.i] : S.tab[d.i];
-    const [x, y] = q.length ? pos[last(q).id] : d.a === 'found' ? foundXY(d.i) : [colX(d.i), L.top];
+    const [x, y] = q.length ? pos[last(q).id] : d.a === 'found' ? foundXY(d.i) : [colX(d.i), L.ty];
     addMark(x, y, hintDst ? 'hint' : '', d.a + d.i);
   }
 }
@@ -914,39 +710,10 @@ function celebrate() {
 }
 
 /* ---------- Dialog ---------- */
-const over = document.getElementById('over');
-const help = document.getElementById('help');
-const dialogOpen = () => over.classList.contains('on') || help.classList.contains('on');
-// The rules come in short pages, so they never need scrolling.
-const helpPages = [...document.querySelectorAll('#helpText .page')];
-let helpAt = 0;
-function showHelpPage(n) {
-  helpAt = n;
-  helpPages.forEach((e, k) => e.classList.toggle('on', k === n));
-  document.getElementById('helpPage').textContent = `Page ${n + 1} sur ${helpPages.length}`;
-  document.getElementById('helpPrev').hidden = n === 0;
-  const next = document.getElementById('helpNext');
-  next.textContent = n === helpPages.length - 1 ? "J'ai compris" : 'Suivant';
-  next.focus();
-}
-function openHelp() { if (drag) return; help.classList.add('on'); showHelpPage(0); }
-function closeHelp() { help.classList.remove('on'); }
-function closeDialog() { over.classList.remove('on', 'soft'); }
-function dialog(title, text, buttons, soft) {
-  document.getElementById('overTitle').textContent = title;
-  document.getElementById('overText').textContent = text;
-  const b = document.getElementById('overBtns'); b.innerHTML = '';
-  let first = null;
-  buttons.forEach(([label, fn, primary]) => {
-    const e = document.createElement('button');
-    e.textContent = label; if (primary) { e.className = 'primary'; first = first || e; }
-    e.onclick = () => { closeDialog(); if (fn) fn(); };
-    b.appendChild(e);
-  });
-  over.classList.toggle('soft', !!soft);
-  over.classList.add('on');
-  (first || b.firstChild).focus();
-}
+// The dialog and the rules guide come from lib/kit.js.
+const { dialog, closeDialog } = Kit;
+const dialogOpen = Kit.isOpen;
+function openHelp() { if (!drag) Kit.openHelp(); }
 
 /* ---------- Mouse and touch ---------- */
 // A press and release that moves less than 16 px is a click, so a shaky hand still clicks.
@@ -1014,13 +781,9 @@ document.getElementById('newBtn').onclick = () => {
 document.getElementById('undoBtn').onclick = doUndo;
 document.getElementById('hintBtn').onclick = showHint;
 document.getElementById('helpBtn').onclick = openHelp;
-document.getElementById('helpClose').onclick = closeHelp;
-document.getElementById('helpPrev').onclick = () => showHelpPage(Math.max(0, helpAt - 1));
-document.getElementById('helpNext').onclick = () => helpAt < helpPages.length - 1 ? showHelpPage(helpAt + 1) : closeHelp();
-help.addEventListener('click', e => { if (e.target === help) closeHelp(); });
 addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); doUndo(); }
-  else if (e.key === 'Escape') { if (help.classList.contains('on')) closeHelp(); else if (dialogOpen()) closeDialog(); else if (sel !== null || hintStock) unchoose(); }
+  else if (e.key === 'Escape') { if (!Kit.escape() && (sel !== null || hintStock)) unchoose(); }
 });
 addEventListener('resize', () => {
   if (drag && drag.started) drag.els.forEach(o => o.el.classList.remove('dragging'));

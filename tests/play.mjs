@@ -52,7 +52,7 @@ await page.mouse.click(...p1);
 await page.mouse.click(...p1);
 await page.waitForTimeout(100);
 ok(await g(() => S.moves) === moves0 + 1 && await g(() => sel) === null, 'one click moves a card with a single place, and the double-click is ignored');
-ok((await g(() => msgEl.textContent)).startsWith('Vous avez '), 'the line says what moved: ' + await g(() => msgEl.textContent));
+ok((await g(() => document.getElementById('msg').textContent)).startsWith('Vous avez '), 'the line says what moved: ' + await g(() => document.getElementById('msg').textContent));
 ok(await g(`E[${m.id}].classList.contains('landed')`), 'the moved card is outlined where it landed');
 await page.screenshot({ path: `${OUT}/2-one-click-landed.png` });
 await page.waitForTimeout(1500);
@@ -74,7 +74,7 @@ ok(await g(() => marks.length) === 2, `destination frames show (${await g(() => 
 await page.screenshot({ path: `${OUT}/3-chosen.png` });
 await page.mouse.click(...await pilePt({ a: 'tab', i: 3 }));
 ok(await g(() => sel) === 6, 'wrong target keeps the card chosen');
-console.log('     message: ' + await g(() => msgEl.textContent));
+console.log('     message: ' + await g(() => document.getElementById('msg').textContent));
 await page.keyboard.press('Escape');
 ok(await g(() => sel) === null, 'Escape drops the choice');
 await page.waitForTimeout(600);
@@ -105,7 +105,7 @@ ok(await g(() => S.moves) === moves1 + 1, 'drag and drop moves the card');
 // 5. Hint, then follow it with one click
 await page.waitForTimeout(1500);
 await page.click('#hintBtn');
-const hint = await g(() => ({ sel, hintDst, hintStock, msg: msgEl.textContent }));
+const hint = await g(() => ({ sel, hintDst, hintStock, msg: document.getElementById('msg').textContent }));
 console.log('     hint: ' + hint.msg);
 ok(hint.msg.length > 10 && (hint.sel !== null || hint.hintStock), 'hint shows a sentence and a target');
 await page.screenshot({ path: `${OUT}/4-hint.png` });
@@ -117,7 +117,7 @@ ok(await g(() => S.moves) === moves2 + 1, 'one click on the yellow place follows
 // 6. Undo
 await page.click('#undoBtn'); await page.waitForTimeout(200);
 ok(await g(() => S.moves) === moves2, 'Annuler goes back one move');
-ok(await g(() => msgEl.textContent) === 'Coup annulé.', 'undo says so');
+ok(await g(() => document.getElementById('msg').textContent) === 'Coup annulé.', 'undo says so');
 await page.keyboard.press('Control+z'); await page.waitForTimeout(200);
 ok(await g(() => S.moves) < moves2, 'Ctrl+Z goes back one more move');
 // A hint is also followed by a click on the ringed card.

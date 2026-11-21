@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jeux</title>
+<meta name="theme-color" content="#0F4F47">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --gold: #FFC83D; --accent: #0B6B5D; --text: #1B2422; --muted: #4E5A57;
+    --face: #FFFDF6; --red: #C4122F; --ink: #14171A; --back: #1F4470;
+    --ui: "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: radial-gradient(120% 90% at 50% 0%, #1A6A5F, #0F4F47 70%) #0F4F47 fixed;
+    color: #fff; font-family: var(--ui); -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1240px; margin: 0 auto; padding: 18px 40px 16px; display: flex; flex-direction: column; gap: 18px; width: 100%; }
+
+  /* Greeting */
+  header { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+  h1 { margin: 0; font: 700 50px/1.05 var(--ui); letter-spacing: -.02em; }
+  #date { margin-top: 6px; font: 500 25px var(--ui); color: rgba(255,255,255,.78); }
+  #time { font: 600 46px/1 var(--ui); letter-spacing: -.01em; color: rgba(255,255,255,.92); font-variant-numeric: tabular-nums; }
+
+  /* A note from the family */
+  #note {
+    display: none; align-items: center; gap: 20px; padding: 16px 26px; border-radius: 22px;
+    background: var(--face); color: var(--text); box-shadow: 0 10px 30px rgba(0,0,0,.25);
+  }
+  #note.on { display: flex; }
+  #note .icon { flex: none; width: 56px; height: 56px; border-radius: 50%; background: #FCEDE9; display: grid; place-items: center; }
+  #note .icon svg { width: 32px; height: 32px; fill: var(--red); }
+  #note small { display: block; font: 700 20px var(--ui); color: var(--accent); letter-spacing: .02em; margin-bottom: 4px; }
+  #note p { margin: 0; font: 600 27px/1.3 var(--ui); }
+
+
+  /* Game tiles */
+  #games { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 26px; }
+  .tile {
+    position: relative; display: flex; flex-direction: column; border-radius: 28px; overflow: hidden;
+    background: var(--face); color: var(--text); text-decoration: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,.2), 0 14px 34px rgba(0,0,0,.28);
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+  a.tile:hover { transform: translateY(-4px); box-shadow: 0 4px 8px rgba(0,0,0,.2), 0 22px 44px rgba(0,0,0,.32); }
+  a.tile:focus-visible { outline: 5px solid var(--gold); outline-offset: 4px; }
+  .art {
+    height: 130px; position: relative; overflow: hidden;
+    background: radial-gradient(90% 120% at 50% 0%, #1F7A6C, #12594F);
+  }
+  .art svg.card { position: absolute; left: 50%; bottom: -44px; width: 96px; height: 134px; margin-left: -48px;
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,.3)); transform-origin: 50% 120%; }
+  .body { padding: 18px 26px 24px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .body h3 { margin: 0; font: 700 34px var(--ui); letter-spacing: -.01em; }
+  .body p { margin: 0; font: 500 21px/1.35 var(--ui); color: var(--muted); }
+  .status { display: flex; align-items: center; gap: 9px; min-height: 30px; font: 600 21px var(--ui); color: var(--accent); }
+  .status svg { width: 26px; height: 26px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .status:empty { display: none; }
+  .play {
+    margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 60px;
+    border-radius: 16px; background: var(--gold); color: #1F1A00; font: 700 24px var(--ui);
+  }
+  a.tile:hover .play { background: #FFD666; }
+  .play svg { width: 26px; height: 26px; fill: currentColor; }
+  .badge {
+    position: absolute; top: 16px; right: 18px; z-index: 2; padding: 6px 16px; border-radius: 999px;
+    background: var(--gold); color: #1F1A00; font: 700 20px var(--ui); box-shadow: 0 3px 10px rgba(0,0,0,.25);
+  }
+
+  /* A game that is coming */
+  .tile.soon { background: rgba(255,255,255,.07); color: #fff; box-shadow: none; border: 2px dashed rgba(255,255,255,.3); }
+  .tile.soon .art { background: none; }
+  .tile.soon .body p { color: rgba(255,255,255,.75); }
+  .tile.soon .badge { background: rgba(255,255,255,.16); color: #fff; box-shadow: none; }
+  a.tile.opening { opacity: .85; transform: none; }
+
+  /* Footer band: the backup state and the PC code on the left, the install button on the right */
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+  main { flex: 1; }
+  footer { background: rgba(0,0,0,.18); border-top: 1px solid rgba(255,255,255,.08); }
+  footer .in { max-width: 1240px; margin: 0 auto; padding: 14px 40px; display: flex; align-items: center; justify-content: space-between; gap: 24px;
+    font: 500 20px var(--ui); color: rgba(255,255,255,.85); }
+  footer .info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  footer:has(#sync:empty):has(#code:empty):has(#install:not(.on)) { display: none; }
+  #sync { display: flex; align-items: center; gap: 10px; }
+  #sync svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  #code b { color: #fff; letter-spacing: .08em; }
+  #code:empty { display: none; }
+  #install { display: none; flex: none; min-height: 54px; padding: 8px 22px; border: 0; border-radius: 15px; cursor: pointer;
+    background: #fff; color: var(--text); font: 600 21px var(--ui); }
+  #install.on { display: inline-flex; align-items: center; }
+
+  @media (max-width: 700px) {
+    main { padding: 24px 16px; }
+    footer .in { padding: 14px 16px; flex-wrap: wrap; }
+    h1 { font-size: 42px; } #time { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .tile { transition: none; } a.tile:hover { transform: none; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="su0" viewBox="0 0 100 100"><path d="M50 5C62 26 95 40 95 61c0 12-10 20-21 20-8 0-15-4-19-11 1 11 6 20 13 26H32c7-6 12-15 13-26-4 7-11 11-19 11C15 81 5 73 5 61 5 40 38 26 50 5z"/></symbol>
+  <symbol id="su1" viewBox="0 0 100 100"><path d="M50 92C22 66 5 50 5 31 5 17 16 7 29 7c9 0 17 5 21 14 4-9 12-14 21-14 13 0 24 10 24 24 0 19-17 35-45 61z"/></symbol>
+  <symbol id="su2" viewBox="0 0 100 100"><path d="M50 2Q69 29 91 50Q69 71 50 98Q31 71 9 50Q31 29 50 2z"/></symbol>
+  <symbol id="su3" viewBox="0 0 100 100"><circle cx="50" cy="26" r="21"/><circle cx="26" cy="58" r="21"/><circle cx="74" cy="58" r="21"/><path d="M40 40h20v20H40zM46 56c0 18-5 31-13 40h34c-8-9-13-22-13-40z"/></symbol>
+  <pattern id="lattice" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+    <path d="M0 0H10M0 0V10" stroke="rgba(255,255,255,.22)" stroke-width="1.2"/>
+  </pattern>
+</svg>
+
+<main>
+  <header>
+    <div>
+      <h1 id="hello">Bonjour !</h1>
+      <div id="date"></div>
+    </div>
+    <div id="time"></div>
+  </header>
+
+  <section id="note" aria-live="polite">
+    <div class="icon"><svg viewBox="0 0 100 100"><use href="#su1"/></svg></div>
+    <div><small id="noteFrom"></small><p id="noteText"></p></div>
+  </section>
+
+  <section id="games" aria-label="Vos jeux"></section>
+
+</main>
+<footer><div class="in">
+  <div class="info"><div id="sync"></div><div id="code"></div></div>
+  <button id="install">Installer sur cet ordinateur</button>
+</div></footer>
+
+<script src="lib/store.js"></script>
+<script>
+'use strict';
+// The library. To add a game: put it in games/<id>/index.html, add it here, and add its folder to CORE in sw.js.
+const GAMES = [
+  { id: 'solitaire', title: 'Solitaire', text: 'Rangez toutes les cartes, de l’as jusqu’au roi.', added: '2026-11-21',
+    cards: [['7', 2], ['A', 0], ['R', 1]] },
+];
+const SOON = [
+  { title: 'Dame de pique', text: 'Une partie de cartes contre trois joueurs de l’ordinateur.', cards: [['D', 0]] },
+];
+
+const SUIT_RED = s => s === 1 || s === 2;
+function cardSvg([rank, suit], angle, dx, back) {
+  if (back) {
+    return `<svg class="card" viewBox="0 0 80 112" style="transform: translateX(${dx}px) rotate(${angle}deg)">
+      <rect x="1" y="1" width="78" height="110" rx="8" fill="#FFFDF6"/>
+      <rect x="6" y="6" width="68" height="100" rx="5" fill="${'#1F4470'}"/>
+      <rect x="6" y="6" width="68" height="100" rx="5" fill="url(#lattice)"/>
+      <rect x="10" y="10" width="60" height="92" rx="3" fill="none" stroke="#E0A526" stroke-width="1.2"/></svg>`;
+  }
+  const col = SUIT_RED(suit) ? '#C4122F' : '#14171A';
+  return `<svg class="card" viewBox="0 0 80 112" style="transform: translateX(${dx}px) rotate(${angle}deg)">
+    <rect x="1" y="1" width="78" height="110" rx="8" fill="#FFFDF6" stroke="#D9D3C5" stroke-width="1"/>
+    <text x="8" y="27" fill="${col}" font-family="Segoe UI, system-ui, sans-serif" font-weight="700" font-size="24">${rank}</text>
+    <use href="#su${suit}" x="${rank.length > 1 ? 34 : 24}" y="9" width="20" height="20" fill="${col}"/>
+    <use href="#su${suit}" x="20" y="44" width="40" height="40" fill="${col}"/></svg>`;
+}
+function art(cards, back) {
+  const n = cards.length;
+  return cards.map((c, i) => {
+    const t = n === 1 ? 0 : i / (n - 1) - 0.5;
+    return cardSvg(c, t * 30, t * 120, back && i === 0);
+  }).join('');
+}
+const ICON_PLAY = '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg>';
+const ICON_TROPHY = '<svg viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v4M8.5 20h7"/></svg>';
+const ICON_CLOUD = '<svg viewBox="0 0 24 24"><path d="M7 18a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 9.5a4 4 0 0 1-.5 8.5z"/><path d="m9.5 13 2 2 3.5-3.5"/></svg>';
+const ICON_PC = '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function render() {
+  const now = Date.now();
+  const tiles = GAMES.map(g => {
+    const meta = GG.meta(g.id);
+    const fresh = !meta && !GG.get('seen:' + g.id) && now - Date.parse(g.added) < 30 * 864e5;
+    const parts = meta && meta.summary ? meta.summary.split(' · ') : [];
+    const playing = parts.some(p => /en cours/i.test(p));
+    // The button already says a game is in progress: the line under the text shows only the wins.
+    const wins = parts.filter(p => !/en cours/i.test(p)).join(' · ');
+    return `<a class="tile" href="games/${g.id}/" data-id="${g.id}">
+      ${fresh ? '<span class="badge">Nouveau</span>' : ''}
+      <div class="art">${art(g.cards)}</div>
+      <div class="body">
+        <h3>${esc(g.title)}</h3>
+        <p>${esc(g.text)}</p>
+        <div class="status">${wins ? ICON_TROPHY + esc(wins) : ''}</div>
+        <div class="play">${ICON_PLAY}${playing ? 'Reprendre la partie' : 'Jouer'}</div>
+      </div></a>`;
+  });
+  const soon = SOON.map(g => `<div class="tile soon">
+      <span class="badge">Bientôt</span>
+      <div class="art">${art(g.cards, true)}</div>
+      <div class="body"><h3>${esc(g.title)}</h3><p>${esc(g.text)}</p></div></div>`);
+  document.getElementById('games').innerHTML = tiles.concat(soon).join('');
+}
+// A game opens only after the startup sync (4 s at most), so it never starts from an old copy
+// and then uploads it over the newer one on the server.
+let syncing = Promise.resolve();
+document.getElementById('games').addEventListener('click', e => {
+  const t = e.target.closest('a.tile');
+  if (!t) return;
+  e.preventDefault();
+  GG.set('seen:' + t.dataset.id, true);
+  t.classList.add('opening');
+  t.querySelector('.play').textContent = 'Ouverture…';
+  Promise.race([syncing, new Promise(r => setTimeout(r, 4000))]).then(() => { location.href = t.href; });
+});
+
+function clock() {
+  const d = new Date(), h = d.getHours();
+  document.getElementById('hello').textContent = h < 18 ? 'Bonjour !' : 'Bonsoir !';
+  const date = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  document.getElementById('date').textContent = date.charAt(0).toUpperCase() + date.slice(1);
+  document.getElementById('time').textContent = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+// The note lives in message.json. An empty text hides it.
+let asker = '', lastSync = null;
+async function note() {
+  try {
+    const m = await (await fetch('message.json', { cache: 'no-cache' })).json();
+    if (!m.text) return;
+    if (m.from) asker = m.from;
+    document.getElementById('noteFrom').textContent = m.from ? `Un mot de ${m.from}` : 'Un petit mot';
+    document.getElementById('noteText').textContent = m.text;
+    document.getElementById('note').classList.add('on');
+  } catch (e) {}
+}
+
+function syncLine(r) {
+  const el = document.getElementById('sync');
+  if (!r) { el.innerHTML = ''; return; }
+  lastSync = r;
+  el.innerHTML = r.approved && !r.offline ? ICON_CLOUD + 'Vos parties sont sauvegardées en ligne.'
+    : r.offline ? ICON_PC + 'Pas d’internet pour le moment : vos parties restent sur cet ordinateur.'
+    : ICON_PC + 'Vos parties sont gardées sur cet ordinateur.';
+  // The code is for the person who approves this PC: say so, so he does not think he must remember it.
+  const who = asker ? `Si ${esc(asker)} vous demande le code, lisez-lui :` : `Code de cet ordinateur :`;
+  document.getElementById('code').innerHTML = r.approved ? '' : `${who} <b>${GG.code.slice(0, 3)} ${GG.code.slice(3)}</b>`;
+}
+
+// Edge offers to install the site as an app. Show the offer as a plain button.
+let installEvent = null;
+addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); installEvent = e;
+  document.getElementById('install').classList.add('on');
+});
+document.getElementById('install').onclick = async () => {
+  if (!installEvent) return;
+  installEvent.prompt();
+  await installEvent.userChoice;
+  installEvent = null;
+  document.getElementById('install').classList.remove('on');
+};
+
+clock(); setInterval(clock, 15000);
+render(); note().then(() => { if (lastSync) syncLine(lastSync); });
+if (location.protocol !== 'file:') syncing = GG.sync().then(r => { syncLine(r); if (r.changed.length) render(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "grandpa-games",
+  "account_id": "afe412ef5813ee5de87db5167650f92d",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-11-01",
+  // One address only: saves on the PC belong to the exact address, so the workers.dev one is off.
+  // www.jeux-papi.fr is sent to jeux-papi.fr by a redirect rule on the zone.
+  "routes": [
+    { "pattern": "jeux-papi.fr", "custom_domain": true },
+    { "pattern": "www.jeux-papi.fr", "custom_domain": true }
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
+  "assets": {
+    "directory": "./public",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "grandpa-games", "database_id": "9caf08ce-fad5-42ed-aec1-679c8ce62838" }
+  ],
+  "observability": { "enabled": true }
+}

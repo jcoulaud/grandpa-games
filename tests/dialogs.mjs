@@ -20,8 +20,12 @@ ok(!(await g(() => dialogOpen())), '"J\'ai compris" closes the rules');
 // Labels under the stock and the waste
 const labels = await g(() => [...document.querySelectorAll('.plabel')].map(e => e.textContent));
 ok(['Pioche', 'Défausse', 'Rangement'].every(t => labels.includes(t)), 'labels: ' + labels.join(', '));
-const overlap = await g(() => { const r = foundLabel.getBoundingClientRect(), s = document.querySelectorAll('.plabel')[0].getBoundingClientRect(); return s.bottom > r.top; });
-ok(!overlap, 'Pioche label does not overlap Rangement label');
+// The labels share one row under the top row: no two may overlap.
+const overlap = await g(() => {
+  const rs = [...document.querySelectorAll('.plabel')].map(e => e.getBoundingClientRect());
+  return rs.some((a, i) => rs.some((b, j) => i < j && a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom));
+});
+ok(!overlap, 'the Pioche, Défausse and Rangement labels do not overlap');
 const bankFits = await g(() => foundXY(3)[1] + L.h <= L.H);
 ok(bankFits, 'the four Rangement piles fit in the window');
 
@@ -34,7 +38,7 @@ if (cand !== null) {
   await g(`choose(${cand})`);
   const wp = await g(() => [bankX(1) + L.w / 2, L.top + L.h / 2]);
   await page.mouse.click(tx + wp[0], ty + wp[1]);
-  const m = await g(() => msgEl.textContent);
+  const m = await g(() => document.getElementById('msg').textContent);
   console.log('     message: ' + m);
   ok(m.includes('défausse') || (await g(() => sel)) !== cand, 'clicking the waste explains that no card goes on the défausse');
 } else console.log('SKIP no column card with 0 or 2+ places');
@@ -59,8 +63,10 @@ ok(!(await g(() => help.classList.contains('on'))), 'Escape closes the rules');
 
 // Autosave across a reload
 await g(() => { for (let n = 0; n < 3; n++) clickStock(); });
-await page.waitForTimeout(800);
-const before = await g(() => JSON.stringify({ S: { stock: S.stock, waste: S.waste, tab: S.tab, found: S.found }, u: undo.length }));
+// Safe cards may still be going home on their own: wait until the board stops changing.
+const snap = () => g(() => JSON.stringify({ S: { stock: S.stock, waste: S.waste, tab: S.tab, found: S.found }, u: undo.length }));
+let before = await snap();
+for (let n = 0; n < 20; n++) { await page.waitForTimeout(700); const s2 = await snap(); if (s2 === before) break; before = s2; }
 await page.reload(); await page.waitForTimeout(1500);
 ok(!(await g(() => help.classList.contains('on'))), 'rules do not open again after the first visit');
 const after = await g(() => JSON.stringify({ S: { stock: S.stock, waste: S.waste, tab: S.tab, found: S.found }, u: undo.length }));
@@ -100,7 +106,7 @@ for (let n = 0; n < 40 && !hops; n++) {
 ok(hops >= 1, `finished piles hop (${hops} animating)`);
 await page.waitForTimeout(2500);
 ok(await g(() => dialogOpen() && document.getElementById('overTitle').textContent.includes('Bravo')), 'win dialog shows after the hop');
-ok(await g(() => document.getElementById('wins').textContent).then(t => /Victoires/.test(t)), 'toolbar shows the win count');
+ok(await g(() => document.getElementById('wins').textContent).then(t => /Victoires/.test(t)), 'the win count shows next to the message line');
 await page.screenshot({ path: `${OUT}/d-win.png` });
 
 ok(errors.length === 0, 'no page errors ' + errors.join(' | '));

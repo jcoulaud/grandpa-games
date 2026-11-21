@@ -1,2 +1,5 @@
 node_modules/
 tests/screenshots/
+public/version.js
+.wrangler/
+.dev.vars
