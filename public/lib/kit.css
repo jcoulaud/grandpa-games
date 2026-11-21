@@ -2,6 +2,8 @@
    A game page links this file, then adds its own table and pieces. */
 :root {
   --gold: #FFC83D; --accent: #0B6B5D; --text: #1B2422;
+  /* Each game has its own felt: a game page may set these three. */
+  --felt-top: #1A6A5F; --felt: #0F4F47; --shade: 6,28,25;
   --face: #FFFDF6; --ink: #14171A; --red: #C4122F; --back: #1F4470;
   --ui: "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
 }
@@ -9,7 +11,7 @@
 html, body { margin: 0; height: 100%; }
 body {
   display: grid; grid-template-rows: auto auto 1fr; grid-template-columns: minmax(0, 1fr); /* never wider than the window */
-  background: radial-gradient(120% 100% at 50% 0%, #1A6A5F, #0F4F47 70%) #0F4F47; color: #fff;
+  background: radial-gradient(120% 100% at 50% 0%, var(--felt-top), var(--felt) 70%) var(--felt); color: #fff;
   font-family: var(--ui);
   overflow: hidden; user-select: none; -webkit-user-select: none; touch-action: none;
 }
@@ -67,7 +69,7 @@ button.game:active { background: #095A4E; }
 #msg::before { content: ""; flex: none; width: 28px; height: 28px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230B6B5D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 12a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.2-4.6A8.5 8.5 0 1 1 21 12z'/%3E%3C/svg%3E") center / contain no-repeat; }
 
 /* Rules guide */
-#help, #over { position: fixed; inset: 0; background: rgba(6,28,25,.6); display: none; align-items: center; justify-content: center; z-index: 5000; }
+#help, #over { position: fixed; inset: 0; background: rgba(var(--shade),.6); display: none; align-items: center; justify-content: center; z-index: 5000; }
 #help.on, #over.on { display: flex; }
 #helpBox, #box { background: #fff; color: var(--text); border-radius: 24px; box-shadow: 0 30px 90px rgba(0,0,0,.45); }
 #helpBox { width: min(840px, 94vw); max-height: 92vh; display: flex; flex-direction: column; }
@@ -85,7 +87,7 @@ button.game:active { background: #095A4E; }
 #helpPage { font: 600 20px var(--ui); color: #55605C; }
 
 /* Dialog */
-#over.soft { background: rgba(6,28,25,.3); }
+#over.soft { background: rgba(var(--shade),.3); }
 #box { padding: 40px 48px 40px; text-align: center; max-width: min(680px, 92vw); }
 #box h2 { margin: 0 0 10px; font: 700 32px var(--ui); letter-spacing: -.01em; }
 #box p { margin: 0 0 28px; font: 400 22px/1.4 var(--ui); color: #3A4542; }

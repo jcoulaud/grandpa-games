@@ -47,7 +47,8 @@ try {
   await page.goto(BASE);
   await page.waitForSelector('#saves svg');
   check('tile for solitaire', await page.locator('a.tile[data-id="solitaire"]').count() === 1);
-  check('new badge on an unplayed game', await page.locator('a.tile .badge').count() === 1);
+  check('tile for freecell', await page.locator('a.tile[data-id="freecell"]').count() === 1);
+  check('no "Nouveau" badge on the games', await page.locator('a.tile .badge').count() === 0);
   check('note from message.json', await page.locator('#note.on').count() === 1);
   check('says the saves stay on this PC', (await page.textContent('#saves')).includes('sur cet ordinateur'));
   check('old backup data is removed', await page.evaluate(() => !localStorage.getItem('gg:cloud:old') && !localStorage.getItem('gg:approved')));
@@ -69,7 +70,6 @@ try {
   check('the game is saved on the PC', await page.evaluate(() => !!GG.load('solitaire')));
   check('trophy line shows wins only', !(await page.textContent('a.tile')).includes('Partie en cours'));
   check('button says resume', (await page.textContent('a.tile .play')).includes('Reprendre'));
-  check('badge gone after the first game', await page.locator('a.tile .badge').count() === 0);
   await page.screenshot({ path: join(OUT, 'library.png') });
   check('fits a 1366x680 app window without scrolling', await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight),
     String(await page.evaluate(() => document.documentElement.scrollHeight)));

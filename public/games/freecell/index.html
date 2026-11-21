@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FreeCell</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../../lib/kit.css">
+<link rel="stylesheet" href="../../lib/cards.css">
+<style>
+  /* FreeCell plays on a deep blue felt, so it does not look like the solitaire. */
+  :root { --gap: 12px; --felt-top: #2B5F94; --felt: #173F6B; --shade: 8,22,40; --accent: #1D5590; }
+
+  /* Table: one flat colour, lit softly from the top. Empty places are soft translucent shapes. */
+  #table { position: relative; overflow-x: hidden; overflow-y: auto; }
+  .slot {
+    position: absolute; width: var(--w); height: var(--h); border-radius: calc(var(--w) * .09);
+    background: rgba(255,255,255,.09); color: rgba(255,255,255,.82);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(var(--w) * .04);
+    font: 600 calc(var(--w) * .2)/1 var(--ui); text-align: center;
+    transform: scale(.96); /* stays hidden under a card */
+  }
+  .slot .s { width: calc(var(--w) * .4); height: calc(var(--w) * .4); opacity: .75; }
+  .slot.cell { background: rgba(255,255,255,.13); box-shadow: inset 0 0 0 2px rgba(255,255,255,.22); }
+  .plabel { position: absolute; text-align: center; color: rgba(255,255,255,.88); font: 600 20px/24px var(--ui); white-space: nowrap; }
+
+  /* Selection, destinations and hints: yellow, with a dark edge so it shows on a white card. */
+  #ring {
+    position: absolute; z-index: 2500; pointer-events: none; display: none;
+    border: 5px solid var(--gold); border-radius: calc(var(--w) * .13);
+    box-shadow: 0 0 0 2px rgba(var(--shade),.85), inset 0 0 0 2px rgba(var(--shade),.85), 0 0 24px 6px rgba(255,200,61,.55);
+  }
+  .mark {
+    position: absolute; z-index: 2400; pointer-events: none; width: var(--w); height: var(--h);
+    border: 5px dashed var(--gold); border-radius: calc(var(--w) * .09); background: rgba(255,200,61,.26);
+    box-shadow: inset 0 0 0 1.5px rgba(var(--shade),.6), 0 0 0 1.5px rgba(var(--shade),.6);
+  }
+  .mark.over { border-style: solid; background: rgba(255,200,61,.48); }
+  .mark.hint { border: 6px solid var(--gold); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 50% { background: rgba(255,200,61,.52); } }
+
+  @media (prefers-reduced-motion: reduce) { .mark.hint { animation: none; } }
+</style>
+</head>
+<body>
+<div id="bar">
+  <div id="title"><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#su1"/></svg>FreeCell</div>
+  <button id="undoBtn" data-icon="undo" title="Annuler le dernier coup joué"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre un bon coup à jouer maintenant"><span class="long">Quel coup jouer ?</span><span class="short">Aide</span></button>
+  <span class="spacer"></span>
+  <button id="helpBtn" data-icon="help">Règles</button>
+  <button id="newBtn" class="game">Nouvelle partie</button>
+</div>
+<div id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div></div>
+<div id="table"></div>
+<div id="help" data-title="Comment jouer">
+    <section class="page">
+      <h3>Le but</h3>
+      <p>Rangez toutes les cartes sur les quatre piles « Rangement », en haut à droite. Chaque pile reçoit une seule couleur : pique, cœur, carreau ou trèfle. On commence par l'as, puis le 2, le 3, et ainsi de suite jusqu'au roi.</p>
+      <h3>Les colonnes</h3>
+      <p>Toutes les cartes sont visibles dès le début. Dans les huit colonnes, une carte se pose sur une carte d'une valeur juste au-dessus et de l'autre couleur. Par exemple, un 7 rouge va sur un 8 noir.</p>
+      <p>N'importe quelle carte peut aller sur une colonne vide.</p>
+    </section>
+    <section class="page">
+      <h3>Les cases libres</h3>
+      <p>En haut à gauche, les quatre « Cases libres » gardent chacune une carte de côté. Une carte d'une case peut revenir sur une colonne ou aller au rangement.</p>
+      <h3>Plusieurs cartes à la fois</h3>
+      <p>Vous pouvez déplacer une suite de cartes qui se suivent, avec ses couleurs alternées. Plus vous avez de cases libres et de colonnes vides, plus la suite peut être longue. Le jeu fait le compte pour vous.</p>
+      <h3>Déplacer une carte</h3>
+      <p>Cliquez sur la carte. Si elle n'a qu'une place possible, elle y va toute seule. Sinon, les places possibles sont entourées de jaune : cliquez sur celle que vous voulez. Vous pouvez aussi faire glisser la carte avec la souris.</p>
+    </section>
+    <section class="page">
+      <h3>Les boutons</h3>
+      <p>« Quel coup jouer ? » montre un bon coup à jouer. « Annuler le dernier coup » revient un coup en arrière, autant de fois que vous voulez. « Nouvelle partie » commence une autre partie. « Règles » ouvre ces explications.</p>
+      <h3>Bon à savoir</h3>
+      <p>Si une carte ne peut pas aller quelque part, la ligne sous les boutons explique pourquoi.</p>
+      <p>Toutes les parties peuvent être gagnées. Les cartes qui ne servent plus vont toutes seules au rangement. La partie est enregistrée à chaque coup : vous la retrouvez en rouvrant le jeu.</p>
+    </section>
+</div>
+
+<script src="../../lib/store.js"></script>
+<script src="../../lib/cards.js"></script>
+<script src="../../lib/kit.js"></script>
+<script src="solver.js"></script>
+<script>
+'use strict';
+/* ---------- Cards ---------- */
+const { RANK_NAMES, SUIT_PLURALS, rk, st, rd, cap, cardName, suitHtml, faceHtml } = Cards;
+const last = a => a[a.length - 1];
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const LAND_MS = 1000; // how long a card that just moved keeps its yellow outline
+const AUTO_DELAY = 450, FINISH_DELAY = 140; // between two automatic cards: in play, and once the game is decided
+
+const HELLO = "Cliquez sur la carte à déplacer. Si elle a plusieurs places possibles, cliquez ensuite sur celle que vous voulez.";
+
+const { solve, sApply, sMoves, sNormalize, sFits, sSafe, sRun } = Solver;
+
+/* ---------- Game state ---------- */
+// S.tab: the 8 columns, S.cells: the 4 free cells (a card id or null), S.found[s]: the cards of suit s.
+// sel: the chosen card (it moves with the cards on top of it). hintDst: the place the hint shows.
+let S, undo = [], stats = { won: 0 }, autoT = 0, zT = 0, winT = 0, busy = false, autoCount = 0;
+let drag = null, plan = null, sel = null, hintDst = null, lastTap = null, dealT = 0;
+
+function toSolver() {
+  return { c: S.tab.map(p => p.slice()), l: S.cells.filter(id => id !== null).sort((a, b) => a - b), f: S.found.map(f => f.length) };
+}
+function freshDeal() {
+  const d = [...Array(52).keys()];
+  for (let i = d.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [d[i], d[j]] = [d[j], d[i]]; }
+  const tab = [[], [], [], [], [], [], [], []];
+  d.forEach((id, n) => tab[n % 8].push(id));
+  return { tab, cells: [null, null, null, null], found: [[], [], [], []], moves: 0, won: false, stuckShown: false, lostShown: false };
+}
+// Deal only games the solver has won. Almost every deal passes on the first try.
+function winnableDeal() {
+  for (;;) {
+    S = freshDeal();
+    if (solve(toSolver(), 30000).win) return S;
+  }
+}
+
+// Every undo step is saved. If the browser storage is full, the oldest steps go first.
+// A win counts as soon as the last card is home, before the celebration, so an undo cannot lose it.
+function save() {
+  if (isWon() && !S.won) { S.won = true; stats.won++; GG.track('freecell', 'won'); }
+  const parts = [];
+  if (S.moves > 0 && !isWon()) parts.push('Partie en cours');
+  if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
+  for (const n of [Infinity, 2000, 300, 50, 0]) {
+    if (GG.save('freecell', { S, undo: n ? undo.slice(-n) : [], stats }, { summary: parts.join(' · ') })) return;
+  }
+}
+function load() {
+  try {
+    const v = GG.load('freecell');
+    if (v && v.stats) stats = v.stats;
+    if (v && v.S) { S = v.S; undo = v.undo || []; return true; }
+  } catch (e) {}
+  return false;
+}
+
+const isWon = () => S.found.every(f => f.length === 13);
+const freeCells = () => S.cells.filter(id => id === null).length;
+const emptyCols = () => S.tab.filter(p => !p.length).length;
+// How many cards move at once: one per free cell plus one, doubled by each empty column.
+const capacity = toEmpty => (freeCells() + 1) * 2 ** Math.max(0, emptyCols() - (toEmpty ? 1 : 0));
+function canFound(id) { return S.found[st(id)].length === rk(id) - 1; }
+// The cards of a pile, as a list: a free cell holds one card or none.
+function pileOf(loc) { return loc.a === 'tab' ? S.tab[loc.i] : loc.a === 'found' ? S.found[loc.i] : S.cells[loc.i] === null ? [] : [S.cells[loc.i]]; }
+function locate(id) {
+  for (let i = 0; i < 4; i++) if (S.cells[i] === id) return { a: 'cell', i, k: 0 };
+  for (let i = 0; i < 4; i++) { const k = S.found[i].indexOf(id); if (k >= 0) return { a: 'found', i, k }; }
+  for (let i = 0; i < 8; i++) { const k = S.tab[i].indexOf(id); if (k >= 0) return { a: 'tab', i, k }; }
+}
+const samePile = (p, q) => !!p && !!q && p.a === q.a && p.i === q.i;
+const pileAt = loc => ({ a: loc.a, i: loc.i });
+// A card of a column can move when the cards on it follow it in order.
+const ordered = loc => loc.a !== 'tab' || sRun(S.tab[loc.i]) >= S.tab[loc.i].length - loc.k;
+function selectable(id) { const loc = locate(id); return loc.a !== 'found' && ordered(loc); }
+// Places for the card at loc.k and the cards above it.
+function destinations(loc) {
+  const out = [];
+  if (loc.a === 'found' || !ordered(loc)) return out;
+  const pile = pileOf(loc), id = pile[loc.k], n = pile.length - loc.k;
+  if (n === 1 && canFound(id)) out.push({ a: 'found', i: st(id) });
+  for (let i = 0; i < 8; i++) {
+    if (loc.a === 'tab' && loc.i === i) continue;
+    const t = last(S.tab[i]);
+    if (t === undefined) { if (n <= capacity(true)) out.push({ a: 'tab', i }); }
+    else if (sFits(id, t) && n <= capacity(false)) out.push({ a: 'tab', i });
+  }
+  if (n === 1 && loc.a !== 'cell') S.cells.forEach((c, i) => { if (c === null) out.push({ a: 'cell', i }); });
+  return out;
+}
+// Empty free cells are all alike, and so are empty columns: each kind counts as one place.
+function places(ds) {
+  const seen = new Set();
+  return ds.filter(d => {
+    const kind = d.a === 'cell' ? 'cell' : d.a === 'tab' && !S.tab[d.i].length ? 'empty' : d.a + d.i;
+    if (seen.has(kind)) return false;
+    seen.add(kind); return true;
+  });
+}
+const most = n => n === 1 ? 'une seule carte' : `${n} cartes`;
+// Why the chosen cards cannot go to this pile, in one sentence.
+function why(loc, dst) {
+  const p = pileOf(loc), id = p[loc.k], n = p.length - loc.k;
+  if (dst.a === 'found') {
+    if (n > 1) return 'Rangez une seule carte à la fois.';
+    if (dst.i !== st(id)) return `Cette pile reçoit les ${SUIT_PLURALS[dst.i]}.`;
+    return `Il faut d'abord ranger ${cardName(st(id) * 13 + S.found[dst.i].length)}.`;
+  }
+  if (dst.a === 'cell') {
+    if (loc.a === 'cell' && S.cells[dst.i] === null) return 'Cette carte est déjà dans une case libre.';
+    if (S.cells[dst.i] !== null) return 'Cette case est déjà prise. Choisissez une case vide.';
+    return 'Une case libre garde une seule carte.';
+  }
+  const t = last(S.tab[dst.i]);
+  if (t !== undefined) {
+    if (rk(id) === 13) return 'Un roi va seulement sur une colonne vide.';
+    if (rd(t) === rd(id)) return 'Alternez les couleurs : une carte rouge sur une noire, une noire sur une rouge.';
+    if (rk(t) !== rk(id) + 1) { const above = rk(id) + 1; return `${cap(cardName(id))} va sur ${above === 12 ? 'une' : 'un'} ${RANK_NAMES[above]}.`; }
+  }
+  const c = capacity(t === undefined);
+  return `Vous pouvez déplacer ${most(c)} à la fois pour le moment. Videz une case libre ou une colonne pour en déplacer plus.`;
+}
+
+/* ---------- Messages ---------- */
+const setMsg = Kit.say;
+function chosenMsg(loc) {
+  const p = pileOf(loc), n = p.length - 1 - loc.k;
+  const extra = n === 1 ? ' et la carte posée dessus' : n > 1 ? ` et les ${n} cartes posées dessus` : '';
+  return `Vous avez pris ${cardName(p[loc.k])}${extra}. Cliquez sur une place entourée de jaune.`;
+}
+// Says why a card of a column cannot be taken.
+function stuckMsg(id) {
+  const loc = locate(id);
+  if (!ordered(loc)) return `Les cartes posées sur ${cardName(id)} ne se suivent pas. Déplacez d'abord celles du dessus.`;
+  return `${cap(cardName(id))} ne peut aller nulle part pour le moment.`;
+}
+
+/* ---------- Actions ---------- */
+function act(fn, text) {
+  const snap = JSON.stringify(S);
+  if (fn() === false) return false;
+  undo.push(snap);
+  S.moves++;
+  changed(text);
+  return true;
+}
+function clearSel() { sel = null; hintDst = null; }
+function changed(text) {
+  clearSel(); setMsg(text || HELLO); render(); save();
+  autoCount = 0;
+  clearTimeout(autoT); autoT = setTimeout(autoStep, AUTO_DELAY);
+}
+// Takes the cards from loc.k up off their pile.
+function lift(loc) {
+  if (loc.a === 'cell') { const id = S.cells[loc.i]; S.cells[loc.i] = null; return [id]; }
+  return pileOf(loc).splice(loc.k);
+}
+// Moves the cards, says what happened and frames them in yellow where they landed.
+function moveCards(loc, dst) {
+  const ids = pileOf(loc).slice(loc.k), n = ids.length - 1;
+  const name = cardName(ids[0]), t = dst.a === 'tab' ? last(S.tab[dst.i]) : undefined;
+  const extra = n === 1 ? ' et 1 autre carte' : n > 1 ? ` et ${n} autres cartes` : '';
+  const text = dst.a === 'found' ? `Vous avez rangé ${name}.`
+    : dst.a === 'cell' ? `Vous avez mis ${name} dans une case libre.`
+    : `Vous avez posé ${name}${extra} sur ${t !== undefined ? cardName(t) : 'la colonne vide'}.`;
+  act(() => {
+    const cards = lift(loc);
+    if (dst.a === 'cell') S.cells[dst.i] = cards[0];
+    else (dst.a === 'found' ? S.found[dst.i] : S.tab[dst.i]).push(...cards);
+  }, text);
+  flash(ids);
+}
+let landT = 0;
+function flash(ids) {
+  clearTimeout(landT);
+  E.forEach(el => el.classList.remove('landed'));
+  ids.forEach(id => E[id].classList.add('landed'));
+  landT = setTimeout(() => ids.forEach(id => E[id].classList.remove('landed')), LAND_MS);
+}
+function choose(id) {
+  const loc = locate(id);
+  if (!destinations(loc).length) {
+    clearSel(); render();
+    setMsg(stuckMsg(id));
+    return shake(E[id]);
+  }
+  clearSel(); sel = id;
+  setMsg(chosenMsg(loc)); render();
+}
+function unchoose() { clearSel(); setMsg(HELLO); render(); }
+// A click on a card. With one place, the card goes there at once.
+// With several, the card is chosen and the player picks the place.
+function take(id) {
+  const loc = locate(id), ps = places(destinations(loc));
+  if (ps.length === 1) return moveCards(loc, ps[0]);
+  choose(id);
+}
+
+// One click: id is the card under the pointer (or null), pile is the pile it belongs to.
+function onTap(id, pile) {
+  if (sel === null) {
+    if (id !== null && locate(id).a !== 'found') take(id);
+    return;
+  }
+  const loc = locate(sel);
+  // A hint is followed by a click on the framed place or on the ringed card.
+  if (hintDst && id === sel) return moveCards(loc, hintDst);
+  if (pile && destinations(loc).some(d => samePile(d, pile))) return moveCards(loc, pile);
+  if (id === sel || !pile) return unchoose();
+  // Another card that can move: play it instead. Otherwise explain the refusal.
+  if (id !== null && selectable(id) && destinations(locate(id)).length) return take(id);
+  if (samePile(pile, pileAt(loc))) return unchoose();
+  setMsg(why(loc, pile));
+}
+
+// Sends safe cards home one by one, and finishes the game once every column is in order.
+// It waits while the player holds a card, reads a hint or answers a question.
+function autoStep() {
+  if (busy) return;
+  if (drag || sel !== null || dialogOpen()) { autoT = setTimeout(autoStep, AUTO_DELAY); return; }
+  if (isWon()) return celebrate();
+  const finishing = S.tab.every(p => sRun(p) === p.length);
+  const x = toSolver();
+  const cands = [];
+  S.cells.forEach((id, i) => { if (id !== null) cands.push({ a: 'cell', i, k: 0 }); });
+  S.tab.forEach((p, i) => { if (p.length) cands.push({ a: 'tab', i, k: p.length - 1 }); });
+  for (const loc of cands) {
+    const id = pileOf(loc)[loc.k];
+    if (canFound(id) && (finishing || sSafe(x, id))) {
+      S.found[st(id)].push(lift(loc)[0]);
+      autoCount++;
+      render(); save();
+      if (!finishing) flash([id]);
+      autoT = setTimeout(autoStep, finishing ? FINISH_DELAY : AUTO_DELAY);
+      return;
+    }
+  }
+  if (autoCount) {
+    setMsg(autoCount === 1 ? '1 carte rangée automatiquement.' : `${autoCount} cartes rangées automatiquement.`);
+    autoCount = 0;
+  }
+  checkStuck();
+  checkLost();
+}
+function checkStuck() {
+  if (S.stuckShown || isWon()) return;
+  if (sMoves(toSolver()).length) return;
+  S.stuckShown = true; save();
+  dialog('Plus aucun coup possible', 'Aucune carte ne peut plus bouger.',
+    [['Revenir en arrière', backToWinnable, true], ['Nouvelle partie', newGame]]);
+}
+// After each move, once the automatic cards are home, say so as soon as the game is surely lost.
+// When the solver runs out of time, it says nothing. A lost position only stops being lost by undo,
+// and the undo step does not carry the flag, so the warning comes once per lost line of play.
+function checkLost() {
+  if (S.lostShown || dialogOpen() || isWon()) return;
+  if (solve(toSolver(), 20000).win !== false) return;
+  S.lostShown = true; save();
+  lostDialog();
+}
+function lostDialog() {
+  dialog('Partie perdue', 'Cette partie ne peut plus être gagnée. « Revenir en arrière » annule vos derniers coups.',
+    [['Revenir en arrière', backToWinnable, true], ['Nouvelle partie', newGame]]);
+}
+
+function newGame() {
+  busy = true; drag = null; plan = null; autoCount = 0;
+  clearTimeout(autoT); clearTimeout(winT); clearTimeout(dealT); clearSel();
+  closeDialog();
+  winnableDeal(); undo = [];
+  GG.track('freecell', 'start');
+  flash([]); // the outline of the last move does not carry over to the new deal
+  save();
+  setMsg(HELLO);
+  render({ deal: true });
+  dealT = setTimeout(() => { busy = false; autoStep(); }, REDUCED ? 100 : 2200);
+}
+// Restores an earlier position. A game that was won stays counted once.
+function restore(snap) {
+  const won = S.won;
+  S = JSON.parse(snap);
+  S.won = S.won || won;
+  S.done = false;
+}
+function doUndo() {
+  if (!undo.length || busy || drag || dialogOpen()) return;
+  clearTimeout(autoT); clearTimeout(winT);
+  restore(undo.pop());
+  lastTap = null; flash([]);
+  clearSel(); setMsg('Coup annulé.'); render(); save();
+  if (isWon()) autoStep();
+}
+// Undo until the solver finds a way to win again.
+// A game restored from the backup has no undo steps: then only a new game is offered.
+function backToWinnable() {
+  clearTimeout(autoT);
+  const wins = snap => { const y = JSON.parse(snap), x = { c: y.tab, l: y.cells.filter(id => id !== null).sort((a, b) => a - b), f: y.found.map(f => f.length) };
+    let r = solve(x, 30000); if (r.unknown) r = solve(x, 60000); return !!r.win; };
+  let k = undo.length - 1;
+  while (k >= 0 && !wins(undo[k])) k--;
+  if (k >= 0) {
+    restore(undo[k]); undo.length = k;
+    S.stuckShown = false; lastTap = null; flash([]);
+    clearSel(); render(); save();
+    setMsg('Vous êtes revenu à une position gagnante.');
+  } else dialog('Impossible de revenir en arrière', 'Aucune position gagnante n\'a été trouvée. Commencez une nouvelle partie.', [['Nouvelle partie', newGame, true]]);
+}
+
+/* ---------- Hint ---------- */
+// Next move of a winning plan. The plan is kept, so following the hints
+// never walks in circles: it is only recomputed when the player leaves it.
+// The plan key keeps column order, because plan moves name columns by number.
+const planKey = x => x.c.map(c => c.join(',')).join('|') + '#' + x.l.join(',');
+function hintMove() {
+  const x = toSolver(), pre = [];
+  sNormalize(x, pre);
+  if (pre.length) return { move: pre[0] };
+  const k = planKey(x);
+  if (plan && plan.has(k)) return { move: plan.get(k) };
+  let r = solve(x, 60000);
+  if (r.unknown) r = solve(x, 400000);
+  if (!r.win) return r;
+  plan = new Map();
+  let y = x;
+  for (const m of r.path) { const ky = planKey(y); if (!plan.has(ky)) plan.set(ky, m); y = sApply(y, m); }
+  return { move: r.path[0] };
+}
+function hintText(m, dst) {
+  const name = cardName(m.id), go = ' Cliquez sur la place entourée de jaune.';
+  if (dst.a === 'found') return `Rangez ${name}.${go}`;
+  if (dst.a === 'cell') return `Mettez ${name} dans une case libre.${go}`;
+  const t = last(S.tab[dst.i]);
+  const where = t !== undefined ? `sur ${cardName(t)}` : 'sur la colonne vide';
+  const n = m.k === 'cc' ? S.tab[m.src].length - m.n - 1 : 0;
+  const extra = n === 1 ? ' et la carte posée dessus' : n > 1 ? ` et les ${n} cartes posées dessus` : '';
+  return `Posez ${name}${extra} ${where}.${go}`;
+}
+function showHint() {
+  if (busy || drag || isWon()) return;
+  const r = hintMove();
+  let m = r.move;
+  if (!m && r.win === false) return lostDialog();
+  // The solver ran out of time. The game does not guess: a card sent home too early can lose the game,
+  // and two guesses could send a card back and forth. The safe cards already go home by themselves.
+  if (!m) { clearSel(); render(); return setMsg("Je ne trouve pas de coup sûr pour le moment. Vous pouvez annuler vos derniers coups."); }
+  const dst = m.k === 'cf' || m.k === 'lf' ? { a: 'found', i: st(m.id) }
+    : m.k === 'cl' ? { a: 'cell', i: S.cells.indexOf(null) } : { a: 'tab', i: m.dst };
+  clearSel(); sel = m.id; hintDst = dst;
+  setMsg(hintText(m, dst)); render();
+}
+
+/* ---------- Drawing ---------- */
+const table = document.getElementById('table');
+let L, E = [], slotCell = [], slotFound = [], slotTab = [], cellLabel, foundLabel, ring, marks = [], pos = [];
+
+function mk(cls, html) {
+  const e = document.createElement('div');
+  if (cls) e.className = cls;
+  if (html) e.innerHTML = html;
+  table.appendChild(e); return e;
+}
+function build() {
+  cellLabel = mk('plabel', 'Cases libres');
+  foundLabel = mk('plabel', 'Rangement');
+  for (let i = 0; i < 4; i++) slotCell.push(mk('slot cell'));
+  for (let s = 0; s < 4; s++) slotFound.push(mk('slot', suitHtml(s) + 'As'));
+  for (let i = 0; i < 8; i++) slotTab.push(mk('slot'));
+  for (let id = 0; id < 52; id++) {
+    const el = mk('card ' + (rd(id) ? 'red' : 'black'), faceHtml(id));
+    el.dataset.id = id;
+    E.push(el);
+  }
+  ring = mk(); ring.id = 'ring';
+}
+
+// Card size depends only on the window, so the board never moves during a game.
+// The top row holds the four free cells on the left and the four foundations on the right.
+// The eight columns fill the width below.
+const RATIO = 1.3, UP = 0.3, LABEL = 30;
+function layout() {
+  const W = table.clientWidth, H = table.clientHeight;
+  const m = 26, g0 = Math.max(10, Math.round(W * 0.009)), pad = 12;
+  const top = Math.round(Math.max(pad, Math.min(32, H * 0.03)));
+  const rowGap = Math.round(Math.max(g0, Math.min(W * 0.025, H * 0.035)));
+  const byWidth = (W - 2 * m - 7 * g0) / 8;
+  // Height: the top row and its labels, then a column of six cards. The four columns of seven
+  // squeeze a little on a laptop (see colY), so the cards can stay large.
+  // UP shows the whole corner index of a covered card.
+  const byHeight = (H - top - pad - LABEL - rowGap) / (2 + 5 * UP) / RATIO;
+  const w = Math.floor(Math.max(48, Math.min(byWidth, byHeight, 170)));
+  const h = Math.round(w * RATIO);
+  // A wide window spreads the columns, up to 30% of a card, so the board fills the felt.
+  const gap = Math.round(Math.max(g0, Math.min(w * 0.3, (W - 2 * m - 8 * w) / 7)));
+  const left = Math.max(m, Math.round((W - (8 * w + 7 * gap)) / 2));
+  L = { W, H, gap, w, h, pad, top, left, ty: top + h + LABEL + rowGap };
+  document.documentElement.style.setProperty('--w', w + 'px');
+  document.documentElement.style.setProperty('--h', h + 'px');
+  document.documentElement.style.setProperty('--gap', gap + 'px');
+}
+const colX = i => L.left + i * (L.w + L.gap);
+const cellXY = i => [colX(i), L.top];
+const foundXY = s => [colX(4 + s), L.top];
+// A long column squeezes its cards down to a strip that still shows the rank. Past that, the table scrolls.
+function colY(pile) {
+  const n = Math.max(0, pile.length - 1);
+  let up = L.h * UP;
+  const avail = L.H - L.ty - L.pad - L.h;
+  if (n * up > avail) up = Math.max(L.h * 0.185, avail / n);
+  return pile.map((_, k) => Math.round(L.ty + k * up));
+}
+function put(el, x, y) { el.style.left = x + 'px'; el.style.top = y + 'px'; }
+// The pile under a point of the table. A column takes the whole height below it.
+function hitPile(x, y) {
+  const g = L.gap / 2;
+  const inside = (rx, ry) => x >= rx - g && x <= rx + L.w + g && y >= ry - g && y <= ry + L.h + g;
+  for (let i = 0; i < 4; i++) if (inside(...cellXY(i))) return { a: 'cell', i };
+  for (let s = 0; s < 4; s++) if (inside(...foundXY(s))) return { a: 'found', i: s };
+  for (let i = 0; i < 8; i++) if (x >= colX(i) - g && x <= colX(i) + L.w + g && y >= L.ty - g) return { a: 'tab', i };
+  return null;
+}
+
+function render(opts = {}) {
+  layout();
+  document.getElementById('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
+  const span = 4 * L.w + 3 * L.gap;
+  put(cellLabel, colX(0), L.top + L.h + 4); cellLabel.style.width = span + 'px';
+  put(foundLabel, colX(4), L.top + L.h + 4); foundLabel.style.width = span + 'px';
+  slotCell.forEach((e, i) => put(e, ...cellXY(i)));
+  slotFound.forEach((e, s) => put(e, ...foundXY(s)));
+  slotTab.forEach((e, i) => put(e, colX(i), L.ty));
+
+  const spots = [];
+  const under = new Set();
+  S.cells.forEach((id, i) => { if (id !== null) spots.push([id, ...cellXY(i), 100]); });
+  S.found.forEach((f, s) => f.forEach((id, k) => { spots.push([id, ...foundXY(s), 200 + k]); if (k < f.length - 2) under.add(id); }));
+  S.tab.forEach((p, i) => { const ys = colY(p); p.forEach((id, k) => spots.push([id, colX(i), ys[k], 300 + k])); });
+
+  // A new deal starts as a face-down pile in the middle of the top row, then the cards fly to their columns.
+  if (opts.deal) {
+    table.classList.add('instant');
+    const cx = Math.round((colX(3) + colX(4)) / 2);
+    spots.forEach(([id], n) => { const el = E[id]; el.classList.add('down'); put(el, cx, L.top); el.style.zIndex = n; });
+    void table.offsetWidth;
+    table.classList.remove('instant');
+  }
+  let order = 0;
+  for (const [id, x, y, z] of spots) {
+    const el = E[id];
+    const wasDown = el.classList.contains('down');
+    el.classList.remove('down');
+    el.classList.toggle('under', under.has(id));
+    const moved = el.style.left !== x + 'px' || el.style.top !== y + 'px';
+    if (opts.deal && !REDUCED) el.style.transitionDelay = (order++ * 0.025) + 's';
+    put(el, x, y);
+    pos[id] = [x, y];
+    el.dataset.z = z;
+    el.style.zIndex = moved && !opts.instant ? 1000 + z : z;
+    el.classList.toggle('can', selectable(id));
+    if (wasDown && !opts.instant && !REDUCED) el.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }],
+      { duration: 220, delay: opts.deal ? order * 25 : 0, easing: 'ease-out', fill: 'backwards' });
+  }
+  clearTimeout(zT);
+  zT = setTimeout(() => E.forEach(el => {
+    if (!el.classList.contains('dragging')) el.style.zIndex = el.dataset.z;
+    el.style.transitionDelay = '';
+  }), opts.deal ? 1700 : 360);
+
+  drawMarks();
+  document.getElementById('undoBtn').disabled = !undo.length;
+}
+// The yellow ring around the chosen cards, and a yellow frame on each place they can go.
+function drawMarks() {
+  ring.style.display = 'none';
+  marks.forEach(m => m.remove()); marks = [];
+  if (sel === null) return;
+  const loc = locate(sel), p = pileOf(loc);
+  if (!(drag && drag.started)) {
+    const [x, y] = pos[sel], yEnd = pos[last(p)][1] + L.h;
+    put(ring, x - 8, y - 8);
+    ring.style.width = L.w + 16 + 'px'; ring.style.height = yEnd - y + 16 + 'px';
+    ring.style.display = 'block';
+  }
+  // One frame per kind of place: the first empty free cell and the first empty column stand for the others,
+  // which still take the card on a click or a drop.
+  for (const d of hintDst ? [hintDst] : places(destinations(loc))) {
+    const [x, y] = d.a === 'cell' ? cellXY(d.i)
+      : d.a === 'found' ? (S.found[d.i].length ? pos[last(S.found[d.i])] : foundXY(d.i))
+      : S.tab[d.i].length ? pos[last(S.tab[d.i])] : [colX(d.i), L.ty];
+    const m = mk('mark' + (hintDst ? ' hint' : '')); put(m, x, y); m.dataset.key = d.a + d.i; marks.push(m);
+  }
+}
+
+function shake(el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+
+// S.done: celebrated in this position (undo clears it). S.won: counted (undo keeps it).
+function celebrate() {
+  if (S.done) return;
+  S.done = true;
+  save(); render();
+  setMsg('Bravo, vous avez gagné !');
+  // The four finished piles hop one after the other, twice.
+  if (!REDUCED) S.found.forEach((f, s) => E[last(f)].animate(
+    [{ translate: '0 0' }, { translate: `0 ${-L.h * 0.14}px` }, { translate: '0 0' }],
+    { duration: 500, delay: s * 120, iterations: 2, easing: 'ease-in-out' }));
+  clearTimeout(winT);
+  winT = setTimeout(() => dialog('Bravo, vous avez gagné !', `C'est votre victoire numéro ${stats.won}.`,
+    [['Nouvelle partie', newGame, true], ['Regarder le jeu', null]], true), REDUCED ? 0 : 1500);
+}
+
+/* ---------- Dialog ---------- */
+// The dialog and the rules guide come from lib/kit.js.
+const { dialog, closeDialog } = Kit;
+const dialogOpen = Kit.isOpen;
+function openHelp() { if (!drag) Kit.openHelp(); }
+
+/* ---------- Mouse and touch ---------- */
+// A press and release that moves less than 16 px is a click, so a shaky hand still clicks.
+// Moving further drags the card.
+function tablePoint(e) {
+  const r = table.getBoundingClientRect();
+  return [e.clientX - r.left + table.scrollLeft, e.clientY - r.top + table.scrollTop];
+}
+table.addEventListener('pointerdown', e => {
+  if (e.button !== 0 || busy || dialogOpen() || drag) return;
+  e.preventDefault();
+  const [x, y] = tablePoint(e), el = e.target.closest('.card');
+  const id = el ? +el.dataset.id : null;
+  const pile = id !== null ? pileAt(locate(id)) : hitPile(x, y);
+  drag = { id, pile, x0: e.clientX, y0: e.clientY, started: false, pointer: e.pointerId };
+});
+addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.pointer) return;
+  const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+  if (!drag.started) {
+    if (Math.hypot(dx, dy) < 16 || drag.id === null || locate(drag.id).a === 'found') return;
+    // A card with no place to go does not drag: the game says why instead.
+    if (!destinations(locate(drag.id)).length) { const id = drag.id; drag = null; return choose(id); }
+    const loc = locate(drag.id), pile = pileOf(loc);
+    drag.started = true; drag.loc = loc;
+    if (sel !== drag.id) { clearSel(); sel = drag.id; }
+    setMsg(chosenMsg(loc));
+    drag.els = pile.slice(loc.k).map((id, n) => {
+      const el = E[id];
+      el.classList.add('dragging'); el.style.zIndex = 3000 + n;
+      return { el, x: parseFloat(el.style.left), y: parseFloat(el.style.top) };
+    });
+    drawMarks();
+  }
+  drag.els.forEach(d => put(d.el, d.x + dx, d.y + dy));
+  const under = hitPile(...tablePoint(e)), key = under ? under.a + under.i : '';
+  marks.forEach(m => m.classList.toggle('over', m.dataset.key === key));
+});
+addEventListener('pointerup', e => {
+  if (!drag || e.pointerId !== drag.pointer) return;
+  const d = drag; drag = null;
+  const hit = hitPile(...tablePoint(e));
+  if (!d.started) {
+    // A double-click counts as one click: the second click at the same spot is ignored.
+    const t = performance.now(), prev = lastTap;
+    lastTap = { t, x: e.clientX, y: e.clientY };
+    if (prev && t - prev.t < 500 && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) < 24) return;
+    return onTap(d.id, d.pile);
+  }
+  d.els.forEach(o => o.el.classList.remove('dragging'));
+  if (hit && destinations(d.loc).some(t => samePile(t, hit))) return moveCards(d.loc, hit);
+  // A missed drop puts the cards back and keeps them chosen.
+  render();
+  if (hit && !samePile(hit, pileAt(d.loc))) setMsg(why(d.loc, hit));
+});
+addEventListener('pointercancel', e => {
+  if (!drag || e.pointerId !== drag.pointer) return;
+  const d = drag; drag = null;
+  if (d.started) { d.els.forEach(o => o.el.classList.remove('dragging')); render(); }
+});
+
+document.getElementById('newBtn').onclick = () => {
+  if (drag) return;
+  if (S.moves > 0 && !isWon()) dialog('Commencer une nouvelle partie ?', 'La partie en cours sera perdue.',
+    [['Continuer la partie', null, true], ['Nouvelle partie', newGame]]);
+  else newGame();
+};
+document.getElementById('undoBtn').onclick = doUndo;
+document.getElementById('hintBtn').onclick = showHint;
+document.getElementById('helpBtn').onclick = openHelp;
+addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); doUndo(); }
+  else if (e.key === 'Escape') { if (!Kit.escape() && sel !== null) unchoose(); }
+});
+addEventListener('resize', () => {
+  if (drag && drag.started) drag.els.forEach(o => o.el.classList.remove('dragging'));
+  drag = null;
+  render({ instant: true });
+});
+
+build();
+// The rules open by themselves the first time the game is opened.
+if (load()) { setMsg(isWon() ? 'Bravo, vous avez gagné !' : HELLO); render({ instant: true }); autoStep(); } else { newGame(); openHelp(); }
+</script>
+</body>
+</html>

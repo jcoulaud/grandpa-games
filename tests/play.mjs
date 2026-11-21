@@ -201,12 +201,64 @@ await page.waitForTimeout(3500);
 ok(await g(() => dialogOpen() && document.getElementById('overTitle').textContent.includes('Bravo')), 'win dialog shows');
 await page.screenshot({ path: `${OUT}/6-win.png` });
 
+// 10b. Fixes from the review. A position: f = foundation heights, cols = 'down ids / up ids', the other cards in the stock.
+const deal = (f, cols, waste = []) => g(`(() => { clearTimeout(autoT); Kit.closeDialog(); clearSel(); plan = null; undo = [];
+  const found = ${JSON.stringify(f)}.map((n, s) => [...Array(n).keys()].map(r => ({ id: s * 13 + r, up: true })));
+  const tab = ${JSON.stringify(cols)}.map(c => { const [d, u] = (c.includes('/') ? c : c + '/').split('/').map(x => x === '–' || !x ? [] : x.split(',').map(Number));
+    return d.map(id => ({ id, up: false })).concat(u.map(id => ({ id, up: true }))); });
+  const waste = ${JSON.stringify(waste)}.map(id => ({ id, up: true }));
+  const used = new Set([...found, ...tab, waste].flat().map(c => c.id));
+  S = { stock: [...Array(52).keys()].filter(id => !used.has(id)).map(id => ({ id, up: false })), waste, found, tab,
+    moves: 3, won: false, stuckShown: false, lostShown: true };
+  render({ instant: true }); })()`);
+// "No move left" is not said while the jack of diamonds can go on the queen of spades.
+await deal([2, 0, 1, 0], ['–/25,50,36', '2/40', '31,20/47,33,6', '48,18,17/37', '21,13,49,39/43,16,41,14', '35,27,19,9,30/7,32,5', '10,28,23,15/11']);
+await g(() => checkStuck());
+ok(!(await g(() => dialogOpen())), 'no "Plus aucun coup possible" while a move exists');
+// A search that runs out of time does not suggest the jack of diamonds onto the queen of clubs, which loses.
+await deal([0, 0, 5, 1], ['–/3', '16/23', '44/8', '41/19,5,17,42', '0,15,4,38/2', '31,11,21,34/36', '9,22,40,48,13/50']);
+await g(() => showHint());
+ok(await g(() => sel !== 36), 'an unfinished search does not guess a move: ' + await g(() => document.getElementById('msg').textContent));
+// The finish also turns the stock: the queen of spades under the king in the waste still goes home.
+const won0 = await g(() => stats.won);
+await g(() => { clearTimeout(autoT); Kit.closeDialog(); clearSel(); undo = [];
+  S = { stock: [], waste: [{ id: 11, up: true }, { id: 12, up: true }], tab: [[], [], [], [], [], [], []],
+    found: [0, 1, 2, 3].map(s => [...Array(s ? 13 : 11).keys()].map(r => ({ id: s * 13 + r, up: true }))), moves: 3, won: false, stuckShown: false, lostShown: true };
+  render({ instant: true }); autoStep(); });
+await page.waitForTimeout(2500);
+ok(await g(() => isWon()), 'the finish turns the stock to reach the last cards');
+// The win counts when the last card is home, before the celebration: an undo right after does not lose it.
+ok(await g(() => stats.won) === won0 + 1, 'the win is counted once');
+await g(() => { clearTimeout(winT); Kit.closeDialog(); });
+// A king at the bottom of a column can go to an empty column.
+await deal([0, 0, 0, 0], ['–/12', '–/25', '–', '–', '–', '–', '–']);
+ok(await g(() => destinations({ a: 'tab', i: 0, k: 0 }).some(d => d.a === 'tab')), 'a king at the bottom of a column may go to an empty column');
+// Going back with no undo steps, as after a restore from the backup, says so and offers a new game.
+await g(() => { undo = []; backToWinnable(); });
+ok(await g(() => dialogOpen() && document.getElementById('overTitle').textContent.startsWith('Impossible')), 'going back with no undo steps says so');
+await page.keyboard.press('Escape');
+// Undo forgets the last click: a click on the restored card right after an undo is not taken for a double-click.
+await g(() => { lastTap = { t: performance.now(), x: 0, y: 0 }; undo = [JSON.stringify(S)]; doUndo(); });
+ok(await g(() => lastTap === null), 'undo forgets the last click');
+
 // 11. Big screen
 const big = await browser.newPage({ viewport: { width: 1920, height: 1000 } });
 big.on('pageerror', e => errors.push(e.message));
 await big.goto(URL); await big.waitForTimeout(2200); await big.keyboard.press("Escape");
 console.log('     1920x1000 card: ' + JSON.stringify(await big.evaluate(() => [L.w, L.h])));
 await big.screenshot({ path: `${OUT}/7-start-1920x1000.png` });
+
+// 12. A save from before the library shows its wins on the library tile.
+const old = await browser.newPage({ viewport: { width: 1366, height: 680 } });
+old.on('pageerror', e => errors.push(e.message));
+await old.goto(URL); await old.waitForTimeout(500);
+await old.evaluate(() => {
+  const st = JSON.parse(JSON.stringify(S)); st.moves = 4;
+  localStorage.clear();
+  localStorage.setItem('solitaire-grand-pere-v2', JSON.stringify({ S: st, undo: [], stats: { won: 3 } }));
+});
+await old.reload(); await old.waitForTimeout(800);
+ok(((await old.evaluate(() => GG.meta('solitaire'))) || {}).summary === 'Partie en cours · 3 victoires', 'an old save shows its wins on the library tile');
 
 ok(errors.length === 0, 'no page errors ' + errors.join(' | '));
 await browser.close();

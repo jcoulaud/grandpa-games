@@ -135,6 +135,27 @@ ok(await g(() => dialogOpen() && document.getElementById('overTitle').textConten
 ok(await g(() => document.getElementById('wins').textContent).then(t => /Victoires/.test(t)), 'the win count shows next to the message line');
 await page.screenshot({ path: `${OUT}/d-win.png` });
 
+// Tab stays inside an open dialog, and closing it gives the focus back to the button that opened it.
+await g(() => Kit.closeDialog());
+await page.focus('#newBtn');
+await page.evaluate(() => Kit.dialog('Partie perdue', 'Test', [['Revenir en arrière', null, true], ['Nouvelle partie', null]]));
+for (let n = 0; n < 4; n++) await page.keyboard.press('Tab');
+ok(await g(() => !!document.activeElement.closest('#box')), 'Tab stays inside the dialog');
+await page.keyboard.press('Escape');
+ok(await g(() => document.activeElement.id === 'newBtn'), 'closing the dialog gives the focus back');
+
+// Two windows of the same game: the older one cannot save over the newer game, and asks to reload.
+const ctx = await browser.newContext({ viewport: { width: 1366, height: 680 } });
+const a = await ctx.newPage(), b = await ctx.newPage();
+for (const p of [a, b]) { p.on('pageerror', e => errors.push(e.message)); await p.goto(URL); await p.waitForTimeout(2200); await p.keyboard.press('Escape'); }
+// A test save that no game writes by itself, so only these two calls touch it.
+await a.evaluate(() => GG.load('twotabs')); await b.evaluate(() => GG.load('twotabs'));
+const first = await a.evaluate(() => GG.save('twotabs', { won: 7 }));
+const second = await b.evaluate(() => GG.save('twotabs', { won: 0 }));
+ok(first && !second && (await a.evaluate(() => GG.load('twotabs'))).won === 7, 'an older window does not save over a newer game');
+ok(await b.evaluate(() => dialogOpen() && document.getElementById('overTitle').textContent.includes('changé')), 'the older window asks to reload');
+await ctx.close();
+
 ok(errors.length === 0, 'no page errors ' + errors.join(' | '));
 await browser.close();
 console.log(fails ? `${fails} FAILED` : 'ALL PASSED');

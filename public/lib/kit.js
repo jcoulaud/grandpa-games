@@ -46,8 +46,13 @@
   if (!$('over')) document.body.insertAdjacentHTML('beforeend',
     '<div id="over"><div id="box" role="dialog" aria-modal="true" aria-labelledby="overTitle"><h2 id="overTitle"></h2><p id="overText"></p><div id="overBtns"></div></div></div>');
   const over = $('over');
-  const closeDialog = () => over.classList.remove('on', 'soft');
+  // The control that had the focus before a dialog or the rules opened gets it back when they close.
+  let opener = null;
+  const remember = () => { if (!isOpen()) opener = document.activeElement; };
+  const giveBack = () => { if (!isOpen() && opener && opener.isConnected) opener.focus({ preventScroll: true }); opener = null; };
+  const closeDialog = () => { over.classList.remove('on', 'soft'); giveBack(); };
   function dialog(title, text, buttons, soft) {
+    remember();
     $('overTitle').textContent = title;
     $('overText').textContent = text;
     const b = $('overBtns'); b.innerHTML = '';
@@ -89,8 +94,8 @@
     next.textContent = n === pages.length - 1 ? "J'ai compris" : 'Suivant';
     next.focus();
   }
-  function openHelp() { if (!help) return; help.classList.add('on'); showPage(0); }
-  function closeHelp() { if (help) help.classList.remove('on'); }
+  function openHelp() { if (!help) return; remember(); help.classList.add('on'); showPage(0); }
+  function closeHelp() { if (help) { help.classList.remove('on'); giveBack(); } }
   const helpOpen = () => !!help && help.classList.contains('on');
   const isOpen = () => over.classList.contains('on') || helpOpen();
   function escape() {
@@ -98,6 +103,26 @@
     if (over.classList.contains('on')) { closeDialog(); return true; }
     return false;
   }
+
+  // While a dialog or the rules are open, Tab moves only between their buttons:
+  // the buttons of the bar behind them cannot be reached.
+  addEventListener('keydown', e => {
+    if (e.key !== 'Tab' || !isOpen()) return;
+    const box = over.classList.contains('on') ? $('box') : $('helpBox');
+    const items = [...box.querySelectorAll('button')].filter(b => !b.hidden && !b.disabled);
+    if (!items.length) return;
+    e.preventDefault();
+    const i = items.indexOf(document.activeElement);
+    items[(i + (e.shiftKey ? -1 : 1) + items.length) % items.length].focus();
+  }, true);
+
+  // A window that is behind (another window or the backup saved a newer game) cannot save:
+  // it asks to reload, at each refused save, until it is reloaded.
+  addEventListener('gg-stale', () => {
+    if (!over.classList.contains('on')) dialog('Le jeu a changé ailleurs',
+      'Ce jeu a été enregistré dans une autre fenêtre. Rechargez-le pour continuer la partie à jour.',
+      [['Recharger le jeu', () => location.reload(), true]]);
+  });
 
   window.Kit = { say, dialog, closeDialog, openHelp, closeHelp, isOpen, escape, icon };
 })();

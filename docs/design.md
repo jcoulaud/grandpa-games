@@ -57,3 +57,14 @@ Flat and current, in the spirit of Windows 11 and recent macOS apps. No texture,
 - **Width.** Cards grow to 170 px and the gaps to 18% of a card. A 1920x1000 window has 73 px margins.
 - **Yellow.** The ring and the frames are #FFC83D with a dark hairline, so they show on a white card. The ring has a soft glow.
 - **Dialogs and rules.** White sheets with a 24 px radius, a large soft shadow, bold 32 px titles and 58 px buttons. The rules guide has a "Fermer" button with a cross, 54 px high, at the top right of every page. The win sheet shows a yellow badge with a check mark that grows in once (450 ms, off with reduced motion).
+
+## FreeCell
+
+FreeCell uses the solitaire's cards, top bar, message line, clicks, drag, hints and dialogs.
+
+- **Its own look.** Each game has its own felt, so he sees at once which game is open. FreeCell is deep blue (#2B5F94 to #173F6B) with a blue "Nouvelle partie" button (#1D5590). Its library tile shows the four aces in a row on the same blue. The solitaire keeps the green and the fan of three cards.
+- **Layout.** The four free cells are on the left of the top row and the four foundations are on the right. The eight columns are under them. The free cells have a light border, so they do not look like the foundations.
+- **Card size.** The card size is set for columns of six cards. The four columns of seven cards squeeze a little on a laptop. At 1366x680 the cards are 101 px wide.
+- **One click.** The empty free cells count as one place, and so do the empty columns. A card that fits nowhere else goes to the first free cell with one click.
+- **Runs.** A click on a card in an ordered run takes the card and the cards on it. When the run is too long for the room, the message line gives the number of cards that can move now.
+- **Solver.** It searches best-first and wins about 98% of random deals in less than 30,000 positions, in about 20 ms. A deal is kept only if the solver wins it.
