@@ -125,7 +125,8 @@
     try {
       const h = await (await call('POST', '/hello')).json();
       // A removed PC keeps its player, so its games are kept if it is approved again.
-      if (!h.approved) { set('approved', false); return { approved: false, changed }; }
+      // "full": the server did not record this PC (too many PCs waiting), so it has no code to read out yet.
+      if (!h.approved) { set('approved', false); return { approved: false, full: !!h.full, changed }; }
       // A PC that is new to this player (first approval, or moved to another person) takes the server
       // copy of every game, even if someone played on it meanwhile. It uploads nothing until that
       // restore is written, so it never overwrites the player's progress, even if this sync fails.

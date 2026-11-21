@@ -26,7 +26,8 @@ migrations/              the database tables
 1. Make `public/games/<id>/index.html` like the solitaire: link `../../lib/kit.css` (and `../../lib/cards.css` for a card game), write the top bar, the message line, the table and the rules pages, then load `../../lib/store.js`, `../../lib/cards.js` and `../../lib/kit.js` before the game's own script. The top of `lib/kit.js` shows the markup.
 2. The kit adds the "Jeux" button, the button icons (`data-icon="undo"`, `bulb`, `help`, `close`), the rules guide frame and the dialog. Use `Kit.say`, `Kit.dialog`, `Kit.openHelp` and `Kit.escape`.
 3. Save with `GG.save('<id>', data, { cloud, summary })` and read with `GG.load('<id>')`. Keep `cloud` under 100 KB. `summary` is the line on the tile, for example "Partie en cours · 3 victoires".
-4. Add the game to `GAMES` in `public/index.html`, and its folder to `CORE` in `public/sw.js`.
+4. Give the game its own browser tab icon: `public/games/<id>/icon.svg`, linked with `<link rel="icon" href="icon.svg">`.
+5. Add the game to `GAMES` in `public/index.html`, and its folder and icon to `CORE` in `public/sw.js`.
 
 When a game changes its save format, it must still read the old format. His saves are never deleted.
 

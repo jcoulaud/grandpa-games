@@ -108,7 +108,7 @@
   <symbol id="su0" viewBox="0 0 100 100"><path d="M50 5C62 26 95 40 95 61c0 12-10 20-21 20-8 0-15-4-19-11 1 11 6 20 13 26H32c7-6 12-15 13-26-4 7-11 11-19 11C15 81 5 73 5 61 5 40 38 26 50 5z"/></symbol>
   <symbol id="su1" viewBox="0 0 100 100"><path d="M50 92C22 66 5 50 5 31 5 17 16 7 29 7c9 0 17 5 21 14 4-9 12-14 21-14 13 0 24 10 24 24 0 19-17 35-45 61z"/></symbol>
   <symbol id="su2" viewBox="0 0 100 100"><path d="M50 2Q69 29 91 50Q69 71 50 98Q31 71 9 50Q31 29 50 2z"/></symbol>
-  <symbol id="su3" viewBox="0 0 100 100"><circle cx="50" cy="26" r="21"/><circle cx="26" cy="58" r="21"/><circle cx="74" cy="58" r="21"/><path d="M40 40h20v20H40zM46 56c0 18-5 31-13 40h34c-8-9-13-22-13-40z"/></symbol>
+  <symbol id="su3" viewBox="0 0 100 100"><circle cx="50" cy="26" r="21"/><circle cx="26" cy="58" r="21"/><circle cx="74" cy="58" r="21"/><path d="M40 40h20v20H40z"/><path d="M46 56c0 18-5 31-13 40h34c-8-9-13-22-13-40z"/></symbol>
   <pattern id="lattice" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
     <path d="M0 0H10M0 0V10" stroke="rgba(255,255,255,.22)" stroke-width="1.2"/>
   </pattern>
@@ -245,7 +245,9 @@ function syncLine(r) {
     : ICON_PC + 'Vos parties sont gardées sur cet ordinateur.';
   // The code is for the person who approves this PC: say so, so he does not think he must remember it.
   const who = asker ? `Si ${esc(asker)} vous demande le code, lisez-lui :` : `Code de cet ordinateur :`;
-  document.getElementById('code').innerHTML = r.approved ? '' : `${who} <b>${GG.code.slice(0, 3)} ${GG.code.slice(3)}</b>`;
+  document.getElementById('code').innerHTML = r.approved ? ''
+    : r.full ? 'La sauvegarde en ligne ne peut pas accueillir cet ordinateur pour le moment. Réessayez demain.'
+    : `${who} <b>${GG.code.slice(0, 3)} ${GG.code.slice(3)}</b>`;
 }
 
 // Edge offers to install the site as an app. Show the offer as a plain button.

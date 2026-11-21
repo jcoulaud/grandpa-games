@@ -3,7 +3,7 @@
 // A PC sends its random id in the X-Device header. Unknown PCs are recorded but cannot save until
 // they are approved on the admin page or with `bun run approve <code>`. Approved PCs share the saves of one player.
 // Approved PCs also send their JavaScript errors here, for the admin page. /api/admin/* is in admin.ts.
-import { admin, type AdminEnv } from './admin';
+import { admin, dropStalePending, type AdminEnv } from './admin';
 import { network } from './ip';
 
 type Env = AdminEnv;
@@ -31,7 +31,6 @@ interface SaveBody {
 const MAX_BYTES = 100_000;   // one save
 const MAX_PENDING = 200;     // PCs waiting for approval
 const PENDING_PER_NETWORK = 5;            // of them from one network
-const PENDING_TTL_MS = 7 * 86_400_000;    // a PC waiting for approval is dropped after a week unseen
 const KEEP_HISTORY = 30;     // old versions kept per game
 const HISTORY_EVERY_MS = 3_600_000; // at most one old version per hour, so 30 versions cover days
 const MIN_WRITE_MS = 1_000;  // between two saves of one PC
@@ -54,20 +53,22 @@ export default {
 
     if (url.pathname === '/api/hello' && request.method === 'POST') {
       if (!device) {
-        // A PC never approved and not seen for a week is dropped. A real one comes back at its next start.
         // One network can add only a few PCs, so strangers cannot fill the list with made-up ones.
+        // The limits are checked inside the insert, so parallel requests cannot pass them together.
         const ip = network(request);
-        const [, pending] = await env.DB.batch<{ n: number; mine: number }>([
-          env.DB.prepare('DELETE FROM devices WHERE approved = 0 AND player IS NULL AND last_seen < ?').bind(now - PENDING_TTL_MS),
-          env.DB.prepare('SELECT COUNT(*) AS n, COALESCE(SUM(ip = ?), 0) AS mine FROM devices WHERE approved = 0 AND player IS NULL').bind(ip),
+        const [, added] = await env.DB.batch([
+          dropStalePending(env.DB, now),
+          env.DB.prepare(`INSERT OR IGNORE INTO devices (id, code, approved, created_at, last_seen, ip)
+            SELECT ?1, ?2, 0, ?3, ?3, ?4
+            WHERE (SELECT COUNT(*) FROM devices WHERE approved = 0 AND player IS NULL) < ?5
+              AND (SELECT COUNT(*) FROM devices WHERE approved = 0 AND player IS NULL AND ip = ?4) < ?6`)
+            .bind(id, id.slice(0, 6), now, ip, MAX_PENDING, PENDING_PER_NETWORK),
         ]);
-        const { n, mine } = pending.results[0] ?? { n: 0, mine: 0 };
-        if (n >= MAX_PENDING || mine >= PENDING_PER_NETWORK) return json({ approved: false });
-        await env.DB.prepare('INSERT OR IGNORE INTO devices (id, code, approved, created_at, last_seen, ip) VALUES (?, ?, 0, ?, ?, ?)')
-          .bind(id, id.slice(0, 6), now, now, ip).run();
-        return json({ approved: false });
+        // "full": the PC was not added, so the library does not show a code nobody can find.
+        return json({ approved: false, full: !added.meta.changes });
       }
-      await env.DB.prepare('UPDATE devices SET last_seen = ? WHERE id = ?').bind(now, id).run();
+      // A PC that waited before the network was recorded gets it now, so it counts in the limit.
+      await env.DB.prepare('UPDATE devices SET last_seen = ?, ip = COALESCE(ip, ?) WHERE id = ?').bind(now, network(request), id).run();
       const ok = device.approved === 1 && !!device.player;
       return json({ approved: ok, player: ok ? device.player : null });
     }

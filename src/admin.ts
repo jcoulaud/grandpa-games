@@ -11,6 +11,11 @@ export interface AdminEnv {
 const CODE = /^[A-Z2-9]{6}$/;
 const MAX_FAILURES = 10;
 const FAILURE_WINDOW_MS = 15 * 60_000;
+const PENDING_TTL_MS = 7 * 86_400_000;
+
+// A PC never approved and not seen for a week is dropped. A real one comes back at its next start.
+export const dropStalePending = (db: D1Database, now: number) =>
+  db.prepare('DELETE FROM devices WHERE approved = 0 AND player IS NULL AND last_seen < ?').bind(now - PENDING_TTL_MS);
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
@@ -35,22 +40,25 @@ const codeOf = (v: unknown) => (typeof v === 'string' ? v.toUpperCase().replace(
 export async function admin(request: Request, env: AdminEnv, path: string): Promise<Response> {
   if (!env.ADMIN_TOKEN) return json({ error: 'admin off' }, 503);
   const db = env.DB;
-  // After MAX_FAILURES wrong passwords from one network, it waits until the oldest is FAILURE_WINDOW_MS old.
-  const ip = network(request), now = Date.now();
-  const failures = await db.prepare('SELECT COUNT(*) AS n FROM admin_failures WHERE ip = ? AND at > ?')
-    .bind(ip, now - FAILURE_WINDOW_MS).first<{ n: number }>();
-  if ((failures?.n ?? 0) >= MAX_FAILURES) return json({ error: 'Trop d’essais. Réessayez dans 15 minutes.' }, 429);
   const auth = request.headers.get('Authorization') ?? '';
-  if (!auth.startsWith('Bearer ') || !(await sameSecret(auth.slice(7), env.ADMIN_TOKEN))) {
-    await db.batch([
-      db.prepare('INSERT INTO admin_failures (ip, at) VALUES (?, ?)').bind(ip, now),
-      db.prepare('DELETE FROM admin_failures WHERE at <= ?').bind(now - FAILURE_WINDOW_MS),
-    ]);
-    return json({ error: 'password' }, 401);
-  }
+  const given = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  if (!given) return json({ error: 'password' }, 401);
+  // Each password try is recorded and counted in one transaction, so parallel tries cannot pass the
+  // limit together. A right password removes its row. After MAX_FAILURES wrong ones from a network
+  // in FAILURE_WINDOW_MS, that network is refused, even with the right password.
+  const ip = network(request), now = Date.now();
+  const [, tried, count] = await db.batch<{ id?: number; n?: number }>([
+    db.prepare('DELETE FROM admin_failures WHERE at <= ?').bind(now - FAILURE_WINDOW_MS),
+    db.prepare('INSERT INTO admin_failures (ip, at) VALUES (?, ?) RETURNING id').bind(ip, now),
+    db.prepare('SELECT COUNT(*) AS n FROM admin_failures WHERE ip = ?').bind(ip),
+  ]);
+  if ((count.results[0]?.n ?? 0) > MAX_FAILURES) return json({ error: 'Trop d’essais. Réessayez dans 15 minutes.' }, 429);
+  if (!(await sameSecret(given, env.ADMIN_TOKEN))) return json({ error: 'password' }, 401);
+  await db.prepare('DELETE FROM admin_failures WHERE id = ?').bind(tried.results[0]?.id ?? -1).run();
 
   if (path === 'overview' && request.method === 'GET') {
-    const [devices, saves, errors] = await db.batch([
+    const [, devices, saves, errors] = await db.batch([
+      dropStalePending(db, Date.now()),
       db.prepare('SELECT code, name, player, approved, created_at, last_seen, last_write FROM devices ORDER BY last_seen DESC'),
       db.prepare('SELECT player, game, updated_at, summary FROM saves ORDER BY updated_at DESC'),
       db.prepare(`SELECT id, device_code, player, page, message, stack, version, agent, happened_at, received_at

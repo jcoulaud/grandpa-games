@@ -23,7 +23,9 @@ const PIPS = (() => {
   const Lx = 18, C = 44, R = 70, pair = y => [[Lx, y], [R, y]];
   const three = [12, 42, 72].flatMap(pair), four = [11, 31.5, 52, 72.5].flatMap(pair);
   return {
-    2: [[[C, 20], [C, 64]], 32], 3: [[[C, 13], [C, 42], [C, 71]], 25],
+    // The 2 and the 3 go on a diagonal, away from the corner suit: in one column under it,
+    // the corner suit read as one more pip.
+    2: [[[64, 18], [24, 66]], 32], 3: [[[67, 13], [C, 42], [21, 71]], 25],
     4: [[...pair(18), ...pair(66)], 28], 5: [[...pair(16), [C, 42], ...pair(68)], 26],
     6: [three, 23], 7: [[...three, [C, 27]], 22], 8: [[...three, [C, 27], [C, 57]], 22],
     9: [[...four, [C, 42]], 19.5], 10: [[...four, [C, 21], [C, 62.5]], 19.5],
@@ -86,7 +88,7 @@ document.body.insertAdjacentHTML('afterbegin', `<svg width="0" height="0" style=
   <symbol id="su0" viewBox="0 0 100 100"><path d="M50 5C62 26 95 40 95 61c0 12-10 20-21 20-8 0-15-4-19-11 1 11 6 20 13 26H32c7-6 12-15 13-26-4 7-11 11-19 11C15 81 5 73 5 61 5 40 38 26 50 5z"/></symbol>
   <symbol id="su1" viewBox="0 0 100 100"><path d="M50 92C22 66 5 50 5 31 5 17 16 7 29 7c9 0 17 5 21 14 4-9 12-14 21-14 13 0 24 10 24 24 0 19-17 35-45 61z"/></symbol>
   <symbol id="su2" viewBox="0 0 100 100"><path d="M50 2Q69 29 91 50Q69 71 50 98Q31 71 9 50Q31 29 50 2z"/></symbol>
-  <symbol id="su3" viewBox="0 0 100 100"><circle cx="50" cy="26" r="21"/><circle cx="26" cy="58" r="21"/><circle cx="74" cy="58" r="21"/><path d="M40 40h20v20H40zM46 56c0 18-5 31-13 40h34c-8-9-13-22-13-40z"/></symbol>
+  <symbol id="su3" viewBox="0 0 100 100"><circle cx="50" cy="26" r="21"/><circle cx="26" cy="58" r="21"/><circle cx="74" cy="58" r="21"/><path d="M40 40h20v20H40z"/><path d="M46 56c0 18-5 31-13 40h34c-8-9-13-22-13-40z"/></symbol>
   <clipPath id="courtClip"><rect x="1" y="1" width="86" height="82" rx="7"/></clipPath>
 </defs></svg>`);
 

@@ -150,6 +150,7 @@ async function api(path, body) {
     body: body ? JSON.stringify(body) : undefined,
   });
   if (r.status === 401) { showLogin('Mot de passe incorrect.'); throw new Error('401'); }
+  if (r.status === 429) { showLogin('Trop d’essais. Réessayez dans 15 minutes.'); throw new Error('429'); }
   const data = await r.json().catch(() => ({}));
   if (!r.ok) { toast(data.error || 'Erreur ' + r.status); throw new Error(data.error); }
   return data;

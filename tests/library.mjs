@@ -272,9 +272,12 @@ try {
   // 8. Strangers: one network adds at most 5 PCs waiting for approval, and a PC unseen for a week goes.
   const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const fakeId = () => Array.from({ length: 26 }, () => ABC[Math.floor(Math.random() * 32)]).join('');
-  for (let i = 0; i < 8; i++) await fetch(BASE + 'api/hello', { method: 'POST', headers: { 'X-Device': fakeId() } });
+  const before = sql('SELECT COUNT(*) AS n FROM devices WHERE approved = 0 AND player IS NULL')[0].n;
+  const answers = await Promise.all(Array.from({ length: 8 }, () =>
+    fetch(BASE + 'api/hello', { method: 'POST', headers: { 'X-Device': fakeId() } }).then(r => r.json())));
   const waiting = sql('SELECT COUNT(*) AS n FROM devices WHERE approved = 0 AND player IS NULL')[0].n;
-  check('one network adds at most 5 waiting PCs', waiting === 5, String(waiting));
+  check('one network adds at most 5 waiting PCs, also in parallel', waiting === 5, String(waiting));
+  check('a PC that is not added is told so', answers.filter(a => a.full).length === 8 - (5 - before), JSON.stringify(answers));
   sql(`UPDATE devices SET last_seen = 0 WHERE approved = 0 AND player IS NULL`);
   await fetch(BASE + 'api/hello', { method: 'POST', headers: { 'X-Device': fakeId() } });
   const fresh = sql('SELECT COUNT(*) AS n FROM devices WHERE approved = 0 AND player IS NULL')[0].n;

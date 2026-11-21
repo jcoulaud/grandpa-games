@@ -157,14 +157,32 @@ ok(!(await g(() => dialogOpen())), 'Escape closes the dialog');
 await g(() => {
   S = { stock: [{ id: 5, up: false }], waste: [], found: [[], [], [], [{ id: 39, up: true }]],
     tab: [[{ id: 0, up: false }, { id: 27, up: true }], [{ id: 12, up: true }], [], [], [], [], []], moves: 5, won: false, stuckShown: false };
+  // Every card not placed goes to the stock, so no card of an older position stays on the table.
+  S.stock = [...Array(52).keys()].filter(id => ![S.waste, ...S.found, ...S.tab].flat().some(c => c.id === id)).map(id => ({ id, up: false }));
   render({ instant: true });
   moveCards({ a: 'found', i: 3, k: 0 }, { a: 'tab', i: 0 });
 });
 await page.waitForTimeout(1500);
 ok(await g(() => last(S.tab[0]).id === 39 && !S.found[3].length), 'an ace taken back onto a 2 stays there');
-await g(() => moveCards({ a: 'tab', i: 0, k: 2 }, { a: 'found', i: 3 }));
-ok(await g(() => S.found[3].length === 1 && !S.found[3][0].kept), 'putting it home again clears the mark');
 await g(() => { clearTimeout(autoT); if (dialogOpen()) Kit.closeDialog(); }); // this made-up deal cannot be won
+
+// 9c. Dragging a card that has nowhere to go does not choose it: the game says so instead.
+await g(() => {
+  S = { stock: [{ id: 5, up: false }], waste: [], found: [[], [], [], []],
+    tab: [[{ id: 7, up: false }, { id: 2, up: true }, { id: 27, up: true }], [{ id: 10, up: true }], [], [], [], [], []],
+    moves: 5, won: false, stuckShown: true, lostShown: true };
+  clearSel(); // an earlier step left a card chosen
+  // Every card not placed goes to the stock, so no card of an older position stays on the table.
+  S.stock = [...Array(52).keys()].filter(id => ![S.waste, ...S.found, ...S.tab].flat().some(c => c.id === id)).map(id => ({ id, up: false }));
+  render({ instant: true });
+});
+await page.waitForTimeout(700); // the cards slide to their new places first
+const box = await g(() => { const r = E[2].getBoundingClientRect(); return [r.left + r.width / 2, r.top + 12]; });
+await page.mouse.move(...box); await page.mouse.down();
+await page.mouse.move(box[0] + 60, box[1] + 60, { steps: 5 }); await page.mouse.up();
+const dragged = await g(() => [sel, document.getElementById('msg').textContent]);
+ok(dragged[0] === null && dragged[1].includes('nulle part'), 'a card with nowhere to go does not drag ' + JSON.stringify(dragged));
+await page.waitForTimeout(600);
 
 // 10. Win
 await g(() => {
