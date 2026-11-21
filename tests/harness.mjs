@@ -7,7 +7,8 @@ import { chromium } from 'playwright';
 const here = dirname(fileURLToPath(import.meta.url));
 
 // The game is opened from disk, the way it runs on the PC.
-export const URL = pathToFileURL(join(here, '..', 'public', 'games', 'solitaire', 'index.html')).href;
+export const gameUrl = id => pathToFileURL(join(here, '..', 'public', 'games', id, 'index.html')).href;
+export const URL = gameUrl('solitaire');
 
 // Screenshots go to tests/screenshots, or to the folder in SHOTS.
 export const OUT = process.env.SHOTS || join(here, 'screenshots');

@@ -30,6 +30,7 @@ migrations/              the database tables
 4. Give the game its own browser tab icon: `public/games/<id>/icon.svg`, linked with `<link rel="icon" href="icon.svg">`.
 5. Add the game to `GAMES` in `public/index.html` and in `src/worker.ts`, and its folder and icon to `CORE` in `public/sw.js`.
 6. Count its games with `GG.track('<id>', 'start')` when a game begins and `GG.track('<id>', 'won')` when it is won.
+7. Give the game its own look. Each game has its own felt colour: set `--felt-top`, `--felt`, `--shade` and `--accent` on `:root` in the game page, and the same felt in `GAMES`. Give its tile a different picture of cards. The solitaire is green with a fan of three cards. FreeCell is blue with four aces in a row.
 
 When a game changes its save format, it must still read the old format. His saves are never deleted.
 
@@ -51,12 +52,19 @@ When a game changes its save format, it must still read the old format. His save
   - The game saves after each move.
   - The card size depends only on the window, so the board does not move during a game.
 
+- `public/games/freecell/`: FreeCell, with four free cells and eight columns.
+  - All the cards are face up from the start. The solver in `solver.js` deals only games that it has won.
+  - The clicks, drag, hint, undo, automatic cards, saves and statistics work as in the solitaire.
+  - The empty free cells count as one place, and so do the empty columns. So a card that fits nowhere else goes to a free cell with one click. The game frames only the first empty free cell and the first empty column, but a click or a drop on another one also works.
+  - A run of cards moves in one go when there is room: one card more per empty free cell, doubled by each empty column. When the run is too long, the message line gives the number of cards that can move.
+
 The design and the research behind it are in `docs/design.md`.
 
 ## Saves
 
 - Everyone plays freely, with no account and no approval. Each game saves in the browser of the PC (localStorage) and never leaves it.
 - The library asks Edge to keep this data when the disk is full. Clearing the browser data for jeux-papi.fr deletes the saves.
+- A game open in two windows saves only from the window that saved last. The other window refuses to save and asks to reload, so it cannot write an older game over a newer one.
 
 ## Admin page
 

@@ -220,10 +220,12 @@ function solve(x0, budget) {
 /* ---------- Game state ---------- */
 // S.found[s] holds suit s. Cards are { id, up }.
 // sel: the chosen card (it moves with the cards on top of it). hintDst / hintStock: the shown hint.
+let turns = 0; // stock turns of the finish since the last card went home
 let S, undo = [], stats = { won: 0 }, autoT = 0, zT = 0, winT = 0, busy = false, autoCount = 0;
-let drag = null, plan = null, sel = null, hintDst = null, hintStock = false, lastTap = null;
+let drag = null, plan = null, sel = null, hintDst = null, hintStock = false, lastTap = null, dealT = 0, legacy = false;
 
-function toSolver() {
+const toSolver = () => solverOf(S);
+function solverOf(S) {
   return {
     cols: S.tab.map(p => ({ d: p.filter(c => !c.up).map(c => c.id), u: p.filter(c => c.up).map(c => c.id) })),
     f: S.found.map(f => f.length),
@@ -248,18 +250,20 @@ function winnableDeal() {
 }
 
 // Every undo step is saved. If the browser storage is full, the oldest steps go first.
+// A win counts as soon as the last card is home, before the celebration, so an undo cannot lose it.
 function save() {
+  if (isWon() && !S.won) { S.won = true; stats.won++; GG.track('solitaire', 'won'); }
   const parts = [];
   if (S.moves > 0 && !isWon()) parts.push('Partie en cours');
   if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
-  for (const n of [Infinity, 2000, 300]) {
-    if (GG.save('solitaire', { S, undo: undo.slice(-n), stats }, { summary: parts.join(' · ') })) return;
+  for (const n of [Infinity, 2000, 300, 50, 0]) {
+    if (GG.save('solitaire', { S, undo: n ? undo.slice(-n) : [], stats }, { summary: parts.join(' · ') })) return;
   }
 }
 function load() {
   try {
     let v = GG.load('solitaire');
-    if (!v) v = JSON.parse(localStorage.getItem(KEY)); // saves from before the library
+    if (!v) { v = JSON.parse(localStorage.getItem(KEY)); legacy = !!v; } // saves from before the library
     if (v && v.stats) stats = v.stats;
     if (v && v.S) { S = v.S; undo = v.undo || []; return true; }
   } catch (e) {}
@@ -289,7 +293,7 @@ function destinations(loc) {
   for (let i = 0; i < 7; i++) {
     if (loc.a === 'tab' && loc.i === i) continue;
     if (!S.tab[i].length) {
-      if (rk(c.id) === 13 && !(loc.a === 'tab' && loc.k === 0)) out.push({ a: 'tab', i });
+      if (rk(c.id) === 13) out.push({ a: 'tab', i });
     } else if (canTab(c.id, i)) out.push({ a: 'tab', i });
   }
   return out;
@@ -384,12 +388,14 @@ function choose(id) {
   setMsg(chosenMsg(loc)); render();
 }
 function unchoose() { clearSel(); setMsg(HELLO); render(); }
+// The places that change something: a king at the bottom of a column gains nothing on an empty column.
+const useful = loc => destinations(loc).filter(d => !(loc.a === 'tab' && loc.k === 0 && d.a === 'tab' && !S.tab[d.i].length));
 // A click on a card. With one legal place, the card goes there at once.
 // With several, the card is chosen and the player picks the place.
 // A card on a foundation never leaves by one click: taking it back is rare and must be meant.
 function take(id) {
   const loc = locate(id), ds = destinations(loc);
-  if (ds.length === 1 && loc.a !== 'found') return moveCards(loc, ds[0]);
+  if (ds.length === 1 && loc.a !== 'found' && useful(loc).length) return moveCards(loc, ds[0]);
   choose(id);
 }
 
@@ -407,7 +413,7 @@ function onTap(id, pile) {
   if (pile && destinations(loc).some(d => samePile(d, pile))) return moveCards(loc, pile);
   if (id === sel || !pile) return unchoose();
   // Another card that can move: play it instead. Otherwise explain the refusal.
-  if (id !== null && selectable(id) && destinations(locate(id)).length) return take(id);
+  if (id !== null && selectable(id) && useful(locate(id)).length) return take(id);
   if (samePile(pile, pileAt(loc))) return unchoose();
   setMsg(why(loc, pile));
 }
@@ -418,7 +424,7 @@ function autoStep() {
   if (busy) return;
   if (drag || sel !== null || hintStock || dialogOpen()) { autoT = setTimeout(autoStep, AUTO_DELAY); return; }
   if (isWon()) return celebrate();
-  const finishing = !S.stock.length && !S.waste.length && S.tab.every(p => p.every(c => c.up));
+  const finishing = S.tab.every(p => p.every(c => c.up));
   const x = toSolver();
   const cands = [];
   if (S.waste.length) cands.push({ a: 'waste', k: S.waste.length - 1 });
@@ -427,13 +433,23 @@ function autoStep() {
     const id = pileOf(loc)[loc.k].id;
     if (canFound(id) && !pileOf(loc)[loc.k].kept && (finishing || sSafe(x, id))) {
       S.found[st(id)].push(pileOf(loc).pop());
-      autoCount++;
+      autoCount++; turns = 0;
       flipTops(); render(); save();
       if (!finishing) flash([id]);
       autoT = setTimeout(autoStep, finishing ? FINISH_DELAY : AUTO_DELAY);
       return;
     }
   }
+  // Nothing goes home: the finish turns the stock, at most one full turn without a card going home.
+  if (finishing && S.stock.length + S.waste.length && turns <= S.stock.length + S.waste.length) {
+    turns++;
+    if (S.stock.length) { const c = S.stock.pop(); c.up = true; S.waste.push(c); }
+    else { S.stock = S.waste.reverse().map(c => ({ id: c.id, up: false })); S.waste = []; }
+    render(); save();
+    autoT = setTimeout(autoStep, FINISH_DELAY);
+    return;
+  }
+  turns = 0;
   if (autoCount) {
     setMsg(autoCount === 1 ? '1 carte rangée automatiquement.' : `${autoCount} cartes rangées automatiquement.`);
     autoCount = 0;
@@ -445,11 +461,21 @@ function checkStuck() {
   if (S.stuckShown || isWon()) return;
   // Auto-play has already run, so the real position is checked: a card the player took back
   // from the foundation and that can go home again still counts as a move.
-  const x = toSolver();
-  if (x.f.every(n => n === 13) || sMoves(x).length) return;
+  if (anyMove()) return;
   S.stuckShown = true; save();
   dialog('Plus aucun coup possible', 'Aucune carte ne peut plus bouger.',
     [['Revenir en arrière', backToWinnable, true], ['Nouvelle partie', newGame]]);
+}
+// A legal move that changes something: a card of the stock or the waste that fits somewhere (the stock
+// can be turned until it shows), or a column card with a place. A king that only goes from the bottom
+// of a column to an empty column changes nothing, and taking a card back from home does not count.
+function anyMove() {
+  for (const c of S.stock.concat(S.waste)) if (canFound(c.id) || S.tab.some((p, i) => canTab(c.id, i))) return true;
+  for (let i = 0; i < 7; i++) for (let k = 0; k < S.tab[i].length; k++) {
+    if (!S.tab[i][k].up) continue;
+    if (useful({ a: 'tab', i, k }).length) return true;
+  }
+  return false;
 }
 // After each move, once the automatic cards are home, say so as soon as the game is surely lost.
 // When the solver runs out of time, it says nothing. A lost position only stops being lost by undo,
@@ -467,14 +493,15 @@ function lostDialog() {
 
 function newGame() {
   busy = true; drag = null; plan = null; autoCount = 0;
-  clearTimeout(autoT); clearTimeout(winT); clearSel();
+  clearTimeout(autoT); clearTimeout(winT); clearTimeout(dealT); clearSel();
   closeDialog();
   winnableDeal(); undo = [];
+  flash([]); // the outline of the last move does not carry over to the new deal
   save();
   GG.track('solitaire', 'start');
   setMsg(HELLO);
   render({ deal: true });
-  setTimeout(() => { busy = false; autoStep(); }, REDUCED ? 100 : 1600);
+  dealT = setTimeout(() => { busy = false; autoStep(); }, REDUCED ? 100 : 1600);
 }
 // Restores an earlier position. A game that was won stays counted once.
 function restore(snap) {
@@ -487,18 +514,22 @@ function doUndo() {
   if (!undo.length || busy || drag || dialogOpen()) return;
   clearTimeout(autoT); clearTimeout(winT);
   restore(undo.pop());
+  lastTap = null; flash([]);
   clearSel(); setMsg('Coup annulé.'); render(); save();
   if (isWon()) autoStep();
 }
 // Undo until the solver finds a way to win again.
+// A game restored from the backup has no undo steps: then only a new game is offered.
 function backToWinnable() {
   clearTimeout(autoT);
-  while (undo.length) {
-    restore(undo.pop());
-    if (solve(toSolver(), 20000).win) break;
-  }
-  S.stuckShown = false;
-  clearSel(); setMsg('Vous êtes revenu à une position gagnante.'); render(); save();
+  const wins = snap => { const x = solverOf(JSON.parse(snap)); let r = solve(x, 30000); if (r.unknown) r = solve(x, 60000); return !!r.win; };
+  let k = undo.length - 1;
+  while (k >= 0 && !wins(undo[k])) k--;
+  if (k >= 0) {
+    restore(undo[k]); undo.length = k;
+    S.stuckShown = false; lastTap = null; flash([]);
+    clearSel(); setMsg('Vous êtes revenu à une position gagnante.'); render(); save();
+  } else dialog('Impossible de revenir en arrière', "Aucune position gagnante n'a été trouvée. Commencez une nouvelle partie.", [['Nouvelle partie', newGame, true]]);
 }
 
 /* ---------- Hint ---------- */
@@ -538,15 +569,9 @@ function showHint() {
   const r = hintMove();
   let m = r.move;
   if (!m && r.win === false) return lostDialog();
-  if (!m) {
-    // The solver ran out of time. Show only a move that cannot be undone by the next hint:
-    // a card going home, a move that turns a card over, or the waste card going down.
-    const x = toSolver(), top = last(S.waste)?.id;
-    m = sMoves(x).find(m =>
-      m.k === 'tf' || (m.k === 'xf' && m.id === top) || (m.k === 'xt' && m.id === top) ||
-      (m.k === 'tt' && m.n === 0 && x.cols[m.src].d.length > 0));
-    if (!m) return hintDraw();
-  }
+  // The solver ran out of time. The game does not guess: a guessed move can lose a winnable game.
+  // The safe cards already go home by themselves.
+  if (!m) { clearSel(); render(); return setMsg('Je ne trouve pas de coup sûr pour le moment. Vous pouvez annuler vos derniers coups.'); }
   if ((m.k === 'xf' || m.k === 'xt') && last(S.waste)?.id !== m.id) return hintDraw();
   const dst = m.k === 'tf' || m.k === 'xf' ? { a: 'found', i: st(m.id) } : { a: 'tab', i: m.dst };
   clearSel(); sel = m.id; hintDst = dst;
@@ -720,7 +745,6 @@ function shake(el) { el.classList.remove('shake'); void el.offsetWidth; el.class
 function celebrate() {
   if (S.done) return;
   S.done = true;
-  if (!S.won) { S.won = true; stats.won++; GG.track('solitaire', 'won'); }
   save(); render();
   setMsg('Bravo, vous avez gagné !');
   // The four finished piles hop one after the other, twice.
@@ -728,7 +752,7 @@ function celebrate() {
     [{ translate: '0 0' }, { translate: `0 ${-L.h * 0.14}px` }, { translate: '0 0' }],
     { duration: 500, delay: s * 120, iterations: 2, easing: 'ease-in-out' }));
   clearTimeout(winT);
-  winT = setTimeout(() => dialog('Bravo, vous avez gagné !', `C'est votre victoire numéro ${stats.won}.`,
+  winT = setTimeout(() => isWon() && dialog('Bravo, vous avez gagné !', `C'est votre victoire numéro ${stats.won}.`,
     [['Nouvelle partie', newGame, true], ['Regarder le jeu', null]], true), REDUCED ? 0 : 1500);
 }
 
@@ -746,16 +770,16 @@ function tablePoint(e) {
   return [e.clientX - r.left + table.scrollLeft, e.clientY - r.top + table.scrollTop];
 }
 table.addEventListener('pointerdown', e => {
-  if (e.button !== 0 || busy || dialogOpen()) return;
+  if (e.button !== 0 || busy || dialogOpen() || drag) return;
   e.preventDefault();
   const [x, y] = tablePoint(e), el = e.target.closest('.card');
   let id = el ? +el.dataset.id : null;
   let pile = id !== null ? pileAt(locate(id)) : hitPile(x, y);
   if (pile && pile.a === 'stock') id = null;
-  drag = { id, pile, x0: e.clientX, y0: e.clientY, started: false };
+  drag = { id, pile, x0: e.clientX, y0: e.clientY, started: false, pointer: e.pointerId };
 });
 addEventListener('pointermove', e => {
-  if (!drag) return;
+  if (!drag || e.pointerId !== drag.pointer) return;
   const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
   if (!drag.started) {
     if (Math.hypot(dx, dy) < 16 || drag.id === null || !selectable(drag.id)) return;
@@ -777,7 +801,7 @@ addEventListener('pointermove', e => {
   marks.forEach(m => m.classList.toggle('over', m.dataset.key === key));
 });
 addEventListener('pointerup', e => {
-  if (!drag) return;
+  if (!drag || e.pointerId !== drag.pointer) return;
   const d = drag; drag = null;
   const hit = hitPile(...tablePoint(e));
   if (!d.started) {
@@ -796,9 +820,14 @@ addEventListener('pointerup', e => {
   render();
   if (hit && !samePile(hit, pileAt(d.loc))) setMsg(why(d.loc, hit));
 });
-addEventListener('pointercancel', () => { if (drag && drag.started) { drag.els.forEach(o => o.el.classList.remove('dragging')); render(); } drag = null; });
+addEventListener('pointercancel', e => {
+  if (!drag || e.pointerId !== drag.pointer) return;
+  const d = drag; drag = null;
+  if (d.started) { d.els.forEach(o => o.el.classList.remove('dragging')); render(); }
+});
 
 document.getElementById('newBtn').onclick = () => {
+  if (drag) return;
   if (S.moves > 0 && !isWon()) dialog('Commencer une nouvelle partie ?', 'La partie en cours sera perdue.',
     [['Continuer la partie', null, true], ['Nouvelle partie', newGame]]);
   else newGame();
@@ -818,7 +847,7 @@ addEventListener('resize', () => {
 
 build();
 // The rules open by themselves the first time the game is opened.
-if (load()) { setMsg(HELLO); render({ instant: true }); autoStep(); } else { newGame(); openHelp(); }
+if (load()) { if (legacy) save(); setMsg(isWon() ? 'Bravo, vous avez gagné !' : HELLO); render({ instant: true }); autoStep(); } else { newGame(); openHelp(); }
 </script>
 </body>
 </html>

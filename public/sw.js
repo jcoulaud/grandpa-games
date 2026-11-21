@@ -9,6 +9,7 @@ const CORE = [
   './', 'lib/store.js', 'lib/kit.js', 'lib/kit.css', 'lib/cards.js', 'lib/cards.css', 'manifest.webmanifest', 'message.json',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
   'games/solitaire/', 'games/solitaire/icon.svg',
+  'games/freecell/', 'games/freecell/solver.js', 'games/freecell/icon.svg',
 ];
 
 self.addEventListener('install', e => {

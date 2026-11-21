@@ -6,6 +6,9 @@
 //   GG.meta(game)                     -> { summary, updatedAt } or null
 //   GG.track(game, 'start' | 'won')   -> counts a game started or won, for the admin page
 //
+// A window that is behind (another window saved the game since it loaded it) refuses to save and
+// fires a "gg-stale" event at each refused save. lib/kit.js then asks to reload.
+//
 // For the admin page, each PC also sends an anonymous visit once a day and its JavaScript errors.
 // It sends only a random id made on the PC, never a save.
 (() => {
@@ -59,16 +62,29 @@
     report('Promesse rejetée : ' + (r.message || r), r.stack);
   });
 
+  // known[game]: the time of the copy this window last read or wrote. A window whose copy is older
+  // than the saved one cannot write its older game over the newer one.
+  const known = {};
+  function load(game) {
+    const r = get('save:' + game);
+    known[game] = r ? r.updatedAt : null;
+    return r ? r.data : null;
+  }
   function save(game, data, opts = {}) {
-    const updatedAt = Date.now();
+    if (game in known && ((get('save:' + game) || {}).updatedAt ?? null) !== known[game]) {
+      dispatchEvent(new Event('gg-stale'));
+      return false;
+    }
+    const updatedAt = Math.max(Date.now(), (known[game] || 0) + 1);
     if (!set('save:' + game, { updatedAt, data })) return false;
+    known[game] = updatedAt;
     const summary = opts.summary !== undefined ? opts.summary : (get('meta:' + game) || {}).summary || '';
     set('meta:' + game, { summary, updatedAt });
     return true;
   }
 
   window.GG = {
-    load: game => { const r = get('save:' + game); return r ? r.data : null; },
+    load,
     meta: game => get('meta:' + game),
     save,
     track: (game, kind) => send('/stats', { game, kind }),

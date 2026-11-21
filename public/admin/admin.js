@@ -5,8 +5,9 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const store = { get: k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
   set: (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} } };
-// A game's name from its folder: dame-de-pique -> Dame de pique.
-const gameName = id => (id.charAt(0).toUpperCase() + id.slice(1)).replace(/-/g, ' ');
+// A game's name from its folder: dame-de-pique -> Dame de pique, unless NAMES gives it.
+const NAMES = { freecell: 'FreeCell' }; // names that the folder cannot spell
+const gameName = id => NAMES[id] || (id.charAt(0).toUpperCase() + id.slice(1)).replace(/-/g, ' ');
 const fmt = v => Number(v || 0).toLocaleString('fr-FR');
 const plural = (v, one, many) => `${fmt(v)} ${v > 1 ? many : one}`;
 const rtf = new Intl.RelativeTimeFormat('fr', { numeric: 'auto' });
