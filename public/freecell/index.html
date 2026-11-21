@@ -29,7 +29,7 @@
     position: absolute; width: var(--w); height: var(--h); border-radius: calc(var(--w) * .09);
     background: rgba(255,255,255,.09); color: rgba(255,255,255,.82);
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(var(--w) * .04);
-    font: 600 calc(var(--w) * .2)/1 var(--ui); text-align: center;
+    font: 600 max(min(20px, calc(var(--w) * .34)), calc(var(--w) * .2))/1 var(--ui); text-align: center;
     transform: scale(.96); /* stays hidden under a card */
   }
   .slot .s { width: calc(var(--w) * .4); height: calc(var(--w) * .4); opacity: .75; }
@@ -57,8 +57,8 @@
 <body>
 <div id="bar">
   <div id="title"><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#su1"/></svg>FreeCell</div>
-  <button id="undoBtn" data-icon="undo" title="Annuler le dernier coup joué"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span></button>
-  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre un bon coup à jouer maintenant"><span class="long">Quel coup jouer ?</span><span class="short">Aide</span></button>
+  <button id="undoBtn" data-icon="undo" title="Annuler le dernier coup joué"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span><span class="tiny">Annuler</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre un bon coup à jouer maintenant"><span class="long">Quel coup jouer ?</span><span class="short">Aide</span><span class="tiny">Aide</span></button>
   <span class="spacer"></span>
   <button id="helpBtn" data-icon="help">Règles</button>
   <button id="newBtn" class="game">Nouvelle partie</button>
@@ -511,7 +511,8 @@ function build() {
 const RATIO = 1.3, UP = 0.3, LABEL = 30;
 function layout() {
   const W = table.clientWidth, H = table.clientHeight;
-  const m = 26, g0 = Math.max(10, Math.round(W * 0.009)), pad = 12;
+  // A phone has narrow margins and gaps, so every column fits across it.
+  const narrow = W < 700, m = narrow ? 6 : 26, g0 = narrow ? 4 : Math.max(10, Math.round(W * 0.009)), pad = 12;
   const top = Math.round(Math.max(pad, Math.min(32, H * 0.03)));
   const rowGap = Math.round(Math.max(g0, Math.min(W * 0.025, H * 0.035)));
   const byWidth = (W - 2 * m - 7 * g0) / 8;
@@ -519,7 +520,7 @@ function layout() {
   // squeeze a little on a laptop (see colY), so the cards can stay large.
   // UP shows the whole corner index of a covered card.
   const byHeight = (H - top - pad - LABEL - rowGap) / (2 + 5 * UP) / RATIO;
-  const w = Math.floor(Math.max(48, Math.min(byWidth, byHeight, 170)));
+  const w = Math.floor(Math.max(narrow ? 30 : 48, Math.min(byWidth, byHeight, 170)));
   const h = Math.round(w * RATIO);
   // A wide window spreads the columns, up to 30% of a card, so the board fills the felt.
   const gap = Math.round(Math.max(g0, Math.min(w * 0.3, (W - 2 * m - 8 * w) / 7)));

@@ -42,7 +42,11 @@
     --gold: #FFC83D; --accent: #0B6B5D; --text: #1B2422; --muted: #4E5A57;
     --face: #FFFDF6; --red: #C4122F; --ink: #14171A; --back: #1F4470;
     --ui: "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    /* The scale of the page. A large screen gets larger tiles, text and buttons instead of empty felt,
+       when both rows of games still fit in it. */
+    --k: 1;
   }
+  @media (min-width: 1800px) and (min-height: 1050px) { :root { --k: 1.2; } }
   * { box-sizing: border-box; }
   html, body { margin: 0; min-height: 100%; }
   body {
@@ -52,7 +56,7 @@
       radial-gradient(120% 90% at 50% 0%, #1A6A5F, #0F4F47 70%) #0F4F47 fixed;
     color: #fff; font-family: var(--ui); -webkit-font-smoothing: antialiased;
   }
-  main { max-width: 1320px; margin: 0 auto; padding: 18px 40px 16px; display: flex; flex-direction: column; gap: 18px; width: 100%; }
+  main { max-width: calc(1320px * var(--k)); margin: 0 auto; padding: calc(18px * var(--k)) 40px 16px; display: flex; flex-direction: column; gap: calc(18px * var(--k)); width: 100%; }
 
   /* Large suit outlines behind the page */
   #deco { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
@@ -61,11 +65,11 @@
 
   /* Greeting */
   header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 6px; }
-  h1 { margin: 0; font: 700 50px/1.05 var(--ui); letter-spacing: -.02em; }
-  #tagline { margin: 6px 0 0; font: 500 25px var(--ui); color: rgba(255,255,255,.78); }
+  h1 { margin: 0; font: 700 calc(50px * var(--k))/1.05 var(--ui); letter-spacing: -.02em; }
+  #tagline { margin: 6px 0 0; font: 500 calc(25px * var(--k)) var(--ui); color: rgba(255,255,255,.78); }
   #now { text-align: right; }
-  #time { font: 600 46px/1 var(--ui); letter-spacing: -.01em; color: rgba(255,255,255,.92); font-variant-numeric: tabular-nums; }
-  #date { margin-top: 6px; font: 500 25px var(--ui); color: rgba(255,255,255,.78); }
+  #time { font: 600 calc(46px * var(--k))/1 var(--ui); letter-spacing: -.01em; color: rgba(255,255,255,.92); font-variant-numeric: tabular-nums; }
+  #date { margin-top: 6px; font: 500 calc(25px * var(--k)) var(--ui); color: rgba(255,255,255,.78); }
 
   /* A note from the family */
   #note {
@@ -76,12 +80,12 @@
   #note .icon { flex: none; width: 56px; height: 56px; border-radius: 50%; background: #FCEDE9; display: grid; place-items: center; }
   #note .icon svg { width: 32px; height: 32px; fill: var(--red); }
   #note small { display: block; font: 700 20px var(--ui); color: var(--accent); letter-spacing: .02em; margin-bottom: 4px; }
-  #note p { margin: 0; font: 600 27px/1.3 var(--ui); }
+  #note p { margin: 0; font: 600 calc(27px * var(--k))/1.3 var(--ui); }
 
 
   /* Game tiles */
   /* Three games per row at most, so each tile has room for its words. A tile is at least 300 px wide. */
-  #games { display: grid; grid-template-columns: repeat(auto-fill, minmax(max(300px, calc((100% - 44px) / 3)), 1fr)); gap: 22px; }
+  #games { display: grid; grid-template-columns: repeat(auto-fill, minmax(max(300px, calc((100% - 44px * var(--k)) / 3)), 1fr)); gap: calc(22px * var(--k)); }
   .tile {
     position: relative; display: flex; flex-direction: column; border-radius: 28px; overflow: hidden;
     background: var(--face); color: var(--text); text-decoration: none;
@@ -91,36 +95,35 @@
   a.tile:hover { transform: translateY(-4px); box-shadow: 0 4px 8px rgba(0,0,0,.2), 0 22px 44px rgba(0,0,0,.32); }
   a.tile:focus-visible { outline: 5px solid var(--gold); outline-offset: 4px; }
   .art {
-    height: 150px; position: relative; overflow: hidden;
+    height: calc(150px * var(--k)); position: relative; overflow: hidden;
     background: radial-gradient(90% 120% at 50% 0%, #1F7A6C, #12594F);
   }
-  .art svg.board { position: absolute; left: 50%; bottom: -30px; width: 224px; height: 140px; margin-left: -112px;
+  .art svg.board { position: absolute; left: 50%; top: 50%; width: calc(190px * var(--k)); height: calc(130px * var(--k)); translate: -50% -50%;
     filter: drop-shadow(0 8px 12px rgba(0,0,0,.35)); transform: rotate(-5deg); }
   /* The card games lay the cards of the games (lib/cards.css) on a 260 by 150 scene, centred:
      what a tile crops on the sides is only felt. */
-  .art .scene { position: absolute; left: 50%; top: 0; width: 260px; height: 150px; margin-left: -130px; }
+  .art .scene { position: absolute; left: 50%; top: 0; width: 260px; height: 150px; margin-left: -130px; transform: scale(var(--k)); transform-origin: 50% 0; }
   .art .card { transition: none; }
   .art .card.lifted { box-shadow: 0 12px 22px rgba(0,0,0,.45); }
   .art .slot { position: absolute; border-radius: 6px; background: rgb(0 0 0 / .14); border: 2px dashed rgb(255 255 255 / .45); }
-  .body { padding: 12px 22px 18px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
-  .body h3 { margin: 0; font: 700 31px var(--ui); letter-spacing: -.01em; }
-  .body p { margin: 0; font: 500 20px/1.35 var(--ui); color: var(--muted); }
-  .status { display: flex; align-items: center; gap: 9px; min-height: 30px; font: 600 21px var(--ui); color: var(--accent); }
+  .body { padding: calc(12px * var(--k)) calc(22px * var(--k)) calc(18px * var(--k)); display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .body h3 { margin: 0; font: 700 calc(31px * var(--k)) var(--ui); letter-spacing: -.01em; }
+  .body p { margin: 0; font: 500 calc(20px * var(--k))/1.35 var(--ui); color: var(--muted); }
+  .status { display: flex; align-items: center; gap: 9px; min-height: 30px; font: 600 calc(21px * var(--k)) var(--ui); color: var(--accent); }
   .status svg { width: 26px; height: 26px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .status:empty { display: none; }
   .play {
-    margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 60px; padding: 8px 16px; text-align: center;
-    border-radius: 16px; background: var(--gold); color: #1F1A00; font: 700 22px var(--ui);
+    margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; min-height: calc(60px * var(--k)); padding: 8px 16px; text-align: center;
+    border-radius: 16px; background: var(--gold); color: #1F1A00; font: 700 calc(22px * var(--k)) var(--ui);
   }
   a.tile:hover .play { background: #FFD666; }
-  .play svg { width: 26px; height: 26px; fill: currentColor; }
   a.tile.opening { opacity: .85; transform: none; }
 
   /* Footer band: where the saves are on the left, the install button on the right */
   body { display: flex; flex-direction: column; min-height: 100vh; }
   main { flex: 1; }
   footer { background: rgba(0,0,0,.18); border-top: 1px solid rgba(255,255,255,.08); }
-  footer .in { max-width: 1320px; margin: 0 auto; padding: 14px 40px; display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  footer .in { max-width: calc(1320px * var(--k)); margin: 0 auto; padding: 14px 40px; display: flex; align-items: center; justify-content: space-between; gap: 24px;
     font: 500 20px var(--ui); color: rgba(255,255,255,.85); }
   #saves { display: flex; align-items: center; gap: 10px; }
   #saves svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -210,7 +213,7 @@ const scene = inner => `<div class="scene" aria-hidden="true">${inner}</div>`;
 function solitaireScene() {
   return scene(
     back(48, 76, 58, -4) + back(50, 74, 58, -1) + back(52, 72, 58, 2)
-    + card(PIQUE + 12, 130, 42, 58) + card(COEUR + 11, 130, 63, 58) + card(TREFLE + 10, 130, 84, 58) + card(CARREAU + 9, 130, 105, 58)
+    + card(PIQUE + 12, 130, 47, 58) + card(COEUR + 11, 130, 66, 58) + card(TREFLE + 10, 130, 85, 58) + card(CARREAU + 9, 130, 104, 58)
     + slot(212, 76, 58) + card(COEUR, 212, 74, 58, 5));
 }
 // FreeCell: the four free cells. One holds a card, two are free, and a roi drops into the last one.
@@ -239,9 +242,8 @@ function boardArt() {
     <circle r="7.5" fill="none" stroke="${white ? '#C9BFA8' : '#141211'}" stroke-width="1.2"/>
     ${king ? '<path d="M-9 -4l4.2 3.6L0 -9l4.3 7.1 4.2-3.6-1.8 10H-7.2z" fill="#E2A82C" stroke="#5E3F06" stroke-width="1"/>' : ''}</g>`;
   sq += piece(1, 0, false) + piece(3, 0, false) + piece(4, 1, false) + piece(2, 1, true, true) + piece(1, 2, true) + piece(3, 2, true) + piece(0, 3, true);
-  return `<svg class="board" viewBox="0 0 240 150" aria-hidden="true"><rect x="-6" y="-6" width="252" height="172" rx="4" fill="#6A4127"/>${sq}</svg>`;
+  return `<svg class="board" viewBox="-6 -6 252 172" aria-hidden="true"><rect x="-6" y="-6" width="252" height="172" rx="4" fill="#6A4127"/>${sq}</svg>`;
 }
-const ICON_PLAY = '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg>';
 const ICON_TROPHY = '<svg viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v4M8.5 20h7"/></svg>';
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -258,7 +260,7 @@ function render() {
         <h3>${esc(g.title)}</h3>
         <p>${esc(g.text)}</p>
         <div class="status">${wins ? ICON_TROPHY + esc(wins) : ''}</div>
-        <div class="play">${ICON_PLAY}${playing ? 'Reprendre la partie' : 'Jouer'}</div>
+        <div class="play">${playing ? 'Reprendre la partie' : 'Jouer'}</div>
       </div></a>`;
   });
   document.getElementById('games').innerHTML = tiles.join('');

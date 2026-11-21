@@ -217,10 +217,6 @@ $('clearErr').onclick = async () => {
   if (!confirm('Effacer toutes les erreurs ?')) return;
   await api('errors/clear', {}); toast('Erreurs effacées.'); load();
 };
-$('refresh').onclick = () => {
-  const b = $('refresh'); b.classList.remove('spin'); void b.offsetWidth; b.classList.add('spin');
-  load().then(() => toast('À jour.'));
-};
 $('logout').onclick = () => showLogin();
 $('login').querySelector('form').onsubmit = async e => {
   e.preventDefault();

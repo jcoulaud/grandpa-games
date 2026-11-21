@@ -20,19 +20,21 @@ header { position: sticky; top: 0; z-index: 5; background: rgba(255,255,255,.88)
   border-bottom: 1px solid var(--line); }
 header .in { max-width: 1200px; margin: 0 auto; height: 64px; padding: 0 28px; display: flex; align-items: center; gap: 14px; }
 .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.brand img { width: 34px; height: 34px; border-radius: 9px; }
+.brand img { display: block; width: 34px; height: 34px; border-radius: 9px; }
 .brand b { display: block; font-size: 15px; font-weight: 650; letter-spacing: -.01em; }
 .brand span { display: block; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .grow { flex: 1; }
 .seg { display: inline-flex; padding: 3px; background: #EEF0EE; border-radius: 10px; }
 .seg button { border: 0; background: none; padding: 5px 12px; border-radius: 8px; font-weight: 600; font-size: 13px; color: var(--muted); cursor: pointer; }
 .seg button[aria-pressed="true"] { background: #fff; color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
-.icon-btn { width: 36px; height: 36px; display: inline-grid; place-items: center; border: 1px solid var(--line); border-radius: 10px;
-  background: #fff; color: var(--muted); cursor: pointer; text-decoration: none; }
-.icon-btn:hover { color: var(--text); background: #FAFBFA; }
-.icon-btn svg, .ico { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.icon-btn.spin svg { animation: spin .7s linear; }
-@keyframes spin { to { transform: rotate(360deg); } }
+/* The logo goes back to the library. */
+#libLink { display: block; border-radius: 9px; }
+#libLink:hover img { opacity: .85; }
+/* Signing out: a plain red button with its word. */
+.signout { height: 36px; display: inline-flex; align-items: center; gap: 8px; padding: 0 14px; border: 0; border-radius: 10px;
+  background: var(--red); color: #fff !important; font-weight: 600; font-size: 13px; cursor: pointer; }
+.signout:hover { background: #A30F27; }
+.ico { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
 
 main { max-width: 1200px; margin: 0 auto; padding: 28px 28px 56px; display: grid; gap: 20px; }
@@ -134,7 +136,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 28px 28px 56px; display: grid
 @media (max-width: 600px) {
   header .in, main { padding-left: 16px; padding-right: 16px; }
   header .in { height: auto; padding-top: 10px; padding-bottom: 10px; flex-wrap: wrap; }
-  .brand span, #libLink { display: none; }
+  .brand span { display: none; }
   .kpis { grid-template-columns: 1fr 1fr; gap: 10px; }
   .kpi { padding: 14px; }
   .kpi .value { font-size: 24px; }
@@ -142,4 +144,4 @@ main { max-width: 1200px; margin: 0 auto; padding: 28px 28px 56px; display: grid
   .legend { display: none; }
   .chart svg { height: 220px; }
 }
-@media (prefers-reduced-motion: reduce) { .icon-btn.spin svg, .loading * { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .loading * { animation: none !important; } }
