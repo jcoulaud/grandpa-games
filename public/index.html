@@ -16,16 +16,25 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; min-height: 100%; }
   body {
-    background: radial-gradient(120% 90% at 50% 0%, #1A6A5F, #0F4F47 70%) #0F4F47 fixed;
+    background:
+      radial-gradient(60% 50% at 0% 100%, rgb(255 200 61 / .16), transparent 70%) fixed,
+      radial-gradient(ellipse at 50% 35%, transparent 50%, rgb(0 0 0 / 28%) 100%) fixed,
+      radial-gradient(120% 90% at 50% 0%, #1A6A5F, #0F4F47 70%) #0F4F47 fixed;
     color: #fff; font-family: var(--ui); -webkit-font-smoothing: antialiased;
   }
   main { max-width: 1240px; margin: 0 auto; padding: 18px 40px 16px; display: flex; flex-direction: column; gap: 18px; width: 100%; }
 
+  /* Large suit outlines behind the page */
+  #deco { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+  #deco svg { position: absolute; fill: none; stroke: rgb(255 255 255 / .13); stroke-width: 1.4; }
+  @media (max-width: 700px) { #deco { display: none; } }
+
   /* Greeting */
-  header { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 14px; }
   h1 { margin: 0; font: 700 50px/1.05 var(--ui); letter-spacing: -.02em; }
-  #date { margin-top: 6px; font: 500 25px var(--ui); color: rgba(255,255,255,.78); }
+  #now { text-align: right; }
   #time { font: 600 46px/1 var(--ui); letter-spacing: -.01em; color: rgba(255,255,255,.92); font-variant-numeric: tabular-nums; }
+  #date { margin-top: 6px; font: 500 25px var(--ui); color: rgba(255,255,255,.78); }
 
   /* A note from the family */
   #note {
@@ -73,7 +82,7 @@
   }
 
   /* A game that is coming */
-  .tile.soon { background: rgba(255,255,255,.07); color: #fff; box-shadow: none; border: 2px dashed rgba(255,255,255,.3); }
+  .tile.soon { background: #246A60; color: #fff; box-shadow: none; border: 2px dashed rgba(255,255,255,.3); }
   .tile.soon .art { background: none; }
   .tile.soon .body p { color: rgba(255,255,255,.75); }
   .tile.soon .badge { background: rgba(255,255,255,.16); color: #fff; box-shadow: none; }
@@ -95,6 +104,7 @@
     main { padding: 24px 16px; }
     footer .in { padding: 14px 16px; flex-wrap: wrap; }
     h1 { font-size: 42px; } #time { display: none; }
+    header { flex-wrap: wrap; row-gap: 0; } #now { text-align: left; }
   }
   @media (prefers-reduced-motion: reduce) { .tile { transition: none; } a.tile:hover { transform: none; } }
 </style>
@@ -110,13 +120,20 @@
   </pattern>
 </svg>
 
+<div id="deco" aria-hidden="true">
+  <svg viewBox="-5 -5 110 110" style="width:520px;left:-150px;bottom:-140px;transform:rotate(-16deg)"><path d="M50 5C62 26 95 40 95 61c0 12-10 20-21 20-8 0-15-4-19-11 1 11 6 20 13 26H32c7-6 12-15 13-26-4 7-11 11-19 11C15 81 5 73 5 61 5 40 38 26 50 5z"/></svg>
+  <svg viewBox="-5 -5 110 110" style="width:380px;right:-90px;bottom:-60px;transform:rotate(14deg)"><path d="M50 92C22 66 5 50 5 31 5 17 16 7 29 7c9 0 17 5 21 14 4-9 12-14 21-14 13 0 24 10 24 24 0 19-17 35-45 61z"/></svg>
+  <svg viewBox="-5 -5 110 110" style="width:200px;right:22%;bottom:10%;transform:rotate(8deg)"><path d="M50 2Q69 29 91 50Q69 71 50 98Q31 71 9 50Q31 29 50 2z"/></svg>
+  <svg viewBox="-5 -5 110 110" style="width:220px;right:-110px;top:46%;transform:rotate(-10deg)"><path d="M32.9 38.2A21 21 0 1 1 67.1 38.2A21 21 0 1 1 55.8 68.5C57 82 61 90 67 96H33C39 90 43 82 44.2 68.5A21 21 0 1 1 32.9 38.2z"/></svg>
+</div>
+
 <main>
   <header>
-    <div>
-      <h1 id="hello">Bonjour !</h1>
+    <h1 id="hello">Bonjour Papi !</h1>
+    <div id="now">
+      <div id="time"></div>
       <div id="date"></div>
     </div>
-    <div id="time"></div>
   </header>
 
   <section id="note" aria-live="polite">
@@ -206,7 +223,8 @@ document.getElementById('games').addEventListener('click', e => {
 
 function clock() {
   const d = new Date(), h = d.getHours();
-  document.getElementById('hello').textContent = h < 18 ? 'Bonjour !' : 'Bonsoir !';
+  const hello = h < 5 ? 'Bonne nuit' : h < 12 ? 'Bonjour' : h < 14 ? 'Bon appétit' : h < 18 ? 'Bon après-midi' : h < 22 ? 'Bonsoir' : 'Bonne nuit';
+  document.getElementById('hello').textContent = hello + ' Papi !';
   const date = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   document.getElementById('date').textContent = date.charAt(0).toUpperCase() + date.slice(1);
   document.getElementById('time').textContent = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
