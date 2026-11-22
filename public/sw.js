@@ -7,7 +7,7 @@
 try { importScripts('version.js'); } catch (e) { self.VERSION = 'dev'; }
 const CACHE = 'grandpa-games-' + self.VERSION;
 const CORE = [
-  './', 'lib/store.js', 'lib/kit.js', 'lib/kit.css', 'lib/zoom.js', 'lib/cards.js', 'lib/cards.css', 'lib/solver-worker.js', 'manifest.webmanifest', 'fonts/atkinson-next.woff2', 'fonts/fraunces.woff2',
+  './', 'lib/store.js', 'lib/kit.js', 'lib/kit.css', 'lib/zoom.js', 'lib/cards.js', 'lib/cards.css', 'lib/solver-worker.js', 'manifest.webmanifest', 'fonts/lexend.woff2',
   'icons/icon.svg', 'icons/logo.webp', 'icons/julien.webp', 'icons/icon-192.png', 'icons/icon-512.png',
   'solitaire/', 'solitaire/solver.js', 'solitaire/icon.svg',
   'freecell/', 'freecell/solver.js', 'freecell/icon.svg',
