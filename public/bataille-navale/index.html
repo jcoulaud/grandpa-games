@@ -70,8 +70,8 @@
 
   /* A square of sea, with small waves. */
   .q { position: relative; display: grid; place-items: center;
-    background: radial-gradient(60% 30% at 30% 35%, rgba(255,255,255,.08), transparent), linear-gradient(160deg, #2F80B5, #1D5F8E);
-    box-shadow: inset 0 0 0 1px rgba(10,40,70,.6); }
+    --water: radial-gradient(60% 30% at 30% 35%, rgba(255,255,255,.08), transparent), linear-gradient(160deg, #2F80B5, #1D5F8E);
+    background: var(--water); box-shadow: inset 0 0 0 1px rgba(10,40,70,.6); }
   #sea1 .q { cursor: crosshair; }
   #side1.turn .q.open:hover { background: linear-gradient(160deg, #FFE08A, #F2C14A); }
   /* The marks of the shots sit above the ships. */
@@ -86,55 +86,95 @@
   /* The last shot on each sea has a yellow ring, so he sees where the computer fired. */
   .q.last::before { content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none;
     box-shadow: inset 0 0 0 4px var(--gold), inset 0 0 0 6px rgba(var(--shade),.8); }
-  /* A shot: the yellow ring closes in on the square, the mark pops up, and a wave spreads from it:
-     white for the water, orange for a hit. */
-  /* The shot falls in about 1.6 s. The yellow ring closes in on the square; then, in the water, a column
-     rises and falls, drops fly out and two waves spread; on a ship, a flash, the fire, sparks, smoke,
-     and the square shakes. A word rises from the square: "Plouf !", "Touché !" or "Coulé !". */
-  .q.last::before { animation: aim .5s ease-in both; }
-  .q.last > svg .mark { transform-box: view-box; transform-origin: 50% 50%; animation: pop .55s .45s cubic-bezier(.2,1.6,.4,1) both; }
-  /* The impact, over three squares around the square shot (Ships.fx). */
-  .impact { position: relative; z-index: 5; pointer-events: none; }
+  /* The last shot's mark and frame appear when the shot lands. */
+  .q.firing::before { animation: land .12s .45s both; }
+  .q.firing > svg .mark { transform-box: view-box; transform-origin: center; animation: pop .3s .45s ease-out both; }
+  .q.firing.boom { animation: quake .28s .45s; }
+  .q.firing.burn { animation: quake .28s .45s, scorch 0s .45s backwards; }
+  @keyframes land { from { opacity: 0; } }
+  @keyframes pop { from { transform: scale(.4); opacity: 0; } 65% { transform: scale(1.1); } }
+  @keyframes quake {
+    20% { transform: translate(-7%, 4%) scale(.86); } 40% { transform: translate(6%, -5%) scale(.88); }
+    65% { transform: translate(-4%, -2%) scale(.92); } 85% { transform: translate(2%, 1%) scale(.96); }
+  }
+  @keyframes scorch { from { background: var(--water); } }
+
+  /* This layer covers only the water. It clips the effects without moving the grid or its frame. */
+  .effects { position: absolute; inset: var(--s) 0 0 var(--lab); z-index: 5; pointer-events: none; overflow: hidden;
+    display: grid; grid-template-columns: repeat(10, var(--s)); grid-template-rows: repeat(10, var(--s)); }
+  .impact { position: relative; --land: calc(.45s + var(--lag, 0s)); }
   .impact svg { position: absolute; left: -100%; top: -100%; width: 300%; height: 300%; overflow: visible; }
-  .impact svg * { transform-box: view-box; transform-origin: 50% 50%; }
-  .impact .ripple { animation: ripple 1.2s .45s ease-out both; }
-  .impact .ripple.late { animation-delay: .75s; }
-  .impact .column { transform-origin: 50% 53%; animation: column 1s .45s ease-out both; }
-  .impact .column.thin { animation-delay: .55s; }
-  .impact .fly { animation: fly .9s .5s cubic-bezier(.2,.7,.4,1) both; }
-  .impact .flash { animation: flash .45s .45s ease-out both; }
-  .impact .ball { animation: ball .8s .5s ease-out both; }
-  .impact .ball.core { animation-duration: .6s; }
-  .impact .ball.again { animation: ball .8s .9s ease-out both; }
-  .impact .smoke { animation: smoke 2s .7s ease-out both; }
-  .q.last.boom { animation: quake .45s .45s; }
-  .boat.appear { animation: surface 1s .5s ease-out both; }
-  @keyframes aim { from { transform: scale(3); opacity: 0; } 70% { opacity: 1; } }
-  @keyframes pop { from { transform: scale(.2); opacity: 0; } }
-  @keyframes ripple { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
-  @keyframes column { from { transform: scaleY(0); } 35% { transform: scaleY(1.1); } 80% { opacity: 1; } to { transform: scaleY(0); opacity: 0; } }
-  @keyframes fly { from { transform: translate(0, 0) scale(.5); opacity: 0; } 15% { opacity: 1; } 75% { opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 0; } }
-  @keyframes flash { from { transform: scale(.2); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
-  @keyframes ball { from { transform: scale(.1); opacity: 1; } 45% { transform: scale(1); opacity: 1; } to { transform: scale(1.2); opacity: 0; } }
-  @keyframes smoke { from { transform: translateY(0) scale(.3); opacity: 0; } 20% { opacity: .85; } to { transform: translateY(-70px) scale(1.4); opacity: 0; } }
-  @keyframes quake { 20% { translate: -4px 2px; } 40% { translate: 4px -2px; } 60% { translate: -3px -1px; } 80% { translate: 2px 1px; } }
-  /* The word of the shot, over its square. */
-  /* It sits above the square, so the impact stays in view. */
-  .word { position: relative; z-index: 6; pointer-events: none; display: flex; align-items: center; justify-content: center; overflow: visible; }
+  .impact svg * { transform-box: view-box; transform-origin: center; }
+  .impact .incoming { animation: approach .45s ease-in both; }
+  @keyframes approach {
+    from { opacity: 0; transform: scale(2.4); } 25% { opacity: 1; }
+    88% { opacity: 1; } to { opacity: 0; transform: scale(.65); }
+  }
+
+  .impact .ripple { transform-origin: 50% 55%; animation: ripple .82s var(--land) ease-out both; }
+  .impact .ripple.late { animation-delay: calc(var(--land) + .22s); }
+  .impact .column { transform-origin: 50% 55%; animation: column .68s var(--land) both; }
+  @keyframes ripple {
+    from { opacity: .95; transform: scale(.22); } 48% { opacity: .8; }
+    to { opacity: 0; transform: scale(1.45); }
+  }
+  @keyframes column {
+    from { transform: scale(.45, 0); animation-timing-function: ease-out; }
+    36% { transform: scale(.78, 1); animation-timing-function: ease-in; }
+    85% { opacity: 1; } to { transform: scale(1.3, .04); opacity: 0; }
+  }
+  /* A piece moves sideways at a steady speed while it rises, slows down, then falls faster. */
+  .impact .flight { --launch: calc(var(--land) + var(--wait, .04s)); animation: sideways var(--time) var(--launch) linear both; }
+  .impact .flight > g { animation: fall var(--time) var(--launch) both; }
+  @keyframes sideways { to { transform: translateX(var(--dx)); } }
+  @keyframes fall {
+    from { opacity: 0; transform: translateY(0); animation-timing-function: ease-out; }
+    12% { opacity: 1; }
+    43% { transform: translateY(calc(-1 * var(--rise))); animation-timing-function: ease-in; }
+    83% { opacity: 1; }
+    to { opacity: 0; transform: translateY(var(--end)); }
+  }
+
+  .impact .flash { animation: flash .19s var(--land) ease-out both; }
+  .impact .ball { animation: ball .52s calc(var(--land) + .035s) both; }
+  .impact .smoke { animation: smoke .77s calc(var(--land) + var(--wait)) ease-out both; }
+  @keyframes flash { from { opacity: 1; transform: scale(.4); } to { opacity: 0; transform: scale(1.24); } }
+  @keyframes ball {
+    from { opacity: 0; transform: scale(.23); animation-timing-function: ease-out; }
+    26%, 47% { opacity: 1; transform: scale(1); } to { opacity: 0; transform: translateY(-25px) scale(.42); }
+  }
+  @keyframes smoke {
+    from { opacity: 0; transform: scale(.68); } 25% { opacity: .88; }
+    to { opacity: 0; transform: translate(var(--drift), -72px) scale(1.1); }
+  }
+
+  /* Give the word room above the splash or fire. Near the top edge it goes below. */
+  .word { position: absolute; z-index: 2; display: flex; justify-content: center; width: 124px;
+    left: clamp(0px, calc((var(--col) + .5) * var(--s) - 62px), calc(100% - 124px));
+    top: max(40px, calc((var(--row) - .72) * var(--s))); transform: translateY(-100%); }
+  .word.below { top: calc((var(--row) + 1.45) * var(--s)); transform: none; }
   .word span { white-space: nowrap; padding: 2px 12px; border-radius: 12px; font: 800 24px var(--ui); color: #fff;
-    background: rgba(var(--shade),.8); box-shadow: 0 4px 12px rgba(0,0,0,.4); animation: word 1.6s .9s ease-out both; }
-  .word.touche span, .word.coule span { background: #C4122F; }
-  .word.coule span { font-size: 28px; }
-  @keyframes word { from { transform: translateY(-30%) scale(.6); opacity: 0; } 15% { transform: translateY(-110%) scale(1.1); opacity: 1; }
-    75% { transform: translateY(-140%); opacity: 1; } to { transform: translateY(-170%); opacity: 0; } }
-  /* The computer's sight: it looks over his sea, then fires. */
-  .scope { position: relative; z-index: 5; pointer-events: none; display: grid; place-items: center; }
-  .scope svg { width: 150%; height: 150%; flex: none; animation: seek .4s ease-out both; }
-  @keyframes seek { from { transform: scale(1.8) rotate(-40deg); opacity: 0; } }
-  /* A ship just sunk comes up dark from the sea; the squares around it turn pale. */
-  @keyframes surface { from { opacity: 0; transform: scale(1.12); } }
-  .q.clear.fresh { animation: fade .6s .3s both; }
-  @keyframes fade { from { background: linear-gradient(160deg, #2F80B5, #1D5F8E); } }
+    background: rgba(var(--shade),.9); box-shadow: 0 3px 8px rgba(0,0,0,.4); animation: word .9s .8s ease-out both; }
+  .word.touche span, .word.coule span { background: #A9192F; }
+  .word.coule span { font-size: 28px; animation-delay: .97s; }
+  @keyframes word {
+    from { opacity: 0; transform: translateY(5px); }
+    16%, 82% { opacity: 1; } to { opacity: 0; }
+  }
+  /* Keep one sight on the water while it glides from square to square. */
+  .scope { position: absolute; top: 0; left: 0; width: var(--s); height: var(--s);
+    animation: glide 1.5s ease-in-out both; display: grid; place-items: center; }
+  .scope svg { position: absolute; width: 144%; height: 144%; animation: seek .28s ease-out both; }
+  @keyframes glide {
+    0%, 30% { transform: var(--first); } 52%, 60% { transform: var(--second); }
+    82%, 100% { transform: var(--target); }
+  }
+  @keyframes seek { from { transform: scale(1.4); opacity: 0; } }
+  /* After the blasts, the dark ship comes up and the water around it turns pale. */
+  .boat.appear { animation: surface .45s 1.05s ease-out both; }
+  @keyframes surface { from { opacity: 0; transform: scale(.92); } }
+  .q.clear.fresh { animation: scorch .4s .95s both; }
+  .q.clear.fresh::after { animation: land .3s 1.05s both; }
   /* The sign of whose turn it is slides in when the turn changes. */
   .side.turn .turn-tag { animation: tag .35s ease-out both; }
   @keyframes tag { from { opacity: 0; transform: translateY(8px); } }
@@ -191,8 +231,9 @@
     #hintBtn, #moveBtn, #helpBtn { flex-direction: column; gap: 0; padding: 3px 2px; text-align: center; font-size: 18px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .q.hint::after, .q.shake, .q.last::before, .q.last > svg .mark, .q.last.boom, .boat.appear, .q.clear.fresh, .side.turn .turn-tag, .scope svg { animation: none; }
-    .word, .impact { display: none; }
+    .q.hint::after, .q.shake, .q.firing, .q.firing.burn, .q.firing.boom, .q.firing::before, .q.firing > svg .mark,
+    .boat.appear, .q.clear.fresh, .q.clear.fresh::after, .side.turn .turn-tag { animation: none; }
+    .effects { display: none; }
   }
 </style>
 <script src="../lib/zoom.js"></script>
@@ -210,11 +251,11 @@
   <section class="side" id="side0" aria-label="Votre flotte">
     <div class="cap"><span class="turn-tag"><span class="long">L'ordinateur tire…</span><span class="short">Il tire…</span></span><h2>Votre flotte</h2></div>
     <ul class="roster" id="roster0" aria-label="Vos bateaux"></ul>
-    <div class="sea" id="sea0" role="grid" aria-label="Votre mer"></div>
+    <div class="sea" id="sea0" role="grid" aria-label="Votre mer"><div class="effects" aria-hidden="true"></div></div>
   </section>
   <section class="side" id="side1" aria-label="La flotte de l'ordinateur">
     <div class="cap"><h2>L'ordinateur</h2><span class="turn-tag"><span class="long">À vous de tirer</span><span class="short">À vous</span></span></div>
-    <div class="sea" id="sea1" role="grid" aria-label="La mer de l'ordinateur : cliquez sur une case pour tirer"></div>
+    <div class="sea" id="sea1" role="grid" aria-label="La mer de l'ordinateur : cliquez sur une case pour tirer"><div class="effects" aria-hidden="true"></div></div>
     <ul class="roster" id="roster1" aria-label="Ses bateaux"></ul>
     <ul class="legend" id="legend" aria-label="Ce que veulent dire les cases"></ul>
   </section>
@@ -253,7 +294,7 @@ const B = Bataille;
 const $ = id => document.getElementById(id);
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 // The computer's turn: his shot falls first, then its sight looks over his sea, then it fires.
-const THINK = REDUCED ? 250 : 2000, SEEK = REDUCED ? 0 : 450;
+const THINK = REDUCED ? 250 : 2000, SEEK = 1500;
 // The same width as the style sheet: a phone puts the computer's sea on top.
 const PHONE = matchMedia('(max-width: 700px)');
 const where = () => PHONE.matches ? 'en haut' : 'à droite';
@@ -319,7 +360,7 @@ function tap(k, i) {
   told = shot.kind === 'eau' ? `${at} : à l'eau.` : shot.kind === 'touche' ? `${at} : touché !`
     : `${at} : touché, coulé ! C'était son ${shipName(shot.ship)}.`;
   commit(shot.G);
-  word(1, i, shot.kind);
+  word(1, i, shot);
   if (G.result) { finish(!stale); return true; }
   // A stale window shows the kit's reload prompt. A move that could not be saved keeps the warning
   // of save() on the message line, and the game still goes on.
@@ -335,48 +376,65 @@ function answer() {
   if (G.result || G.turn !== 'them') return;
   const i = B.aim(G);
   if (i < 0) return;
-  if (!SEEK) return fireAt(i);
-  const r = Math.floor(i / B.N), c = i % B.N, near = [];
-  for (let n = 0; n < 2; n++) {
-    const rr = Math.min(9, Math.max(0, r + Math.round((Math.random() - .5) * 6))), cc = Math.min(9, Math.max(0, c + Math.round((Math.random() - .5) * 6)));
-    near.push(rr * B.N + cc);
-  }
-  [...near, i].forEach((j, n) => later(() => showScope(j), n * SEEK));
-  later(() => fireAt(i), 3 * SEEK + 150);
+  if (REDUCED) return fireAt(i);
+  // Choose two distinct stops near the target. The target itself still comes from the rules.
+  const near = squares[0].map((_, j) => j).filter(j => j !== i
+    && Math.abs(row(j) - row(i)) <= 3 && Math.abs(col(j) - col(i)) <= 3);
+  const pick = () => near.splice(Math.floor(Math.random() * near.length), 1)[0];
+  const scope = document.createElement('div');
+  scope.className = 'scope'; scope.innerHTML = SCOPE;
+  [pick(), pick(), i].forEach((j, n) => {
+    const stop = ['--first', '--second', '--target'][n];
+    scope.style.setProperty(stop, `translate(calc(${col(j)} * var(--s)), calc(${row(j)} * var(--s)))`);
+  });
+  effects[0].appendChild(scope);
+  later(() => fireAt(i), SEEK);
 }
-const gridAt = i => `${Math.floor(i / B.N) + 2} / ${i % B.N + 2}`;
-function showScope(i) {
-  seas[0].querySelectorAll('.scope').forEach(e => e.remove());
-  const e = document.createElement('div');
-  e.className = 'scope'; e.style.gridArea = gridAt(i); e.innerHTML = SCOPE;
-  seas[0].appendChild(e);
+const row = i => Math.floor(i / B.N), col = i => i % B.N;
+function placeFx(e, i) {
+  e.style.setProperty('--row', row(i));
+  e.style.setProperty('--col', col(i));
 }
 const SCOPE = '<svg viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="30" r="17" fill="none" stroke="#1F2A31" stroke-width="6"/><circle cx="30" cy="30" r="17" fill="none" stroke="#FFC83D" stroke-width="3"/>'
   + '<path d="M30 4v16M30 40v16M4 30h16M40 30h16" stroke="#1F2A31" stroke-width="6" stroke-linecap="round"/><path d="M30 5v14M30 41v14M5 30h14M41 30h14" stroke="#FFC83D" stroke-width="3" stroke-linecap="round"/><circle cx="30" cy="30" r="3" fill="#E8411F"/></svg>';
-// The impact of a shot plays over its square, and its word rises from it, then both go.
+// The first blast is on the square shot. A sinking sets off up to two more along the ship.
 const WORDS = { eau: 'Plouf !', touche: 'Touché !', coule: 'Coulé !' };
-function word(k, i, kind) {
+function word(k, i, { kind, ship }) {
   if (REDUCED) return;
-  seas[k].querySelectorAll('.word, .impact').forEach(e => e.remove());
-  const fx = document.createElement('div');
-  fx.className = 'impact'; fx.style.gridArea = gridAt(i); fx.innerHTML = Ships.fx[kind];
-  seas[k].appendChild(fx);
-  setTimeout(() => fx.remove(), 2800);
+  const layer = effects[k], square = squares[k][i];
+  layer.querySelectorAll('.word, .impact').forEach(e => e.remove());
+  square.classList.add('firing');
+  const cells = kind === 'coule'
+    ? G.fleets[k][ship].slice().sort((a, b) => Math.abs(a - i) - Math.abs(b - i)).slice(0, 3) : [i];
+  const blasts = cells.map((j, n) => {
+    const fx = document.createElement('div');
+    fx.className = 'impact'; fx.style.gridArea = `${row(j) + 1} / ${col(j) + 1}`;
+    fx.style.setProperty('--lag', `${n * 150}ms`);
+    fx.innerHTML = Ships.fx[kind] + (n === 0 ? Ships.fx.incoming : '');
+    layer.appendChild(fx);
+    return fx;
+  });
   const e = document.createElement('div');
-  e.className = 'word ' + kind; e.style.gridArea = gridAt(i); e.setAttribute('aria-hidden', 'true');
+  const rows = cells.map(row), top = Math.min(...rows), below = top < 2;
+  e.className = 'word ' + kind + (below ? ' below' : '');
+  placeFx(e, (below ? Math.max(...rows) : top) * B.N + col(i));
   e.innerHTML = `<span>${WORDS[kind]}</span>`;
-  seas[k].appendChild(e);
-  setTimeout(() => e.remove(), 2400);
+  layer.appendChild(e);
+  later(() => {
+    blasts.forEach(fx => fx.remove());
+    e.remove();
+    square.classList.remove('firing');
+  }, 1900);
 }
 function fireAt(i) {
-  seas[0].querySelectorAll('.scope').forEach(e => e.remove());
+  effects[0].querySelector('.scope')?.remove();
   if (G.result || G.turn !== 'them' || B.aim(G) !== i) return;
   const at = B.name(i), shot = B.fire(G, 0, i);
-  word(0, i, shot.kind);
   const theirs = shot.kind === 'eau' ? `L'ordinateur tire en ${at} : à l'eau.`
     : shot.kind === 'touche' ? `L'ordinateur tire en ${at} : touché, votre ${shipName(shot.ship)}.`
     : `L'ordinateur tire en ${at} : coulé, votre ${shipName(shot.ship)} !`;
   commit(shot.G);
+  word(0, i, shot);
   if (G.result) return finish(!stale);
   if (saved) say((told ? told + ' ' : '') + theirs + ' À vous.');
   told = '';
@@ -439,7 +497,7 @@ function newGame(lv) {
   Kit.showLevel(level);
   const seed = crypto.getRandomValues(new Uint32Array(1))[0];
   G = B.newGame(level, seed); hint = null; lastShot = null; wonNow = false; told = '';
-  seas[0].querySelectorAll('.scope, .word, .impact').forEach(e => e.remove()); seas[1].querySelectorAll('.word, .impact').forEach(e => e.remove());
+  effects.forEach(layer => layer.replaceChildren());
   // A stale window cannot save, so it does not count a game either.
   if (save()) GG.track('bataille-navale', 'start');
   render();
@@ -449,7 +507,7 @@ const startText = () => `Cliquez sur une case de la mer de l'ordinateur, ${where
 
 /* ---------- Drawing ---------- */
 const table = $('table'), seas = [$('sea0'), $('sea1')];
-const squares = [[], []];
+const effects = seas.map(sea => sea.querySelector('.effects')), squares = [[], []];
 function build() {
   if (squares[0].length) return;
   for (let k = 0; k < 2; k++) {
@@ -543,7 +601,10 @@ function render() {
       else if (x === 'c' && e.classList.contains('fresh')) cls += ' fresh';
       if (k === 1 && x === 'x') cls += ' burn';
       if (x === 's') cls += ' wreck';
-      if (G.last[k] === i) cls += ' last' + (x === 'x' || x === 's' ? ' boom' : '');
+      if (G.last[k] === i) {
+        cls += ' last' + (x === 'x' || x === 's' ? ' boom' : '');
+        if (e.classList.contains('firing')) cls += ' firing';
+      }
       if (k === 1 && framed.has(i)) cls += ' hint';
       if (k === 1 && ringed.has(i)) cls += ' ring';
       const html = x === 'x' || x === 's' ? Ships.hit : x === 'o' ? Ships.splash : '';
