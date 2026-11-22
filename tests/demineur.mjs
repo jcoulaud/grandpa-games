@@ -88,10 +88,11 @@ ok(await g(i => Demineur.neighbours(G.w, G.h)[i].every(j => G.cells[j] !== '.'),
 ok(await g(() => G.result === null && G.layout.some(i => G.cells[i] === '.')), 'the game goes on with mines still closed');
 const before = await cells();
 const mine = await g(() => G.layout.find(i => G.cells[i] === '.'));
-await click(mine);
+await cell(mine).click();
 ok(await page.locator('.blast').count() === 1 && !(await g(() => Kit.isOpen())), 'the mine explodes before the dialog opens');
-await wait(1100);
-ok(await page.locator('.blast').count() === 0, 'the explosion clears itself');
+await page.waitForFunction(() => Kit.isOpen());
+ok(await page.locator('.blast').count() === 0, 'the explosion clears itself before the dialog');
+await page.mouse.move(5, 5);
 ok(await g(() => G.result === 'lost' && G.boom >= 0), 'a click on a mine loses the game');
 ok(await page.locator('.c.boom svg').count() === 1, 'only the mine that went off is shown');
 ok(await page.locator('#overBtns button.primary').textContent() === 'Annuler le dernier coup', 'the dialog offers "Annuler le dernier coup" first');
@@ -171,6 +172,24 @@ const turned = await phone.evaluate(() => ({ turned: document.getElementById('bo
   fits: document.getElementById('frame').getBoundingClientRect().right <= innerWidth }));
 ok(turned.turned && turned.S >= 30 && turned.fits, `a phone turns Difficile, with squares of ${turned.S} px`);
 await phone.screenshot({ path: `${OUT}/demineur-phone.png` });
+
+// 13. At 130 %, the explosion is still centred on the mine that went off.
+const big = await browser.newPage({ viewport: { width: 1366, height: 680 } });
+await big.addInitScript(() => localStorage.setItem('gg:zoom', '1.3'));
+await big.goto(URL);
+await big.evaluate(() => { Kit.closeHelp(); });
+await big.locator('#overBtns button', { hasText: 'Facile' }).click();
+await big.evaluate(() => { G = Demineur.newGame('facile', 12345); save(); render(); });
+await big.locator('.c[data-i="40"]').click();
+await big.mouse.move(5, 5); await big.waitForTimeout(520);
+await big.locator(`.c[data-i="${await big.evaluate(() => G.layout.find(i => G.cells[i] === '.'))}"]`).click();
+const off = await big.evaluate(() => {
+  const mid = e => { const r = e.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  const [a, b] = [mid(document.querySelector('.c.boom')), mid(document.querySelector('.blast'))];
+  return { z: Zoom.z(), d: Math.round(Math.hypot(a[0] - b[0], a[1] - b[1])) };
+});
+ok(off.z === 1.3 && off.d <= 2, `at 130 %, the explosion is centred on the mine (${off.d} px off)`);
+await big.close();
 
 ok(!errors.length, 'no page error' + (errors.length ? ': ' + errors.join(' | ') : ''));
 await browser.close();

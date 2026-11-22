@@ -70,7 +70,8 @@ function explode() {
   const e = squares[G.boom];
   if (!e) return;
   // On the page rather than in the table, so the edge of the table does not cut it.
-  const r = e.getBoundingClientRect();
+  // The page is zoomed (zoom.js): the square's place on the screen, divided by the zoom, is its place on the page.
+  const z = Zoom.z(), q = e.getBoundingClientRect(), r = { left: q.left / z, top: q.top / z, width: q.width / z, height: q.height / z };
   const b = document.createElement('div');
   b.className = 'blast';
   b.style.left = r.left + r.width / 2 + 'px';

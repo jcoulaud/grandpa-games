@@ -72,7 +72,8 @@
 'use strict';
 const D = Demineur;
 const $ = id => document.getElementById(id);
-const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Read at each end of a game, so a change of the setting counts at once.
+const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const FLAG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 19V4.5l10 4.2-10 4.2" fill="#C4122F" stroke="#7A0D0B" stroke-width="1.2" stroke-linejoin="round"/><path d="M8 20V4" stroke="#2A1A0B" stroke-width="2" stroke-linecap="round"/><path d="M4.5 20.5h7" stroke="#2A1A0B" stroke-width="2" stroke-linecap="round"/></svg>';
 const MINE = '<svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#141211" stroke-width="2.2" stroke-linecap="round"><path d="M12 2.5v19M2.5 12h19M5.3 5.3l13.4 13.4M18.7 5.3 5.3 18.7"/></g><circle cx="12" cy="12" r="6.6" fill="#141211"/><circle cx="9.7" cy="9.7" r="1.9" fill="#fff"/></svg>';
 
@@ -187,15 +188,18 @@ function flagButton() {
 function finish(show) {
   hint = null; setArming(false);
   render();
+  const still = reduced();
+  // The dialog waits for the end of the animation, and does not replace the rules or the level choice opened meanwhile.
+  const after = (open, ms) => later(() => { if (!Kit.isOpen()) open(); }, still ? 0 : ms);
   if (G.result === 'won') {
     say(`Bravo, vous avez gagné : les ${G.mines} mines sont trouvées.`);
-    if (show) later(() => Kit.dialog('Bravo, vous avez gagné !', `Vous avez trouvé les ${G.mines} mines sans en toucher une.${!wonNow ? '' : stats.won === 1 ? " C'est votre première victoire." : ` C'est votre ${stats.won}e victoire.`}`,
-      [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', home]], true), REDUCED ? 0 : 600);
+    if (show) after(() => Kit.dialog('Bravo, vous avez gagné !', `Vous avez trouvé les ${G.mines} mines sans en toucher une.${!wonNow ? '' : stats.won === 1 ? " C'est votre première victoire." : ` C'est votre ${stats.won}e victoire.`}`,
+      [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', home]], true), 600);
   } else {
     say('Perdu : il y avait une mine sous cette case. « Annuler le dernier coup » reprend juste avant.');
-    if (show && !REDUCED) explode();
-    if (show) later(() => Kit.dialog('Une mine a sauté', 'Il y avait une mine sous cette case. Vous pouvez reprendre la partie juste avant ce coup.',
-      [['Annuler le dernier coup', doUndo, true], ['Nouvelle partie', askNewGame], ['Retour aux jeux', home]]), REDUCED ? 0 : 1400);
+    if (show && !still) explode();
+    if (show) after(() => Kit.dialog('Une mine a sauté', 'Il y avait une mine sous cette case. Vous pouvez reprendre la partie juste avant ce coup.',
+      [['Annuler le dernier coup', doUndo, true], ['Nouvelle partie', askNewGame], ['Retour aux jeux', home]]), 1400);
   }
 }
 const home = () => { location.href = $('home').href; };
@@ -253,7 +257,7 @@ function askNewGame() {
   Kit.chooseLevel(level, playing(), newGame);
 }
 function newGame(lv) {
-  timers.forEach(clearTimeout); timers = [];
+  timers.forEach(clearTimeout); timers = []; clearBlast();
   if (lv) level = lv;
   Kit.showLevel(level);
   const seed = crypto.getRandomValues(new Uint32Array(1))[0];
