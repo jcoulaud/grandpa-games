@@ -315,7 +315,7 @@ const CUP = '<svg viewBox="0 0 120 110" aria-hidden="true"><path d="M22 14h76l-9
 
 /* ---------- State ----------
    G: the game (see engine.js). view: the game on screen; it differs from G while the computer's turn
-   is shown step by step. undo: the games before each box he wrote, as JSON. hint: what the hint shows,
+   is shown step by step, and after the end, when the last dice stay on the piste. undo: the games before each box he wrote, as JSON. hint: what the hint shows,
    until his next action. wonNow: this game is counted as won (undo keeps it, so a win counts once). */
 let G, view, undo = [], level = 'facile', stats = { won: 0, best: 0 }, wonNow = false, hint = null, timers = [], fresh = null, rolling = [];
 let stale = false, saved = true;
@@ -323,7 +323,8 @@ addEventListener('gg-stale', () => { stale = true; });
 const say = Kit.say;
 const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
 const playing = () => !G.result && (G.dice || G.sheets.some(s => s.some(v => v !== null)));
-const busy = () => view !== G;   // the computer's turn is still being shown
+let showing = false;
+const busy = () => showing;   // the computer's turn is being shown
 
 /* ---------- Saves ---------- */
 function save() {
@@ -348,8 +349,10 @@ function valid(g) {
   if (g.dice === null ? g.rolls !== 0 : !(Array.isArray(g.dice) && g.dice.length === 5 && g.dice.every(d => int(d, 1, 6)) && g.rolls >= 1)) return false;
   // The computer's turn is saved whole: a game waiting for it has no dice yet.
   if (g.turn === 1 && g.dice !== null) return false;
-  const full = g.sheets.map(s => s.every(v => v !== null));
-  return g.result ? full[0] && full[1] : !full[g.turn];
+  // He always starts: on his turn both sheets have as many boxes, on the computer's he has one more.
+  const n = g.sheets.map(s => s.filter(v => v !== null).length);
+  if (g.result) return n[0] === 13 && n[1] === 13 && ['won', 'lost', 'tie'].includes(g.result);
+  return g.result === null && n[0] === n[1] + g.turn && n[0] < 13 + g.turn && n[1] < 13;
 }
 function load() {
   try {
@@ -357,7 +360,7 @@ function load() {
     if (!v || !valid(v.G)) return false;
     G = view = v.G; wonNow = !!v.wonNow; level = G.level;
     // Undo steps that do not read back as a game are dropped.
-    undo = (Array.isArray(v.undo) ? v.undo : []).filter(u => { try { return valid(JSON.parse(u)); } catch (e) { return false; } });
+    undo = (Array.isArray(v.undo) ? v.undo : []).filter(u => { try { const g = JSON.parse(u); return valid(g) && g.turn === 0 && g.dice !== null; } catch (e) { return false; } });
     stats = { won: 0, best: 0, ...(v.stats || {}) };
     if (Object.hasOwn(CAST, v.who)) who = v.who;
     return true;
@@ -393,7 +396,7 @@ function once(key) {
   const t = performance.now(), prev = lastTap;
   lastTap = { key, t };
   // A die appears where the cup was: a click on it just after the throw is the second click of a double-click.
-  return !(prev && t - prev.t < 500 && (prev.key === key || (prev.key === 'roll' && key.startsWith('die'))));
+  return !(prev && t - prev.t < 500 && (prev.key === key || (prev.key === 'cup' && key.startsWith('die'))));
 }
 function refuseBusy() {
   if (busy() || (G.turn !== 0 && !G.result)) return say(`Attendez : c'est à ${them()} de jouer.`), true;
@@ -457,13 +460,12 @@ function afterWrite(text) {
 }
 
 /* ---------- The computer's turn ----------
-   The whole turn is played and saved at once; then it is shown one step at a time. */
+   The turn is shown one step at a time, then saved. It depends only on the saved game, so a reload
+   during it plays the same turn again, and an undo during it takes it back with his box. */
 function computerPlays() {
-  const steps = Y.computerTurn(G), before = G;
-  G = steps[steps.length - 1].G;
-  const oldBest = commit();
-  if (stale) { view = G; return render(); }
-  view = before;
+  const steps = Y.computerTurn(G);
+  if (!steps.length) return;
+  showing = true;
   let at = 0;
   const show = () => {
     const s = steps[at++], prev = at > 1 ? steps[at - 2].G : null;
@@ -480,19 +482,22 @@ function computerPlays() {
     } else {
       fresh = { player: 1, box: s.box, at: performance.now() };
       // The dice it wrote stay on the felt until he throws.
-      view = { ...s.G, turn: s.G.result ? s.G.turn : 1, dice: prev ? prev.dice : null, kept: [false, false, false, false, false] };
+      view = { ...s.G, turn: 1, result: null, dice: prev ? prev.dice : null, kept: [false, false, false, false, false] };
       say(writeText(s.G, 1, s.box));
       render();
     }
     if (at < steps.length) return later(show, REDUCED ? 300 : s.did === 'keep' ? KEEP_MS : STEP_MS);
-    later(() => {
-      view = G;
-      // The save failed before the turn was shown: try once more, the disk may have room now.
-      if (!saved) commit();
-      render();
-      if (G.result) return finish(true, record(oldBest));
-      say(writeText(G, 1, s.box) + ' ' + turnText());
-    }, REDUCED ? 300 : END_MS);
+    later(() => done(s, prev), REDUCED ? 300 : END_MS);
+  };
+  const done = (s, prev) => {
+    showing = false;
+    G = s.G;
+    const oldBest = commit();
+    // A stale window shows the kit's reload prompt, and a failed save leaves its warning.
+    if (stale) { view = G; return render(); }
+    if (G.result) { view = { ...G, dice: prev ? prev.dice : null }; return finish(true, record(oldBest)); }
+    view = G; render();
+    if (saved) say(writeText(G, 1, s.box) + ' ' + turnText());
   };
   render();
   later(show, REDUCED ? 200 : FIRST_MS);
@@ -500,7 +505,8 @@ function computerPlays() {
 
 /* ---------- End of the game ---------- */
 function finish(show, record) {
-  hint = null; view = G;
+  hint = null;
+  if (!view || !view.result) view = G;
   render();
   // The rules or the levels he opened meanwhile stay open: the message line says the result.
   const dialog = (...a) => { if (!Kit.isOpen()) Kit.dialog(...a); };
@@ -537,7 +543,7 @@ function doUndo() {
   if (!undo.length) return;
   calm();
   Kit.closeDialog();
-  G = view = JSON.parse(undo.pop()); hint = null; fresh = null;
+  G = view = JSON.parse(undo.pop()); hint = null; fresh = null; showing = false;
   save(); render();
   if (saved) say('Coup annulé : vos dés sont revenus, choisissez une autre case. ' + (G.rolls < 3 ? 'Vous pouvez aussi relancer.' : ''));
 }
@@ -676,16 +682,17 @@ function render() {
   layout();
 }
 // Five dice alike: the ribbon says "Yams !" for a moment, and the dice hop.
+let partyTimers = [];
 function ribbon() {
   const r = $('ribbon');
+  partyTimers.forEach(clearTimeout);
   r.classList.remove('on'); void r.offsetWidth; r.classList.add('on');
-  later(() => r.classList.remove('on'), 1900);
-  later(party, 650);
+  partyTimers = [later(() => r.classList.remove('on'), 1900), later(party, 650)];
 }
 function party() {
   if (REDUCED) return;
   dieEls.forEach((e, i) => { e.style.setProperty('--i', i); e.classList.remove('party'); void e.offsetWidth; e.classList.add('party'); });
-  later(() => dieEls.forEach(e => e.classList.remove('party')), 2200);
+  partyTimers.push(later(() => dieEls.forEach(e => e.classList.remove('party')), 2200));
 }
 // While a die flies, its pips change every 70 ms, then it shows the face it landed on.
 function flicker(e, face, delay) {
@@ -761,7 +768,7 @@ $('sheet').addEventListener('keydown', e => {
 });
 $('rollBtn').onclick = () => { if (once('roll')) rollDice(); };
 // A click on the cup throws the dice too.
-$('piste').addEventListener('click', e => { if (!view.dice && !e.target.closest('.die') && once('roll')) rollDice(); });
+$('piste').addEventListener('click', e => { if (!view.dice && !e.target.closest('.die') && once('cup')) rollDice(); });
 $('undoBtn').onclick = () => { if (once('undo')) doUndo(); };
 $('hintBtn').onclick = showHint;
 $('helpBtn').onclick = () => Kit.openHelp();

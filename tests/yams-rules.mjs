@@ -48,7 +48,7 @@ ok(G.rolls === 3 && Y.roll(G) === G && Y.keep(G, 1) === G, 'no fourth throw, and
   const start = Y.roll(Y.newGame('fort', 42));
   const after = Y.write(start, B.chance);
   const its = Y.computerTurn(after)[0].G.dice;
-  const mine = Y.roll(Y.roll(start)).dice;
+  const mine = Y.roll(start).dice;
   ok(!same(its, mine) && same(Y.roll(start).dice, Y.roll(start).dice), 'the computer throws from its own stream');
 }
 
@@ -89,9 +89,16 @@ ok(Y.advice(Y.newGame('fort', 1)).kind === 'roll', 'before the first throw, the 
 // Five 6 with Six and Yams left and 60 in the top: the Yams is written, a 6 next turn brings the bonus.
 a = Y.advice(at([6, 6, 6, 6, 6], 3, [4, 8, 12, 16, 20, null, 0, 0, 0, 0, 0, null, 0]));
 ok(a.kind === 'write' && a.box === B.yams, 'five 6 go in the Yams when the bonus is one 6 away', JSON.stringify(a));
-// The computer's last box: dice that already win are written at once.
-a = Y.advice({ ...Y.newGame('fort', 1), turn: 1, dice: [4, 6, 5, 5, 3], rolls: 1, sheets: [[...Array(12).fill(0), 226], [205, ...Array(11).fill(0), null]] });
-ok(a.kind === 'write' && a.box === B.chance, 'on its last box, Difficile writes dice that already win', JSON.stringify(a));
+// The computer's last box, Chance, with 224 points: it plays to win the game, not for points.
+const its = [3, 6, 9, 4, 10, 5, 18, 24, 25, 30, 40, 50, null], his = t => [...Array(11).fill(0), 50, t];
+const lastBox = (dice, rolls, him) => Y.advice({ ...Y.newGame('fort', 1), turn: 1, dice, rolls, sheets: [his(him - 50), its] });
+a = lastBox([4, 6, 5, 5, 3], 1, 246);
+ok(a.kind === 'write' && a.box === B.chance, 'on its last box, Difficile writes dice that win, rather than risk them for more', JSON.stringify(a));
+a = lastBox([4, 4, 4, 4, 4], 2, 245);
+ok(a.kind === 'keep' && a.kept.filter(k => k).length === 4, 'on its last box, Difficile throws again rather than write a sure loss', JSON.stringify(a));
+// Deux and Carré left, 61 in the top: four 6 go in the Carré, a 2 next turn is nearly sure.
+a = Y.advice(at([2, 6, 6, 6, 6], 3, [3, null, 9, 12, 15, 22, 0, null, 0, 0, 0, 0, 0]));
+ok(a.kind === 'write' && a.box === B.carre, 'the hint does not spend a good Carré on a bonus that is nearly sure anyway', JSON.stringify(a));
 // One point short of the bonus with As left: the hint keeps As for the bonus and gives up Brelan.
 a = Y.advice(at([2, 3, 4, 5, 6], 3, [null, 2, 9, 12, 15, 24, null, 0, 0, 0, 0, 0, 0]));
 ok(a.kind === 'write' && a.box === B.brelan, 'the hint does not give up a bonus that is nearly sure', JSON.stringify(a));

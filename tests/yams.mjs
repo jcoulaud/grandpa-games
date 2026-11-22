@@ -17,7 +17,7 @@ const die = i => page.locator(`.die[data-i="${i}"]`);
 const box = (p, b) => page.locator(`#sheet td[data-p="${p}"][data-b="${b}"]`);
 // A click, then the mouse moves away and waits, so the next click on the same thing is not a double-click.
 const click = async loc => { await loc.click(); await page.mouse.move(5, 5); await wait(520); };
-const myTurn = () => page.waitForFunction(() => G.turn === 0 && view === G && !G.result, null, { timeout: 15000 });
+const myTurn = () => page.waitForFunction(() => G.turn === 0 && !showing && !G.result, null, { timeout: 15000 });
 
 // 1. The first visit: the rules open, each page fits, and the level starts a game.
 await page.goto(URL);
@@ -67,7 +67,7 @@ ok(/celle de/.test(await msg()), "a box in the computer's column is refused");
 // 4. Writing a box, then the computer plays its turn and gives the hand back.
 const chance = await g(() => G.dice.reduce((a, b) => a + b));
 await click(box(0, 12));
-ok(await g(c => G.sheets[0][12] === c || (G.turn === 1 || view !== G), chance), 'a click on a box writes the dice');
+ok(await g(c => G.sheets[0][12] === c && G.turn === 1, chance), 'a click on a box writes the dice');
 await myTurn();
 ok(await g(c => G.sheets[0][12] === c && G.sheets[1].filter(v => v !== null).length === 1 && G.dice === null, chance), 'the computer writes one box, then it is his turn');
 ok(/À vous : lancez les dés/.test(await msg()), 'the message line gives him the hand back');
@@ -120,11 +120,11 @@ ok(await g(s => JSON.stringify(G) === s, saved), 'a reload brings back the same 
 await click(page.locator('#rollBtn'));
 await click(box(0, 6));
 await wait(100);
-ok(await g(() => view !== G), "the computer's turn is being shown");
-const mid = await g(() => JSON.stringify(G));
+ok(await g(() => showing && G.turn === 1), "the computer's turn is being shown");
+const mid = await g(() => { const s = Yams.computerTurn(G); return JSON.stringify(s[s.length - 1].G); });
 await page.reload();
-await wait(300);
-ok(await g(m => JSON.stringify(G) === m && G.turn === 0, mid), "a reload during the computer's turn shows it done");
+await myTurn();
+ok(await g(m => JSON.stringify(G) === m, mid), "a reload during the computer's turn plays the same turn again");
 
 // 8. The end: he wins with the last box, the win is counted once, and undo does not count it twice.
 await g(() => {
@@ -132,8 +132,15 @@ await g(() => {
   save(); render();
 });
 await click(page.locator('#rollBtn'));
+// An undo while the computer plays its last box: the win was never shown, so it is not counted.
+await click(box(0, 12));
+ok(await g(() => showing && !G.result), "the game ends only once the computer's last box is shown");
+await page.click('#undoBtn');
+await wait(300);
+ok(await g(() => !G.result && stats.won === 0 && !GG.meta('yams').summary.includes('victoire')), 'an undo during the last turn counts no win');
 await click(box(0, 12));
 await page.waitForFunction(() => !!G.result && document.getElementById('over').classList.contains('on'), null, { timeout: 15000 });
+ok(await page.locator('.die svg').count() === 5, 'the last dice stay on the piste for the win');
 ok(await g(() => G.result === 'won' && stats.won === 1 && GG.meta('yams').summary === '1 victoire'), 'the win is counted and the tile says so');
 ok(await page.locator('#overTitle').textContent() === 'Bravo, vous avez gagné !', 'the win says bravo');
 await page.screenshot({ path: `${OUT}/yams-won.png` });

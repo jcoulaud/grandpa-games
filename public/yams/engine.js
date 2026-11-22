@@ -159,7 +159,7 @@
     if (careful && box < 6 && bonusOpen(sheet)) {
       const after = sheet.slice(); after[box] = p;
       // Reaching the bonus gains what it was not yet sure to bring.
-      if (totals(after).top >= BONUS_AT) v += BONUS * (1 - bonusChance(sheet) / 2);
+      if (totals(after).top >= BONUS_AT) v += BONUS * (1 - bonusChance(sheet));
       // A box that makes the bonus impossible gives up what it was likely to bring.
       else if (!bonusOpen(after)) v -= BONUS * bonusChance(sheet);
       // Otherwise, points above three dice of the face bring the bonus closer, points under it push it away.
@@ -167,11 +167,25 @@
     }
     return v;
   }
-  // About how likely the bonus still is: the points missing against what the empty top boxes make
-  // when each gets three dice of its face.
+  // AIM[k]: the chance of at least k dice of one face after three throws that keep that face.
+  const AIM = (() => {
+    const C = (n, k) => { let r = 1; for (let i = 0; i < k; i++) r = r * (n - i) / (i + 1); return r; };
+    let dist = [1, 0, 0, 0, 0, 0];
+    for (let t = 0; t < 3; t++) {
+      const nd = [0, 0, 0, 0, 0, 0];
+      dist.forEach((p, c) => { const n = 5 - c; for (let h = 0; h <= n; h++) nd[c + h] += p * C(n, h) * (1 / 6) ** h * (5 / 6) ** (n - h); });
+      dist = nd;
+    }
+    return dist.map((_, k) => dist.slice(k).reduce((a, b) => a + b, 0));
+  })();
+  // How likely the bonus still is. With one top box left, exactly: the dice of its face it needs.
+  // With more, about: the points missing against what the empty top boxes make with three dice each.
   function bonusChance(sheet) {
-    const missing = BONUS_AT - totals(sheet).top;
-    const par = sheet.slice(0, 6).reduce((a, v, b) => a + (v === null ? 3 * (b + 1) : 0), 0);
+    const missing = BONUS_AT - totals(sheet).top, left = open(sheet).filter(b => b < 6);
+    if (missing <= 0) return 1;
+    if (!left.length) return 0;
+    if (left.length === 1) { const k = Math.ceil(missing / (left[0] + 1)); return k > 5 ? 0 : AIM[k]; }
+    const par = left.reduce((a, b) => a + 3 * (b + 1), 0);
     return Math.max(.1, Math.min(.95, .5 + (par - missing) / 20));
   }
   const open = sheet => sheet.map((v, b) => v === null ? b : -1).filter(b => b >= 0);
@@ -182,8 +196,9 @@
   }
 
   // The planner: for each hand with r throws left (1 or 2), the multiset to keep and what it is worth.
-  function plan(sheet, careful, r) {
-    const V0 = ALL.map(c => bestBox(c, sheet, careful)[1]);
+  // worth(c): what a hand is worth once written.
+  function plan(worth, r) {
+    const V0 = ALL.map(worth);
     const expect = V => { const E = new Map(); for (const [k, { outs }] of KEEPS) { let e = 0; for (const [i, p] of outs) e += p * V[i]; E.set(k, e); } return E; };
     const best = E => ALL.map((c, i) => { let bk = 0, bv = -Infinity; for (const k of SUBS[i]) { const v = E.get(k); if (v > bv) { bv = v; bk = k; } } return [bk, bv]; });
     const B1 = best(expect(V0));
@@ -204,13 +219,17 @@
     const sheet = G.sheets[G.turn], c = counts(G.dice), left = 3 - G.rolls;
     if (how === 'facile') return easy(G, sheet, c, left, random);
     const careful = how === 'fort';
-    // Difficile's last box, with the other sheet full: when the dice already win, it writes them.
+    // Difficile's last box, with the other sheet full: it plays to win the game, not for points. A win
+    // is worth 1, a tie 0.5; the points only break ties between two equal chances.
     const other = G.sheets[1 - G.turn], last = open(sheet);
-    if (careful && left > 0 && last.length === 1 && other.every(v => v !== null)
-      && totals(sheet).total + pointsOf(last[0], c) + (last[0] < 6 && totals(sheet).top < BONUS_AT && totals(sheet).top + pointsOf(last[0], c) >= BONUS_AT ? BONUS : 0) > totals(other).total)
-      return { kind: 'write', box: last[0] };
+    let worth = h => bestBox(h, sheet, careful)[1];
+    if (careful && last.length === 1 && other.every(v => v !== null)) {
+      const need = totals(other).total;
+      worth = h => { const after = sheet.slice(); after[last[0]] = pointsOf(last[0], h); const t = totals(after).total;
+        return (t > need ? 1 : t === need ? .5 : 0) + t / 1e4; };
+    }
     if (left > 0) {
-      const [k] = plan(sheet, careful, how === 'fort' ? left : 1)[INDEX.get(keyOf(c))];
+      const [k] = plan(worth, how === 'fort' ? left : 1)[INDEX.get(keyOf(c))];
       if (k !== keyOf(c)) return { kind: 'keep', kept: keptFor(G.dice, G.kept, k) };
     }
     return { kind: 'write', box: bestBox(c, sheet, careful)[0] };
