@@ -155,7 +155,7 @@
   <header>
     <div>
       <h1>Jeux de Papi</h1>
-      <p id="tagline">Retrouvez vos jeux de cartes et de dames, gratuits et sans publicité.</p>
+      <p id="tagline">Retrouvez vos jeux de cartes, de dames et de dés, gratuits et sans publicité.</p>
     </div>
     <div id="now">
       <div id="time"></div>
@@ -191,6 +191,8 @@ const GAMES = [
     felt: ['#6A4488', '#2C1840'], scene: piqueScene },
   { id: 'demineur', title: 'Démineur', text: 'Trouvez les mines cachées, sans jamais deviner.',
     felt: ['#8A6234', '#4A3217'], scene: mineArt },
+  { id: 'yams', title: 'Yams', text: 'Lancez cinq dés et remplissez votre feuille, contre l’ordinateur.',
+    felt: ['#B5532A', '#6A2A12'], scene: diceArt },
 ];
 
 // A card as the games draw it, centred on (x, y), w wide, turned by rot degrees.
@@ -274,6 +276,18 @@ function mineArt() {
     }
   }
   return `<svg class="field" viewBox="-84 -28 194 136" aria-hidden="true">${out}</svg>`;
+}
+// The yams: four dice that show a carré of 5, and a fifth die still rolling in, tilted, for the yams.
+function diceArt() {
+  const PIPS = { 2: [[28, 28], [72, 72]], 5: [[26, 26], [74, 26], [50, 50], [26, 74], [74, 74]] };
+  const die = (x, y, n, rot, s = 1) => `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${s * .46}) translate(-50 -50)">
+    <rect x="4" y="10" width="96" height="96" rx="18" fill="rgba(0,0,0,.3)"/>
+    <rect x="2" y="2" width="96" height="96" rx="18" fill="#FFFDF6" stroke="#BDB39C" stroke-width="2"/>
+    ${PIPS[n].map(([cx, cy]) => `<circle cx="${cx}" cy="${cy}" r="9" fill="#1B1B1B"/>`).join('')}</g>`;
+  return `<svg class="field" viewBox="0 0 210 147" aria-hidden="true">
+    <ellipse cx="105" cy="96" rx="98" ry="40" fill="rgba(0,0,0,.14)"/>
+    ${die(38, 98, 5, -8)}${die(84, 104, 5, 6)}${die(130, 96, 5, -3)}${die(174, 102, 5, 10)}${die(112, 40, 5, 28, 1.05)}
+    <path d="M70 30q12-14 26-10M150 26q-10-12-24-9" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="3" stroke-linecap="round"/></svg>`;
 }
 const ICON_TROPHY = '<svg viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v4M8.5 20h7"/></svg>';
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

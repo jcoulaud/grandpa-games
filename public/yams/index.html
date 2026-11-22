@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yams · Jeux de Papi</title>
+<meta name="description" content="Le yams en grand, pour les grands-parents : cinq gros dés, une feuille de marque claire, contre l'ordinateur à trois niveaux. Gratuit, sans publicité, sans compte.">
+<link rel="canonical" href="https://jeux-papi.fr/yams/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Jeux de Papi">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://jeux-papi.fr/yams/">
+<meta property="og:title" content="Yams · Jeux de Papi">
+<meta property="og:description" content="Le yams en grand, contre l'ordinateur. Gratuit, sans publicité, sans compte.">
+<meta property="og:image" content="https://jeux-papi.fr/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../lib/kit.css">
+<style>
+  /* The yams plays on a terracotta table. The dice roll on a red baize piste with a wooden rim, the
+     tray of French cafés, and the points go on a paper score pad. */
+  :root {
+    --felt-top: #B8582E; --felt: #5E2410; --shade: 50,18,6; --accent: #9A3F17;
+    --die: 96px; --row: 50px; --col: 88px; --k: 1; --gap: 22px;
+    --paper: #FFFCF3; --rule: #E9DFC9; --ink: #1E2622; --blue-ink: #1F4C9A; --mine: #FFF3CF; --theirs: #F1F4FA;
+  }
+  #title svg { width: 32px; height: 32px; }
+  button.game { --accent: #9A3F17; }
+  button.game:hover { background: #AE4A1D; }
+  button.game:active { background: #823413; }
+
+  #table { display: flex; align-items: center; justify-content: center; gap: clamp(18px, 3vw, 56px); padding: 0 clamp(12px, 2.4vw, 40px); overflow: hidden; }
+
+  /* ---------- The dice side: the computer across the piste, him in front of it ---------- */
+  #tray { flex: 0 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+  .seat { position: relative; display: flex; align-items: center; gap: 14px; min-width: 0; height: calc(70px * var(--k)); padding: 6px 20px 6px 10px; border-radius: 20px;
+    background: var(--paper); color: var(--ink); border: 3px solid rgba(0,0,0,.08); box-shadow: 0 6px 18px rgba(0,0,0,.3); transition: border-color .2s, box-shadow .2s; }
+  .seat.turn { border-color: var(--gold); background: #FFF8E2; box-shadow: 0 0 0 5px rgba(255,200,61,.3), 0 6px 18px rgba(0,0,0,.3); }
+  .ava { width: calc(48px * var(--k)); height: calc(48px * var(--k)); border-radius: 50%; flex: none; display: grid; place-items: center; object-fit: cover;
+    font: 700 calc(24px * var(--k)) var(--ui); color: #fff; box-shadow: 0 0 0 3px #fff, 0 2px 6px rgba(0,0,0,.3); }
+  .seat .who { flex: 1; min-width: 0; }
+  .seat b { display: block; font: 700 calc(23px * var(--k))/1.15 var(--ui); }
+  .seat .now { display: block; font: 500 calc(20px * var(--k))/1.25 var(--ui); color: #5A6461; }
+  .seat.turn .now { color: #6B4D00; font-weight: 700; }
+  .seat .pts { flex: none; text-align: right; font: 800 calc(34px * var(--k))/1 var(--ui); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .seat .pts small { display: block; font: 600 calc(20px * var(--k))/1.1 var(--ui); color: #5A6461; letter-spacing: 0; }
+
+  /* The piste: red baize inside a rounded wooden rim, with a soft light on the felt. */
+  #piste { position: relative; padding: 20px 22px 6px; border-radius: 26px;
+    background: radial-gradient(90% 120% at 50% 20%, #9E2A22, #6A1611 62%, #4E0F0B);
+    box-shadow: inset 0 0 0 3px #3B1C0B, inset 0 0 0 11px #B97A43, inset 0 0 0 13px #6E4122, inset 0 14px 28px rgba(0,0,0,.45),
+      0 16px 34px rgba(0,0,0,.42), 0 3px 0 #2A1206; }
+  #piste::before { content: ""; position: absolute; inset: 11px; border-radius: 16px; pointer-events: none;
+    background: repeating-linear-gradient(45deg, rgba(255,255,255,.018) 0 2px, transparent 2px 5px); }
+  #dice { position: relative; display: grid; grid-template-columns: repeat(5, var(--die)); gap: calc(var(--die) * .16); }
+  .die { position: relative; width: var(--die); height: var(--die); min-height: 0; padding: 0; border: 0; border-radius: 19%;
+    background: none; box-shadow: none; display: block; transition: translate .2s cubic-bezier(.3,1.4,.5,1); }
+  .die:hover, .die:active { background: none; box-shadow: none; transform: none; }
+  .die svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  .die .face { transition: fill .12s; }
+  .die:not(.kept):hover .face:first-of-type { fill: url(#ivoryHover); }
+  .die.kept { translate: 0 calc(var(--die) * -.1); }
+  .die.kept::after, .die.hint::before { content: ""; position: absolute; border-radius: 24%; pointer-events: none; }
+  .die.kept::after { inset: -7px; border: 5px solid var(--gold); box-shadow: 0 0 0 1.5px rgba(var(--shade),.8), inset 0 0 0 1.5px rgba(var(--shade),.8), 0 0 22px rgba(255,200,61,.45); }
+  .die.hint::before { inset: -13px; border: 4px dashed var(--gold); border-radius: 28%; animation: glow 1.4s ease-in-out infinite; }
+  @keyframes glow { 50% { box-shadow: 0 0 20px 6px rgba(255,200,61,.7); } }
+  /* A throw: each die flies in from the cup's side, spins, bounces twice and settles; they land one
+     after the other (--delay). Their faces flicker on the way (see roll()). */
+  .die.rolling svg { animation: throwIn .75s cubic-bezier(.2,.75,.3,1) var(--delay, 0s) both; }
+  @keyframes throwIn {
+    0% { transform: translate(-180%, -70%) rotate(-340deg) scale(.55); opacity: 0; }
+    12% { opacity: 1; }
+    55% { transform: translate(8%, 5%) rotate(16deg) scale(1.05); }
+    70% { transform: translate(-3%, -9%) rotate(-7deg) scale(1); }
+    84% { transform: translate(1%, 1%) rotate(3deg); }
+    100% { transform: none; }
+  }
+  /* Five alike, or a win: the dice hop in a wave. */
+  .die.party svg { animation: hop .55s cubic-bezier(.3,1.6,.5,1) calc(var(--i) * 90ms) 3 both; }
+  @keyframes hop { 40% { transform: translateY(-26%) rotate(-8deg); } }
+  #tags { position: relative; display: grid; grid-template-columns: repeat(5, var(--die)); gap: calc(var(--die) * .16); height: calc(34px * var(--k)); margin-top: 6px; }
+  #tags span { justify-self: center; align-self: start; padding: 0 12px; border-radius: 10px; background: var(--gold); color: #2B2000;
+    font: 700 calc(20px * var(--k))/1.4 var(--ui); box-shadow: 0 2px 6px rgba(0,0,0,.35); visibility: hidden; white-space: nowrap; }
+  #tags span.on { visibility: visible; }
+  /* No dice yet this turn: the cup waits in the middle of the piste. */
+  #cup { position: absolute; inset: 11px 11px 40px; display: none; align-items: center; justify-content: center; gap: 18px; color: #FCE7D2; font: 700 calc(24px * var(--k)) var(--ui); text-shadow: 0 2px 4px rgba(0,0,0,.4); }
+  #piste.empty #cup { display: flex; }
+  #piste.empty.ready { cursor: pointer; }
+  #piste.empty.ready:hover #cup span { text-decoration: underline; text-underline-offset: 5px; }
+  #piste.empty #dice, #piste.empty #tags { visibility: hidden; }
+  #cup svg { height: min(100%, calc(120px * var(--k))); width: auto; flex: none; filter: drop-shadow(0 8px 8px rgba(0,0,0,.4)); }
+  /* Five alike: a gold ribbon over the dice. */
+  #ribbon { position: absolute; left: 50%; top: 42%; z-index: 4; translate: -50% -50%; padding: 6px 34px; border-radius: 14px;
+    background: linear-gradient(#FFD666, #F2B21E); color: #3A2600; font: 900 44px/1.1 var(--ui); letter-spacing: .04em;
+    box-shadow: 0 10px 30px rgba(0,0,0,.45), inset 0 -3px 0 rgba(0,0,0,.15); pointer-events: none; display: none; }
+  #ribbon.on { display: block; animation: ribbon 1.8s cubic-bezier(.2,1.3,.4,1) both; }
+  @keyframes ribbon { 0% { scale: .3; opacity: 0; } 15% { scale: 1.08; opacity: 1; } 25% { scale: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
+
+  #rollBtn { align-self: center; min-height: calc(60px * var(--k)); padding: 8px 30px; font-size: calc(23px * var(--k)); justify-content: center; white-space: nowrap; }
+  #rollBtn svg { width: calc(30px * var(--k)); height: calc(30px * var(--k)); }
+
+  /* ---------- The score pad ---------- */
+  #sheet { flex: none; position: relative; padding: 10px 16px 12px; border-radius: 8px 8px 16px 16px;
+    background: linear-gradient(var(--paper), #FBF5E6); color: var(--ink);
+    box-shadow: 0 1px 0 #E4D8BD, 0 3px 0 #F7F0DE, 0 4px 0 #DCCFB1, 0 18px 44px rgba(0,0,0,.42); }
+  /* The binding of the pad. */
+  #sheet::before { content: ""; position: absolute; left: 0; right: 0; top: -10px; height: 16px; border-radius: 8px 8px 3px 3px;
+    background: linear-gradient(#B8582E, #7E3214); box-shadow: 0 2px 4px rgba(0,0,0,.3); }
+  #halves { display: flex; gap: var(--gap); }
+  #sheet table { border-collapse: collapse; }
+  #sheet th, #sheet td { height: var(--row); padding: 0 calc(10px * var(--k)); font: 600 calc(21px * var(--k))/1 var(--ui); border-bottom: 1.5px solid var(--rule); white-space: nowrap; }
+  #sheet tr:last-child td { border-bottom: 0; }
+  #sheet thead th { height: calc(46px * var(--k)); border-bottom: 2.5px solid #D6C7A6; }
+  #sheet th .ava { width: calc(34px * var(--k)); height: calc(34px * var(--k)); margin: 0 auto; font-size: calc(20px * var(--k)); box-shadow: 0 0 0 2px #fff, 0 1px 3px rgba(0,0,0,.25); }
+  #sheet td.name { text-align: left; padding-left: 4px; padding-right: calc(var(--gap) * .5); }
+  #sheet td.name span { display: inline-flex; align-items: center; gap: 10px; }
+  #sheet td.name svg { width: calc(26px * var(--k)); height: calc(26px * var(--k)); flex: none; }
+  #sheet td.v, #sheet th.v { position: relative; width: var(--col); min-width: var(--col); max-width: var(--col); padding: 0; text-align: center; }
+  #sheet td.v { font: 700 calc(24px * var(--k))/1 var(--ui); font-variant-numeric: tabular-nums; }
+  #sheet .me { background: var(--mine); }
+  #sheet .it { background: var(--theirs); }
+  #sheet td.it { color: var(--blue-ink); }
+  #sheet td.zeroed { color: #9AA29E; }
+  #sheet td.zeroed::before { content: ""; position: absolute; left: 22%; right: 22%; top: 50%; border-top: 2.5px solid currentColor; rotate: -18deg; }
+  #sheet td.zeroed { font-size: 0; }
+  /* The bonus: how far the top boxes are from 63, as a number and a bar. */
+  #sheet td.bonus { font: 700 calc(20px * var(--k))/1 var(--ui); color: #4E5A57; }
+  #sheet td.bonus i { position: absolute; left: 12%; right: 12%; bottom: 7px; height: 5px; border-radius: 3px; background: rgba(0,0,0,.1); overflow: hidden; }
+  #sheet td.bonus i::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--fill, 0%); background: #3E8E4A; border-radius: 3px; }
+  #sheet td.bonus.got { color: #1C7128; font-size: calc(24px * var(--k)); }
+  #sheet td.bonus.lost { color: #9AA29E; }
+  /* An empty box he can write in: the points the dice would make, in a yellow target. */
+  #sheet td.can { cursor: pointer; color: #6B4D00; }
+  #sheet td.can::before { content: ""; position: absolute; inset: 4px 6px; border: 2.5px dashed #D2A02A; border-radius: 12px; background: rgba(255,255,255,.65); z-index: 0; }
+  #sheet td.can b { position: relative; z-index: 1; font: inherit; }
+  #sheet td.can:hover::before { background: var(--gold); border: 2.5px solid #C9951A; }
+  #sheet td.can:hover { color: #1F1A00; }
+  #sheet td.can.zero { color: #9AA29E; }
+  #sheet td.can:focus-visible { outline: 4px solid #1B2422; outline-offset: -4px; }
+  /* The box just written: a frame, yellow for him, blue for the computer. */
+  #sheet td.fresh::after { content: ""; position: absolute; inset: 3px 5px; border: 4px solid var(--gold); border-radius: 12px; box-shadow: 0 0 0 1.5px rgba(var(--shade),.6); }
+  #sheet td.it.fresh::after { border-color: #5B86D6; box-shadow: none; }
+  #sheet td.hint::after { content: ""; position: absolute; inset: 2px 4px; border: 5px solid var(--gold); border-radius: 12px; z-index: 2;
+    box-shadow: 0 0 0 1.5px rgba(var(--shade),.8), inset 0 0 0 1.5px rgba(var(--shade),.8); animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { background: rgba(255,200,61,.45); } }
+  #sheet td.shake { animation: sh .3s; }
+  /* A number just written: it is stamped into its box. */
+  #sheet td.ink { animation: ink .5s cubic-bezier(.2,1.5,.4,1); }
+  @keyframes ink { 0% { scale: 1.9; opacity: 0; } 60% { opacity: 1; } }
+
+  #helpText .boxes { display: grid; grid-template-columns: auto 1fr; gap: 2px 22px; margin: 4px 0 8px; }
+  #helpText .boxes b { white-space: nowrap; }
+  #helpText .demo { display: flex; gap: 10px; margin: 4px 0 10px; }
+  #helpText .demo svg { width: 54px; height: 54px; overflow: visible; }
+
+  /* A low window (his laptop with the text at 125 %): the two players sit side by side above the
+     piste, so the dice keep their size. */
+  #table.low #tray { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  #table.low #seat0 { order: 0; } #table.low #seat1 { order: 1; }
+  #table.low #piste { order: 2; grid-column: 1 / -1; } #table.low #rollBtn { order: 3; grid-column: 1 / -1; justify-self: center; }
+  #table.low .seat { gap: 10px; padding: 4px 12px 4px 8px; height: 68px; }
+  #table.low .seat .now { line-height: 1.12; }
+  #table.low .ava { width: 40px; height: 40px; font-size: 20px; }
+  #table.low .seat .pts small { display: none; }
+  #table.low .seat .pts { font-size: 30px; }
+
+  /* A phone: the two players side by side, the piste, then the pad; the table scrolls. */
+  @media (max-width: 700px) {
+    #table { flex-direction: column; justify-content: flex-start; overflow-y: auto; touch-action: pan-y; padding: 14px 8px 16px; gap: 16px; }
+    #tray { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    #seat1 { order: 1; } #seat0 { order: 0; } #piste { order: 2; grid-column: 1 / -1; } #rollBtn { order: 3; grid-column: 1 / -1; justify-self: center; }
+    #piste { padding: 14px 10px 4px; }
+    .seat { height: auto; min-height: 0; gap: 8px; padding: 6px 10px 6px 6px; }
+    .seat b, .seat .now { font-size: 15px; }
+    .seat .pts { font-size: 24px; }
+    .seat .pts small { font-size: 13px; }
+    .ava { width: 32px; height: 32px; font-size: 16px; }
+    #halves { gap: 8px; }
+    #sheet { padding: 8px; }
+    #sheet th, #sheet td { font-size: 15px; padding: 0 4px; }
+    #sheet td.name span { gap: 4px; }
+    #sheet td.name svg { width: 16px; height: 16px; }
+    #sheet td.v { font-size: 17px; }
+    #sheet td.bonus { font-size: 13px; }
+    #sheet th .ava { width: 26px; height: 26px; }
+    #tags { height: 26px; }
+    #tags span { font-size: 14px; padding: 0 6px; }
+    #cup { font-size: 16px; }
+    #ribbon { font-size: 30px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .die.hint::before, #sheet td.hint::after, #sheet td.shake, .die.rolling svg, .die.party svg, #sheet td.ink, #ribbon.on { animation: none; }
+    .die, .seat { transition: none; }
+  }
+</style>
+<script src="../lib/zoom.js"></script>
+</head>
+<body>
+<svg id="defs" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="ivory" x1="0" y1="0" x2=".9" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".55" stop-color="#FBF6EA"/><stop offset="1" stop-color="#EADFC6"/></linearGradient>
+  <linearGradient id="ivoryHover" x1="0" y1="0" x2=".9" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#FFE8A8"/></linearGradient>
+  <radialGradient id="gloss" cx=".3" cy=".22" r=".75"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset=".5" stop-color="#fff" stop-opacity=".15"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+  <radialGradient id="pip" cx=".42" cy=".38" r=".7"><stop offset="0" stop-color="#4A4A4A"/><stop offset=".6" stop-color="#151515"/><stop offset="1" stop-color="#000"/></radialGradient>
+  <radialGradient id="pipRed" cx=".42" cy=".38" r=".7"><stop offset="0" stop-color="#E8414B"/><stop offset=".65" stop-color="#B5121F"/><stop offset="1" stop-color="#7A0A12"/></radialGradient>
+</defs></svg>
+<div id="bar">
+  <div id="title"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="4.5" fill="#FFFDF6" stroke="#6A2A12" stroke-width="1.6"/><g fill="#1B1B1B"><circle cx="7.6" cy="7.6" r="1.8"/><circle cx="16.4" cy="7.6" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="7.6" cy="16.4" r="1.8"/><circle cx="16.4" cy="16.4" r="1.8"/></g></svg>Yams</div>
+  <button id="undoBtn" data-icon="undo" title="Reprend la dernière case que vous avez remplie"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span><span class="tiny">Annuler</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Dit quels dés garder, ou dans quelle case marquer">Aide</button>
+  <span class="spacer"></span>
+  <button id="helpBtn" data-icon="help">Règles</button>
+  <button id="newBtn" class="game">Nouvelle partie</button>
+</div>
+<div id="table">
+  <div id="tray">
+    <div class="seat" id="seat1"></div>
+    <div id="piste">
+      <div id="dice"></div>
+      <div id="tags" aria-hidden="true"></div>
+      <div id="cup"></div>
+      <div id="ribbon" aria-hidden="true">Yams !</div>
+    </div>
+    <button id="rollBtn" class="primary"></button>
+    <div class="seat" id="seat0"></div>
+  </div>
+  <div id="sheet" role="grid" aria-label="Feuille de marque">
+    <div id="halves"><table id="top"></table><table id="bottom"></table></div>
+  </div>
+</div>
+<footer id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div><div class="zoom"></div></footer>
+<div id="help" data-title="Comment jouer">
+  <section class="page">
+    <h3>Le but</h3>
+    <p>Vous jouez contre un joueur de l'ordinateur, chacun à son tour. Chacun a sa colonne sur la feuille de marque, avec 13 cases. À chaque tour, on remplit une case.</p>
+    <p>Quand les deux colonnes sont pleines, le plus grand total gagne.</p>
+    <h3>Un tour</h3>
+    <p>Cliquez sur « Lancer les dés ». Cliquez ensuite sur les dés que vous voulez garder, puis relancez les autres. Vous avez trois lancers au plus.</p>
+    <p>Pour finir le tour, cliquez sur une case de votre colonne : elle montre déjà les points que vos dés y marquent.</p>
+  </section>
+  <section class="page">
+    <h3>Le haut de la feuille</h3>
+    <p>Les cases de l'As au Six comptent les dés de leur valeur. Par exemple, trois 5 marquent 15 points dans la case Cinq.</p>
+    <div class="demo" id="demo5"></div>
+    <h3>Le bonus</h3>
+    <p>Si vos six cases du haut font 63 points ou plus, vous gagnez 35 points de bonus. 63 points, c'est trois dés de chaque valeur. La ligne Bonus montre où vous en êtes.</p>
+  </section>
+  <section class="page">
+    <h3>Le bas de la feuille</h3>
+    <div class="boxes">
+      <b>Brelan</b><span>trois dés pareils : leur total</span>
+      <b>Carré</b><span>quatre dés pareils : leur total</span>
+      <b>Full</b><span>trois dés pareils et deux autres pareils : 25 points</span>
+      <b>Petite suite</b><span>quatre dés qui se suivent, comme 2 3 4 5 : 30 points</span>
+      <b>Grande suite</b><span>cinq dés qui se suivent : 40 points</span>
+      <b>Yams</b><span>cinq dés pareils : 50 points</span>
+      <b>Chance</b><span>n'importe quels dés : leur total</span>
+    </div>
+  </section>
+  <section class="page">
+    <h3>Barrer une case</h3>
+    <p>Si vos dés ne vont dans aucune case, choisissez-en une quand même : elle marque 0 point. On dit qu'elle est barrée.</p>
+    <h3>Les boutons</h3>
+    <p>« Aide » encadre les dés à garder, ou la meilleure case. « Annuler le dernier coup » reprend la dernière case remplie. « Nouvelle partie » vous laisse choisir la force de l'ordinateur. La partie est enregistrée à chaque coup.</p>
+  </section>
+</div>
+
+<script src="../lib/store.js"></script>
+<script src="../lib/kit.js"></script>
+<script src="engine.js"></script>
+<script>
+'use strict';
+const Y = Yams;
+const $ = id => document.getElementById(id);
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const FIRST_MS = 900;   // before the computer's first throw, so his own box is seen first
+const STEP_MS = 1300;   // between two steps of the computer's turn
+const KEEP_MS = 1000;   // the dice it keeps stay lifted this long before it throws again
+const END_MS = 1100;    // its box stays framed this long before it is his turn
+
+// The players the computer can seat, as in the dame de pique. Each new game seats one, not the one before.
+const CAST = {
+  jeanne: { name: 'Jeanne', color: '#F2B8A8' }, louise: { name: 'Louise', color: '#BFE3C0' },
+  simone: { name: 'Simone', color: '#B9D7F0' }, odette: { name: 'Odette', color: '#D8C8F0' },
+  colette: { name: 'Colette', color: '#F5E2A0' }, yvonne: { name: 'Yvonne', color: '#F7CFA8' },
+  paul: { name: 'Paul', color: '#B4CCE8' }, marcel: { name: 'Marcel', color: '#E8D5B0' },
+  rene: { name: 'René', color: '#B0E0DA' }, andre: { name: 'André', color: '#CDE6B8' },
+  henri: { name: 'Henri', color: '#F0C6D0' }, gaston: { name: 'Gaston', color: '#D6CCEE' },
+};
+let who = 'jeanne';
+const them = () => CAST[who].name;
+function newOpponent() {
+  const pool = Object.keys(CAST).filter(id => id !== who);
+  who = pool[Math.floor(Math.random() * pool.length)];
+}
+
+/* ---------- The dice ---------- */
+const PIPS = { 1: [[50, 50]], 2: [[28, 28], [72, 72]], 3: [[26, 26], [50, 50], [74, 74]], 4: [[28, 28], [72, 28], [28, 72], [72, 72]],
+  5: [[26, 26], [74, 26], [50, 50], [26, 74], [74, 74]], 6: [[28, 24], [72, 24], [28, 50], [72, 50], [28, 76], [72, 76]] };
+const pipsSvg = n => PIPS[n].map(([x, y]) => `<circle cx="${x}" cy="${y - 1.5}" r="${n === 1 ? 12 : 9.2}" fill="url(#${n === 1 ? 'pipRed' : 'pip'})"/>`).join('');
+// A die: ivory with a soft light from the top left, rounded edges and pips sunk into the face.
+// The gradients are defined once, in #defs.
+const dieSvg = n => `<svg viewBox="0 0 100 100" aria-hidden="true">`
+  + `<rect x="5" y="11" width="92" height="92" rx="20" fill="rgba(0,0,0,.38)"/>`
+  + `<rect x="2" y="2" width="96" height="96" rx="20" fill="#CFC2A3"/>`
+  + `<rect class="face" x="2" y="1" width="96" height="93" rx="20" fill="url(#ivory)"/>`
+  + `<rect class="face" x="2" y="1" width="96" height="93" rx="20" fill="url(#gloss)"/>`
+  + `<rect x="5.5" y="4.5" width="89" height="86" rx="17" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width="2"/>`
+  + `<g class="pips">${pipsSvg(n)}</g></svg>`;
+// The leather cup the dice are thrown from, with two dice beside it.
+const CUP = '<svg viewBox="0 0 120 110" aria-hidden="true"><path d="M22 14h76l-9 86H31z" fill="#5B2B14"/><path d="M22 14h76l-2 16H24z" fill="#3E1C0C"/>'
+  + '<path d="M31 100h58" stroke="#3E1C0C" stroke-width="6" stroke-linecap="round"/><path d="M30 38l6 56M90 38l-6 56" stroke="#C9955E" stroke-width="2" stroke-dasharray="5 5"/>'
+  + '<ellipse cx="60" cy="14" rx="38" ry="7" fill="#2A1106"/><path d="M40 52h40" stroke="#8A4A26" stroke-width="3" stroke-linecap="round" opacity=".7"/></svg>';
+
+/* ---------- State ----------
+   G: the game (see engine.js). view: the game on screen; it differs from G while the computer's turn
+   is shown step by step. undo: the games before each box he wrote, as JSON. hint: what the hint shows,
+   until his next action. wonNow: this game is counted as won (undo keeps it, so a win counts once). */
+let G, view, undo = [], level = 'facile', stats = { won: 0, best: 0 }, wonNow = false, hint = null, timers = [], fresh = null, rolling = [];
+let stale = false, saved = true;
+addEventListener('gg-stale', () => { stale = true; });
+const say = Kit.say;
+const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
+const playing = () => !G.result && (G.dice || G.sheets.some(s => s.some(v => v !== null)));
+const busy = () => view !== G;   // the computer's turn is still being shown
+
+/* ---------- Saves ---------- */
+function save() {
+  const parts = [];
+  if (playing()) parts.push('Partie en cours');
+  if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
+  for (const n of [Infinity, 13, 3, 1, 0]) {
+    const data = { v: 1, G, who, undo: n ? undo.slice(-n) : [], level, stats, wonNow };
+    if (GG.save('yams', data, { summary: parts.join(' · ') })) return (saved = true);
+    if (stale) return (saved = false);
+  }
+  saved = false;
+  say("La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.");
+  return false;
+}
+function valid(g) {
+  const int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
+  const sheetOk = s => Array.isArray(s) && s.length === 13 && s.every(v => v === null || int(v, 0, 50));
+  if (!g || !Object.hasOwn(Y.LEVELS, g.level) || !(g.turn === 0 || g.turn === 1) || !Array.isArray(g.sheets) || g.sheets.length !== 2 || !g.sheets.every(sheetOk)) return false;
+  if (!Array.isArray(g.rng) || g.rng.length !== 2 || !g.rng.every(v => int(v, 0, 2 ** 32 - 1))) return false;
+  if (!Array.isArray(g.kept) || g.kept.length !== 5 || !g.kept.every(k => typeof k === 'boolean') || !int(g.rolls, 0, 3)) return false;
+  if (g.dice === null ? g.rolls !== 0 : !(Array.isArray(g.dice) && g.dice.length === 5 && g.dice.every(d => int(d, 1, 6)) && g.rolls >= 1)) return false;
+  // The computer's turn is saved whole: a game waiting for it has no dice yet.
+  if (g.turn === 1 && g.dice !== null) return false;
+  const full = g.sheets.map(s => s.every(v => v !== null));
+  return g.result ? full[0] && full[1] : !full[g.turn];
+}
+function load() {
+  try {
+    const v = GG.load('yams');
+    if (!v || !valid(v.G)) return false;
+    G = view = v.G; wonNow = !!v.wonNow; level = G.level;
+    // Undo steps that do not read back as a game are dropped.
+    undo = (Array.isArray(v.undo) ? v.undo : []).filter(u => { try { return valid(JSON.parse(u)); } catch (e) { return false; } });
+    stats = { won: 0, best: 0, ...(v.stats || {}) };
+    if (Object.hasOwn(CAST, v.who)) who = v.who;
+    return true;
+  } catch (e) { return false; }
+}
+
+/* ---------- Words ---------- */
+const NUM = ['', 'un', 'deux', 'trois', 'quatre', 'cinq'];
+const boxName = b => Y.NAMES[b];
+const ptsText = n => n === 0 ? '0 point' : plural(n, 'point', 'points');
+// "les deux 6 et le 3", for the dice given.
+function diceWords(dice) {
+  const c = Y.counts(dice), parts = [];
+  for (let f = 6; f >= 1; f--) if (c[f]) parts.push(c[f] === 1 ? `le ${f}` : `les ${NUM[c[f]]} ${f}`);
+  return parts.length > 1 ? parts.slice(0, -1).join(', ') + ' et ' + parts[parts.length - 1] : parts[0] || '';
+}
+function writeText(g, player, box) {
+  const p = g.sheets[player][box];
+  const name = player === 0 ? 'Vous' : them();
+  const verb = player === 0 ? (p ? 'marquez' : 'barrez') : (p ? 'marque' : 'barre');
+  return p ? `${name} ${verb} ${ptsText(p)} en ${boxName(box)}.` : `${name} ${verb} la case ${boxName(box)} : 0 point.`;
+}
+function turnText() {
+  if (!G.dice) return 'À vous : lancez les dés.';
+  if (G.rolls >= 3) return 'Dernier lancer : cliquez sur une case de votre colonne pour marquer vos points.';
+  return 'Cliquez sur les dés à garder, puis relancez. Ou cliquez sur une case pour marquer vos points.';
+}
+
+/* ---------- His actions ---------- */
+let lastTap = null;
+// A second click on the same thing within half a second is a double-click: it counts as one click.
+function once(key) {
+  const t = performance.now(), prev = lastTap;
+  lastTap = { key, t };
+  // A die appears where the cup was: a click on it just after the throw is the second click of a double-click.
+  return !(prev && t - prev.t < 500 && (prev.key === key || (prev.key === 'roll' && key.startsWith('die'))));
+}
+function refuseBusy() {
+  if (busy() || (G.turn !== 0 && !G.result)) return say(`Attendez : c'est à ${them()} de jouer.`), true;
+  if (G.result) return say('La partie est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.'), true;
+  return false;
+}
+function rollDice() {
+  if (Kit.isOpen() || refuseBusy()) return;
+  if (G.rolls >= 3) return say('Vous avez lancé trois fois : cliquez sur une case de votre colonne pour marquer vos points.');
+  if (G.dice && G.kept.every(k => k)) return say('Vous gardez les cinq dés : cliquez sur un dé pour le relancer, ou sur une case pour marquer.');
+  const thrown = G.dice ? G.kept.map((k, i) => k ? -1 : i).filter(i => i >= 0) : [0, 1, 2, 3, 4];
+  G = view = Y.roll(G); hint = null; fresh = null;
+  save(); rolling = thrown; render(); rolling = [];
+  if (!saved) return;
+  const p = Y.points(11, G.dice);
+  if (p) ribbon();
+  if (p && G.sheets[0][11] === null) return say('Yams ! Les cinq dés sont pareils : cliquez sur la case Yams pour marquer 50 points.');
+  say(turnText());
+}
+function tapDie(i) {
+  if (Kit.isOpen() || refuseBusy()) return;
+  if (!G.dice) return say("Lancez d'abord les dés avec le bouton « Lancer les dés ».");
+  if (G.rolls >= 3) return shakeDie(i), say('Vous avez lancé trois fois : cliquez sur une case de votre colonne pour marquer vos points.');
+  G = view = Y.keep(G, i); hint = null;
+  save(); render();
+  if (!saved) return;
+  const d = G.dice[i], n = G.kept.filter(k => k).length;
+  say(G.kept[i] ? (n === 5 ? `Vous gardez le ${d}. Les cinq dés sont gardés : cliquez sur une case pour marquer.` : `Vous gardez le ${d}. Cliquez encore dessus pour le relancer.`)
+    : `Le ${d} sera relancé.`);
+}
+function tapBox(player, box) {
+  if (Kit.isOpen() || refuseBusy()) return;
+  if (player !== 0) return shakeBox(player, box), say(`Cette colonne est celle de ${them()} : marquez dans la colonne « Vous ».`);
+  if (!G.dice) return shakeBox(player, box), say("Lancez d'abord les dés avec le bouton « Lancer les dés ».");
+  if (G.sheets[0][box] !== null) return shakeBox(player, box), say('Cette case est déjà remplie : choisissez une case vide.');
+  undo.push(JSON.stringify(G));
+  G = Y.write(G, box); view = G; hint = null; fresh = { player: 0, box, at: performance.now() };
+  afterWrite(writeText(G, 0, box));
+  // A save that failed leaves its warning on the message line, and the game goes on in this window.
+  if (G.result || stale) return;
+  computerPlays();
+}
+// Counts a win once and saves. Returns the best score before this game ended, for the record.
+function commit() {
+  const firstWin = G.result && G.result !== 'lost' && !wonNow;
+  const oldBest = stats.best;
+  if (firstWin) { wonNow = true; stats.won++; }
+  if (G.result) stats.best = Math.max(stats.best, Y.totals(G.sheets[0]).total);
+  if (save()) { if (firstWin) GG.track('yams', 'won'); }
+  else { if (firstWin) { wonNow = false; stats.won--; } stats.best = oldBest; }
+  return oldBest;
+}
+const record = oldBest => oldBest > 0 && Y.totals(G.sheets[0]).total > oldBest;
+// After he writes a box: save, then show the end or his box.
+function afterWrite(text) {
+  const oldBest = commit();
+  render();
+  // A stale window shows the kit's reload prompt, not the result.
+  if (G.result) return finish(!stale, record(oldBest));
+  if (saved) say(text);
+}
+
+/* ---------- The computer's turn ----------
+   The whole turn is played and saved at once; then it is shown one step at a time. */
+function computerPlays() {
+  const steps = Y.computerTurn(G), before = G;
+  G = steps[steps.length - 1].G;
+  const oldBest = commit();
+  if (stale) { view = G; return render(); }
+  view = before;
+  let at = 0;
+  const show = () => {
+    const s = steps[at++], prev = at > 1 ? steps[at - 2].G : null;
+    view = s.G;
+    if (s.did === 'roll') {
+      rolling = prev && prev.dice ? [0, 1, 2, 3, 4].filter(i => !prev.kept[i]) : [0, 1, 2, 3, 4];
+      say(s.G.rolls === 1 ? `${them()} lance les dés.` : `${them()} relance ${plural(rolling.length, 'dé', 'dés')}.`);
+      render(); rolling = [];
+      if (Y.points(11, s.G.dice)) ribbon();
+    } else if (s.did === 'keep') {
+      const kept = s.G.dice.filter((d, i) => s.G.kept[i]);
+      say(kept.length ? `${them()} garde ${diceWords(kept)}.` : `${them()} ne garde aucun dé.`);
+      render();
+    } else {
+      fresh = { player: 1, box: s.box, at: performance.now() };
+      // The dice it wrote stay on the felt until he throws.
+      view = { ...s.G, turn: s.G.result ? s.G.turn : 1, dice: prev ? prev.dice : null, kept: [false, false, false, false, false] };
+      say(writeText(s.G, 1, s.box));
+      render();
+    }
+    if (at < steps.length) return later(show, REDUCED ? 300 : s.did === 'keep' ? KEEP_MS : STEP_MS);
+    later(() => {
+      view = G;
+      // The save failed before the turn was shown: try once more, the disk may have room now.
+      if (!saved) commit();
+      render();
+      if (G.result) return finish(true, record(oldBest));
+      say(writeText(G, 1, s.box) + ' ' + turnText());
+    }, REDUCED ? 300 : END_MS);
+  };
+  render();
+  later(show, REDUCED ? 200 : FIRST_MS);
+}
+
+/* ---------- End of the game ---------- */
+function finish(show, record) {
+  hint = null; view = G;
+  render();
+  // The rules or the levels he opened meanwhile stay open: the message line says the result.
+  const dialog = (...a) => { if (!Kit.isOpen()) Kit.dialog(...a); };
+  const me = Y.totals(G.sheets[0]).total, it = Y.totals(G.sheets[1]).total;
+  const scores = `Vous avez ${ptsText(me)}, ${them()} ${ptsText(it)}.`;
+  const best = record ? ' C\'est votre meilleur score.' : '';
+  const nth = !wonNow ? '' : stats.won === 1 ? " C'est votre première victoire." : ` C'est votre ${stats.won}e victoire.`;
+  const buttons = [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', home]];
+  const lost = saved ? '' : " La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.";
+  if (G.result !== 'lost' && show) party();
+  if (G.result === 'won') {
+    say(`Bravo, vous avez gagné : ${me} points contre ${it}.`);
+    if (show) later(() => dialog('Bravo, vous avez gagné !', scores + nth + best + lost, buttons, true), REDUCED ? 0 : 900);
+  } else if (G.result === 'tie') {
+    say(`Égalité : ${me} points chacun. Vous partagez la victoire avec ${them()}.`);
+    if (show) later(() => dialog('Égalité !', `Vous avez tous les deux ${ptsText(me)} : vous partagez la victoire.` + nth + best + lost, buttons, true), REDUCED ? 0 : 900);
+  } else {
+    say(`${them()} a gagné : ${it} points contre ${me}.`);
+    if (show) later(() => dialog(`${them()} a gagné`, scores + best + lost + ' « Annuler le dernier coup » reprend votre dernière case.',
+      [['Nouvelle partie', askNewGame, true], ['Annuler le dernier coup', doUndo], ['Retour aux jeux', home]]), REDUCED ? 0 : 900);
+  }
+}
+const home = () => { location.href = $('home').href; };
+
+/* ---------- Buttons ---------- */
+function later(fn, ms) { const t = setTimeout(() => { timers = timers.filter(x => x !== t); fn(); }, ms); timers.push(t); return t; }
+// Stops what is moving: the timers, the ribbon, the hops and the faces that flicker.
+function calm() {
+  timers.forEach(clearTimeout); timers = [];
+  $('ribbon').classList.remove('on');
+  dieEls.forEach(e => { e.classList.remove('party', 'rolling'); e.dataset.html = ''; });
+}
+function doUndo() {
+  if (!undo.length) return;
+  calm();
+  Kit.closeDialog();
+  G = view = JSON.parse(undo.pop()); hint = null; fresh = null;
+  save(); render();
+  if (saved) say('Coup annulé : vos dés sont revenus, choisissez une autre case. ' + (G.rolls < 3 ? 'Vous pouvez aussi relancer.' : ''));
+}
+function showHint() {
+  if (Kit.isOpen() || refuseBusy()) return;
+  const a = Y.advice(G, 'fort');
+  if (a.kind === 'roll') { hint = null; render(); return say('Cliquez sur « Lancer les dés » pour commencer votre tour.'); }
+  if (a.kind === 'keep') {
+    hint = { dice: a.kept.map((k, i) => k ? i : -1).filter(i => i >= 0) };
+    const keepDice = G.dice.filter((d, i) => a.kept[i]);
+    const wrong = a.kept.some((k, i) => k !== G.kept[i]);
+    render();
+    if (!keepDice.length) return say(wrong ? 'Ne gardez aucun dé : cliquez sur les dés gardés pour les rendre, puis relancez les cinq.' : 'Relancez les cinq dés : aucun ne vaut la peine d\'être gardé.');
+    return say(wrong ? `Gardez ${diceWords(keepDice)}, les dés entourés, et relancez les autres.` : `Vous gardez les bons dés : relancez les autres.`);
+  }
+  hint = { box: a.box };
+  render();
+  const p = Y.points(a.box, G.dice);
+  say(p ? `Marquez ${ptsText(p)} en ${boxName(a.box)} : cliquez sur la case encadrée.`
+    : `Aucune bonne case pour ces dés : barrez la case ${boxName(a.box)}, encadrée. C'est celle qui vous coûte le moins.`);
+}
+function askNewGame() { Kit.chooseLevel(level, playing(), newGame); }
+function newGame(lv) {
+  calm();
+  if (lv) level = lv;
+  Kit.showLevel(level);
+  newOpponent();
+  const seed = crypto.getRandomValues(new Uint32Array(1))[0];
+  G = view = Y.newGame(level, seed); undo = []; hint = null; fresh = null; wonNow = false;
+  // A stale window cannot save, so it does not count a game either.
+  if (save()) GG.track('yams', 'start');
+  render();
+  if (saved) say(`Vous jouez contre ${them()}. À vous : lancez les dés.`);
+}
+
+/* ---------- Drawing ---------- */
+const diceEl = $('dice'), tagsEl = $('tags');
+for (let i = 0; i < 5; i++) {
+  diceEl.insertAdjacentHTML('beforeend', `<button class="die" data-i="${i}"></button>`);
+  tagsEl.insertAdjacentHTML('beforeend', '<span>Gardé</span>');
+}
+const dieEls = [...diceEl.children], tagEls = [...tagsEl.children];
+// The pad: the top half (As to Six, each with its die, and the bonus) and the bottom half. Each
+// column has its player's face on top: his yellow "V", and the computer's cartoon.
+const mini = n => `<svg viewBox="0 0 100 100" aria-hidden="true"><rect x="3" y="3" width="94" height="94" rx="20" fill="#fff" stroke="#8C7F62" stroke-width="5"/>`
+  + PIPS[n].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="${n === 1 ? 13 : 10.5}" fill="${n === 1 ? '#C4122F' : '#1E2622'}"/>`).join('') + '</svg>';
+const ME_FACE = '<div class="ava" style="background:#C9951A">V</div>';
+const themFace = () => `<img class="ava" src="../lib/avatars/${who}.webp" alt="" style="background:${CAST[who].color}">`;
+function buildSheet() {
+  const head = `<thead><tr><th></th><th class="v me" aria-label="Vous">${ME_FACE}</th><th class="v it them"></th></tr></thead>`;
+  const row = b => `<tr><td class="name"><span>${b < 6 ? mini(b + 1) : ''}${boxName(b)}</span></td><td class="v me" data-p="0" data-b="${b}"></td><td class="v it" data-p="1" data-b="${b}"></td></tr>`;
+  $('top').innerHTML = head + '<tbody>' + [0, 1, 2, 3, 4, 5].map(row).join('')
+    + '<tr><td class="name">Bonus</td><td class="v me bonus" data-bonus="0"></td><td class="v it bonus" data-bonus="1"></td></tr></tbody>';
+  $('bottom').innerHTML = head + '<tbody>' + [6, 7, 8, 9, 10, 11, 12].map(row).join('') + '</tbody>';
+}
+buildSheet();
+const boxEls = [...document.querySelectorAll('#sheet td[data-b]')];
+
+// A player: the face, the name, what he does now, and the total in large figures.
+function seatHtml(p, g) {
+  const mine = p === 0;
+  let line;
+  if (g.result) line = 'Partie finie';
+  else if (g.turn === p) line = mine ? (!g.dice ? 'À vous de lancer' : g.rolls >= 3 ? 'Choisissez une case' : `Encore ${plural(3 - g.rolls, 'lancer', 'lancers')}`) : 'Joue';
+  else line = mine ? 'Attendez votre tour' : 'Attend son tour';
+  return `${mine ? ME_FACE : themFace()}<div class="who"><b>${mine ? 'Vous' : CAST[who].name}</b><span class="now">${line}</span></div>`
+    + `<div class="pts"><span class="n">${Y.totals(g.sheets[p]).total}</span><small>points</small></div>`;
+}
+
+function render() {
+  if (!G) return;
+  const g = view, mine = g.turn === 0 && !g.result && !busy();
+  // Seats
+  for (const p of [0, 1]) {
+    const e = $('seat' + p), html = seatHtml(p, g);
+    if (e.dataset.html !== html) { e.innerHTML = html; e.dataset.html = html; countUp(p, Y.totals(g.sheets[p]).total); }
+    e.classList.toggle('turn', !g.result && g.turn === p);
+  }
+  // Dice
+  dieEls.forEach((e, i) => {
+    const blank = !g.dice, kept = !blank && g.kept[i];
+    const html = blank ? '' : dieSvg(g.dice[i]);
+    if (e.dataset.html !== html || rolling.includes(i)) { e.innerHTML = html; e.dataset.html = html; }
+    e.className = 'die' + (kept ? ' kept' : '') + (hint && hint.dice && hint.dice.includes(i) ? ' hint' : '');
+    if (rolling.includes(i) && !REDUCED) {
+      e.style.setProperty('--delay', rolling.indexOf(i) * 70 + 'ms');
+      void e.offsetWidth; e.classList.add('rolling');
+      flicker(e, g.dice[i], rolling.indexOf(i) * 70);
+    }
+    e.setAttribute('aria-label', blank ? 'Dé pas encore lancé' : `Dé ${i + 1} : ${g.dice[i]}${kept ? ', gardé' : ''}`);
+    e.setAttribute('aria-pressed', String(kept));
+    tagEls[i].classList.toggle('on', kept);
+  });
+  const piste = $('piste');
+  piste.classList.toggle('empty', !g.dice);
+  piste.classList.toggle('ready', !g.dice && mine);
+  const cupText = g.result ? 'Partie finie' : g.turn === 0 ? 'À vous de lancer' : `${CAST[who].name} va lancer`;
+  if ($('cup').dataset.text !== cupText) { $('cup').innerHTML = CUP + `<span>${cupText}</span>`; $('cup').dataset.text = cupText; }
+  // The throw button
+  const rb = $('rollBtn');
+  const free = g.dice ? g.kept.filter(k => !k).length : 5;
+  const label = !mine ? (g.result ? 'Partie finie' : `${CAST[who].name} joue`) : !g.dice ? 'Lancer les dés' : g.rolls >= 3 ? 'Plus de lancer' : free === 0 ? 'Tous les dés sont gardés' : free === 5 ? 'Relancer les 5 dés' : `Relancer ${plural(free, 'dé', 'dés')}`;
+  rb.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>' + label;
+  rb.disabled = !mine || g.rolls >= 3 || free === 0;
+  // The sheet
+  document.querySelectorAll('#sheet th.them').forEach(e => {
+    if (e.dataset.who !== who) { e.innerHTML = themFace(); e.dataset.who = who; e.setAttribute('aria-label', CAST[who].name); }
+  });
+  for (const e of boxEls) {
+    const p = +e.dataset.p, b = +e.dataset.b, v = g.sheets[p][b];
+    const can = p === 0 && mine && g.dice && v === null;
+    const preview = can ? Y.points(b, g.dice) : null;
+    let cls = 'v' + (p === 0 ? ' me' : ' it');
+    if (can) cls += ' can' + (preview ? '' : ' zero');
+    if (v === 0) cls += ' zeroed';
+    if (fresh && fresh.player === p && fresh.box === b) cls += ' fresh' + (performance.now() - fresh.at < 500 ? ' ink' : '');
+    if (hint && hint.box === b && p === 0) cls += ' hint';
+    if (e.className.replace(' shake', '') !== cls) e.className = cls;
+    const text = v !== null ? String(v) : can ? `<b>${preview}</b>` : '';
+    if (e.innerHTML !== text) e.innerHTML = text;
+    if (can) { e.tabIndex = 0; e.setAttribute('role', 'button'); } else { e.removeAttribute('tabindex'); e.removeAttribute('role'); }
+    e.setAttribute('aria-label', `${boxName(b)}, ${p === 0 ? 'vous' : CAST[who].name} : ${v !== null ? ptsText(v) : can ? `vide, vos dés y marquent ${ptsText(preview)}` : 'vide'}`);
+  }
+  for (const p of [0, 1]) {
+    const e = document.querySelector(`#sheet td[data-bonus="${p}"]`), t = Y.totals(g.sheets[p]);
+    const decided = t.bonus || !Y.bonusOpen(g.sheets[p]);
+    e.innerHTML = t.bonus ? '+' + Y.BONUS : decided ? '0' : `${t.top} / ${Y.BONUS_AT}<i style="--fill:${Math.round(100 * t.top / Y.BONUS_AT)}%"></i>`;
+    e.classList.toggle('got', !!t.bonus);
+    e.classList.toggle('lost', !t.bonus && decided);
+    e.setAttribute('aria-label', `Bonus, ${p === 0 ? 'vous' : CAST[who].name} : ${t.bonus ? '35 points' : decided ? 'manqué' : `${t.top} points sur 63`}`);
+  }
+  // The count of wins changes once the computer's last turn has been shown.
+  if (!busy()) $('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
+  $('undoBtn').disabled = !undo.length;
+  $('hintBtn').disabled = !!G.result;
+  layout();
+}
+// Five dice alike: the ribbon says "Yams !" for a moment, and the dice hop.
+function ribbon() {
+  const r = $('ribbon');
+  r.classList.remove('on'); void r.offsetWidth; r.classList.add('on');
+  later(() => r.classList.remove('on'), 1900);
+  later(party, 650);
+}
+function party() {
+  if (REDUCED) return;
+  dieEls.forEach((e, i) => { e.style.setProperty('--i', i); e.classList.remove('party'); void e.offsetWidth; e.classList.add('party'); });
+  later(() => dieEls.forEach(e => e.classList.remove('party')), 2200);
+}
+// While a die flies, its pips change every 70 ms, then it shows the face it landed on.
+function flicker(e, face, delay) {
+  let n = 0;
+  const pips = e.querySelector('.pips');
+  const tick = () => {
+    if (!pips.isConnected) return;
+    if (++n > 8 || !e.classList.contains('rolling')) { pips.innerHTML = pipsSvg(face); return; }
+    pips.innerHTML = pipsSvg(1 + Math.floor(Math.random() * 6));
+    later(tick, 70);
+  };
+  later(tick, delay);
+}
+// The totals count up to their new value.
+const shownTotal = [null, null];
+function countUp(p, to) {
+  const el = $('seat' + p).querySelector('.pts .n');
+  const from = shownTotal[p];
+  shownTotal[p] = to;
+  if (!el || from === null || from === to || REDUCED || to < from) return;
+  const t0 = performance.now();
+  const step = () => {
+    const k = Math.min(1, (performance.now() - t0) / 700);
+    el.textContent = Math.round(from + (to - from) * (1 - (1 - k) ** 3));
+    if (k < 1) requestAnimationFrame(step);
+  };
+  el.textContent = from;
+  requestAnimationFrame(step);
+}
+function shake(e) { if (!e) return; e.classList.remove('shake'); void e.offsetWidth; e.classList.add('shake'); }
+const shakeBox = (p, b) => shake(boxEls.find(e => +e.dataset.p === p && +e.dataset.b === b));
+const shakeDie = i => shake(dieEls[i]);
+
+// Everything on the table grows with the window, from his laptop (k = 1) to a large monitor (k = 1.4).
+// The pad keeps its rows as tall as the table allows; the dice take the room left, up to 124 px * k.
+// A narrow window closes the pad up first, so the dice stay large enough to click.
+const table = $('table');
+function layout() {
+  const root = document.documentElement.style;
+  if (innerWidth < 700) {
+    root.setProperty('--k', '1'); root.setProperty('--row', '40px'); root.setProperty('--col', '50px'); root.setProperty('--gap', '8px');
+    root.setProperty('--die', Math.floor(Math.min(64, (table.clientWidth - 16 - 22 - 4 * 10) / 5.64)) + 'px');
+    return;
+  }
+  const H = table.clientHeight, W = table.clientWidth;
+  const k = Math.max(1, Math.min(1.4, W / 1366, H / 494));
+  const row = Math.floor(Math.max(34, Math.min(60 * k, (H - 22 - 46 * k - 16) / 7)));
+  const narrow = W < 1200, low = H < 440;
+  table.classList.toggle('low', low);
+  root.setProperty('--k', k.toFixed(3));
+  root.setProperty('--row', row + 'px');
+  root.setProperty('--col', Math.round((narrow ? 74 : row >= 44 ? 86 : 78) * k) + 'px');
+  root.setProperty('--gap', Math.round((narrow ? 12 : 22) * k) + 'px');
+  const cs = getComputedStyle(table);
+  const roomW = (W - $('sheet').offsetWidth - parseFloat(cs.columnGap) - 2 * parseFloat(cs.paddingLeft) - 44) / 5.64;
+  const seatH = low ? 68 : 70 * k;
+  const roomH = (H - (low ? 1 : 2) * seatH - 60 * k - 3 * 12 - 26 - 40 * k) / 1.1;
+  root.setProperty('--die', Math.floor(Math.max(44, Math.min(124 * k, roomW, roomH))) + 'px');
+}
+
+/* ---------- Mouse, touch and keys ---------- */
+diceEl.addEventListener('click', e => {
+  const d = e.target.closest('.die');
+  if (d && once('die' + d.dataset.i)) tapDie(+d.dataset.i);
+});
+$('sheet').addEventListener('click', e => {
+  const c = e.target.closest('td[data-b]');
+  if (c && once('box' + c.dataset.p + c.dataset.b)) tapBox(+c.dataset.p, +c.dataset.b);
+});
+$('sheet').addEventListener('keydown', e => {
+  const c = e.target.closest('td[data-b]');
+  if (c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); tapBox(+c.dataset.p, +c.dataset.b); }
+});
+$('rollBtn').onclick = () => { if (once('roll')) rollDice(); };
+// A click on the cup throws the dice too.
+$('piste').addEventListener('click', e => { if (!view.dice && !e.target.closest('.die') && once('roll')) rollDice(); });
+$('undoBtn').onclick = () => { if (once('undo')) doUndo(); };
+$('hintBtn').onclick = showHint;
+$('helpBtn').onclick = () => Kit.openHelp();
+$('newBtn').onclick = askNewGame;
+addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (!Kit.isOpen()) doUndo(); }
+  else if (e.key === 'Escape') Kit.escape();
+});
+addEventListener('resize', render);
+$('demo5').innerHTML = [5, 5, 5, 2, 6].map(dieSvg).join('');
+
+// The rules open by themselves the first time the game is opened.
+if (load()) {
+  Kit.showLevel(level);
+  if (G.result) finish(false);
+  else if (G.turn === 1) { render(); computerPlays(); }
+  else {
+    if (G.last && G.last.player === 1 && !G.dice) { fresh = { player: 1, box: G.last.box, at: 0 }; render(); say(writeText(G, 1, G.last.box) + ' ' + turnText()); }
+    else { render(); say(turnText()); }
+  }
+} else {
+  Kit.firstVisit(newGame);
+}
+</script>
+</body>
+</html>

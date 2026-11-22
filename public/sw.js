@@ -14,6 +14,7 @@ const CORE = [
   'dames/', 'dames/engine.js', 'dames/icon.svg',
   'dame-de-pique/', 'dame-de-pique/engine.js', 'dame-de-pique/icon.svg',
   'demineur/', 'demineur/engine.js', 'demineur/icon.svg',
+  'yams/', 'yams/engine.js', 'yams/icon.svg',
   ...['jeanne', 'louise', 'simone', 'odette', 'colette', 'yvonne', 'paul', 'marcel', 'rene', 'andre', 'henri', 'gaston'].map(id => `lib/avatars/${id}.webp`),
 ];
 
