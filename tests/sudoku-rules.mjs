@@ -108,21 +108,12 @@ ok([7533, 2899].every(seed => givens(S.newGame('facile', seed).givens) <= 42), '
   const boxOnly = [1, 2, 3, 4, 5, 6, 7, 8, 9].find(d => ![S.ROW(empty), 9 + S.COL(empty)].some(u => S.UNITS[u].some(j => +G.givens[j] === d))
     && S.UNITS[18 + S.BOX(empty)].some(j => +G.givens[j] === d));
   if (boxOnly) ok(S.write(G, empty, boxOnly).clash.unit === 'box', 'a digit already in the block only names the block');
-  // Notes.
-  const other = S.PEERS[empty].find(j => G.givens[j] === '0');
-  let n = S.note(G, other, right);
-  ok(n.on && n.G.notes[other] === 1 << right, 'a note goes in an empty cell');
-  n = S.note(n.G, empty, 4);
-  r = S.write(n.G, empty, right);
-  ok(r.G.notes[empty] === 0 && r.G.notes[other] === 0, 'a digit written clears the notes of its cell and itself from the notes it sees');
-  ok(S.refusal(r.G, empty, 'note', 3) === 'filled' && S.note(r.G, empty, 3) === null, 'no note in a cell with a digit');
-  ok(S.note(S.note(G, other, 6).G, other, 6).G.notes[other] === 0, 'a second click on a note takes it off');
   // Erase.
+  r = S.write(G, empty, right);
   const e = S.erase(r.G, empty);
   ok(e.was === right && e.G.cells[empty] === '0', 'erase takes the digit off');
-  const en = S.erase(S.note(G, other, 2).G, other);
-  ok(en.was === 0 && en.G.notes[other] === 0, 'erase on an empty cell takes its notes off');
-  ok(S.refusal(G, empty, 'erase') === 'empty' && S.erase(G, empty) === null, 'erase on an empty cell without notes is refused');
+  ok(S.refusal(G, empty, 'erase') === 'empty' && S.erase(G, empty) === null, 'erase on an empty cell is refused');
+  ok(!('notes' in G) && !('note' in S), 'the game has no notes');
   ok(S.erase(G, given) === null, 'a given cannot be erased');
   // A digit complete, and the win.
   for (let i = 0; i < 81; i++) if (G.givens[i] === '0' && G.solution[i] === '1') G = S.write(G, i, 1).G;
@@ -254,9 +245,9 @@ function falseStep(g, h) {
   ok(r && r.level === 'facile' && r.stats.won === 0 && r.undo.length === 0, 'a save without a level or stats loads, at Facile');
   r = S.restore({ G: { ...G, level: 'expert' }, level: 'fort' });
   ok(r && r.level === 'fort', 'an unknown level in the game takes the level saved beside it');
-  const { notes, result, ...old } = G;
+  const { result, ...old } = G;
   r = S.restore({ G: old });
-  ok(r && r.G.notes.length === 81 && r.G.result === '', 'a save without notes or result loads');
+  ok(r && r.G.result === '', 'a save without a result loads');
   const set = (s, i, c) => s.slice(0, i) + c + s.slice(i + 1);
   const given = [...G.givens].findIndex(c => c !== '0');
   ok(!S.restore({ G: { ...G, givens: G.givens.slice(1) } }), 'a short grid is refused');
@@ -264,13 +255,25 @@ function falseStep(g, h) {
   ok(!S.restore({ G: { ...G, solution: set(G.solution, 0, G.solution[1]) } }), 'a solution that breaks a rule is refused');
   ok(!S.restore({ G: { ...G, cells: set(G.cells, given, '5') } }), 'a digit of his over a given is refused');
   ok(!S.restore({ G: { ...G, givens: '0'.repeat(81), cells: '0'.repeat(81) } }), 'givens with several solutions are refused');
-  ok(!S.restore({ G: { ...G, notes: G.notes.slice(1) } }) && !S.restore({ G: { ...G, notes: G.notes.map((n, i) => i ? n : 1) } }), 'broken notes are refused');
+  // The game had notes once: an old save with notes loads without them, and the undo steps that only
+  // changed notes go.
+  {
+    const empty0 = [...G.givens].findIndex((c, i) => c === '0' && G.cells[i] === '0');
+    const notes = new Array(81).fill(0); notes[empty0] = 1 << 3 | 1 << 7;
+    const step = cells => JSON.stringify({ cells, notes });
+    const mid = S.write(G0, [...G0.givens].indexOf('0', empty + 1), 1).G.cells;
+    const old = S.restore({ ...data, G: { ...G, notes }, undo: [step(G0.cells), step(mid), step(mid), step(G.cells)] });
+    ok(old && !('notes' in old.G) && old.G.cells === G.cells, 'an old save with notes loads, without the notes');
+    ok(old.undo.length === 2 && old.undo[0] === S.snapshot(G0) && JSON.parse(old.undo[1]).cells === mid && !old.undo.some(s => s.includes('notes')),
+      'its undo steps that only changed notes go');
+    ok(!!S.restore({ ...data, G: { ...G, notes: 'broken' } }), 'broken notes in an old save do not stop it from loading');
+  }
   ok(!S.restore({ G: { ...G, result: 'won' } }), 'a win with empty cells is refused');
-  r = S.restore({ ...data, undo: [S.snapshot(G0), '{broken', { cells: 'x' }, S.snapshot(G)] });
-  ok(r && r.undo.length === 1 && r.undo[0] === S.snapshot(G), 'a broken step of the undo drops the steps before it');
+  r = S.restore({ ...data, undo: [S.snapshot(S.write(G0, empty, 1).G), '{broken', { cells: 'x' }, S.snapshot(G0)] });
+  ok(r && r.undo.length === 1 && r.undo[0] === S.snapshot(G0), 'a broken step of the undo drops the steps before it');
   ok(!S.valid({ ...G, level: 'toString' }) && S.restore({ ...data, G: { ...G, level: 'constructor' } }).level === 'moyen',
     'a level such as "constructor" is not a level: the level saved beside it is taken');
-  r = S.restore({ ...data, undo: [S.snapshot(G0), JSON.stringify({ cells: [...G.solution].map((c, i) => G.givens[i] === '0' ? c : '0').join(''), notes: G.notes })] });
+  r = S.restore({ ...data, undo: [S.snapshot(G0), JSON.stringify({ cells: [...G.solution].map((c, i) => G.givens[i] === '0' ? c : '0').join('') })] });
   ok(r && r.undo.length === 0, 'an undo step that is a won grid is refused, with the steps before it');
   ok(S.restore({ ...data, wonNow: true }).wonNow === false, 'a game not won cannot be counted as won');
   ok(S.restore({ ...data, stats: { won: -2 } }).stats.won === 0, 'a broken count of wins starts at 0');

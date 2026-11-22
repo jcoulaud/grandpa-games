@@ -53,7 +53,7 @@
   /* The nine blocks, under the cells: they light up in the win wave. */
   .block { position: absolute; border-radius: 2px; pointer-events: none; z-index: 0; }
 
-  /* A cell: a button with its digit, or its notes. */
+  /* A cell: a button with its digit. */
   .cell { position: absolute; z-index: 1; min-height: 0; padding: 0; margin: 0; border: 0; border-radius: 0; box-shadow: none;
     background: transparent; color: var(--chalk); display: flex; align-items: center; justify-content: center;
     font: 500 var(--fd)/1 var(--ui); cursor: pointer; transition: background-color .15s; }
@@ -78,11 +78,8 @@
   /* The hint: a yellow ring that glows on the cell, and a soft yellow over the line or block of its reason. */
   .cell.why { background: rgba(255,200,61,.14); }
   .cell.hint { z-index: 5; box-shadow: inset 0 0 0 calc(var(--t) * .9) var(--gold), 0 0 0 2px rgba(var(--shade),.9); }
-  /* His notes: small digits in a 3 by 3 square, a visual aid only (see docs/design.md). */
-  .notes { position: absolute; inset: 6%; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); pointer-events: none; }
-  .notes i { font: 600 var(--fn)/1 var(--ui); font-style: normal; color: #D7DCE0; display: flex; align-items: center; justify-content: center; }
 
-  /* The number pad: the count of empty cells, big keys, then "Effacer" and "Notes". */
+  /* The number pad: the count of empty cells, big keys, then a wide "Effacer". */
   #pad { flex: none; display: grid; gap: var(--kg, 12px); }
   .key { position: relative; min-height: 0; padding: 0; justify-content: center; border-radius: 14px; font: 700 var(--fk)/1 var(--ui);
     background: #FBFAF6; color: #1F2830; border-color: #8C979F; box-shadow: 0 4px 0 #8C979F; }
@@ -98,19 +95,14 @@
     background: #2F8F4E url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 70% no-repeat;
     box-shadow: 0 0 0 3px #fff, 0 2px 6px rgba(0,0,0,.35); }
   .tool { min-height: 0; justify-content: center; font-size: 22px; padding: 4px 10px; }
-  /* Tool keys too narrow for an icon and a word keep the word. */
-  #pad.slim .tool { font-size: 20px; padding: 2px 6px; }
-  #pad.slim .tool svg { display: none; }
-  #notesBtn[aria-pressed="true"] { background: var(--gold); border-color: #C9951A; box-shadow: 0 3px 0 #C9951A; color: #1F1A00; }
   #stage.under .tool { font-size: 20px; gap: 6px; padding: 2px 6px; }
-  #stage.under #eraseBtn { flex-direction: column; gap: 0; font-size: 15px; }
 
   #stage.under .tool svg { width: 22px; height: 22px; }
   #stage.under .key.done::after { width: 22px; height: 22px; top: -6px; right: -6px; }
   #stage.under .key .left { top: -7px; right: -7px; min-width: 26px; height: 26px; font-size: 18px; }
   @media (min-width: 700px) { #stage.under .key .left { min-width: 30px; height: 30px; font-size: 20px; } }
 
-  /* The cells still empty: a small slate in the same wooden frame, on top of the pad, or beside "Notes"
+  /* The cells still empty: a small slate in the same wooden frame, on top of the pad, or beside "Effacer"
      when the pad is under the grid. */
   #count { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 2px 12px; border-radius: 10px;
     background: var(--slate); color: var(--chalk); font: 500 22px/1.05 var(--ui); white-space: nowrap; text-align: center;
@@ -196,7 +188,6 @@
       <button class="key" data-d="4">4<span class="left" aria-hidden="true"></span></button><button class="key" data-d="5">5<span class="left" aria-hidden="true"></span></button><button class="key" data-d="6">6<span class="left" aria-hidden="true"></span></button>
       <button class="key" data-d="7">7<span class="left" aria-hidden="true"></span></button><button class="key" data-d="8">8<span class="left" aria-hidden="true"></span></button><button class="key" data-d="9">9<span class="left" aria-hidden="true"></span></button>
       <button id="eraseBtn" class="tool" title="Efface le chiffre de la case choisie"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 20H20M4.6 14.6l8.8-8.8a2 2 0 0 1 2.8 0l3 3a2 2 0 0 1 0 2.8L12 18.8a2 2 0 0 1-1.4.6H8.2a2 2 0 0 1-1.4-.6l-2.2-2.2a2 2 0 0 1 0-2zM9 10l6 6"/></svg>Effacer</button>
-      <button id="notesBtn" class="tool" aria-pressed="false" title="Écrit les chiffres en petit, pour vous en souvenir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19z"/><path d="M14.5 6.5l3 3"/></svg>Notes</button>
     </div>
   </div>
 </div>
@@ -237,7 +228,7 @@
         <figcaption><strong>Le petit chiffre bleu</strong> dit combien il en reste à placer. <strong>Une coche verte :</strong> les neuf 5 sont en place.</figcaption>
       </figure>
     </div>
-    <p>« Notes » écrit les chiffres en petit, pour vous en souvenir. Le clavier marche aussi : tapez un chiffre.</p>
+    <p>Le clavier marche aussi : tapez un chiffre.</p>
   </section>
 </div>
 
@@ -257,12 +248,12 @@ document.documentElement.style.setProperty('--lit-ms', LIT_MS + 'ms');
 
 /* ---------- State ----------
    G: the game (see engine.js). undo: the grid before each of his moves (Sudoku.snapshot). sel: the chosen
-   cell, or -1. notesOn: the "Notes" key is pressed. hint: { rings, house } shown by "Une aide ?" until his
+   cell, or -1. hint: { rings, house } shown by "Une aide ?" until his
    next move. plan: { key, h, k } a longer hint told one step at a time, k steps told so far, for that board of digits
    only. stats: { won }. wonNow: this game is counted as won, so a win counts once. winSave: the save of
    the winning move while it is not done: until then no menu opens, so the win sheet is not lost. */
 let G = null, undo = [], level = 'facile', stats = { won: 0 }, wonNow = false;
-let sel = -1, notesOn = false, hint = null, plan = null, making = 0, timers = [];
+let sel = -1, hint = null, plan = null, making = 0, timers = [];
 let stale = false, saved = true, pendingWin = null, winSave = null;
 addEventListener('gg-stale', () => { stale = true; });
 
@@ -312,7 +303,7 @@ function choose(i) {
   const d = S.board(G)[i];
   if (S.isGiven(G, i)) Kit.say(`Ce ${d} est un chiffre du départ. Choisissez une case vide pour écrire.`);
   else if (d) Kit.say(`Cette case a votre ${d}. Choisissez un autre chiffre pour le changer, ou « Effacer ».`);
-  else Kit.say(notesOn ? 'Choisissez les chiffres à noter en petit dans cette case.' : `Choisissez le chiffre de cette case ${padWhere()}.`);
+  else Kit.say(`Choisissez le chiffre de cette case ${padWhere()}.`);
 }
 const padWhere = () => $('stage').classList.contains('under') ? 'en dessous' : 'à droite';
 // A full grid that is not won has red digits: a full grid that keeps every rule is the solution.
@@ -329,7 +320,6 @@ function refuse(what, d) {
     : 'Ce chiffre est un chiffre du départ : il ne peut pas changer. Choisissez une case vide.');
   else if (why === 'same') Kit.say(`Ce ${d} est déjà écrit dans cette case.`);
   else if (why === 'empty') Kit.say('Cette case est déjà vide.');
-  else if (why === 'filled') Kit.say('Cette case a déjà un chiffre : effacez-le pour y mettre des notes.');
   shake(sel);
   return true;
 }
@@ -348,7 +338,6 @@ async function commit(next) {
 // that fails replaces the message (see save).
 async function digit(d) {
   if (!ready() || double('key' + d)) return;
-  if (notesOn) return toggleNote(d);
   if (refuse('place', d)) return;
   const i = sel, before = S.complete(G);
   const r = S.write(G, i, d);
@@ -367,15 +356,6 @@ async function digit(d) {
   else Kit.say(`Vous avez écrit un ${d}. Encore ${plural(empties(), 'case', 'cases')} à remplir.`);
   await written;
 }
-async function toggleNote(d) {
-  if (refuse('note', d)) return;
-  const r = S.note(G, sel, d);
-  const previous = G;
-  const written = commit(r.G);
-  drawMove(previous, sel);
-  Kit.say(r.on ? `Vous avez noté un petit ${d} dans cette case.` : `Le petit ${d} est retiré de cette case.`);
-  await written;
-}
 async function eraseCell() {
   if (!ready() || double('erase')) return;
   if (refuse('erase')) return;
@@ -383,14 +363,8 @@ async function eraseCell() {
   const previous = G;
   const written = commit(r.G);
   drawMove(previous);
-  Kit.say(r.was ? `Le ${r.was} est effacé.` : 'Les notes de cette case sont effacées.');
+  Kit.say(`Le ${r.was} est effacé.`);
   await written;
-}
-function setNotes(on) {
-  if (!ready() || double('notes')) return;
-  notesOn = on;
-  render();
-  Kit.say(on ? 'Notes : les chiffres s\'écrivent en petit. Cliquez encore sur « Notes » pour écrire en grand.' : 'Les chiffres s\'écrivent de nouveau en grand.');
 }
 async function doUndo() {
   if (!ready() || !undo.length || G.result || double('undo')) return;
@@ -400,14 +374,14 @@ async function doUndo() {
   const written = save();
   drawMove(previous);
   // A save short of room keeps fewer steps, so the first step kept may not be the start.
-  Kit.say(playing() || G.notes.some(Boolean) ? 'Le dernier coup est annulé.' : 'Le dernier coup est annulé. La grille est comme au départ.');
+  Kit.say(playing() ? 'Le dernier coup est annulé.' : 'Le dernier coup est annulé. La grille est comme au départ.');
   await written;
 }
 
 /* ---------- The hint ---------- */
 async function showHint() {
   if (!ready() || G.result || double('hint')) return;
-  // Notes do not change the reasoning, so a longer hint goes on while only notes change.
+  // A longer hint goes on while the digits stay the same.
   const key = S.board(G).join('');
   if (!plan || plan.key !== key) {
     const h = S.hint(G);
@@ -464,7 +438,7 @@ const houseOf = (i, unit) => S.UNITS[unit === 'row' ? S.ROW(i) : unit === 'col' 
    window behind another) shows no win. Without it, the game was won before a reload. */
 function finish(written) {
   const show = !!written;
-  hint = null; plan = null; notesOn = false; sel = -1; render();
+  hint = null; plan = null; sel = -1; render();
   const text = `Bravo, la grille est complète ! Niveau ${Kit.levelNames[level].toLowerCase()}.`;
   if (!show) { if (saved && !stale) Kit.say(text); return; }
   if (saved && !stale) Kit.say(text);
@@ -516,7 +490,7 @@ async function newGame(lv) {
   Kit.say('Je prépare une nouvelle grille…');
   const g = await makeGrid(level, crypto.getRandomValues(new Uint32Array(1))[0]);
   making = 0;
-  G = g; undo = []; sel = -1; hint = null; wonNow = false; notesOn = false;
+  G = g; undo = []; sel = -1; hint = null; wonNow = false;
   const written = save();
   render();
   animDeal();
@@ -581,7 +555,7 @@ function layout() {
   }
   const s0 = slateOf(slate);
   side = sidePad(s0.gw, s0.c, s0.f);
-  // Under the grid: 1 to 5, then 6 to 9 and "Effacer", then "Notes" and the count.
+  // Under the grid: 1 to 5, then 6 to 9 centred under them, then the count and a wide "Effacer".
   const kh = phone ? 48 : 58, padH = 3 * kh + 2 * 8;
   const low = Math.min(W - 16, Math.max(H - pv - 12 - padH, Math.min(W - 16, 300)));
   const under = phone || !side.ok || slate < low;
@@ -597,25 +571,22 @@ function layout() {
     padEl.style.gridTemplateColumns = `repeat(6, ${(3 * K + 2 * kg - 5 * kg) / 6}px)`;
     padEl.style.gridTemplateRows = `${hc}px repeat(3, ${K}px) ${T}px`;
     padEl.style.marginTop = f + 'px';
-    padEl.classList.toggle('slim', (3 * K + kg) / 2 < 150);
     keys.forEach((e, k) => { const r = 2 + Math.floor(k / 3), col = 1 + 2 * (k % 3); at(e, `${r} / ${col} / ${r + 1} / ${col + 2}`); });
     at($('count'), '1 / 1 / 2 / 7');
-    at($('eraseBtn'), '5 / 1 / 6 / 4');
-    at($('notesBtn'), '5 / 4 / 6 / 7');
+    at($('eraseBtn'), '5 / 1 / 6 / 7');
     fk = Math.max(30, K * .46);
     // The badge of the digits still to place grows with the key, from 20 px.
     document.documentElement.style.setProperty('--fb', Math.round(clamp(K * .16, 20, 26)) + 'px');
   } else {
     gap = 12; kg = 8;
     const kw = Math.floor((slate - 4 * kg) / 5);
-    padEl.style.gridTemplateColumns = `repeat(5, ${kw}px)`;
+    // Ten half columns, so the row of four keys sits centred under the row of five.
+    padEl.style.gridTemplateColumns = `repeat(10, ${(5 * kw + 4 * kg - 9 * kg) / 10}px)`;
     padEl.style.gridTemplateRows = `repeat(3, ${kh}px)`;
     padEl.style.marginTop = '';
-    padEl.classList.remove('slim');
-    keys.forEach((e, k) => { const r = 1 + Math.floor(k / 5), col = 1 + k % 5; at(e, `${r} / ${col} / ${r + 1} / ${col + 1}`); });
-    at($('eraseBtn'), '2 / 5 / 3 / 6');
-    at($('notesBtn'), '3 / 1 / 4 / 4');
-    at($('count'), '3 / 4 / 4 / 6');
+    keys.forEach((e, k) => { const r = 1 + Math.floor(k / 5), col = 1 + 2 * (k % 5) + (r > 1 ? 1 : 0); at(e, `${r} / ${col} / ${r + 1} / ${col + 2}`); });
+    at($('count'), '3 / 1 / 4 / 5');
+    at($('eraseBtn'), '3 / 5 / 4 / 11');
     fk = Math.max(26, kh * .56);
   }
   stage.style.paddingBlock = (pv / 3) + 'px ' + (pv * 2 / 3) + 'px';
@@ -623,7 +594,6 @@ function layout() {
   root.setProperty('--c', c + 'px'); root.setProperty('--t', t + 'px'); root.setProperty('--f', f + 'px');
   // The digits: two thirds of a cell, and never under 30 px while the cell holds them.
   root.setProperty('--fd', Math.round(Math.min(c - 1, Math.max(30, c * .66))) + 'px');
-  root.setProperty('--fn', Math.max(11, Math.round(c * .27)) + 'px');
   root.setProperty('--fk', Math.round(fk) + 'px');
   stage.style.setProperty('--gap', gap + 'px');
   padEl.style.setProperty('--kg', kg + 'px');
@@ -668,16 +638,13 @@ function render() {
     if (hint && hint.rings.includes(i)) cls += ' hint';
     if (i === blame) cls += ' blame';
     if (e.className !== cls) e.className = cls;
-    const k = d ? 'd' + d : 'n' + G.notes[i];
+    const k = 'd' + d;
     if (e.dataset.k !== k) {
       e.dataset.k = k;
-      if (d) e.innerHTML = `<span class="d">${d}</span>`;
-      else if (G.notes[i]) e.innerHTML = '<span class="notes">' + [1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<i>${G.notes[i] & (1 << n) ? n : ''}</i>`).join('') + '</span>';
-      else e.innerHTML = '';
+      e.innerHTML = d ? `<span class="d">${d}</span>` : '';
     }
     const r = Math.floor(i / 9) + 1, col = i % 9 + 1;
-    const what = d ? `${d}${given ? ', chiffre du départ' : bad.has(i) ? ', en rouge, contre la règle' : ''}`
-      : G.notes[i] ? 'vide, notes ' + S.digitsOf(G.notes[i]).join(' ') : 'vide';
+    const what = d ? `${d}${given ? ', chiffre du départ' : bad.has(i) ? ', en rouge, contre la règle' : ''}` : 'vide';
     e.setAttribute('aria-label', `Ligne ${r}, colonne ${col} : ${what}`);
     e.setAttribute('aria-selected', i === sel ? 'true' : 'false');
   });
@@ -688,11 +655,9 @@ function render() {
     if (badge.textContent !== text) badge.textContent = text;
     e.setAttribute('aria-label', on ? `${d}, les neuf sont écrits` : `${d}, encore ${left} à placer`);
   });
-  $('notesBtn').setAttribute('aria-pressed', notesOn ? 'true' : 'false');
   $('undoBtn').disabled = !undo.length || !!G.result;
   $('hintBtn').disabled = !!G.result;
   $('eraseBtn').disabled = !!G.result;
-  $('notesBtn').disabled = !!G.result;
   const left = empties(), count = G.result ? '<span>Grille</span> <b>complète</b>'
     : `<span>Encore</span> <b>${plural(left, 'case', 'cases')}</b>`;
   if ($('count').innerHTML !== count) $('count').innerHTML = count;
@@ -710,19 +675,14 @@ function drawMove(previous, padCell = -1) {
   if (reducedMotion.matches) { render(); return; }
   const changes = [];
   cells.forEach((cell, i) => {
-    if (previous.cells[i] === G.cells[i] && previous.notes[i] === G.notes[i]) return;
+    if (previous.cells[i] === G.cells[i]) return;
     changes.push({ cell, i, old: cell.firstElementChild, color: getComputedStyle(cell).color });
   });
   render();
   for (const { cell, i, old, color } of changes) {
     const current = cell.firstElementChild;
-    const added = G.notes[i] & ~previous.notes[i];
-    const removed = previous.notes[i] & ~G.notes[i];
-    if (old && (previous.cells[i] !== '0' || removed)) {
-      // Keep only the notes that left. The real cell already has its new accessible label.
-      old.querySelectorAll('i').forEach((mark, n) => {
-        if (!(removed & (1 << (n + 1)))) mark.textContent = '';
-      });
+    if (old && previous.cells[i] !== '0') {
+      // The real cell already has its new accessible label.
       old.classList.add('leaving');
       old.style.color = color;
       old.setAttribute('aria-hidden', 'true');
@@ -730,22 +690,19 @@ function drawMove(previous, padCell = -1) {
       old.addEventListener('animationend', () => old.remove(), { once: true });
     }
     if (!current) continue;
-    const marks = current.matches('.d') ? [current] : [...current.children].filter((_, n) => added & (1 << (n + 1)));
-    for (const mark of marks) {
-      // Undo restores nearby chalk in place. A played digit starts at its own number key.
-      let dx = 0, dy = -10, scale = 1;
-      if (i === padCell) {
-        const key = keys[Number(mark.textContent) - 1].getBoundingClientRect();
-        const dest = mark.getBoundingClientRect();
-        dx = (key.x + key.width / 2 - dest.x - dest.width / 2) / Zoom.z();
-        dy = (key.y + key.height / 2 - dest.y - dest.height / 2) / Zoom.z();
-        scale = current.matches('.notes') ? 2 : 1.15;
-      }
-      mark.style.setProperty('--dx', dx + 'px');
-      mark.style.setProperty('--dy', dy + 'px');
-      mark.style.setProperty('--start-scale', scale);
-      mark.classList.add('travelling');
+    // Undo restores nearby chalk in place. A played digit starts at its own number key.
+    let dx = 0, dy = -10, scale = 1;
+    if (i === padCell) {
+      const key = keys[Number(current.textContent) - 1].getBoundingClientRect();
+      const dest = current.getBoundingClientRect();
+      dx = (key.x + key.width / 2 - dest.x - dest.width / 2) / Zoom.z();
+      dy = (key.y + key.height / 2 - dest.y - dest.height / 2) / Zoom.z();
+      scale = 1.15;
     }
+    current.style.setProperty('--dx', dx + 'px');
+    current.style.setProperty('--dy', dy + 'px');
+    current.style.setProperty('--start-scale', scale);
+    current.classList.add('travelling');
   }
 }
 gridEl.addEventListener('animationend', e => {
@@ -802,7 +759,6 @@ function animWin() {
 /* ---------- Buttons and keys ---------- */
 keys.forEach(e => e.addEventListener('click', () => digit(+e.dataset.d)));
 $('eraseBtn').onclick = eraseCell;
-$('notesBtn').onclick = () => setNotes(!notesOn);
 $('undoBtn').onclick = doUndo;
 $('hintBtn').onclick = showHint;
 $('helpBtn').onclick = () => { if (winFirst()) return; stopAll(); render(); Kit.openHelp(); };
@@ -810,7 +766,7 @@ $('newBtn').onclick = askNewGame;
 addEventListener('keydown', e => {
   if (e.key === 'Escape') { Kit.escape(); return; }
   if (Kit.isOpen()) return;
-  // A key held down repeats: it counts once, so a note is not put and taken off again.
+  // A key held down repeats: it counts once.
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (!e.repeat) { lastTap = null; doUndo(); } return; }
   if (e.ctrlKey || e.metaKey || e.altKey || !G) return;
   // The top row by its place, so AZERTY works without Shift. The keypad by its key: without Num Lock
