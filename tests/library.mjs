@@ -45,14 +45,14 @@ try {
     localStorage.setItem('gg:device', '"ABCDEFGHJKLMNPQRSTUVWXYZ23"');
   });
   await page.goto(BASE);
-  await page.waitForSelector('#saves svg');
+  await page.waitForSelector('a.tile[data-id="solitaire"]');
   check('tile for solitaire', await page.locator('a.tile[data-id="solitaire"]').count() === 1);
   check('tile for freecell', await page.locator('a.tile[data-id="freecell"]').count() === 1);
   check('tile for dames', await page.locator('a.tile[data-id="dames"]').count() === 1);
   check('tile for dame de pique', await page.locator('a.tile[data-id="dame-de-pique"]').count() === 1);
   check('no "Nouveau" badge on the games', await page.locator('a.tile .badge').count() === 0);
   check('games follow the library header', await page.locator('header + #games').count() === 1);
-  check('says the saves stay on this PC', (await page.textContent('#saves')).includes('sur cet ordinateur'));
+  check('no line about the saves under the games', await page.locator('#saves').count() === 0 && !(await page.textContent('main')).includes('gardées'));
   check('old backup data is removed', await page.evaluate(() => !localStorage.getItem('gg:cloud:old') && !localStorage.getItem('gg:approved')));
   check('old games are kept', await page.evaluate(() => GG.load('old').n === 1));
   await page.waitForTimeout(800);
@@ -69,7 +69,7 @@ try {
   await page.evaluate(() => clickStock());
   await page.waitForTimeout(600);
   await page.click('#home');
-  await page.waitForSelector('#saves svg');
+  await page.waitForSelector('a.tile[data-id="solitaire"]');
   check('the game is saved on the PC', await page.evaluate(() => !!GG.load('solitaire')));
   check('trophy line shows wins only', !(await page.textContent('a.tile')).includes('Partie en cours'));
   check('button says resume', (await page.textContent('a.tile .play')).includes('Reprendre'));
@@ -110,7 +110,7 @@ try {
   // 4. A new version starts when the library opens, never under an open game.
   const page3 = await pc.newPage();
   await page3.goto(BASE);
-  await page3.waitForSelector('#saves svg');
+  await page3.waitForSelector('a.tile[data-id="solitaire"]');
   const v1 = await page3.evaluate(async () => (await caches.keys()).join());
   writeFileSync(versionFile, "self.VERSION = 'test-2';\n");
   // page is the solitaire: a game is open in another window.
@@ -132,7 +132,7 @@ try {
     .then(() => check('the newest version starts at the first open', true))
     .catch(async () => check('the newest version starts at the first open', false, await page4.evaluate(async () => (await caches.keys()).join())));
   await page4.waitForTimeout(1000);
-  await page4.waitForSelector('#saves svg');
+  await page4.waitForSelector('a.tile[data-id="solitaire"]');
   const ctl = await page4.evaluate(async () => {
     const c = navigator.serviceWorker.controller;
     return c ? (await (await fetch('version.js')).text()) : 'no controller';

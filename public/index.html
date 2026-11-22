@@ -127,9 +127,7 @@
     font: 500 20px var(--ui); color: rgba(255,255,255,.85); }
   /* The credit on the left, the install button and the size buttons together on the right. */
   .footer-controls { display: flex; flex: 1 1 auto; min-width: 0; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; }
-  #saves, #installed { font: 500 20px var(--ui); color: rgba(255,255,255,.85); }
-  #saves { display: flex; align-items: center; gap: 10px; }
-  #saves svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  #installed { font: 500 20px var(--ui); color: rgba(255,255,255,.85); }
   /* Installing the site as an app: a white key that says where it goes. */
   #install { display: none; }
   #install.on { display: flex; }
@@ -195,7 +193,6 @@
 
   <section id="games" aria-label="Vos jeux"></section>
 
-  <div id="saves"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Vos parties sont gardées sur cet ordinateur.</div>
   <p id="installed">Le jeu est déjà installé. Pour l’ouvrir, cliquez sur la petite icône en haut, à droite de la barre d’adresse.</p>
 </main>
 <footer><div class="in">
