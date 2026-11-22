@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 110">
+<defs>
+<linearGradient id="lane" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#EBC88F"/><stop offset="1" stop-color="#C99A5C"/></linearGradient>
+<radialGradient id="ball" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#FF6B6B"/><stop offset=".45" stop-color="#C8263A"/><stop offset="1" stop-color="#6E0F1E"/></radialGradient>
+<linearGradient id="pinShade" x1="0" x2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".6" stop-color="#F6F0E2"/><stop offset="1" stop-color="#CFC6B3"/></linearGradient>
+<symbol id="pin" viewBox="-7 -29 14 30" overflow="visible">
+<path d="M-3.8 0C-6.6-4-6.6-11-4-14.5-2.2-17-2-18.5-2.6-20.5-4.2-25-2.5-28 0-28 2.5-28 4.2-25 2.6-20.5 2-18.5 2.2-17 4-14.5 6.6-11 6.6-4 3.8 0Z" fill="url(#pinShade)" stroke="#5B4F3E" stroke-width=".7"/>
+<path d="M-2.45-19.6h4.9v1.3h-4.9zM-2.3-17.6h4.6v1.3h-4.6z" fill="#C8263A"/>
+</symbol>
+</defs>
+<path d="M0 30h160v10H0z" fill="#232457"/>
+<path d="M44 24h72v12H44z" fill="#2E3178"/>
+<path d="M58 29l1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.2-2.4 1.2.5-2.6-1.9-1.8 2.6-.4zM102 29l1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.2-2.4 1.2.5-2.6-1.9-1.8 2.6-.4z" fill="#FFF1D0"/>
+<path d="M2 110 46 36h68l44 74z" fill="#5A5F73"/>
+<path d="M14 110 50 36h60l36 74z" fill="url(#lane)"/>
+<g stroke="#B08048" stroke-width=".6" opacity=".55"><path d="M38 110 60 36M62 110 70 36M80 110V36M98 110 90 36M122 110 100 36"/></g>
+<path d="M14 110 50 36" stroke="#7A5530" stroke-width="2"/><path d="M146 110 110 36" stroke="#7A5530" stroke-width="2"/>
+<g fill="#5B3A1E"><path d="M60 82l2.4-5 2.4 5zM70 82l2.4-5 2.4 5zM80 82l2.4-5 2.4 5zM90 82l2.4-5 2.4 5zM100 82l2.4-5 2.4 5z" transform="translate(-2.4 0)"/></g>
+<g fill="#3A2412" opacity=".28"><ellipse cx="62" cy="44.5" rx="4" ry="1.2"/><ellipse cx="74" cy="44.5" rx="4" ry="1.2"/><ellipse cx="86" cy="44.5" rx="4" ry="1.2"/><ellipse cx="66.5" cy="50.5" rx="4.4" ry="1.3"/><ellipse cx="80" cy="50.5" rx="4.4" ry="1.3"/><ellipse cx="93.5" cy="50.5" rx="4.4" ry="1.3"/><ellipse cx="72.5" cy="57.5" rx="4.8" ry="1.4"/><ellipse cx="87.5" cy="57.5" rx="4.8" ry="1.4"/><ellipse cx="80" cy="65.5" rx="5.2" ry="1.5"/></g>
+<use href="#pin" x="56" y="16" width="12" height="29"/>
+<use href="#pin" x="68" y="16" width="12" height="29"/>
+<use href="#pin" x="80" y="16" width="12" height="29"/>
+<use href="#pin" x="60" y="19.5" width="13" height="31.5"/>
+<use href="#pin" x="73.5" y="19.5" width="13" height="31.5"/>
+<use href="#pin" x="87" y="19.5" width="13" height="31.5"/>
+<use href="#pin" x="65.5" y="23.5" width="14" height="34.5"/>
+<use href="#pin" x="80.5" y="23.5" width="14" height="34.5"/>
+<use href="#pin" x="72.5" y="28" width="15" height="38"/>
+<g transform="translate(124 34) rotate(58)"><use href="#pin" x="-6.5" y="-15" width="13" height="31.5"/></g>
+<path d="M104 40q6-6 12-8M108 46q7-3 11-3" stroke="#FFF1D0" stroke-width="1.8" stroke-linecap="round" fill="none" opacity=".85"/>
+<ellipse cx="52" cy="104" rx="15" ry="3.5" fill="#3A2412" opacity=".3"/>
+<circle cx="52" cy="90" r="15" fill="url(#ball)"/>
+<path d="M40 86c6 4 12-4 20 1s4 8 7 9" stroke="#8E1424" stroke-width="2.2" fill="none" opacity=".6" stroke-linecap="round"/>
+<circle cx="56" cy="84" r="1.9" fill="#3B0710"/><circle cx="61" cy="86.5" r="1.9" fill="#3B0710"/><circle cx="57.5" cy="92" r="2.3" fill="#3B0710"/>
+<ellipse cx="46" cy="83" rx="4" ry="2.4" fill="#fff" opacity=".55" transform="rotate(-30 46 83)"/>
+<path d="M26 98h-9M28 92h-12M27 86h-7" stroke="#FFF1D0" stroke-width="1.8" stroke-linecap="round" opacity=".7"/>
+</svg>

@@ -40,6 +40,13 @@ When a game changes its save format, it must still read the old format. His save
 
 ## Games
 
+- `public/bowling/`: ten frames of ten-pin bowling in a 1960s alley, alone against a score.
+  - Look straight down the lane. On a tall desktop window the score sheet sits above the throw panel. At 660 px high or less it sits above the lane. A small live view shows the pins on wide stages.
+  - Set the start, direction, curve and force in the « Votre lancer » panel, then click « Lancer la boule ». The lane takes no mouse input. Every throw starts again from the middle, straight, at force 6.
+  - No level has barriers: a ball off the boards drops into the gutter. Facile shows the whole path. Moyen shows half the path. Difficile shows the path to the arrows. Every level offers three curve steps to either side. He chooses the starting board on the foul line with « Départ ». A new game starts in the middle, and the curve never moves the ball. The hint starts 5 boards towards the side of its hook per curve step. At force 6 the three steps bend about 10, 20 and 30 boards from the launch line. The path band shows the intended shot. In Difficile it turns later and harder.
+  - At impact, the ball and pins spin, bounce and fall under gravity. A fixed camera shows the deck. The pinsetter lifts the standing pins, sweeps the deck and puts each pin back. At the end of a frame it sets ten new pins.
+  - The ten-frame goals are 145, 160 and 175 points. The same imperfect player won 52, 25 and 11 of 64 seeded games. The pinsetter stands each surviving pin upright on its spot. Each throw saves its seed and the remaining pins, so undo and reload reproduce it.
+
 - `public/golf/`: nine holes of miniature golf in 3D, new at each game.
   - `engine.js` builds the course from a seed saved with the game, so a reload or an undo replays the same holes. It has no DOM, so the page and the tests run the same code. `scene.js` draws a hole with Three.js, kept in `lib/three/`.
   - Each hole joins a lane shape and its obstacles. The shapes are a straight lane, a long lane, a wide green, a dogleg, an L and an S. The obstacles are toadstool bumpers, a hill, a dip, a raised green on a ramp, a bridge over a pond, a tunnel, narrow gates, bank boards and a windmill.
@@ -233,6 +240,8 @@ Windows Quick Assist is the easiest way to do this with him on the phone.
 - Migration 0005 removed the old save and device tables and replaced the error table. Prefer a forward fix if a rollback must cross 0005. If the older Worker is essential, restore a pre-0005 export to a separate D1 database first. Verify its schema and data before switching the Worker binding. Plan how to preserve writes made since the restore point before directing production traffic to the restored database.
 
 ## Tests
+
+`tests/bowling-rules.mjs` checks scoring, pin physics, undo, saves, hints and the three goals. `tests/bowling.mjs` plays the throws with the mouse, checks both endings and measures the page and guide at each window size.
 
 The tests play the game in a real browser with the mouse. They are only for development: the game itself still needs nothing.
 

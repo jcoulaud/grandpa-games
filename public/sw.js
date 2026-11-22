@@ -21,6 +21,7 @@ const CORE = [
   'demineur/', 'demineur/engine.js', 'demineur/board.js', 'demineur/style.css', 'demineur/icon.svg',
   'yams/', 'yams/engine.js', 'yams/icon.svg',
   'bataille-navale/', 'bataille-navale/engine.js', 'bataille-navale/ships.js', 'bataille-navale/icon.svg',
+  'bowling/', 'bowling/icon.svg', 'bowling/game.js', 'bowling/engine.js', 'bowling/scene.js',
   'golf/', 'golf/icon.svg', 'golf/game.js', 'golf/engine.js', 'golf/scene.js', 'lib/three/three.module.min.js',
   'paires/', 'paires/engine.js', 'paires/icon.svg',
   'sudoku/', 'sudoku/engine.js', 'sudoku/icon.svg',
