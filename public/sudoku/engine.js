@@ -140,10 +140,11 @@
     }
     return null;
   }
-  // cells: the cells whose candidates make the reasoning, which the hint lights.
-  const removal = (list, name, level, cells) => {
+  // cells: the cells whose candidates make the reasoning, which the hint lights. need: what the reasoning
+  // relies on, [cell, mask] for digits that must be out of that cell. extra: more for the hint.
+  const removal = (list, name, level, cells, need, extra) => {
     const keep = list.filter(([, , has]) => has);
-    return keep.length ? { name, level, remove: keep.map(([i, m]) => [i, m]), cells } : null;
+    return keep.length ? { name, level, remove: keep.map(([i, m]) => [i, m]), cells, need, ...extra } : null;
   };
   // Pointing: a digit of a block that sits in one row or column of it leaves the rest of that line.
   // Claiming: a digit of a line that sits in one block leaves the rest of that block.
@@ -160,7 +161,8 @@
         } else if (where.every(j => BOX(j) === BOX(where[0]))) targets.push(18 + BOX(where[0]));
         for (const t of targets) {
           const list = UNITS[t].filter(j => !where.includes(j) && !g[j]).map(j => [j, m, !!(cand[j] & m)]);
-          const step = removal(list, u >= 18 ? 'pointing' : 'claiming', 2, where);
+          const need = UNITS[u].filter(j => !g[j] && !where.includes(j)).map(j => [j, m]);
+          const step = removal(list, u >= 18 ? 'pointing' : 'claiming', 2, where, need);
           if (step) return step;
         }
       }
@@ -182,7 +184,8 @@
         let union = 0;
         for (const j of set) union |= cand[j];
         if (bits(union) !== k) continue;
-        const step = removal(open.filter(j => !set.includes(j)).map(j => [j, union, !!(cand[j] & union)]), 'naked' + k, level, set);
+        const step = removal(open.filter(j => !set.includes(j)).map(j => [j, union, !!(cand[j] & union)]), 'naked' + k, level, set,
+          set.map(j => [j, ALL & ~union]));
         if (step) return step;
       }
     }
@@ -202,7 +205,8 @@
         const mask = set.reduce((m, d) => m | (1 << d), 0);
         const cells = open.filter(j => cand[j] & mask);
         if (cells.length !== k) continue;
-        const step = removal(cells.map(j => [j, ALL & ~mask, !!(cand[j] & ~mask)]), 'hidden' + k, level, cells);
+        const step = removal(cells.map(j => [j, ALL & ~mask, !!(cand[j] & ~mask)]), 'hidden' + k, level, cells,
+          open.filter(j => !cells.includes(j)).map(j => [j, mask]), { unit: u, digits: set });
         if (step) return step;
       }
     }
@@ -231,7 +235,12 @@
             if (!g[i]) list.push([i, m, !!(cand[i] & m)]);
           }
           const at = set.flatMap(([a, w]) => w.map(b => byRow ? a * 9 + b : b * 9 + a));
-          const step = removal(list, k === 2 ? 'xwing' : 'swordfish', 3, at);
+          const need = [];
+          for (const a of base) for (let b = 0; b < 9; b++) {
+            const i = byRow ? a * 9 + b : b * 9 + a;
+            if (!g[i] && !cross.has(b)) need.push([i, m]);
+          }
+          const step = removal(list, k === 2 ? 'xwing' : 'swordfish', 3, at, need);
           if (step) return step;
         }
       }
@@ -256,7 +265,8 @@
           if (g[i] || i === p || i === pairs[a] || i === pairs[b]) continue;
           if (sees(i, pairs[a]) && sees(i, pairs[b]) && (!xyz || sees(i, p))) list.push([i, z, !!(cand[i] & z)]);
         }
-        const step = removal(list, xyz ? 'xyzwing' : 'xywing', 3, [p, pairs[a], pairs[b]]);
+        const three = [p, pairs[a], pairs[b]];
+        const step = removal(list, xyz ? 'xyzwing' : 'xywing', 3, three, three.map(x => [x, ALL & ~cand[x]]));
         if (step) return step;
       }
     }
@@ -419,10 +429,31 @@
   //   { kind: 'wrong', cell, digit }               a digit of his breaks no rule but is not the solution
   //   { kind: 'naked', cell, digit }               only this digit fits this cell
   //   { kind: 'hidden', cell, digit, unit }        in this row, column or block, the digit fits only here
-  //   { kind: 'deep', cell, digit, technique, via, unit, removed, cells }
+  //   { kind: 'deep', cell, digit, technique, via, unit, removed, cells, steps }
   //       the next digit a longer reasoning finds. via 'naked': the reasoning took the digits removed out of
   //       this cell. via 'hidden': it took the digit out of the other cells of this unit. cells: the cells
-  //       whose candidates did it.
+  //       whose candidates did it. steps: the reasoning in order, only the steps the digit needs, each
+  //       { name, cells, targets, digits, unit, subset }: because of its cells, its digits leave its
+  //       targets. A step relies on the visible board and the steps before it only. With one step, cells
+  //       and removed say it all; with more, the page shows them one at a time.
+  // The steps of used that a conclusion needs, in order: a step counts when it took out a digit the
+  // conclusion or a later step relies on (need). A step that took different digits out of different cells
+  // splits in one step for each set of digits, so each sentence is true for each cell it names.
+  function chain(used, need) {
+    const want = new Int32Array(81), out = [];
+    for (const [j, m] of need) want[j] |= m;
+    for (let k = used.length - 1; k >= 0; k--) {
+      const s = used[k], rel = s.remove.map(([j, m]) => [j, m & want[j]]).filter(([, m]) => m);
+      if (!rel.length) continue;
+      const groups = new Map();
+      for (const [j, m] of rel) groups.set(m, [...(groups.get(m) || []), j]);
+      const split = [...groups].map(([m, targets]) => ({ name: s.name, cells: s.cells, targets, digits: digitsOf(m),
+        unit: s.unit === undefined ? '' : UNIT_KIND(s.unit), subset: s.digits || [] }));
+      out.unshift(...split);
+      for (const [j, m] of s.need) want[j] |= m;
+    }
+    return out;
+  }
   function hint(G) {
     if (G.result) return null;
     const b = board(G);
@@ -446,20 +477,19 @@
       if (!s) break;
       if (s.place) {
         const [i, d] = s.place, naked = s.name === 'naked';
-        // The steps that matter: those that emptied this cell, or that took d out of the rest of the unit.
-        const hits = ([j, m]) => naked ? j === i : j !== i && m & (1 << d) && UNITS[s.unit].includes(j);
-        const cells = new Set(used.filter(u => u.remove.some(hits)).flatMap(u => u.cells));
-        cells.delete(i);
+        const steps = chain(used, naked ? [[i, ALL & ~(1 << d)]] : UNITS[s.unit].filter(j => j !== i && !b[j]).map(j => [j, 1 << d]));
+        const cells = steps.length === 1 ? steps[0].cells.filter(j => j !== i) : [];
         return { kind: 'deep', cell: i, digit: d, technique: technique || s.name, via: naked ? 'naked' : 'hidden',
-          unit: naked ? '' : UNIT_KIND(s.unit), removed: naked ? digitsOf(start[i] & ~(1 << d)) : [], cells: [...cells] };
+          unit: naked ? '' : UNIT_KIND(s.unit), removed: naked ? digitsOf(start[i] & ~(1 << d)) : [], cells, steps };
       }
       technique = technique || s.name;
+      // The digits it really takes out: its masks name all the digits of a pair or a triple.
+      used.push({ ...s, remove: s.remove.map(([j, m]) => [j, m & cand[j]]) });
       apply(b, cand, s);
-      used.push(s);
     }
     // The reasoning of the solver is stuck (it never is on a grid it made): give the solution of a cell.
     const i = b.indexOf(0);
-    return { kind: 'deep', cell: i, digit: +G.solution[i], technique: '', via: '', unit: '', removed: [], cells: [] };
+    return { kind: 'deep', cell: i, digit: +G.solution[i], technique: '', via: '', unit: '', removed: [], cells: [], steps: [] };
   }
 
   // ---------- Saves ----------

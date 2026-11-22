@@ -210,7 +210,7 @@
   </section>
   <section class="page">
     <h3>Demander de l'aide</h3>
-    <p>Cliquez sur « Une aide ? » : le jeu remplit une case et vous dit pourquoi. Si un de vos chiffres est faux, il l'efface.</p>
+    <p>Cliquez sur « Une aide ? » : le jeu remplit une case et vous dit pourquoi. Si un de vos chiffres est faux, il l'efface. Une aide plus longue se donne en plusieurs étapes : cliquez encore pour la suite.</p>
     <div class="guide-panel">
       <figure class="guide-example">
         <div class="guide-art ex-keys" aria-hidden="true"><span>4</span><span class="ex-done">5</span><span>6</span></div>
@@ -237,11 +237,13 @@ document.documentElement.style.setProperty('--lit-ms', LIT_MS + 'ms');
 
 /* ---------- State ----------
    G: the game (see engine.js). undo: the grid before each of his moves (Sudoku.snapshot). sel: the chosen
-   cell, or -1. notesOn: the "Notes" key is pressed. hint: { cell, house } shown by "Une aide ?" until his
-   next move. stats: { won }. wonNow: this game is counted as won, so a win counts once. */
+   cell, or -1. notesOn: the "Notes" key is pressed. hint: { rings, house } shown by "Une aide ?" until his
+   next move. plan: { G, h, k } a longer hint told one step at a time, k steps told so far, for that grid
+   only. stats: { won }. wonNow: this game is counted as won, so a win counts once. winSave: the save of
+   the winning move while it is not done: until then no menu opens, so the win sheet is not lost. */
 let G = null, undo = [], level = 'facile', stats = { won: 0 }, wonNow = false;
-let sel = -1, notesOn = false, hint = null, making = 0, timers = [];
-let stale = false, saved = true, pendingWin = null;
+let sel = -1, notesOn = false, hint = null, plan = null, making = 0, timers = [];
+let stale = false, saved = true, pendingWin = null, winSave = null;
 addEventListener('gg-stale', () => { stale = true; });
 
 const UNIT_NAME = { row: 'cette ligne', col: 'cette colonne', box: 'ce carré' };
@@ -385,8 +387,25 @@ async function doUndo() {
 /* ---------- The hint ---------- */
 async function showHint() {
   if (!ready() || G.result || double('hint')) return;
-  const h = S.hint(G);
-  if (!h) return;
+  if (!plan || plan.G !== G) {
+    const h = S.hint(G);
+    if (!h) return;
+    plan = h.kind === 'deep' && h.steps.length > 1 ? { G, h, k: 0 } : null;
+    if (!plan) return placeHint(h);
+  }
+  const { h, k } = plan, n = h.steps.length + 1;
+  if (k === h.steps.length) { plan = null; return placeHint(h, `Étape ${n} sur ${n} : `); }
+  // A step of a longer reasoning: its cells in yellow, the cells it rules digits out of ringed.
+  const s = h.steps[k], few = s.digits.length > 1 ? 'vont' : 'va';
+  plan.k++;
+  hint = { rings: s.targets, house: s.cells };
+  render();
+  Kit.say(`Étape ${k + 1} sur ${n} : ` + (s.subset.length
+    ? `dans ${UNIT_NAME[s.unit]}, ${digitList(s.subset)} ne vont que dans les cases en jaune, donc ${digitList(s.digits)} n'y ${few} pas.`
+    : `à cause des cases en jaune, ${digitList(s.digits)} ne ${few} pas dans ${s.targets.length > 1 ? 'les cases entourées' : 'la case entourée'}.`));
+}
+// Plays the hint h. step: the start of the last step of a longer reasoning, which says only the end.
+async function placeHint(h, step = '') {
   const i = h.cell;
   let next, text;
   if (h.kind === 'clash' || h.kind === 'wrong') {
@@ -397,6 +416,8 @@ async function showHint() {
     next = S.write(G, i, h.digit).G;
     text = h.kind === 'naked' ? `Dans cette case, seul le ${h.digit} est possible.`
       : h.kind === 'hidden' ? `Dans ${UNIT_NAME[h.unit]}, le ${h.digit} ne peut aller que dans cette case.`
+      : step && h.via === 'naked' ? `${step}dans cette case, il ne reste que le ${h.digit}.`
+      : step && h.via === 'hidden' ? `${step}dans ${UNIT_NAME[h.unit]}, le ${h.digit} ne peut plus aller que dans cette case.`
       : h.via === 'naked' ? `À cause des cases en jaune, ${digitList(h.removed)} ${h.removed.length > 1 ? 'ne vont' : 'ne va'} pas dans cette case : il n'y reste que le ${h.digit}.`
       : h.via === 'hidden' ? `À cause des cases en jaune, le ${h.digit} ne va dans aucune autre case de ${UNIT_NAME[h.unit]} : il va donc ici.`
       : `Ici, il faut un raisonnement plus long : le ${h.digit} va dans cette case.`;
@@ -404,7 +425,7 @@ async function showHint() {
   const previous = G, before = S.complete(G);
   const written = commit(next);
   sel = i;
-  hint = { cell: i, house: h.kind === 'hidden' ? houseOf(i, h.unit) : h.kind === 'deep' ? h.cells : [] };
+  hint = { rings: [i], house: h.kind === 'hidden' || (step && h.via === 'hidden') ? houseOf(i, h.unit) : h.kind === 'deep' && !step ? h.cells : [] };
   drawMove(previous, i);
   S.complete(G).filter(x => !before.includes(x)).forEach(animKeyDone);
   if (G.result) { finish(written); return written; }
@@ -419,11 +440,14 @@ const houseOf = (i, unit) => S.UNITS[unit === 'row' ? S.ROW(i) : unit === 'col' 
    window behind another) shows no win. Without it, the game was won before a reload. */
 function finish(written) {
   const show = !!written;
-  hint = null; notesOn = false; sel = -1; render();
+  hint = null; plan = null; notesOn = false; sel = -1; render();
   const text = `Bravo, la grille est complète ! Niveau ${Kit.levelNames[level].toLowerCase()}.`;
   if (!show) { if (saved && !stale) Kit.say(text); return; }
   if (saved && !stale) Kit.say(text);
   animWin();
+  winSave = written;
+  const done = () => { if (winSave === written) winSave = null; };
+  written.then(done, done);
   const game = G;
   const open = () => written.then(ok => ok && G === game && !stale && !Kit.isOpen() && Kit.dialog('Bravo, vous avez gagné !',
     `Vous avez rempli toute la grille du niveau ${Kit.levelNames[level].toLowerCase()}.` + (stats.won > 1 ? ` C'est votre victoire numéro ${stats.won}.` : ''),
@@ -454,8 +478,9 @@ function makeGrid(lv, seed) {
     worker.postMessage({ id, level: lv, seed });
   });
 }
-// A menu opened during the gold wave opens the win sheet at once: it offers a new game too.
-const winFirst = () => { if (!pendingWin) return false; showWinDialog(); return true; };
+// A menu opened during the gold wave opens the win sheet at once: it offers a new game too. While the
+// win is not saved, a menu does nothing more: the win sheet opens when the save is done.
+const winFirst = () => { if (!pendingWin && !winSave) return false; showWinDialog(); return true; };
 function askNewGame() { if (making || winFirst()) return; stopAll(); render(); Kit.chooseLevel(level, playing(), newGame); }
 // One grid is made at a time: a second request would leave the first one's timer to stop the worker.
 async function newGame(lv) {
@@ -580,7 +605,7 @@ function render() {
     else if (d && d === sd) cls += ' same';
     else if (why.has(i)) cls += ' why';
     else if (house.has(i)) cls += ' house';
-    if (hint && hint.cell === i) cls += ' hint';
+    if (hint && hint.rings.includes(i)) cls += ' hint';
     if (i === blame) cls += ' blame';
     if (e.className !== cls) e.className = cls;
     const k = d ? 'd' + d : 'n' + G.notes[i];

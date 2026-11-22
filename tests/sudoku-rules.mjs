@@ -135,6 +135,57 @@ ok([7533, 2899].every(seed => givens(S.newGame('facile', seed).givens) <= 42), '
   ok(S.refusal(G, empty, 'erase') === 'won' && S.write(G, empty, 1) === null && S.hint(G) === null, 'after the win, nothing more can be played');
 }
 
+// Checks a longer hint against the visible board, without the solver: each step must be true on the
+// candidates the digits give, after the steps before it, and the last step must leave the digit.
+// Gives '' or what is false.
+function falseStep(g, h) {
+  const b = S.board(g), cand = S.candidates(b);
+  const has = (i, d) => !!(cand[i] & (1 << d));
+  const sees = (a, c) => a !== c && S.PEERS[a].includes(c);
+  const unitsOf = cells => S.UNITS.filter(u => cells.every(j => u.includes(j)));
+  const KIND = { row: [0, 9], col: [9, 18], box: [18, 27] };
+  for (const [k, s] of h.steps.entries()) {
+    const at = `step ${k + 1} (${s.name})`;
+    if (s.cells.some(j => b[j]) || s.targets.some(j => b[j])) return at + ' names a full cell';
+    if (!s.targets.every(j => s.digits.every(d => has(j, d)))) return at + ' rules out a digit already out';
+    let good = false;
+    if (s.name === 'pointing' || s.name === 'claiming') {
+      const [d] = s.digits;
+      good = s.digits.length === 1 && unitsOf(s.cells).some(U => U.filter(j => has(j, d)).every(j => s.cells.includes(j))
+        && unitsOf(s.cells).some(T => T !== U && s.targets.every(j => T.includes(j) && !U.includes(j))));
+    } else if (/^naked\d$/.test(s.name)) {
+      const union = s.cells.reduce((m, j) => m | cand[j], 0);
+      good = S.digitsOf(union).length === s.cells.length && s.digits.every(d => union & (1 << d))
+        && s.targets.every(j => !s.cells.includes(j) && unitsOf([...s.cells, j]).length > 0);
+    } else if (/^hidden\d$/.test(s.name)) {
+      const units = S.UNITS.slice(...KIND[s.unit]).filter(u => s.cells.every(j => u.includes(j)));
+      good = s.subset.length === s.cells.length && !s.digits.some(d => s.subset.includes(d)) && s.targets.every(j => s.cells.includes(j))
+        && units.some(u => u.every(j => s.cells.includes(j) || !s.subset.some(d => has(j, d))));
+    } else if (s.name === 'xwing' || s.name === 'swordfish') {
+      const [d] = s.digits, n = s.name === 'xwing' ? 2 : 3;
+      for (const [line, cross] of [[S.ROW, S.COL], [S.COL, S.ROW]]) {
+        const base = new Set(s.cells.map(line)), other = new Set(s.cells.map(cross));
+        if (base.size !== n || other.size !== n) continue;
+        const inBase = [...Array(81).keys()].filter(j => base.has(line(j)) && has(j, d));
+        if (inBase.every(j => other.has(cross(j))) && s.targets.every(j => other.has(cross(j)) && !base.has(line(j)))) good = true;
+      }
+    } else if (s.name === 'xywing' || s.name === 'xyzwing') {
+      const [p, a, c] = s.cells, [z] = s.digits, ds = j => S.digitsOf(cand[j]);
+      const pair = j => ds(j).length === 2 && has(j, z) && ds(j).filter(d => d !== z).every(d => has(p, d));
+      good = sees(p, a) && sees(p, c) && pair(a) && pair(c) && cand[a] !== cand[c] && (s.name === 'xywing'
+        ? ds(p).length === 2 && !has(p, z) && (cand[a] | cand[c]) === (cand[p] | 1 << z)
+        : ds(p).length === 3 && has(p, z) && (cand[a] | cand[c]) === cand[p])
+        && s.targets.every(j => sees(j, a) && sees(j, c) && (s.name === 'xywing' || sees(j, p)));
+    }
+    if (!good) return at + ' is false on the board';
+    for (const j of s.targets) for (const d of s.digits) cand[j] &= ~(1 << d);
+  }
+  const i = h.cell, d = h.digit;
+  if (h.via === 'naked') return cand[i] === 1 << d ? '' : 'the cell keeps other digits';
+  const unit = S.UNITS.slice(...KIND[h.unit]).find(u => u.includes(i));
+  return unit.every(j => j === i || b[j] || !has(j, d)) && has(i, d) ? '' : `the ${d} still fits elsewhere`;
+}
+
 // 7. The hint: the simplest reason first, and following it wins every level.
 {
   let G = S.newGame('facile', 9);
@@ -156,7 +207,7 @@ ok([7533, 2899].every(seed => givens(S.newGame('facile', seed).givens) <= 42), '
   h = S.hint(S.write(S.write(G, a, +G.solution[a]).G, b, +G.solution[a]).G);
   ok(h.kind === 'clash' && h.cell === b, 'of two clashing digits, the hint erases the one that is not the solution');
   for (const level of Object.keys(S.LEVELS)) {
-    let won = 0, wrong = 0, deep = 0, unexplained = 0;
+    let won = 0, wrong = 0, deep = 0, unexplained = 0, untrue = [];
     for (let seed = 1; seed <= 8; seed++) {
       let g = S.newGame(level, seed * 31);
       for (let k = 0; k < 81 && !g.result; k++) {
@@ -166,7 +217,10 @@ ok([7533, 2899].every(seed => givens(S.newGame('facile', seed).givens) <= 42), '
           deep++;
           // A longer reasoning names its cells, and the digits it rules out of the cell or of the unit.
           const b = S.board(g);
-          if (!x.cells.length || x.cells.some(j => b[j]) || !(x.via === 'naked' ? x.removed.length && !x.removed.includes(x.digit) : x.unit)) unexplained++;
+          const one = x.steps.length === 1;
+          if ((one && !x.cells.length) || x.cells.some(j => b[j]) || !(x.via === 'naked' ? x.removed.length && !x.removed.includes(x.digit) : x.unit)) unexplained++;
+          const why = falseStep(g, x);
+          if (why) untrue.push(`seed ${seed * 31}, hint ${k + 1}: ${why}`);
         }
         g = S.write(g, x.cell, x.digit).G;
       }
@@ -174,7 +228,15 @@ ok([7533, 2899].every(seed => givens(S.newGame('facile', seed).givens) <= 42), '
     }
     ok(won === 8 && !wrong, `${level}: following the hint wins 8 grids out of 8 with no wrong digit (${deep} longer reasonings)`);
     ok(!unexplained, `${level}: each longer reasoning lights its cells and names what it rules out`, `${unexplained} without a reason`);
+    ok(!untrue.length, `${level}: each step of a longer reasoning is true on the visible board`, untrue.join('; '));
   }
+  // Moyen seed 1, hint 13: the pair of R1C2 and R1C3 rules out the 1 and the 8 of R1C6 only once the 3
+  // has left R1C2. The hint says both steps, in that order.
+  let g = S.newGame('moyen', 1);
+  for (let k = 0; k < 12; k++) { const x = S.hint(g); g = S.write(g, x.cell, x.digit).G; }
+  h = S.hint(g);
+  ok(h.cell === 5 && h.digit === 4 && h.steps.length === 2 && h.steps[0].targets.includes(1) && h.steps[0].digits.includes(3)
+    && h.steps[1].cells.join() === '1,2' && !falseStep(g, h), 'a longer hint whose pair needs an earlier step gives that step first', JSON.stringify(h.steps));
 }
 
 // 8. A save read back is checked whole.

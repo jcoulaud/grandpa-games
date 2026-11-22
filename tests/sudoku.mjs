@@ -222,11 +222,13 @@ await page.screenshot({ path: `${OUT}/sudoku-difficile.png` });
     await p.locator(`.key[data-d="${d ?? await p.evaluate(i => +G.solution[i], i)}"]`).click();
     await p.waitForTimeout(250);
   };
-  // A full grid with a red digit says to correct it, also after a reload.
+  // A full grid with a red digit says to correct it, also after a reload. A fixed seed, and a red digit
+  // that is not the last one's: the last digit then breaks no rule, so the message is about the red one.
+  await p.evaluate(() => { G = Sudoku.newGame('facile', 4242); undo = []; save(); render(); });
   const first0 = await p.evaluate(() => [...G.givens].indexOf('0'));
   const j = await p.evaluate(f => [...G.givens].findIndex((c, k) => c === '0' && k > f + 9), first0);
   const i = await nearWin(p, j);
-  const red = await p.evaluate(j => Sudoku.PEERS[j].map(k => +G.givens[k]).find(Boolean), j);
+  const red = await p.evaluate(({ i, j }) => Sudoku.PEERS[j].map(k => +G.givens[k]).find(d => d && d !== +G.solution[i]), { i, j });
   await play(j, red);
   await p.waitForTimeout(550);
   await play(i);
@@ -264,11 +266,32 @@ await page.screenshot({ path: `${OUT}/sudoku-difficile.png` });
       lastTap = null;
       await showHint();
       const text = document.getElementById('msg').textContent;
-      if (/À cause des cases en jaune/.test(text)) return { text, lit: document.querySelectorAll('.cell.why').length };
+      if (/^À cause des cases en jaune/.test(text)) return { text, lit: document.querySelectorAll('.cell.why').length };
     }
     return null;
   });
   ok(deep && deep.lit > 0 && /(ne (va|vont) pas dans cette case : il n'y reste que le \d|ne va dans aucune autre case)/.test(deep.text), `a longer hint gives its reason: ${deep && deep.text}`);
+  // Moyen seed 1, hint 13: the pair needs an earlier step. Each click tells one step, with its cells in
+  // yellow and the cells it rules digits out of ringed. The grid changes only at the last step.
+  const steps = await p.evaluate(async () => {
+    G = Sudoku.newGame('moyen', 1); undo = []; render();
+    for (let k = 0; k < 12; k++) { lastTap = null; await showHint(); }
+    const out = [];
+    for (let k = 0; k < 3; k++) {
+      lastTap = null;
+      const cells = G.cells;
+      await showHint();
+      out.push({ text: document.getElementById('msg').textContent, same: G.cells === cells,
+        why: [...document.querySelectorAll('.cell.why')].map(e => +e.dataset.i), rings: [...document.querySelectorAll('.cell.hint')].map(e => +e.dataset.i) });
+    }
+    return out;
+  });
+  ok(steps[0].same && /^Étape 1 sur 3 : à cause des cases en jaune, le 3 ne va pas dans la case entourée\.$/.test(steps[0].text) && steps[0].rings.join() === '1' && steps[0].why.length > 0,
+    `a longer hint first says the step its pair needs: ${steps[0].text}`);
+  ok(steps[1].same && /^Étape 2 sur 3 : à cause des cases en jaune, le 1 et le 8 ne vont pas dans la case entourée\.$/.test(steps[1].text) && steps[1].rings.join() === '5' && steps[1].why.join() === '1,2',
+    `then the pair: ${steps[1].text}`);
+  ok(!steps[2].same && steps[2].text === 'Étape 3 sur 3 : dans cette case, il ne reste que le 4.' && await p.evaluate(() => G.cells[5] === '4'),
+    `then it writes the digit: ${steps[2].text}`);
   await p.close();
 }
 // 13b. A menu opened during the gold wave opens the win sheet.
@@ -287,6 +310,35 @@ await page.screenshot({ path: `${OUT}/sudoku-difficile.png` });
     '"Règles" during the wave opens the win sheet instead of losing it');
   await p.close();
 }
+// 13c. A win whose save waits, for example for another window: a double-click on "Nouvelle partie" keeps
+// the win sheet, and no new grid can save a win the win save then refuses.
+for (const saves of [true, false]) {
+  const p = await browser.newPage({ viewport: { width: 1366, height: 680 } });
+  await p.goto(URL);
+  await p.evaluate(() => Kit.closeHelp());
+  await start(p, 'Facile');
+  await p.evaluate(() => { G = Sudoku.newGame('facile', 4242); undo = []; save(); render(); });
+  const i = await nearWin(p);
+  await p.evaluate(() => GG.flush());
+  await p.evaluate(() => { const real = GG.save; GG.save = (...a) => new Promise(r => { window.release = ok => r(ok && real(...a)); }); });
+  await p.locator(`.cell[data-i="${i}"]`).click();
+  await p.locator(`.key[data-d="${await p.evaluate(i => +G.solution[i], i)}"]`).click();
+  await p.locator('#newBtn').dblclick();
+  await p.waitForTimeout(100);
+  const waiting = await p.evaluate(() => !Kit.isOpen());
+  await p.evaluate(ok => window.release(ok), saves);
+  await p.waitForTimeout(300);
+  const title = await p.evaluate(() => Kit.isOpen() && document.getElementById('overTitle').textContent);
+  if (saves) ok(waiting && /Bravo, vous avez gagné/.test(title), 'a double-click on "Nouvelle partie" while the win saves opens the win sheet, not the levels');
+  else {
+    const n = await p.evaluate(() => stats.won);
+    await p.click('#newBtn');
+    await p.waitForTimeout(100);
+    ok(waiting && !title && n === 0 && await p.evaluate(() => Kit.isOpen() && !/Bravo/.test(document.getElementById('overTitle').textContent)),
+      'a win whose save fails counts nothing, and only then can a new grid start');
+  }
+  await p.close();
+}
 
 // 14. Every window of docs/design.md: nothing goes past the window, the grid is whole, the buttons are
 // 44 px or more, the text 20 px or more (13 on a phone), the digits 30 px, the longest message fits,
@@ -294,6 +346,8 @@ await page.screenshot({ path: `${OUT}/sudoku-difficile.png` });
 const WINDOWS = [[1366, 680], [1093, 530], [1920, 1000], [1280, 620], [390, 760], [1366, 680, 1.3], [1920, 1000, 1.75]];
 // A longer hint can name seven digits that a cell cannot take.
 const LONGEST = "À cause des cases en jaune, le 1, le 2, le 3, le 4, le 5, le 6 et le 7 ne vont pas dans cette case : il n'y reste que le 8.";
+// A step of a longer hint: a quad of a column that rules five digits out.
+const LONGEST_STEP = "Étape 12 sur 14 : dans cette colonne, le 1, le 2, le 3 et le 4 ne vont que dans les cases en jaune, donc le 5, le 6, le 7, le 8 et le 9 n'y vont pas.";
 for (const [w, h, z] of WINDOWS) {
   const name = `${w}x${h}` + (z ? ` at ${z * 100} %` : '');
   const phone = w < 700;
@@ -339,6 +393,10 @@ for (const [w, h, z] of WINDOWS) {
   ok(!m.tiny.length, `${name}: every text is ${phone ? 13 : 20} px or more` + (m.tiny.length ? ': ' + m.tiny.join(', ') : ''));
   ok(m.digit >= 30 && m.key >= 26 && m.cell >= 32, `${name}: cells of ${m.cell} px with digits of ${m.digit} px`);
   ok(m.msgFit, `${name}: the longest message fits the message line`);
+  await p.evaluate(t => Kit.say(t), LONGEST_STEP);
+  await p.waitForTimeout(100);
+  ok(await p.evaluate(() => { const msg = document.getElementById('msg'); return msg.scrollWidth <= msg.clientWidth + 1 && msg.scrollHeight <= msg.clientHeight + 1; }),
+    `${name}: the longest step of a hint fits the message line`);
   await p.screenshot({ path: `${OUT}/sudoku-${w}x${h}${z ? '-' + z : ''}.png` });
   await p.close();
 }
