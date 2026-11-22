@@ -6,8 +6,8 @@
 //     <span class="spacer"></span>
 //     <button id="newBtn" class="game">Nouvelle partie</button>
 //   </div>
+//   <div id="say"><div id="wins"></div><div id="msg" aria-live="polite"></div><div class="zoom"></div></div>
 //   <div id="table"></div>
-//   <footer id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div><div class="zoom"></div></footer>
 //   <div id="help" data-title="Comment jouer"><section class="page">…</section>…</div>
 //
 // This file adds the "Jeux" button that goes back to the library, the button icons, the frame and
@@ -69,7 +69,13 @@
     msg.classList.remove('long');
     if (msg.scrollWidth > msg.clientWidth + 1) msg.classList.add('long');
   };
-  const say = text => { if (msg) { msg.textContent = text; fit(); } };
+  // A new text flashes once, so his eye goes to the line when it changes.
+  const say = text => {
+    if (!msg) return;
+    const changed = msg.textContent !== text;
+    msg.textContent = text; fit();
+    if (changed) { msg.classList.remove('flash'); void msg.offsetWidth; msg.classList.add('flash'); }
+  };
   addEventListener('resize', fit);
 
   // Dialog

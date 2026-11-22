@@ -12,8 +12,8 @@
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 html, body { margin: 0; height: 100%; }
 body {
-  display: grid; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); /* never wider than the window */
-  row-gap: clamp(8px, 8vh - 40px, 40px); /* 40px on a tall window, less on a laptop so the cards stay large */
+  display: grid; grid-template-rows: auto auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); /* never wider than the window */
+  padding-bottom: clamp(8px, 8vh - 40px, 40px); box-sizing: border-box; /* 40px on a tall window, less on a laptop so the cards stay large */
   background: radial-gradient(120% 100% at 50% 0%, var(--felt-top), var(--felt) 70%) var(--felt); color: #fff;
   font-family: var(--ui);
   overflow: hidden; user-select: none; -webkit-user-select: none; touch-action: none;
@@ -93,17 +93,38 @@ button.game { --accent: #0B6B5D; background: var(--accent); color: #fff; --edge:
 button.game:hover { background: #0E7D6D; }
 button.game:active { background: #095A4E; }
 
-/* Message line: dark text on a warm cream band, so it reads apart from the white top bar. */
-#msgRail { padding: 8px clamp(10px, 1.4vw, 18px); display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,.18); }
-#msgRail #msg { flex: 1; min-width: 0; }
+/* Message line: under the top bar, where his eyes already are, in the middle of the row. The win count
+   (and the flags in the Démineur) are on its left, the size buttons on its right. Dark bold text on a
+   warm cream band with a gold edge. A new text flashes once (see Kit.say). */
+#say { display: flex; align-items: center; gap: 10px; padding: 4px clamp(10px, 1.4vw, 18px); margin-bottom: clamp(8px, 8vh - 40px, 40px); }
+#say .zoom { flex: none; }
 #msg {
-  height: 46px; padding: 0 18px; display: flex; align-items: center; gap: 12px;
-  background: #FFF4D6; color: var(--text); font: 600 22px/1.2 var(--ui);
-  border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,.25);
+  flex: 0 1 auto; min-width: 0; height: 52px; margin-inline: auto; padding: 2px 24px 2px 16px; box-sizing: border-box;
+  display: flex; align-items: center; gap: 12px;
+  background: #FFF4D6; color: var(--text); font: 700 23px/1.2 var(--ui);
+  border: 2px solid #E9C46A; border-radius: 16px; box-shadow: 0 4px 14px rgba(0,0,0,.3);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-/* A text too long for one line: two lines in the same height (see Kit.say). */
-#msg.long { white-space: normal; font-size: 20px; line-height: 21px; height: auto; min-height: 46px; padding-block: 2px; }
+#msg:empty { visibility: hidden; }
+/* A text too long for one line: two lines, a little smaller, in the same height, so the board never moves
+   (see Kit.say). Only a phone lets the band grow. */
+#msg.long { white-space: normal; font-size: 20px; line-height: 22px; height: auto; min-height: 52px; }
+#msg.flash { animation: flash 1s; }
+@keyframes flash { 25% { background: #FFD666; } }
+@media (prefers-reduced-motion: reduce) { #msg.flash { animation: none; } }
+/* A short page (lib/zoom.js sets the class): the band and the gaps close up, so the board keeps its size. */
+html.short #say { padding-block: 4px; margin-bottom: 8px; }
+html.short body { padding-bottom: 8px; }
+/* A narrow page (a tablet, a phone): the message stays under the top bar, and the counts and the size
+   buttons go under the board, so the message has the whole width. */
+@media (max-width: 900px) {
+  body { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto minmax(0, 1fr) auto; }
+  #bar, #table { grid-column: 1 / -1; }
+  #say { display: contents; }
+  #msg { grid-row: 2; grid-column: 1 / -1; max-width: calc(100% - 20px); margin: 8px auto; }
+  #flags, #wins { grid-row: 4; grid-column: 1; justify-self: start; margin: 10px 0 0 10px; }
+  #say .zoom { grid-row: 4; grid-column: 2; margin: 10px 10px 0 0; }
+}
 #msg::before { content: ""; flex: none; width: 28px; height: 28px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230B6B5D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 12a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.2-4.6A8.5 8.5 0 1 1 21 12z'/%3E%3C/svg%3E") center / contain no-repeat; }
 
 /* Rules guide */
@@ -137,6 +158,7 @@ html.short #helpBox .end { padding: 12px 40px 18px; }
   #helpBox .end button { min-width: 0; padding: 8px 18px; flex: none; }
   #helpPage { display: none; }
   #box { padding: 28px 20px; }
+  #overBtns button { padding-inline: 12px; }
 }
 
 /* Dialog */
@@ -145,13 +167,15 @@ html.short #helpBox .end { padding: 12px 40px 18px; }
 #box h2 { margin: 0 0 10px; font: 700 32px var(--ui); letter-spacing: -.01em; }
 #box p { margin: 0 0 28px; font: 400 22px/1.4 var(--ui); color: #3A4542; }
 #box p:empty { display: none; }
-#overBtns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 6px; }
-/* The levels: one wide button each, under each other, with what the level means under its name. */
+/* The choices: one wide button each, under each other, the yellow one first. A row of three wraps
+   into two rows of different widths, and a column reads in order from the top. */
+#overBtns { display: flex; flex-direction: column; align-items: stretch; gap: 12px; width: min(420px, 100%); margin: 6px auto 0; }
+/* The levels: what the level means goes under its name. */
 #box.levels { width: min(560px, calc(92vw / var(--z, 1))); }
-#box.levels #overBtns { flex-direction: column; align-items: stretch; }
+#box.levels #overBtns { width: auto; }
 #box.levels #overBtns button { min-height: 64px; }
-/* The way out after the levels stands a little apart from them. */
-#box.levels #overBtns button:not(.choice):last-child { margin-top: 10px; }
+/* After two choices or more, the way out ("Retour aux jeux", "Continuer la partie") stands a little apart. */
+#overBtns button:not(.choice):nth-child(n+3):last-child { margin-top: 10px; }
 #overBtns button.choice { flex-direction: column; gap: 2px; padding-block: 8px; font-size: 24px; font-weight: 700; }
 #overBtns button.choice::after { content: attr(data-note); font: 500 20px var(--ui); color: #4E5A57; }
 #overBtns button.choice.primary::after { color: #3D3000; }
