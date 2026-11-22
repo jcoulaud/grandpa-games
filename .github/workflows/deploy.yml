@@ -1,16 +1,39 @@
-# Publishes https://jeux-papi.fr when main changes. It uses the CLOUDFLARE_API_TOKEN repository secret,
-# an account token named "grandpa-games GitHub deploy" (Workers and D1 on the account, and routes, DNS and
-# certificates on jeux-papi.fr only). Without the secret, the job does nothing.
-name: Deploy
+# Runs the tests on each pull request and on main. When main changes and the tests pass, it publishes
+# https://jeux-papi.fr. The deploy uses the CLOUDFLARE_API_TOKEN repository secret, an account token named
+# "grandpa-games GitHub deploy" (Workers and D1 on the account, and routes, DNS and certificates on
+# jeux-papi.fr only). Without the secret, the deploy does nothing.
+name: Test and deploy
 on:
   push:
     branches: [main]
-  workflow_dispatch: # "Run workflow" in the Actions tab deploys main again
-concurrency: deploy
+  pull_request:
+  workflow_dispatch: # "Run workflow" in the Actions tab tests and deploys main again
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run typecheck
+      - run: bun run test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: screenshots
+          path: tests/screenshots
   deploy:
     # A manual run can name any branch: only main ever reaches the live site and its database.
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: test
+    concurrency: deploy
     runs-on: ubuntu-latest
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -20,8 +43,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         if: env.CLOUDFLARE_API_TOKEN != ''
       - run: bun install --frozen-lockfile
-        if: env.CLOUDFLARE_API_TOKEN != ''
-      - run: bun run typecheck
         if: env.CLOUDFLARE_API_TOKEN != ''
       - run: bun run deploy
         if: env.CLOUDFLARE_API_TOKEN != ''
