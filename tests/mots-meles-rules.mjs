@@ -183,5 +183,17 @@ for (const [level, L] of Object.entries(M.LEVELS)) {
   ok(copy && !M.valid(copy), 'a save with a second copy of a word is refused');
 }
 
+// A Difficile grid of 13 by 13, the size before the change to 11 by 11, still loads.
+{
+  const F = M.LEVELS.fort, sizes = F.sizes;
+  F.sizes = [13];
+  const old = M.newGame('fort', 31);
+  F.sizes = sizes;
+  ok(old.size === 13 && M.valid(old), 'an old 13 by 13 Difficile grid still loads');
+  const { level, ...noLevel } = old;
+  ok(M.withLevel(noLevel).level === 'fort', 'an old 13 by 13 grid without its level is a Difficile grid');
+  ok(M.newGame('fort', 31).size === 11, 'a new Difficile grid is 11 by 11');
+}
+
 console.log(fails ? `\n${fails} FAILED` : '\nALL PASSED');
 process.exit(fails ? 1 : 0);

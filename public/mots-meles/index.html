@@ -354,6 +354,8 @@ gridEl().addEventListener('pointerdown', e => {
 addEventListener('pointermove', e => {
   if (!press || press.moved || Math.hypot(e.clientX - press.x, e.clientY - press.y) < 16) return;
   const at = cellOf(e);
+  // A press that left its letter by 16 px is a drag, even if it comes back to it.
+  if (at !== press.i) press.far = true;
   if (at < 0 || at === press.i) return;
   press.moved = true;
   // A drag starts at its first letter, whatever was chosen before.
@@ -364,7 +366,7 @@ addEventListener('pointerup', e => {
   const p = press, end = cellOf(e); press = null;
   // A press let go on its letter, or less than 16 px away, is a click. Farther, it is a drag, even when
   // it crossed no other letter.
-  if (!p.moved && (end === p.i || Math.hypot(e.clientX - p.x, e.clientY - p.y) < 16)) return tap(p.i, p.x, p.y);
+  if (!p.moved && !p.far && (end === p.i || Math.hypot(e.clientX - p.x, e.clientY - p.y) < 16)) return tap(p.i, p.x, p.y);
   lastTap = null;
   if (Kit.isOpen() || !G || G.result) return;
   if (end >= 0 && end !== p.i) return pair(p.i, end);

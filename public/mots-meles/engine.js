@@ -17,7 +17,8 @@
   const LEVELS = {
     facile: { sizes: [8, 9], words: 6, min: 4, max: 6, dirs: [RIGHT, DOWN] },
     moyen: { sizes: [11], words: 9, min: 4, max: 8, dirs: [RIGHT, DOWN, DOWN_RIGHT, UP_RIGHT] },
-    fort: { sizes: [11], words: 12, min: 5, max: 10, dirs: ALL },
+    // Difficile was 13 by 13 at first: a grid of that size still loads, and new grids are 11 by 11.
+    fort: { sizes: [11], loads: [11, 13], words: 12, min: 5, max: 10, dirs: ALL },
   };
 
   // A word as the grid writes it: capitals without accents. "Châtaigne" becomes CHATAIGNE.
@@ -266,14 +267,14 @@
   // A save without its level, or with a level this file does not know, takes the level of its size and its number of words.
   function withLevel(G) {
     if (!G || typeof G !== 'object' || Object.hasOwn(LEVELS, G.level)) return G;
-    const level = Object.keys(LEVELS).find(k => LEVELS[k].sizes.includes(G.size) && G.words?.length === LEVELS[k].words);
+    const level = Object.keys(LEVELS).find(k => (LEVELS[k].loads || LEVELS[k].sizes).includes(G.size) && G.words?.length === LEVELS[k].words);
     return level ? { ...G, level } : G;
   }
 
   // A save read back must be a grid this file could have made: its words in their places, letter by letter.
   function valid(G) {
     const L = G && typeof G === 'object' && LEVELS[G.level];
-    if (!L || !L.sizes.includes(G.size) || typeof G.theme !== 'string' || typeof G.grid !== 'string') return false;
+    if (!L || !(L.loads || L.sizes).includes(G.size) || typeof G.theme !== 'string' || typeof G.grid !== 'string') return false;
     const n = G.size;
     if (G.grid.length !== n * n || !/^[A-Z]+$/.test(G.grid)) return false;
     if (!Array.isArray(G.words) || G.words.length !== L.words) return false;

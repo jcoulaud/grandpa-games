@@ -350,6 +350,15 @@ for (const [label, at] of Object.entries(laptop))
   await p.mouse.move(5, 5); await p.waitForTimeout(560);
   ok(await p.evaluate(b => !G.found.includes(0) && anchor === b, b) && /Vous avez choisi/.test(await pmsg()), 'a press dragged out of the grid finds nothing: its letter becomes the first letter');
   await p.locator(`.cell[data-i="${b}"]`).click(); await p.mouse.move(5, 5); await p.waitForTimeout(560);
+  // A press that goes 40 px away and comes back to its letter is a drag, not a click on that letter.
+  await p.evaluate(() => { anchor = -1; lastTap = null; render(); });
+  await p.locator(`.cell[data-i="${a}"]`).click(); await p.mouse.move(5, 5); await p.waitForTimeout(560);
+  const [bx, by] = await at(b);
+  await p.mouse.move(bx, by); await p.mouse.down();
+  await p.mouse.move(board.x + board.width + 40, by, { steps: 2 }); await p.mouse.move(bx + 3, by, { steps: 2 }); await p.mouse.up();
+  await p.mouse.move(5, 5); await p.waitForTimeout(560);
+  ok(await p.evaluate(b => !G.found.includes(0) && anchor === b, b), 'a press that goes away and comes back is a drag: it finds nothing');
+  await p.evaluate(() => { anchor = -1; lastTap = null; render(); });
 
   // A save that waits while a new grid starts: when the win cannot be saved, the next grid does not keep it.
   const won = await p.evaluate(async () => {
