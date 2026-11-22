@@ -54,6 +54,12 @@
     event.preventDefault();
     home();
   });
+  // A cross at the right end of the bar, where a window has its own: some players close the whole app
+  // to leave a game. This one closes the game and goes back to the library. The game is already saved.
+  if (bar && !$('quit')) {
+    bar.insertAdjacentHTML('beforeend', '<button id="quit" data-icon="close" aria-label="Fermer le jeu" title="Fermer le jeu et revenir à la liste des jeux"></button>');
+    $('quit').addEventListener('click', home);
+  }
   if ($('rail') && !$('rail').querySelector('.credit'))
     $('rail').insertAdjacentHTML('afterbegin', `<a class="credit" href="https://x.com/JulienCoulaud" target="_blank" rel="noopener"><img src="${libRoot}icons/julien.webp" width="34" height="34" alt=""><span>Fait par <b>Julien Coulaud</b></span></a>`);
   document.querySelectorAll('button[data-icon]').forEach(b => b.insertAdjacentHTML('afterbegin', icon(b.dataset.icon)));
@@ -88,6 +94,7 @@
   };
   // A new text flashes once, so his eye goes to the line when it changes.
   const say = text => {
+    stir();
     if (!msg) return;
     const changed = msg.textContent !== text;
     msg.textContent = text; fit();
@@ -116,6 +123,8 @@
       // A line under the label says what the choice means. It is drawn by the style sheet, so the
       // text of the button stays its label.
       // The label stays its name for a screen reader; the line is read as its description.
+      // Leaving the game looks like the cross of the bar: dark, with the cross, and it says it closes the game.
+      if (label === 'Retour aux jeux') { e.textContent = 'Fermer le jeu'; e.className = 'leave'; e.insertAdjacentHTML('afterbegin', icon('close')); }
       if (note) { e.classList.add('choice'); e.dataset.note = note; e.setAttribute('aria-label', label); e.setAttribute('aria-description', note); }
       e.onclick = () => { closeDialog(); if (fn) fn(); };
       b.appendChild(e);
@@ -144,6 +153,7 @@
     return $('level');
   }
   function showLevel(level) {
+    shownLevel = level;
     levelLine();
     $('levelName').textContent = 'Niveau ' + levelNames[level].toLowerCase();
     fitBar();
@@ -163,7 +173,7 @@
     const levels = Object.entries(levelNames).map(([key, label]) =>
       [label, () => start(key), !playing && key === (level || 'facile'), levelNotes[key]]);
     const buttons = playing ? [['Continuer la partie', null, true], ...levels]
-      : [...levels, level ? ['Continuer la partie', null] : ['Retour aux jeux', home]];
+      : [...levels, level ? ['Continuer la partie', null] : ['Retour aux jeux', home]]; // shown as "Fermer le jeu"
     dialog('Nouvelle partie', playing ? 'Attention : la partie en cours sera effacée si vous choisissez un niveau.'
       : 'Choisissez le niveau de difficulté.', buttons);
     $('box').classList.add('levels');
@@ -242,6 +252,44 @@
     const i = items.indexOf(document.activeElement);
     items[(i + (e.shiftKey ? -1 : 1) + items.length) % items.length].focus();
   }, true);
+
+  // The nudge. When he has done nothing for a while on his turn, the next thing to press breathes with a
+  // gold ring: a button the game marks with data-nudge (such as "Manche suivante"), else the hint button.
+  // The wait depends on the level. At Facile, the hint then shows by itself, once, unless the hint button
+  // has data-auto="no" because its hint plays the move for him (the sudoku fills a cell).
+  const NUDGE = { facile: [15, 40], moyen: [30, 0], fort: [60, 0] };
+  let shownLevel = null, idle = 0, nudged = null, autoDone = false;
+  function stir() {
+    idle = 0;
+    if (nudged) { nudged.classList.remove('nudge'); nudged = null; }
+  }
+  const visible = e => e && !e.disabled && !e.hidden && e.offsetParent !== null;
+  function nudgeTarget() {
+    const marked = [...document.querySelectorAll('[data-nudge]')].find(visible);
+    if (marked) return marked;
+    const hint = $('hintBtn');
+    return visible(hint) ? hint : null;
+  }
+  function tick() {
+    if (document.hidden || isOpen() || ($('table') && $('table').hidden)) { stir(); return; }
+    idle++;
+    const [pulse, auto] = NUDGE[shownLevel] || NUDGE.moyen;
+    const target = nudgeTarget();
+    if (!target) { stir(); return; }
+    if (idle >= pulse && target !== nudged) {
+      if (nudged) nudged.classList.remove('nudge');
+      target.classList.add('nudge');
+      nudged = target;
+    }
+    if (auto && idle >= auto && !autoDone && target.id === 'hintBtn' && target.dataset.auto !== 'no') {
+      autoDone = true;
+      target.click();
+    }
+  }
+  setInterval(tick, 1000);
+  // Only his own hand or keys allow a new automatic hint.
+  for (const type of ['pointerdown', 'keydown', 'wheel'])
+    addEventListener(type, e => { stir(); if (e.isTrusted) autoDone = false; }, { capture: true, passive: true });
 
   // A window that is behind (another window or the backup saved a newer game) cannot save:
   // it asks to reload, at each refused save, until it is reloaded.

@@ -16,7 +16,7 @@ try {
       if (!first) await page.click('#newBtn');
       // During a game "Continuer la partie" comes first; otherwise the levels come first.
       const texts = await choices.allTextContents();
-      const back = first ? 'Retour aux jeux' : 'Continuer la partie';
+      const back = first ? 'Fermer le jeu' : 'Continuer la partie';
       assert.ok([['Facile', 'Moyen', 'Difficile', back], [back, 'Facile', 'Moyen', 'Difficile']].some(o => o.join() === texts.join()), texts.join());
       // The yellow button: Facile the first time, "Continuer la partie" during a game.
       if (first) assert.equal(await page.locator('#overBtns button.primary').textContent(), 'Facile');

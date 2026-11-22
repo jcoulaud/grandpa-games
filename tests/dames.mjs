@@ -117,7 +117,7 @@ ok(await g(() => G.result && G.result.winner === 1), 'taking the last pieces win
 ok(await g(() => stats.won === 1 && document.getElementById('over').classList.contains('on')), 'the win is counted and shown');
 ok(await g(() => document.querySelectorAll('#trayW i.b').length === 20 && document.getElementById('tookW').textContent.includes('20 pièces')), 'every black piece is in his tray');
 await page.screenshot({ path: `${OUT}/dames-won.png` });
-ok((await g(() => [...document.querySelectorAll('#overBtns button')].map(b => b.textContent).join())) === 'Nouvelle partie,Retour aux jeux', 'the win offers a new game or the way back to the games');
+ok((await g(() => [...document.querySelectorAll('#overBtns button')].map(b => b.textContent).join())) === 'Nouvelle partie,Fermer le jeu', 'the win offers a new game or the way back to the games');
 await g(() => Kit.closeDialog());
 await page.click('#undoBtn');
 ok(await g(() => !G.result && G.b[46] === 2), 'undo after the win');
