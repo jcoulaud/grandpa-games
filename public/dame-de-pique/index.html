@@ -57,6 +57,9 @@
   @keyframes took { 40% { transform: scale(1.06); } }
   .ava { width: 52px; height: 52px; border-radius: 50%; flex: none; display: grid; place-items: center;
     font: 700 26px var(--ui); color: #fff; box-shadow: inset 0 -3px 0 rgba(0,0,0,.18); }
+  /* The players of the computer: a cartoon face, drawn on their own color while it loads. */
+  img.ava { object-fit: cover; box-shadow: 0 0 0 2px #fff, 0 1px 4px rgba(0,0,0,.25); }
+  .face { width: 30px; height: 30px; border-radius: 50%; flex: none; object-fit: cover; font: 700 20px/30px var(--ui); color: #fff; text-align: center; }
   .seat b { display: block; font: 700 24px/1.15 var(--ui); }
   .seat .where { display: block; font: 500 20px/1.3 var(--ui); color: #5A6461; }
   .seat .pts { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; font: 600 20px/1.2 var(--ui); color: #3A4542; }
@@ -70,7 +73,7 @@
   @keyframes dot { 50% { opacity: .2; } }
   /* How many cards each one holds: a small fan of backs. */
   .backs { position: relative; height: 36px; }
-  /* Jeanne and Louise, on the sides, are narrow: their cards go under their name. */
+  /* The players on the sides, are narrow: their cards go under their name. */
   #seat1 .backs, #seat3 .backs { grid-column: 1 / -1; justify-self: center; }
   #seat2 { grid-template-columns: auto auto auto; min-width: 390px; }
   #seat1, #seat3 { min-width: 270px; }
@@ -144,7 +147,7 @@
   .sheet td:first-child { text-align: left; }
   .sheet td.n { text-align: right; font-variant-numeric: tabular-nums; }
   .sheet tr.me td { background: #FFF4D6; }
-  .sheet tr.best td:first-child::after { content: " · en tête"; font: 600 20px var(--ui); color: #6A3F8C; }
+  .sheet tr.best td:first-child .who::after { content: "· en tête"; font: 600 20px var(--ui); color: #6A3F8C; }
   .sheet .note { font: 600 21px/1.35 var(--ui); color: #4B2E69; max-width: 520px; }
 
   /* The side column: the scores, then the last trick. */
@@ -159,8 +162,7 @@
   #scores td.n { text-align: right; padding-left: 8px; font-variant-numeric: tabular-nums; }
   #scores td.n b { font-weight: 700; }
   #scores tr.me td { color: #1B2422; }
-  #scores .who { display: flex; align-items: center; gap: 8px; }
-  #scores .dot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+  .who { display: flex; align-items: center; gap: 8px; }
   #state { margin: 10px 0 0; display: grid; gap: 4px; font: 600 20px/1.3 var(--ui); color: #3A4542; }
   #state span { display: flex; align-items: center; gap: 8px; }
   #state svg { width: 18px; height: 18px; flex: none; }
@@ -177,6 +179,7 @@
   .mini .f .s { width: 22px; height: 22px; }
   .mini.won .f { outline: 4px solid #B98AE0; outline-offset: -1px; }
   .mini span { font: 600 20px var(--ui); color: #55605C; }
+  .mini .face { width: 34px; height: 34px; line-height: 34px; }
   #lastText { margin: 10px 0 0; font: 600 20px/1.3 var(--ui); color: #3A4542; }
 
   #helpText .demo { display: flex; gap: 22px; align-items: center; margin: 6px 0 10px; }
@@ -229,7 +232,7 @@
 <div id="help" data-title="Comment jouer">
   <section class="page">
     <h3>Le but</h3>
-    <p>Vous jouez à quatre : vous, en bas, et trois joueurs de l'ordinateur, Jeanne à gauche, Paul en face et Louise à droite.</p>
+    <p>Vous jouez à quatre : vous, en bas, et trois joueurs de l'ordinateur, <span id="castLine">Jeanne à gauche, Paul en face et Louise à droite</span>. Ce ne sont pas les mêmes à chaque partie.</p>
     <div class="demo">
       <div class="pair"><span class="tag" style="color:#C4122F"><svg viewBox="0 0 100 100" fill="#C4122F"><use href="#su1"/></svg></span><span class="tag">D<svg viewBox="0 0 100 100" fill="#14171A"><use href="#su0"/></svg></span></div>
       <p>Chaque cœur que vous ramassez vaut 1 point. La dame de pique vaut 13 points. Il faut en prendre le moins possible.</p>
@@ -275,14 +278,34 @@ const FIRST_MS = 650;      // before the first one answers his card
 const SHOW_MS = 1500;      // a full trick stays on the table before it is taken away
 const AWAY_MS = 500;       // the trick slides to the player who took it
 
-const PLAYERS = [
-  { name: 'Vous', where: '', color: '#C9951A' },
-  { name: 'Jeanne', where: 'à votre gauche', color: '#D9705E', pro: 'elle' },
-  { name: 'Paul', where: 'en face', color: '#4F86B8', pro: 'il' },
-  { name: 'Louise', where: 'à votre droite', color: '#5E9E55', pro: 'elle' },
-];
-// To whom the cards go, as he sees it.
-const TO = { 1: 'à Jeanne, à votre gauche', 2: 'à Paul, en face de vous', 3: 'à Louise, à votre droite' };
+// The players the computer can seat. Each new game seats three of them, none from the game before.
+const CAST = {
+  jeanne: { name: 'Jeanne', pro: 'elle', color: '#F2B8A8' }, louise: { name: 'Louise', pro: 'elle', color: '#BFE3C0' },
+  simone: { name: 'Simone', pro: 'elle', color: '#B9D7F0' }, odette: { name: 'Odette', pro: 'elle', color: '#D8C8F0' },
+  colette: { name: 'Colette', pro: 'elle', color: '#F5E2A0' }, yvonne: { name: 'Yvonne', pro: 'elle', color: '#F7CFA8' },
+  paul: { name: 'Paul', pro: 'il', color: '#B4CCE8' }, marcel: { name: 'Marcel', pro: 'il', color: '#E8D5B0' },
+  rene: { name: 'René', pro: 'il', color: '#B0E0DA' }, andre: { name: 'André', pro: 'il', color: '#CDE6B8' },
+  henri: { name: 'Henri', pro: 'il', color: '#F0C6D0' }, gaston: { name: 'Gaston', pro: 'il', color: '#D6CCEE' },
+};
+const WHERE = ['', 'à votre gauche', 'en face', 'à votre droite'];
+let cast = ['jeanne', 'paul', 'louise'], PLAYERS, TO;
+function setCast(ids) {
+  cast = ids;
+  PLAYERS = [{ name: 'Vous', where: '', color: '#C9951A' },
+    ...ids.map((id, i) => ({ ...CAST[id], id, where: WHERE[i + 1] }))];
+  // To whom the cards go, as he sees it.
+  TO = { 1: `à ${PLAYERS[1].name}, à votre gauche`, 2: `à ${PLAYERS[2].name}, en face de vous`, 3: `à ${PLAYERS[3].name}, à votre droite` };
+  $('castLine').textContent = `${PLAYERS[1].name} à gauche, ${PLAYERS[2].name} en face et ${PLAYERS[3].name} à droite`;
+}
+function newCast() {
+  const pool = Object.keys(CAST).filter(id => !cast.includes(id));
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  setCast(pool.slice(0, 3));
+}
+setCast(cast);
+// A player's face: his own "V", or the cartoon of a player of the computer.
+const face = (s, cls = 'face') => s === 0 ? `<div class="${cls}" style="background:${PLAYERS[0].color}">V</div>`
+  : `<img class="${cls}" src="../lib/avatars/${PLAYERS[s].id}.webp" alt="" style="background:${PLAYERS[s].color}">`;
 const ARROWS = { 1: '<path d="M19 12H5M11 6l-6 6 6 6"/>', 2: '<path d="M12 19V5M6 11l6-6 6 6"/>', 3: '<path d="M5 12h14M13 6l6 6-6 6"/>' };
 const HEART = '<svg viewBox="0 0 100 100" aria-hidden="true"><use href="#su1"/></svg>';
 const SPADE = '<svg viewBox="0 0 100 100" aria-hidden="true"><use href="#su0"/></svg>';
@@ -327,7 +350,7 @@ function save() {
   if (started && G.phase !== 'over') parts.push('Partie en cours');
   if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
   for (const n of [Infinity, 4, 0]) {
-    const data = { v: 1, G, picks, got, undo: n ? undo.slice(-n) : [], level, stats, wonNow, started };
+    const data = { v: 1, G, cast, picks, got, undo: n ? undo.slice(-n) : [], level, stats, wonNow, started };
     if (GG.save('dame-de-pique', data, { summary: parts.join(' · ') })) return true;
     if (stale) return false;
   }
@@ -338,7 +361,8 @@ function load() {
   try {
     const v = GG.load('dame-de-pique');
     if (!v || !v.G || !Array.isArray(v.G.hands) || v.G.hands.length !== 4) return false;
-    G = v.G; stats = v.stats || stats; undo = Array.isArray(v.undo) ? v.undo : [];
+    G = v.G; stats = v.stats || stats;
+    if (Array.isArray(v.cast) && v.cast.length === 3 && v.cast.every(id => Object.hasOwn(CAST, id))) setCast(v.cast); undo = Array.isArray(v.undo) ? v.undo : [];
     level = Object.hasOwn(DDP.LEVELS, v.level) ? v.level : 'facile';
     wonNow = !!v.wonNow; started = v.started !== false;
     picks = G.phase === 'pass' && Array.isArray(v.picks) ? v.picks.filter(c => G.hands[0].includes(c)).slice(0, 3) : [];
@@ -577,6 +601,7 @@ function newGame(lv) {
   cancelAll();
   if (lv) level = lv;
   Kit.showLevel(level);
+  newCast();
   G = DDP.newGame(); picks = []; got = []; undo = []; hint = []; wonNow = false; started = false;
   // A stale window cannot save, so it does not count a game either.
   if (save()) GG.track('dame-de-pique', 'start');
@@ -650,7 +675,7 @@ function render() {
   for (const s of [1, 2, 3]) {
     const e = $('seat' + s), p = PLAYERS[s], n = G.hands[s].length;
     const backs = Array.from({ length: n }, (_, i) => `<i style="left:${i * 7}px"></i>`).join('');
-    e.innerHTML = `<div class="ava" style="background:${p.color}">${p.name[0]}</div>
+    e.innerHTML = `${face(s, 'ava')}
       <div><b>${p.name}${G.qsTo === s ? QS_CHIP : ''}</b>${s === 2 ? '' : `<span class="where">${cap(p.where)}</span>`}
       <span class="pts">${HEART}${seatPts(s)}</span>
       <span class="now"><span class="dots"><i></i><i></i><i></i></span>${p.name} joue</span></div>
@@ -675,7 +700,7 @@ function render() {
   // His own seat, above the left end of his hand: his points, his total when the score column is
   // hidden, and "À vous de jouer" on his turn.
   const s0 = $('seat0');
-  s0.innerHTML = `<div class="ava" style="background:${PLAYERS[0].color}">V</div><b>Vous${G.qsTo === 0 ? QS_CHIP : ''}</b>
+  s0.innerHTML = `${face(0, 'ava')}<b>Vous${G.qsTo === 0 ? QS_CHIP : ''}</b>
     <span class="pts">${HEART}${seatPts(0)}</span><span class="now">À vous de jouer</span>`;
   s0.classList.toggle('turn', playing);
   s0.classList.toggle('narrow', !L.sideW);
@@ -765,7 +790,7 @@ function render() {
         : `${names(G.result.winners)} ${verb(G.result.winners, 'a', 'ont')} le moins de points.`)
       : '';
     $('scoreTable').innerHTML = '<tr><th><span class="sr">Joueur</span></th><th>Cette manche</th><th>Total</th></tr>' + [0, 1, 2, 3].map(s =>
-      `<tr class="${s === 0 ? 'me' : ''} ${G.scores[s] === low ? 'best' : ''}"><td>${PLAYERS[s].name}</td><td class="n">+${G.handPts[s]}</td><td class="n"><b>${G.scores[s]}</b></td></tr>`).join('');
+      `<tr class="${s === 0 ? 'me' : ''} ${G.scores[s] === low ? 'best' : ''}"><td><span class="who">${face(s)}${PLAYERS[s].name}</span></td><td class="n">+${G.handPts[s]}</td><td class="n"><b>${G.scores[s]}</b></td></tr>`).join('');
     $('nextBtn').textContent = over ? 'Nouvelle partie' : 'Manche suivante';
     place(ss, cx, cy);
   }
@@ -778,7 +803,7 @@ function render() {
     side.classList.remove('tight');
     const low = Math.min(...G.scores);
     $('scoreSide').innerHTML = '<tr><th><span class="sr">Joueur</span></th><th>Manche</th><th>Total</th></tr>' + [0, 1, 2, 3].map(s =>
-      `<tr class="${s === 0 ? 'me' : ''}"><td><span class="who"><span class="dot" style="background:${PLAYERS[s].color}"></span>${PLAYERS[s].name}</span></td>
+      `<tr class="${s === 0 ? 'me' : ''}"><td><span class="who">${face(s)}${PLAYERS[s].name}</span></td>
        <td class="n">${G.phase === 'done' || G.phase === 'over' ? '+' + G.handPts[s] : G.pts[s]}</td><td class="n"><b>${G.scores[s]}</b></td></tr>`).join('');
     // Where the queen of spades is, and whether hearts may lead.
     const inPlay = G.phase === 'play' || G.phase === 'done' || G.phase === 'over';
@@ -789,7 +814,7 @@ function render() {
     if (last) {
       $('lastCards').innerHTML = last.cards.map((c, i) => {
         const seat = (last.leader + i) % 4;
-        return `<div class="mini${seat === last.winner ? ' won' : ''}">${i === 0 ? '<em>1er</em>' : ''}<div class="f ${rd(c) ? 'red' : 'black'}">${RANKS[c % 13 + 1]}${suitHtml(suit(c))}</div><span>${PLAYERS[seat].name}</span></div>`;
+        return `<div class="mini${seat === last.winner ? ' won' : ''}">${i === 0 ? '<em>1er</em>' : ''}<div class="f ${rd(c) ? 'red' : 'black'}">${RANKS[c % 13 + 1]}${suitHtml(suit(c))}</div>${face(seat)}<span>${PLAYERS[seat].name}</span></div>`;
       }).join('');
       $('lastText').textContent = (last.winner === 0 ? 'Vous l\'avez ramassé' : `${PLAYERS[last.winner].name} l'a ramassé`) + ` : ${ptsText(last.pts)}.`;
     }

@@ -13,6 +13,7 @@ const CORE = [
   'freecell/', 'freecell/solver.js', 'freecell/icon.svg',
   'dames/', 'dames/engine.js', 'dames/icon.svg',
   'dame-de-pique/', 'dame-de-pique/engine.js', 'dame-de-pique/icon.svg',
+  ...['jeanne', 'louise', 'simone', 'odette', 'colette', 'yvonne', 'paul', 'marcel', 'rene', 'andre', 'henri', 'gaston'].map(id => `lib/avatars/${id}.webp`),
 ];
 
 self.addEventListener('install', e => {
