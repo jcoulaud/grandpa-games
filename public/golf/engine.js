@@ -4,8 +4,9 @@
 // Metres and seconds, on the ground plane x, z. A hole is plain data:
 //   spine     the centre line of the lane, [x, z, width] per joint; the lane is this line with its width
 //   outline   the lane's border, a closed polygon; the ball stays inside it
-//   regions   closed shapes inside the lane the ball cannot enter: stone, water, flowers, mill
-//   bumpers   round posts, bumps (hills and dips), ramp (a raised green), mill (turning sails)
+//   regions   closed shapes inside the lane the ball cannot enter: stone, rock, board, water, flowers, mill
+//   sands     patches of sand the ball crosses slowly
+//   bumpers   round posts, bumps (hills, dips and waves), ramp (a raised green), mill (turning sails)
 //   parts     what the scene draws for each obstacle: bridge, tunnel, gate, mill, bank
 //   tee, cup, par, name
 // A shot is a target point: the ball leaves towards it with the pace that stops it there on flat open
@@ -18,7 +19,8 @@ const ROLL = 1.1, // rolling friction, m/s²
   // and a ball that stops on the side of a hill or a ramp rolls back down.
   SLOW = 0.3, // m/s
   REST = 0.35, // m/s², the friction under SLOW
-  SLOPE = 6, // pull of a slope, m/s² per unit of gradient
+  SLOPE = 7, // pull of a slope on a rolling ball, 5/7 of g, m/s² per unit of gradient
+  SAND = 4.5, // friction in sand, m/s²
   STEP = 0.05, // longest move in one sub-step, well under the ball's radius
   STEPS = 25 / dt,
   REACH = 24,
@@ -34,28 +36,62 @@ const ROLL = 1.1, // rolling friction, m/s²
   LIP_LOSS = 0.8;
 
 export const LEVEL = {
-  facile: { slip: [0.07, 0.24], width: [2.7, 3.1], cup: 0.36, catch: 1.15, bend: [18, 30], ramp: 0.18, bridge: 1.3, tunnel: 1.1, gate: 1, mill: 1, bumpers: [1, 2] },
-  moyen: { slip: [0.05, 0.17], width: [2.2, 2.6], cup: 0.29, catch: 0.95, bend: [28, 42], ramp: 0.26, bridge: 1, tunnel: 0.85, gate: 0.8, mill: 0.8, bumpers: [2, 3] },
-  fort: { slip: [0.035, 0.12], width: [1.85, 2.2], cup: 0.24, catch: 0.8, bend: [34, 48], ramp: 0.32, bridge: 0.85, tunnel: 0.72, gate: 0.6, mill: 0.66, bumpers: [3, 3] }
+  facile: { slip: [0.07, 0.24], width: [2.7, 3.1], cup: 0.36, catch: 1.15, bend: [18, 30], ramp: 0.18, bridge: 1.3, tunnel: 1.1, gate: 1, mill: 1, bumpers: [2, 3], gap: 0.75, wave: 0.07, boards: 2 },
+  moyen: { slip: [0.05, 0.17], width: [2.2, 2.6], cup: 0.29, catch: 0.95, bend: [28, 42], ramp: 0.26, bridge: 1, tunnel: 0.85, gate: 0.8, mill: 0.8, bumpers: [2, 4], gap: 0.62, wave: 0.09, boards: 2 },
+  fort: { slip: [0.035, 0.12], width: [1.85, 2.2], cup: 0.24, catch: 0.8, bend: [34, 48], ramp: 0.32, bridge: 0.85, tunnel: 0.72, gate: 0.6, mill: 0.66, bumpers: [3, 4], gap: 0.52, wave: 0.11, boards: 3 }
 };
-// Hole types: a lane shape and the obstacles on it. The level picks the pool; the first hole is gentle and
-// the last one is the showpiece.
+// Hole types: a lane shape and the obstacles on it, most often two. The level picks the pool; the first
+// hole is gentle and the last one is the showpiece. A hole that the solver cannot fit drops its last
+// obstacle first, so it keeps the one it is named after.
 const T = (id, shape, ...features) => ({ id, shape, features });
 const POOLS = {
   facile: {
-    opener: [T('droit', 'straight')],
-    middle: [T('champignons', 'straight', 'bumpers'), T('green', 'wide'), T('virage', 'dogleg'), T('terrasse', 'straight', 'ramp'), T('portillon-large', 'long', 'gate'), T('virage-champignons', 'dogleg', 'bumpers'), T('green-champignons', 'wide', 'bumpers')],
-    finale: [T('grand-pont', 'bigdog', 'bridge')]
+    opener: [T('droit', 'straight', 'bumpers')],
+    middle: [
+      T('champignons', 'straight', 'bumpers', 'sand'),
+      T('rocher', 'wide', 'rock'),
+      T('virage', 'dogleg', 'bumpers'),
+      T('terrasse', 'straight', 'ramp', 'bumpers'),
+      T('portillon-large', 'long', 'gate', 'sand'),
+      T('vagues', 'long', 'waves', 'bumpers'),
+      T('sable', 'dogleg', 'sand', 'bumpers'),
+      T('green-champignons', 'wide', 'bumpers', 'rock')
+    ],
+    finale: [T('grand-pont', 'bigdog', 'bridge', 'bumpers')]
   },
   moyen: {
-    opener: [T('green', 'wide'), T('droit', 'straight')],
-    middle: [T('equerre', 'ell', 'bank'), T('colline', 'dogleg', 'hill'), T('cuvette', 'straight', 'dip'), T('tunnel', 'long', 'tunnel'), T('terrasse', 'dogleg', 'ramp'), T('champignons', 'wide', 'bumpers'), T('pont', 'long', 'bridge'), T('virage', 'dogleg', 'bank')],
-    finale: [T('grande-terrasse', 'long', 'tunnel', 'ramp')]
+    opener: [T('green', 'wide', 'bumpers'), T('droit', 'straight', 'sand')],
+    middle: [
+      T('equerre', 'ell', 'bank', 'rock'),
+      T('colline', 'dogleg', 'hill', 'sand'),
+      T('cuvette', 'long', 'dip', 'bumpers'),
+      T('tunnel', 'long', 'tunnel', 'sand'),
+      T('terrasse', 'dogleg', 'ramp', 'bumpers'),
+      T('champignons', 'long', 'bumpers', 'rock'),
+      T('pont', 'long', 'bridge', 'waves'),
+      T('virage', 'dogleg', 'bank', 'bumpers'),
+      T('chicane', 'long', 'chicane', 'sand'),
+      T('rocher', 'long', 'rock', 'waves'),
+      T('vagues', 'long', 'waves', 'gate')
+    ],
+    finale: [T('grande-terrasse', 'long', 'tunnel', 'ramp', 'bumpers')]
   },
   fort: {
-    opener: [T('virage', 'dogleg')],
-    middle: [T('lacets', 'ess', 'bank'), T('portillon', 'long', 'gate'), T('equerre', 'ell', 'bank'), T('colline', 'dogleg', 'hill'), T('tunnel', 'dogleg', 'tunnel'), T('cuvette', 'long', 'dip', 'bumpers'), T('terrasse', 'straight', 'ramp'), T('lacets-portillon', 'ess', 'gate')],
-    finale: [T('moulin', 'straight', 'mill')]
+    opener: [T('virage', 'dogleg', 'bumpers')],
+    middle: [
+      T('lacets', 'ess', 'bank', 'bumpers'),
+      T('portillon', 'long', 'gate', 'sand'),
+      T('equerre', 'ell', 'bank', 'rock'),
+      T('colline', 'dogleg', 'hill', 'bumpers'),
+      T('tunnel', 'dogleg', 'tunnel', 'sand'),
+      T('cuvette', 'long', 'dip', 'bumpers'),
+      T('terrasse', 'straight', 'ramp', 'rock'),
+      T('lacets-portillon', 'ess', 'gate', 'sand'),
+      T('chicane', 'long', 'chicane', 'sand'),
+      T('rocher', 'long', 'rock', 'waves'),
+      T('vagues', 'long', 'waves', 'chicane')
+    ],
+    finale: [T('moulin', 'long', 'mill', 'bumpers')]
   }
 };
 
@@ -191,7 +227,7 @@ function prepare(h) {
     }
   };
   add(h.outline, 0.78);
-  for (const r of h.regions) add(r.pts, r.kind === 'water' ? 0.6 : 0.7);
+  for (const r of h.regions) add(r.pts, r.kind === 'water' ? 0.6 : r.kind === 'board' ? 0.75 : 0.7);
   let x0 = Infinity,
     z0 = Infinity,
     x1 = -Infinity,
@@ -227,6 +263,21 @@ function prepare(h) {
 }
 
 // ---------- The shot ----------
+const inSand = (h, x, z) => h.sands.some((s) => Math.hypot(x - s.x, z - s.z) < s.r && inside(s.pts, x, z));
+// A bounce off a wall or a post with normal n: the ball keeps e of the pace into the wall, and the rub
+// takes a share of the pace along it, more for a hit head-on than for a glancing one. A harder hit
+// gives a softer bounce, as rubber and wood do.
+function bounce(v, nx, nz, e) {
+  const vn = v[0] * nx + v[1] * nz;
+  if (vn >= 0) return;
+  const tx = v[0] - vn * nx,
+    tz = v[1] - vn * nz,
+    speed = Math.hypot(v[0], v[1]),
+    k = e * (1 - 0.2 * Math.min(1, -vn / 4)),
+    rub = 1 - 0.18 * (-vn / speed);
+  v[0] = tx * rub - k * vn * nx;
+  v[1] = tz * rub - k * vn * nz;
+}
 // The pace that stops the ball after len metres on flat open ground: ROLL until SLOW, then REST.
 function pace(len) {
   const tail = (SLOW * SLOW) / (2 * REST);
@@ -238,7 +289,8 @@ export function simulate(h, start, target, record = true) {
     g = [0, 0],
     cup = h.cup,
     cupR2 = cup.r * cup.r,
-    m = h.mill;
+    m = h.mill,
+    vel = [0, 0];
   let x = start.x,
     z = start.z;
   const len = Math.hypot(target.x - x, target.z - z),
@@ -267,7 +319,7 @@ export function simulate(h, start, target, record = true) {
     vx -= SLOPE * g[0] * dt;
     vz -= SLOPE * g[1] * dt;
     let v = Math.hypot(vx, vz);
-    const fr = v > SLOW ? ROLL : REST;
+    const fr = h.sands.length && inSand(h, x, z) ? SAND : v > SLOW ? ROLL : REST;
     if (v <= fr * dt) {
       vx = vz = 0;
       // At rest, unless the slope is steeper than the friction can hold.
@@ -286,7 +338,9 @@ export function simulate(h, start, target, record = true) {
         oz = z;
       x += vx * hs;
       z += vz * hs;
-      let hit = false;
+      let hit = false,
+        sx = 0,
+        sz = 0;
       const c = Math.floor((x - P.x0) / CELL),
         r = Math.floor((z - P.z0) / CELL);
       const cell = c >= 0 && r >= 0 && c < P.cols && r < P.rows ? P.grid[r * P.cols + c] : null;
@@ -303,11 +357,12 @@ export function simulate(h, start, target, record = true) {
               nz = d > 1e-9 ? dz / d : 0;
             x = s.x + nx * min;
             z = s.z + nz * min;
-            const vn = vx * nx + vz * nz;
-            if (vn < 0) {
-              vx -= 1.9 * vn * nx;
-              vz -= 1.9 * vn * nz;
-            }
+            vel[0] = vx;
+            vel[1] = vz;
+            bounce(vel, nx, nz, 0.62);
+            [vx, vz] = vel;
+            sx += nx;
+            sz += nz;
             hit = true;
             continue;
           }
@@ -330,14 +385,12 @@ export function simulate(h, start, target, record = true) {
             nz = dz / d;
           x = cx + nx * radius;
           z = cz + nz * radius;
-          const vn = vx * nx + vz * nz;
-          if (vn < 0) {
-            vx -= (1 + s.bounce) * vn * nx;
-            vz -= (1 + s.bounce) * vn * nz;
-            // The rail also takes a little of the run along it.
-            vx *= 0.97;
-            vz *= 0.97;
-          }
+          vel[0] = vx;
+          vel[1] = vz;
+          bounce(vel, nx, nz, s.bounce);
+          [vx, vz] = vel;
+          sx += nx;
+          sz += nz;
           hit = true;
         }
       if (m) {
@@ -352,16 +405,26 @@ export function simulate(h, start, target, record = true) {
             const vu = vx * m.dx + vz * m.dz;
             vx -= 1.6 * vu * m.dx;
             vz -= 1.6 * vu * m.dz;
+            sx -= Math.sign(vu) * m.dx;
+            sz -= Math.sign(vu) * m.dz;
             hit = true;
           }
         }
       }
-      // A push that left the lane is undone, so the walls never let the ball out.
+      // A push that left the lane is undone, so the walls never let the ball out. In a corner the ball
+      // bounces off the sum of the walls it touches, so it leaves at an angle and not straight back.
       if (hit && !free(h, x, z)) {
         x = ox;
         z = oz;
-        vx *= -0.5;
-        vz *= -0.5;
+        const l = Math.hypot(sx, sz);
+        vel[0] = vx;
+        vel[1] = vz;
+        if (l > 1e-9) bounce(vel, sx / l, sz / l, 0.6);
+        if (l <= 1e-9 || vel[0] * sx + vel[1] * sz <= 0) {
+          vel[0] *= -0.5;
+          vel[1] *= -0.5;
+        }
+        [vx, vz] = vel;
       }
       if (hit && firstBounce === null) firstBounce = step;
       const dx = x - cup.x,
@@ -395,21 +458,23 @@ export function simulate(h, start, target, record = true) {
   return { path, end: point(x, z), firstBounce, sunk, steps: step };
 }
 // How much of the path the preview shows. The scene fades the dots out over the last FADE metres, so the
-// end reads as a choice, not a cut. Facile: all of it. Moyen: until 0.7 m after the first bounce.
-// Difficile: the first 3 m.
+// end reads as a choice, not a cut. Facile: all of it. Moyen: until 0.7 m after the first bounce, and never
+// less than Difficile. Difficile: the first 3 m.
 export const FADE = { facile: 0, moyen: 0.7, fort: 1 };
 export function reveal(level, shot) {
   const n = shot.path.length - 1;
   if (level === 'facile') return n;
-  const bounce = level === 'moyen' ? (shot.firstBounce ?? n) : 0,
-    limit = level === 'moyen' ? 0.7 : 3;
-  let run = 0,
-    i = 1;
-  for (; i < n; i++) {
-    if (i > bounce) run += Math.hypot(shot.path[i].x - shot.path[i - 1].x, shot.path[i].z - shot.path[i - 1].z);
-    if (run > limit) break;
-  }
-  return Math.min(n, i);
+  const upTo = (from, limit) => {
+    let run = 0,
+      i = 1;
+    for (; i < n; i++) {
+      if (i > from) run += Math.hypot(shot.path[i].x - shot.path[i - 1].x, shot.path[i].z - shot.path[i - 1].z);
+      if (run > limit) break;
+    }
+    return Math.min(n, i);
+  };
+  const first = upTo(0, 3);
+  return level === 'moyen' ? Math.max(first, upTo(shot.firstBounce ?? n, 0.7)) : first;
 }
 
 // ---------- The solver ----------
@@ -614,6 +679,10 @@ const NOUNS = {
   cuvette: [['f', 'cuvette'], ['m', 'creux'], ['m', 'vallon']],
   tunnel: [['m', 'tunnel'], ['m', 'passage'], ['f', 'grotte']],
   portillon: [['m', 'portillon'], ['f', 'porte'], ['m', 'col']],
+  rocher: [['m', 'rocher'], ['f', 'pierre'], ['m', 'caillou']],
+  sable: [['m', 'bac à sable'], ['f', 'plage'], ['f', 'dune']],
+  vagues: [['f', 'vague'], ['f', 'houle'], ['f', 'ondulation']],
+  chicane: [['f', 'chicane'], ['m', 'labyrinthe'], ['f', 'barrière']],
   moulin: [['m', 'moulin']]
 };
 const SHAPE_NAMES = { straight: 'droit', long: 'droit', wide: 'green', dogleg: 'virage', bigdog: 'virage', ell: 'equerre', ess: 'lacets' };
@@ -639,17 +708,17 @@ const rad = (d) => (d * Math.PI) / 180;
 function spineFor(shape, L, r, m, w) {
   switch (shape) {
     case 'straight':
-      return [[0, 0, w], [r(7.4, 8.8), 0, w]];
+      return [[0, 0, w], [r(8, 9.4), 0, w]];
     case 'long':
-      return [[0, 0, w], [r(9.4, 10.8), 0, w]];
+      return [[0, 0, w], [r(10.2, 11.6), 0, w]];
     case 'wide': {
-      const a = r(5, 6.2),
+      const a = r(5.6, 6.8),
         g = w * r(1.45, 1.6);
       return [[0, 0, w], [a, 0, w], [a + 1.3, 0, g], [a + 1.3 + r(2.5, 3), 0, g]];
     }
     case 'dogleg': {
-      const a = r(4.8, 5.8),
-        b = r(4.2, 5),
+      const a = r(5.3, 6.3),
+        b = r(4.6, 5.4),
         t = rad(r(...L.bend));
       return [[0, 0, w], [a, 0, w], [a + b * Math.cos(t), m * b * Math.sin(t), w]];
     }
@@ -661,15 +730,15 @@ function spineFor(shape, L, r, m, w) {
       return [[0, 0, w], [a, 0, w], [a + b * Math.cos(t), m * b * Math.sin(t), w]];
     }
     case 'ell': {
-      const a = r(5, 6),
-        b = r(3.8, 4.6);
+      const a = r(5.5, 6.5),
+        b = r(4.2, 5);
       return [[0, 0, w], [a, 0, w], [a, m * b, w]];
     }
     default: {
       // ess: two bends of 50 to 65°, back to the first direction.
-      const a = r(3.4, 4.1),
-        b = r(3, 3.5),
-        c = r(3.4, 4),
+      const a = r(3.8, 4.5),
+        b = r(3.2, 3.7),
+        c = r(3.8, 4.4),
         t = rad(r(50, 65));
       return [[0, 0, w], [a, 0, w], [a + b * Math.cos(t), m * b * Math.sin(t), w], [a + b * Math.cos(t) + c, m * b * Math.sin(t), w]];
     }
@@ -688,6 +757,7 @@ function build(level, type, rnd) {
     spine,
     outline: [...left, ...[...right].reverse()],
     regions: [],
+    sands: [],
     bumpers: [],
     bumps: [],
     ramp: null,
@@ -735,8 +805,10 @@ function build(level, type, rnd) {
     return { x, z, dx: g.dx, dz: g.dz, len, width: c, lane: g.w, o, f, cx: at(k, s, 0) };
   };
   // A free stretch of a segment of even width for an obstacle of the given half-length, clear of the tee,
-  // the cup and the other obstacles. The preferred segment first, then the longest ones.
+  // the cup and the other obstacles. The preferred segment first, then the longest ones. With two
+  // obstacles, the first one tries the tee end first and the second one the cup end, so both fit.
   const used = segs.map(() => []);
+  let bias = null;
   const place = (half, from = 0.5, prefer = straight) => {
     const order = [prefer, ...segs.map((_, k) => k).sort((a, b) => segs[b].len - segs[a].len)].filter((k) => segs[k].w === segs[k].wb);
     for (const k of order) {
@@ -745,7 +817,7 @@ function build(level, type, rnd) {
         lo = (k === 0 ? 2.1 : t0 + 0.4) + half,
         hi = g.len - (k === last ? g.len - cupS + 1.1 : t1 + 0.4) - half;
       if (lo > hi) continue;
-      for (const f of [from, 0.5, 0.2, 0.8, 0, 1]) {
+      for (const f of [bias ?? from, from, 0.5, 0.2, 0.8, 0, 1]) {
         const s = lo + (hi - lo) * f;
         if (used[k].every(([a, b]) => s + half + 0.3 < a || s - half - 0.3 > b)) {
           used[k].push([s - half, s + half]);
@@ -756,7 +828,11 @@ function build(level, type, rnd) {
     return null;
   };
   // A raised green comes first: it takes the end of the last segment.
-  for (const feature of [...type.features].sort((a, b) => (b === 'ramp') - (a === 'ramp'))) {
+  const features = [...type.features].sort((a, b) => (b === 'ramp') - (a === 'ramp')),
+    placed = features.filter((f) => f !== 'ramp' && f !== 'bank');
+  for (const feature of features) {
+    const i = placed.indexOf(feature);
+    bias = placed.length > 1 && i >= 0 ? (i ? 0.9 : 0.1) : null;
     if (feature === 'bank') {
       // Angled boards across the outer corner of each bend, for bank shots. A flower bed fills the corner.
       for (let k = 1; k < spine.length - 1; k++) {
@@ -773,10 +849,13 @@ function build(level, type, rnd) {
         h.parts.push({ kind: 'bank', a: A, b: B, c: C });
       }
     } else if (feature === 'bumpers') {
-      // Toadstools in a zigzag, one every 0.9 m.
-      const count = Math.round(r(L.bumpers[0], L.bumpers[1] + 0.49)),
-        spot = place(0.45 * count, r(0.3, 0.7), type.shape === 'wide' ? last : straight);
+      // Toadstools in a zigzag, one every 0.9 m; fewer where the lane has no room for them all.
+      let count = Math.round(r(L.bumpers[0], L.bumpers[1] + 0.49)),
+        spot = null;
+      const from = r(0.3, 0.7);
+      for (; count > 0 && !spot; count--) spot = place(0.45 * count, from, type.shape === 'wide' ? last : straight);
       if (!spot) return null;
+      count++;
       const g = segs[spot.k],
         side = rnd() < 0.5 ? 1 : -1;
       for (let i = 0; i < count; i++) {
@@ -786,6 +865,74 @@ function build(level, type, rnd) {
           v = side * (i % 2 ? -1 : 1) * Math.min(r(0.12, 0.3) * g.w, g.w / 2 - size - 3 * radius - 0.03),
           [x, z] = at(spot.k, s, v);
         h.bumpers.push({ x, z, r: size });
+      }
+    } else if (feature === 'rock') {
+      // A rock in the middle of the lane: two ways round it, each at least the level's gap wide.
+      const spot = place(0.55, r(0.3, 0.7));
+      if (!spot) return null;
+      const g = segs[spot.k],
+        o = r(-0.12, 0.12) * g.w,
+        across = g.w / 2 - Math.abs(o) - L.gap - r(0, 0.12),
+        long = r(0.35, 0.5);
+      if (across < 0.22) return null;
+      const pts = [];
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * Math.PI * 2,
+          bump = 1 + 0.08 * Math.sin(3 * a + spot.s);
+        pts.push(at(spot.k, spot.s + Math.cos(a) * long * bump, o + Math.sin(a) * across * bump));
+      }
+      h.regions.push({ kind: 'rock', pts });
+    } else if (feature === 'sand') {
+      // A patch of sand to one side or across the lane: it eats the pace of the ball.
+      const long = r(0.6, 0.85),
+        spot = place(long, r(0.25, 0.75));
+      if (!spot) return null;
+      const g = segs[spot.k],
+        across = r(0.26, 0.38) * g.w,
+        o = r(-1, 1) * (g.w / 2 - across - 0.08),
+        pts = [];
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2,
+          wob = 1 + 0.1 * Math.sin(2 * a + spot.s * 3);
+        pts.push(at(spot.k, spot.s + Math.cos(a) * long * wob, o + Math.sin(a) * across * wob));
+      }
+      const [x, z] = at(spot.k, spot.s, o);
+      h.sands.push({ x, z, r: Math.max(long, across) * 1.15, pts });
+    } else if (feature === 'waves') {
+      // Low humps across the lane, three or else two, 0.85 m apart: the ball rises and dips over each.
+      const R = clamp(0.32 * w, 0.6, 0.8),
+        from = r(0.35, 0.65);
+      let n = 3,
+        spot = place(0.85 + R, from);
+      if (!spot) {
+        n = 2;
+        spot = place(0.425 + R, from);
+      }
+      if (!spot) return null;
+      const v = r(-0.08, 0.08) * w,
+        tall = L.wave * r(0.9, 1.1);
+      for (let i = 0; i < n; i++) {
+        const [x, z] = at(spot.k, spot.s + (i - (n - 1) / 2) * 0.85, v);
+        h.bumps.push({ x, z, r: R, h: tall });
+      }
+    } else if (feature === 'chicane') {
+      // Wooden boards from each wall in turn, each leaving a gap of about half the lane.
+      const from = r(0.4, 0.6);
+      let n = L.boards,
+        spot = place((n - 1) * 0.6 + 0.2, from);
+      if (!spot && n > 2) {
+        n = 2;
+        spot = place(0.8, from);
+      }
+      if (!spot) return null;
+      const g = segs[spot.k],
+        e = g.w / 2 + 0.2,
+        first = rnd() < 0.5 ? 1 : -1;
+      for (let i = 0; i < n; i++) {
+        const s = spot.s + (i - (n - 1) / 2) * 1.2,
+          side = i % 2 ? -first : first,
+          tip = side * (g.w / 2 - r(0.5, 0.56) * g.w);
+        h.regions.push({ kind: 'board', pts: [at(spot.k, s - 0.07, side * e), at(spot.k, s + 0.07, side * e), at(spot.k, s + 0.07, tip), at(spot.k, s - 0.07, tip)] });
       }
     } else if (feature === 'hill' || feature === 'dip') {
       const R = clamp(r(0.95, 1.25) * (w / 2.3), 0.85, 1.3),
@@ -842,6 +989,7 @@ function sound(h) {
   const clear = (p, room) =>
     free(h, p.x, p.z) && segs.every(([a, b]) => segDistance(a[0], a[1], b[0], b[1], p.x, p.z) >= room) && h.bumpers.every((b) => Math.hypot(b.x - p.x, b.z - p.z) >= b.r + room);
   if (!clear(h.tee, 0.4) || !clear(h.cup, h.cup.r + 0.12)) return false;
+  if ([h.tee, h.cup].some((p) => h.sands.some((s) => Math.hypot(p.x - s.x, p.z - s.z) < s.r + 0.5))) return false;
   // The cup and the tee sit on flat ground.
   const g = [0, 0];
   for (const p of [h.cup, h.tee]) {
@@ -886,10 +1034,11 @@ export function generate(level, seed) {
     let h = null,
       par = null,
       plain = false;
-    // After 20 tries the obstacles go, then the shape: a plain lane always works.
-    for (let attempt = 0; attempt < 40 && !par; attempt++) {
-      plain = attempt >= 20;
-      h = build(level, !plain ? type : attempt < 30 ? { ...type, features: [] } : T(type.id, 'straight'), rnd);
+    // After 12 tries the last obstacle goes, after 24 all of them, then the shape: a plain lane always works.
+    for (let attempt = 0; attempt < 44 && !par; attempt++) {
+      plain = attempt >= 24;
+      const features = attempt < 12 ? type.features : type.features.slice(0, Math.max(1, type.features.length - 1));
+      h = build(level, !plain ? { ...type, features } : attempt < 34 ? { ...type, features: [] } : T(type.id, 'straight'), rnd);
       if (h && sound(h)) par = parOf(h);
     }
     h.index = index;
@@ -914,8 +1063,9 @@ export function course(level, seed) {
 
 // ---------- The game and its save ----------
 // Only the seed and the targets are saved. Replaying rebuilds and checks every stroke.
+// Version 3 builds other holes from the same seed, so a save of version 2 starts a fresh course.
 export const fresh = (level = 'facile', finished = 0, seed = 1) => ({
-  v: 2,
+  v: 3,
   level,
   seed: seed >>> 0,
   finished,
@@ -953,7 +1103,7 @@ export function undo(s) {
 export function restore(raw) {
   try {
     if (
-      raw.v !== 2 ||
+      raw.v !== 3 ||
       !Number.isSafeInteger(raw.seed) ||
       raw.seed < 0 ||
       raw.seed > 0xffffffff ||

@@ -105,12 +105,20 @@ test('a fixed aiming error costs more strokes over par at each level', () => {
 });
 
 test('the preview shows less of the path at each level', () => {
-  const h = G.course('fort', 7)[0],
-    shot = G.simulate(h, h.tee, { x: h.tee.x + 12, z: h.tee.z + 3 });
-  assert.ok(shot.firstBounce !== null);
-  const shown = G.levels.map((level) => G.reveal(level, shot));
-  assert.equal(shown[0], shot.path.length - 1);
+  // A long shot whose first bounce comes after 3 m, then one that hits a toadstool sooner.
+  const shots = seeds(20).map((seed) => {
+    const h = G.course('fort', seed)[0];
+    return G.simulate(h, h.tee, { x: h.tee.x + 12, z: h.tee.z + 3 });
+  });
+  const travel = (shot) => shot.path.slice(1, shot.firstBounce + 1).reduce((d, p, i) => d + Math.hypot(p.x - shot.path[i].x, p.z - shot.path[i].z), 0);
+  const late = shots.find((s) => s.firstBounce !== null && travel(s) > 4),
+    early = shots.find((s) => s.firstBounce !== null && travel(s) < 2.5);
+  assert.ok(late && early);
+  const shown = G.levels.map((level) => G.reveal(level, late));
+  assert.equal(shown[0], late.path.length - 1);
   assert.ok(shown[0] > shown[1] && shown[1] > shown[2], shown.join(', '));
+  // Moyen never shows less than Difficile.
+  assert.ok(G.reveal('moyen', early) >= G.reveal('fort', early));
 });
 
 test('wild shots from anywhere never leave the lane', () => {
@@ -127,6 +135,23 @@ test('wild shots from anywhere never leave the lane', () => {
           if (!shot.sunk) p = shot.end;
         }
       }
+});
+
+test('most holes have two obstacles, and sand slows the ball', () => {
+  for (const level of G.levels) {
+    const holes = seeds(30).flatMap((seed) => course(level, seed)),
+      count = (h) => (h.bumpers.length > 0) + (h.sands.length > 0) + (h.bumps.length > 0) + !!h.ramp + new Set(h.regions.map((r) => (r.kind === 'water' || r.kind === 'flowers' ? 'part' : r.kind))).size;
+    assert.ok(holes.filter((h) => count(h) >= 2).length > holes.length * 0.6, level);
+    assert.ok(holes.some((h) => h.sands.length) && holes.some((h) => h.regions.some((r) => r.kind === 'rock')), level);
+    if (level !== 'facile') assert.ok(holes.some((h) => h.regions.some((r) => r.kind === 'board')), level);
+  }
+  // The same shot across a sand trap, and without it.
+  const h = seeds(30).flatMap((seed) => course('facile', seed)).find((h) => h.sands.length),
+    target = { x: h.sands[0].x, z: h.sands[0].z },
+    sandy = G.simulate(h, h.tee, target),
+    plain = G.simulate({ ...h, sands: [] }, h.tee, target);
+  const run = (shot) => shot.path.reduce((d, p, i) => (i ? d + Math.hypot(p.x - shot.path[i - 1].x, p.z - shot.path[i - 1].z) : 0), 0);
+  assert.ok(run(sandy) < run(plain) - 0.2, run(sandy) + ' ' + run(plain));
 });
 
 test('the mill turns on a clock that restarts at each stroke', () => {
@@ -193,7 +218,8 @@ test('the save reader checks targets, holes, counts and shape, and keeps the lev
     { rounds: [[{ x: 80, z: 0 }]] },
     { rounds: [Array(9).fill({ x: 1, z: 0 })] },
     { finished: -1 },
-    { v: 3 },
+    { v: 2 },
+    { v: 4 },
     { seed: -1 },
     { seed: 1.5 },
     { won: true },
