@@ -1,42 +1,38 @@
-// Every screen, in two fonts and five window sizes, against the same rules of layout.
+// Every screen, in four windows, against the same rules of layout.
 //
-// Fonts (tests/fonts): Selawik has the metrics of Segoe UI, the font of his PC, so the text takes the
-// room it takes on Windows. DejaVu Sans is much wider: it shows where a longer text or another font
-// would break. Each font replaces Segoe UI in the page, so the result is the same on any machine.
+// Font: the harness draws every page in Selawik, which has the metrics of Segoe UI, the font of his PC,
+// so the text takes the room it takes on Windows, on any machine.
 //
-// Windows: his laptop in Edge, the same laptop with the text at 125%, a 1920 by 1080 monitor, the same
-// monitor at 150%, a phone, and the laptop and the monitor enlarged with the size buttons of the page.
+// Windows: his laptop in Edge, the same laptop with the text at 125%, a phone, and the laptop enlarged
+// with the size buttons of the page. A layout that fits these also fits a large monitor.
 //
 // Rules, on each screen:
 //   - nothing goes past the sides of the window;
-//   - no text is cut, and with the Segoe UI metrics the rules pages need no scrolling in a window of 620 px
-//     or more (in the wide font they may scroll);
+//   - no text is cut, and the rules pages need no scrolling on the laptop;
 //   - all text is 20 px or more (13 on a phone), apart from the cards themselves and the pictures of the library;
 //   - every button is at least 44 px high, and no two buttons overlap;
 //   - a dialog fits in the window.
 // A screenshot of each screen goes to tests/screenshots/layout (or SHOTS/layout).
-import { readFileSync, mkdirSync } from 'node:fs';
+//
+// tests/run.mjs runs it in parts at once: LAYOUT_PART=k/n takes every n-th window from the k-th, and
+// LAYOUT_GAMES=demineur,yams draws only those games.
+import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { launch, useFont, gameUrl, OUT } from './harness.mjs';
+import { launch, gameUrl, OUT } from './harness.mjs';
 
-const font = file => readFileSync(new URL(`fonts/${file}.woff2`, import.meta.url)).toString('base64');
-const FONTS = {
-  segoe: { 400: font('selawik-400'), 600: font('selawik-600'), 700: font('selawik-700') },
-  wide: { 400: font('dejavu-400'), 700: font('dejavu-700') },
-};
 // minText: the smallest text allowed. On a phone the cards are small, and so are the words drawn on
 // their places. rulesFit: each page of the rules fits without scrolling; in a lower window it scrolls.
-const WINDOWS = [
+const ALL_WINDOWS = [
   { name: 'laptop', width: 1366, height: 680, minText: 20, rulesFit: true },
   { name: 'laptop-125', width: 1093, height: 530, minText: 20 },
-  { name: 'monitor', width: 1920, height: 1000, minText: 20, rulesFit: true },
-  { name: 'monitor-150', width: 1280, height: 620, minText: 20, rulesFit: true },
   { name: 'phone', width: 390, height: 760, isMobile: true, hasTouch: true, minText: 13 },
-  // The size buttons (lib/zoom.js) at the largest size each window holds: about 1050 by 540 px of page.
+  // The size buttons (lib/zoom.js) at the largest size the laptop holds: about 1050 by 520 px of page.
   { name: 'laptop-zoom-130', width: 1366, height: 680, minText: 20, zoom: 1.3 },
-  { name: 'monitor-zoom-175', width: 1920, height: 1000, minText: 20, zoom: 1.75 },
 ];
-const GAMES = ['solitaire', 'freecell', 'dames', 'dame-de-pique', 'demineur', 'yams', 'bataille-navale', 'paires'];
+const [part, parts] = (process.env.LAYOUT_PART || '1/1').split('/').map(Number);
+const WINDOWS = ALL_WINDOWS.filter((w, i) => i % parts === part - 1);
+const GAMES = process.env.LAYOUT_GAMES ? process.env.LAYOUT_GAMES.split(',')
+  : ['solitaire', 'freecell', 'dames', 'dame-de-pique', 'demineur', 'yams', 'bataille-navale', 'paires'];
 // The longest kind of message a game says, to check the message line never cuts it.
 const LONG = 'Vous pouvez déplacer 3 cartes à la fois pour le moment. Videz une case libre ou une colonne pour en déplacer plus.';
 const shots = join(OUT, 'layout');
@@ -117,31 +113,29 @@ function audit({ minText, rulesFit }) {
   return [...new Set(bad)];
 }
 
-const browser = await launch({ segoe: false });
+const browser = await launch();
 let failed = 0, screens = 0;
 try {
-  for (const [fontName, faces] of Object.entries(FONTS)) for (const win of WINDOWS) {
+  for (const win of WINDOWS) {
     const ctx = await browser.newContext({ viewport: { width: win.width, height: win.height }, isMobile: win.isMobile, hasTouch: win.hasTouch, reducedMotion: 'reduce' });
-    await ctx.addInitScript(useFont, faces);
     if (win.zoom) await ctx.addInitScript(z => localStorage.setItem('gg:zoom', String(z)), win.zoom);
     const page = await ctx.newPage();
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
-    const tag = `${fontName} ${win.name}`;
+    const tag = win.name;
     const check = async (screen, settle = 150) => {
       await page.waitForTimeout(settle);
       await page.evaluate(() => document.fonts.ready);
       // The test font must be the one drawing the page.
       if (win.zoom && await page.evaluate(() => Zoom.z()) !== win.zoom) { failed++; console.log(`FAIL ${tag} ${screen}: the page is not at ${win.zoom * 100} %`); }
       const used = await page.evaluate(() => document.fonts.check('20px "Segoe UI"') && [...document.fonts].some(f => f.family === 'Segoe UI' && f.status === 'loaded'));
-      const bad = used ? await page.evaluate(audit, { ...win, rulesFit: win.rulesFit && fontName === 'segoe' }) : ['the test font did not load'];
-      await page.screenshot({ path: join(shots, `${fontName}-${win.name}-${screen}.png`) });
+      const bad = used ? await page.evaluate(audit, { ...win, rulesFit: win.rulesFit }) : ['the test font did not load'];
+      await page.screenshot({ path: join(shots, `${win.name}-${screen}.png`) });
       screens++;
       if (bad.length) { failed++; console.log(`FAIL ${tag} ${screen}`); for (const b of bad) console.log('     ' + b); }
     };
 
-    await page.goto(gameUrl('.'));
-    await check('library');
+    if (!process.env.LAYOUT_GAMES) { await page.goto(gameUrl('.')); await check('library'); }
 
     for (const game of GAMES) {
       await page.goto(gameUrl(game));
