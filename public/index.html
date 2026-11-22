@@ -244,6 +244,8 @@ const GAMES = [
     felt: ['#C08A2E', '#6B4A12'], scene: beloteArt },
   { id: 'huit-americain', family: 'cartes', title: 'Huit américain', text: 'Posez toutes vos cartes le premier, à quatre autour de la table.',
     felt: ['#A8306E', '#551237'], scene: eightScene },
+  { id: 'rami', family: 'cartes', title: 'Rami', text: 'Posez vos suites et vos brelans avant Odette : 51 points pour ouvrir.',
+    felt: ['#3C3F9C', '#17184A'], scene: ramiScene },
 ];
 
 // The families of games, in the order of the page. A new game joins one of them, such as the billard or
@@ -615,6 +617,23 @@ function eightScene() {
     return `<path d="${arc(a0, a1 - 4, 70)}" stroke="#FFFDF6" stroke-width="5" fill="none" stroke-linecap="round" opacity=".9"/><polygon points="${p(9, 0)} ${p(-5, 8)} ${p(-5, -8)}" fill="#FFFDF6"/>`; };
   return scene(`<svg width="260" height="150" viewBox="0 0 260 150" style="position: absolute; inset: 0; overflow: visible">
     ${wheel}${arrow(-40, 30)}${arrow(140, 210)}${suits}</svg>` + card(COEUR + 7, 130, 76, 54, -12, 'lifted'));
+}
+// The rami: the 7, 8 and 9 de carreau in a fan on a tray a little lighter than the felt, as in the game,
+// with a joker tilted behind them, under a soft lamp light.
+function ramiScene() {
+  const w = 56, h = w * 1.3;
+  const star = '<path d="M50 4l13 30 33 3-25 22 8 33-29-18-29 18 8-33L4 37l33-3z"/>';
+  const lamp = '<div style="position: absolute; inset: -20px 0; background: radial-gradient(48% 52% at 50% 52%, rgba(255,232,190,.2), transparent 72%)"></div>';
+  const tray = '<div style="position: absolute; left: 50px; top: 34px; width: 150px; height: 98px; border-radius: 14px;'
+    + ' background: linear-gradient(rgba(255,255,255,.18), rgba(255,255,255,.1)); box-shadow: inset 0 3px 8px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.18)"></div>';
+  const joker = `<div class="card red lifted" style="--w: ${w}px; --h: ${h}px; left: ${190 - w / 2}px; top: ${66 - h / 2}px; transform: rotate(18deg)">
+    <svg viewBox="0 0 100 100" style="position: absolute; left: 6%; top: 4%; width: 17%; fill: currentColor">${star}</svg>
+    <svg viewBox="0 0 60 74" style="position: absolute; left: 14%; right: 14%; top: 18%; width: 72%; height: 68%">
+      <path d="M9 44C11 31 8 22 3 15c11 3 17 9 19 17 2-12 5-21 8-27 3 6 6 15 8 27 2-8 8-14 19-17-5 7-8 16-6 29z" fill="currentColor"/>
+      <circle cx="3" cy="15" r="3.6" fill="#E0A526"/><circle cx="30" cy="5" r="3.6" fill="#E0A526"/><circle cx="57" cy="15" r="3.6" fill="#E0A526"/>
+      <rect x="8" y="44" width="44" height="7" rx="3" fill="#E0A526"/>
+      <text x="30" y="69" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-weight="800" font-size="13.5" fill="currentColor">JOKER</text></svg></div>`;
+  return scene(lamp + tray + joker + card(CARREAU + 6, 95, 86, w, -8, 'lifted') + card(CARREAU + 7, 125, 82, w, 0, 'lifted') + card(CARREAU + 8, 155, 86, w, 8, 'lifted'));
 }
 const ICON_TROPHY = '<svg viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v4M8.5 20h7"/></svg>';
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

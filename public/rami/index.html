@@ -1,0 +1,1334 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rami · Jeux de Papi</title>
+<meta name="description" content="Le rami en grand, pour les grands-parents : posez vos suites et vos brelans contre Odette, en facile, moyen ou difficile. Gratuit, sans publicité, sans compte.">
+<link rel="canonical" href="https://jeux-papi.fr/rami/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Jeux de Papi">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://jeux-papi.fr/rami/">
+<meta property="og:title" content="Rami · Jeux de Papi">
+<meta property="og:description" content="Le rami en grand, contre Odette. Gratuit, sans publicité, sans compte.">
+<meta property="og:image" content="https://jeux-papi.fr/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../lib/kit.css">
+<link rel="stylesheet" href="../lib/cards.css">
+<style>
+  /* The rami plays on a midnight indigo felt, so it does not look like the other games. */
+  :root { --felt-top: #3C3F9C; --felt: #17184A; --shade: 14,15,52; --accent: #3A3DA6; --turn: #BFC6FF; --rise: 28px; }
+  button.game { --accent: #3A3DA6; }
+  button.game:hover { background: #4649B8; }
+  button.game:active { background: #2F3290; }
+  #title svg { width: 30px; height: 30px; }
+
+  /* clip, not hidden: a focused card must never scroll the table. The perspective gives the cards that
+     turn over in flight some depth. */
+  #table { position: relative; overflow: clip; perspective: 1800px; }
+  /* A lamp over a café table: a warm light in the middle, darker edges and a faint grain in the cloth. */
+  #table::before { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 58% 62% at 50% 46%, rgba(255,232,190,.17), rgba(255,232,190,.07) 48%, transparent 72%),
+      radial-gradient(ellipse 125% 120% at 50% 46%, transparent 52%, rgba(5,5,26,.62) 100%),
+      repeating-linear-gradient(37deg, rgba(255,255,255,.022) 0 1px, transparent 1px 4px),
+      repeating-linear-gradient(-53deg, rgba(0,0,0,.05) 0 1px, transparent 1px 3px); }
+  .card { z-index: 10; }
+
+  /* His hand: a gentle arc. Hover lifts a card 8 px; a chosen card rises with a yellow ring and a deeper
+     shadow. The hint glows gold without rising. */
+  .card.hand { cursor: pointer; transform-origin: 50% 110%;
+    transform: translateY(calc(var(--arc, 0px) + var(--lift, 0px))) rotate(var(--rot, 0deg));
+    transition: transform .2s cubic-bezier(.2,.7,.3,1), box-shadow .2s; }
+  .card.hand:hover { --lift: -8px; outline: 3px solid #fff; }
+  .card.hand.sel, .card.hand.sel:hover { --lift: calc(var(--rise) * -1); outline: 5px solid var(--gold); outline-offset: 0;
+    box-shadow: 0 0 0 2px rgba(var(--shade),.9), 0 16px 26px rgba(0,0,0,.5), 0 4px 8px rgba(0,0,0,.3); }
+  .card.hand.hint { outline: 5px solid var(--gold); box-shadow: 0 0 0 2px rgba(var(--shade),.8), 0 0 26px 8px rgba(255,200,61,.7); }
+  .card.hand.wait, .card.hand.wait:hover { cursor: default; --lift: 0px; }
+  .card.hand.wait.sel { --lift: calc(var(--rise) * -1); }
+  /* The card taken from the défausse this turn carries a white tag: it cannot go back. */
+  .card.hand .tag { position: absolute; left: 50%; top: calc(var(--h) * -.2); translate: -50% 0; z-index: 3;
+    padding: 2px 10px; border-radius: 10px; background: #fff; color: var(--text); font: 700 20px/1.25 var(--ui);
+    box-shadow: 0 2px 6px rgba(0,0,0,.3); white-space: nowrap; pointer-events: none; }
+  .card.hand.sel .tag { top: calc(var(--h) * -.06); }
+  /* After the sort, the cards that make a combination sit together over a thin gold bar. */
+  .gbar { position: absolute; z-index: 250; height: 6px; border-radius: 3px; background: linear-gradient(90deg, #E0A526, #FFD666, #E0A526);
+    box-shadow: 0 0 0 1px rgba(var(--shade),.7), 0 0 10px rgba(255,200,61,.55); pointer-events: none; }
+  /* A card that turns over in flight shows its back for the first half. */
+  .card .flipback { left: -1px; top: -1px; z-index: 5; pointer-events: none; transition: none; }
+
+  /* The pioche: a real stack, thicker with more cards, and the count under it. The défausse: its top card
+     straight, the two below peeking out. Both take a click, with a dashed yellow frame when a click there
+     does something and a solid gold ring under the mouse. */
+  #stock, #pileBox { position: absolute; z-index: 8; width: var(--w); height: var(--h); border-radius: calc(var(--w) * .09); }
+  #stock .card { left: 0; top: 0; transition: none; pointer-events: none; }
+  #stock .card:not(:last-child) { box-shadow: inset 0 0 0 calc(var(--w) * .04) var(--back), inset 0 0 0 calc(var(--w) * .06) var(--face),
+    inset 0 0 0 calc(var(--w) * .085) var(--back), inset 0 0 0 calc(var(--w) * .095) var(--gold), 1px 1px 2px rgba(0,0,0,.35); }
+  #stock .card:last-child { box-shadow: inset 0 0 0 calc(var(--w) * .04) var(--back), inset 0 0 0 calc(var(--w) * .06) var(--face),
+    inset 0 0 0 calc(var(--w) * .085) var(--back), inset 0 0 0 calc(var(--w) * .095) var(--gold), 0 2px 4px rgba(0,0,0,.4), 0 8px 18px rgba(0,0,0,.35); }
+  #pileBox { border: 3px dashed rgba(255,255,255,.3); }
+  #stock.can, #pileBox.can { cursor: pointer; }
+  #stock.can::after, #pileBox.can::after { content: ""; position: absolute; inset: -9px; border-radius: calc(var(--w) * .14); z-index: 30;
+    border: 4px dashed var(--gold); pointer-events: none; }
+  #stock.can:hover::after, #pileBox.can:hover::after, #stock.hint::after, #pileBox.hint::after { border-style: solid; border-width: 6px; box-shadow: 0 0 24px 6px rgba(255,200,61,.7); }
+  .card.pile { pointer-events: none; transition: transform .4s cubic-bezier(.2,.7,.3,1); transform: rotate(var(--rot, 0deg)); }
+  .card.pile.under { filter: brightness(.9); box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+  .pill { position: absolute; z-index: 32; translate: -50% 0; padding: 2px 12px; border-radius: 12px; background: #fff; color: var(--text);
+    font: 700 20px/1.25 var(--ui); white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.35); pointer-events: none; }
+  #stockN b { font-size: 21px; }
+
+  /* The keys of the table: "Poser", "Jeter" and "Trier". A key with nothing to do stays dashed. */
+  .act { position: absolute; z-index: 40; min-height: 54px; justify-content: center; font-size: 22px; font-weight: 700; }
+  .act svg { width: 26px; height: 26px; }
+  .act.hint { outline: 5px solid var(--gold); outline-offset: 4px; box-shadow: 0 0 26px 8px rgba(255,200,61,.7); }
+  #sortBtn { background: #E4E9E7; }
+  #sortBtn:hover { background: #D7DEDB; }
+
+  /* Odette: her face, her name plate, what she does, and her hand as a tight fan of backs with its count.
+     While she plays, a soft gold ring breathes around her face. */
+  .seat { position: absolute; z-index: 20; display: grid; grid-template-columns: auto auto; align-items: center; column-gap: 12px; row-gap: 6px;
+    padding: 10px 18px 10px 10px; background: #FFFDF6; color: var(--text); border-radius: 20px; border: 4px solid #CFD3EE;
+    box-shadow: 0 6px 22px rgba(5,5,30,.45); transition: border-color .2s, box-shadow .2s; }
+  .seat.turn { border-color: var(--turn); box-shadow: 0 0 0 6px rgba(191,198,255,.4), 0 6px 22px rgba(5,5,30,.45); }
+  .avw { position: relative; width: 58px; height: 58px; flex: none; }
+  .avw img { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: #F4C7D8; box-shadow: 0 0 0 3px #fff, 0 2px 8px rgba(0,0,0,.3); }
+  .avw::after { content: ""; position: absolute; inset: -8px; border-radius: 50%; border: 4px solid var(--gold); opacity: 0; pointer-events: none;
+    box-shadow: 0 0 14px 2px rgba(255,200,61,.55); }
+  .seat.turn .avw::after { opacity: 1; animation: breathe 1.8s ease-in-out infinite; }
+  @keyframes breathe { 50% { opacity: .35; transform: scale(1.07); } }
+  .seat b { display: block; font: 700 24px/1.15 var(--ui); white-space: nowrap; }
+  .seat .st { display: flex; align-items: center; gap: 8px; font: 500 20px/1.3 var(--ui); color: #4E5A57; white-space: nowrap; }
+  .seat.turn .st { color: #2F3290; font-weight: 600; }
+  .dots { display: none; gap: 5px; }
+  .seat.turn .dots { display: inline-flex; }
+  .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: dot 1.2s infinite; }
+  .dots i:nth-child(2) { animation-delay: .2s; } .dots i:nth-child(3) { animation-delay: .4s; }
+  @keyframes dot { 50% { opacity: .2; } }
+  .hold { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; }
+  .fan { position: relative; height: 46px; flex: none; }
+  .fan i { position: absolute; bottom: 0; width: 30px; height: 42px; border-radius: 4px; border: 1px solid #0B1D33; transform-origin: 50% 100%;
+    background: repeating-linear-gradient(45deg, rgba(255,210,74,.35) 0 1px, transparent 1px 6px), repeating-linear-gradient(-45deg, rgba(255,210,74,.35) 0 1px, transparent 1px 6px), var(--back);
+    box-shadow: inset 0 0 0 2px var(--back), inset 0 0 0 3px rgba(255,255,255,.7), 1px 1px 2px rgba(0,0,0,.3); }
+  .badge { padding: 2px 12px; border-radius: 12px; background: #2F3290; color: #fff; font: 700 20px/1.25 var(--ui); white-space: nowrap; }
+  #table.slim .seat { grid-template-columns: auto auto auto; padding: 4px 14px 4px 4px; }
+  #table.slim .seat .avw { width: 40px; height: 40px; }
+  #table.slim .seat .avw::after { inset: -6px; border-width: 3px; }
+  #table.slim .seat .hold { grid-column: auto; gap: 8px; }
+  #table.slim .fan { height: 34px; }
+  #table.slim .fan i { width: 22px; height: 31px; }
+
+  /* The two zones of the table: Odette's combinations on top, his under them. */
+  .zone { position: absolute; z-index: 1; border-radius: 22px; background: rgba(8,8,40,.24); box-shadow: inset 0 0 0 2px rgba(255,255,255,.1), inset 0 2px 14px rgba(0,0,0,.18); }
+  #zone0 { background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 2px rgba(255,255,255,.18), inset 0 2px 14px rgba(0,0,0,.14); }
+  .zlabel { position: absolute; left: 10px; top: 10px; display: flex; flex-direction: column; padding: 4px 14px; border-radius: 14px;
+    background: rgba(255,255,255,.92); color: var(--text); font: 700 21px/1.2 var(--ui); white-space: nowrap; }
+  .zempty { position: absolute; font: 500 20px/1.3 var(--ui); color: rgba(255,255,255,.75); white-space: nowrap; pointer-events: none; }
+
+  /* The opening gauge, in his zone until he opens: it fills as his cards make combinations, and turns
+     gold at 51. */
+  #gauge { position: absolute; z-index: 2; display: flex; align-items: center; padding: 4px 16px; border-radius: 14px; overflow: hidden;
+    background: rgba(8,8,36,.62); box-shadow: inset 0 0 0 2px rgba(255,255,255,.28); color: #fff; font: 600 20px/1.25 var(--ui); white-space: nowrap; pointer-events: none; }
+  #gauge .gf { position: absolute; inset: 0; transform-origin: 0 50%; transform: scaleX(var(--p, 0)); transition: transform .45s cubic-bezier(.2,.7,.3,1);
+    background: linear-gradient(90deg, rgba(110,120,240,.55), rgba(140,150,255,.7)); }
+  #gauge span { position: relative; }
+  #gauge b { font-size: 22px; }
+  #gauge.full { color: #1B2422; box-shadow: inset 0 0 0 3px #C9951A, 0 0 18px 4px rgba(255,200,61,.55); }
+  #gauge.full .gf { background: linear-gradient(90deg, #FFD666, #FFC83D); }
+  /* The ribbon when he opens. */
+  .ribbon { position: absolute; z-index: 350; translate: -50% -50%; padding: 8px 28px; border-radius: 12px; pointer-events: none;
+    background: linear-gradient(#FFD666, #FFC83D); color: #1B2422; font: 700 26px/1.2 var(--ui); white-space: nowrap;
+    box-shadow: 0 0 0 2px rgba(var(--shade),.7), 0 8px 22px rgba(0,0,0,.45); }
+
+  /* A combination lies on its own tray, a little lighter than the felt, with its name. The whole tray
+     takes the click. With cards chosen, the trays that take them glow gold and the others dim a little. */
+  .meld { position: absolute; z-index: 5; border-radius: 14px; cursor: pointer; transform-origin: 50% 50%;
+    background: linear-gradient(rgba(255,255,255,.17), rgba(255,255,255,.1));
+    box-shadow: inset 0 3px 8px rgba(0,0,0,.4), inset 0 0 0 1px rgba(255,255,255,.16), 0 1px 0 rgba(255,255,255,.08); }
+  .meld:hover { outline: 3px solid #fff; outline-offset: 2px; }
+  .meld.can, .meld.can:hover { outline: 4px solid var(--gold); outline-offset: 2px;
+    box-shadow: inset 0 3px 8px rgba(0,0,0,.4), 0 0 0 2px rgba(var(--shade),.6), 0 0 24px 6px rgba(255,200,61,.55); }
+  .meld.hint { outline: 6px solid var(--gold); outline-offset: 2px; box-shadow: 0 0 24px 6px rgba(255,200,61,.7); }
+  .meld.fresh { box-shadow: inset 0 3px 8px rgba(0,0,0,.4), 0 0 0 4px #fff, 0 0 22px 6px rgba(191,198,255,.8); }
+  .meld.dim, .card.mc.dim, .mlab.dim { filter: brightness(.74); }
+  .mlab { position: absolute; z-index: 30; padding: 0 8px; border-radius: 8px; background: rgba(12,12,44,.88); color: #fff;
+    font: 600 20px/21px var(--ui); white-space: nowrap; pointer-events: none; }
+  .shimmer { position: absolute; z-index: 60; border-radius: 14px; overflow: hidden; pointer-events: none; }
+  .shimmer i { position: absolute; inset: 0; background: linear-gradient(100deg, transparent 25%, rgba(255,222,130,.75) 50%, transparent 75%); }
+  .card.mc { pointer-events: none; transition: none; transform-origin: 0 0; }
+  .card.mc.fresh { outline: 4px solid #fff; }
+  /* On the table the cards overlap: a large rank and suit in the corner, and a large suit below. */
+  .card.mc .ix, .card.mc .c { display: none; }
+  .mx { position: absolute; left: 5%; top: 3%; display: flex; flex-direction: column; align-items: center; width: 46%;
+    font: 700 calc(var(--w) * .34)/.95 "Segoe UI", Arial, sans-serif; letter-spacing: -.08em; white-space: nowrap; }
+  .mx svg { width: calc(var(--w) * .3); height: calc(var(--w) * .3); fill: currentColor; margin-top: 1px; }
+  .mbig { position: absolute; right: 7%; bottom: 6%; width: 42%; height: 42%; fill: currentColor; opacity: .9; }
+  /* A joker on the table: a pale gold face, the rank it stands for in the corner, and a star. */
+  .card.mc.joker { background: #FFF3CC; }
+  .card.mc.joker .mbig { opacity: .55; }
+
+  /* The jokers, drawn for this game: a star in the corners and a jester's cap. */
+  .card.joker .ix .star { width: calc(var(--w) * .17); height: calc(var(--w) * .17); fill: currentColor; }
+  .card.joker .c.jk { left: 14%; right: 14%; top: 18%; bottom: 14%; }
+
+  /* Why a click is refused, just above what was clicked. */
+  #bubble { position: absolute; z-index: 400; max-width: 400px; padding: 12px 18px; border-radius: 16px; display: none;
+    background: #fff; color: var(--text); border: 3px solid var(--accent); font: 600 21px/1.3 var(--ui); box-shadow: 0 8px 24px rgba(0,0,0,.4); pointer-events: none; }
+  #bubble.on { display: block; }
+  #bubble::after { content: ""; position: absolute; left: var(--tip, 50%); bottom: -11px; width: 18px; height: 18px; margin-left: -9px;
+    background: #fff; border: 3px solid var(--accent); border-top: 0; border-left: 0; transform: rotate(45deg); }
+  .card.fly { z-index: 300; pointer-events: none; transition: none; }
+
+  /* The win: small cards of the four suits cross the felt. */
+  #confetti { position: fixed; inset: 0; z-index: 4800; pointer-events: none; overflow: hidden; }
+  #confetti i { position: absolute; left: var(--x); top: var(--y); width: var(--s); height: calc(var(--s) * 1.32); border-radius: 5px; display: grid; place-items: center;
+    background: #FFFDF6; border: 1px solid #7E786B; box-shadow: 0 3px 8px rgba(0,0,0,.35); animation: burst var(--t) cubic-bezier(.15,.7,.4,1) var(--d) both; }
+  #confetti svg { width: 62%; height: 62%; }
+  @keyframes burst {
+    0% { transform: translate(-50%, -50%) scale(.3) rotate(0); opacity: 0; }
+    8% { opacity: 1; }
+    50% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1) rotate(var(--r)); opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--dx) * 1.25), calc(-50% + var(--dy) + 55vh)) scale(.9) rotate(calc(var(--r) * 2)); opacity: 0; }
+  }
+  #overText { white-space: pre-line; }
+
+  /* The rules: one picture per page, made of the real cards on a piece of the felt, and one or two short
+     sentences under it. Yellow, a ring or the pointing hand, marks what to click, as in the game. */
+  #help { --guide-more: #26302D; --guide-edge: #17184A; }
+  .hp { container-type: inline-size; display: flex; justify-content: center; margin: 2px 0 14px; }
+  .hp-felt { --cw: min(80px, 12cqw); position: relative; display: flex; align-items: center; justify-content: center; gap: 22px;
+    padding: 18px 28px; border-radius: 22px; background: radial-gradient(130% 100% at 50% 15%, #3C3F9C, #17184A); box-shadow: inset 0 0 0 3px rgba(255,255,255,.14); }
+  #help .hp .card { --w: var(--cw); --h: calc(var(--cw) * 1.3); }
+  .hp-col { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .hp-row { display: flex; align-items: flex-end; }
+  .hp-row .card + .card { margin-left: calc(var(--cw) * -.45); }
+  .hp-spread .card + .card { margin-left: 8px; }
+  #help .hp .card.up { translate: 0 calc(var(--cw) * -.18); outline: 5px solid var(--gold); box-shadow: 0 0 0 2px rgba(var(--shade),.9); }
+  #help .hp .ring { box-shadow: var(--guide-ring); }
+  .hp-frame { position: relative; padding: 8px 10px; border-radius: 14px; outline: 4px dashed var(--gold); outline-offset: 2px; background: rgba(255,255,255,.08); }
+  .hp-frame.solid { outline: 5px solid var(--gold); }
+  .hp-lbl { padding: 2px 12px; border-radius: 12px; background: #fff; color: var(--text); font: 700 20px/1.25 var(--ui); white-space: nowrap; }
+  .hp-on { font: 600 22px var(--ui); color: #E3E6FF; }
+  .hp-pts { display: flex; gap: 18px; align-items: flex-end; }
+  .hp-pts figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .hp-pts figcaption { padding: 2px 12px; border-radius: 12px; background: #fff; color: var(--text); font: 600 20px/1.25 var(--ui); white-space: nowrap; }
+  .hp-pts figcaption b { font-size: 24px; }
+  .hp-sum { font: 700 26px var(--ui); color: #fff; align-self: center; white-space: nowrap; }
+  .hp .guide-hand { right: -26px; bottom: -26px; rotate: -18deg; }
+  .hp .guide-btn .guide-hand { right: 2px; bottom: -36px; }
+  @container (max-width: 520px) {
+    .hp-felt { --cw: 15cqw; gap: 12px; padding: 14px 12px; flex-wrap: wrap; }
+    .hp-pts { gap: 8px; }
+    .hp-sum { font-size: 22px; }
+  }
+  @media (max-width: 699px) {
+    .seat { grid-template-columns: auto auto; row-gap: 0; padding: 4px 14px 4px 4px; } .seat .avw { grid-row: span 2; width: 40px; height: 40px; }
+    .seat .avw::after { inset: -6px; border-width: 3px; }
+    .seat b { font-size: 18px; } .seat .st { display: none; } .hold { grid-column: 2; } .badge { font-size: 15px; padding: 1px 8px; } .fan { display: none; }
+    .zlabel { font-size: 16px; padding: 2px 10px; top: 6px; left: 6px; }
+    .zempty { font-size: 15px; }
+    #gauge { font-size: 15px; padding: 2px 10px; } #gauge b { font-size: 16px; }
+    .mlab { font-size: 13px; line-height: 15px; padding: 0 5px; border-radius: 6px; }
+    .ribbon { font-size: 20px; padding: 6px 18px; }
+    .act { min-height: 46px; font-size: 18px; padding: 4px 12px; gap: 6px; } .act svg { width: 22px; height: 22px; }
+    .pill, #stockN b { font-size: 15px; }
+    .card.hand .tag { font-size: 15px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    #confetti { display: none; }
+  }
+</style><script src="../lib/zoom.js"></script>
+</head>
+<body>
+<div id="bar">
+  <div id="title"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="11" height="16" rx="2" fill="#FFFDF6" stroke="#3A3DA6" stroke-width="1.2" transform="rotate(-10 7 12)"/><rect x="10" y="4" width="11" height="16" rx="2" fill="#FFFDF6" stroke="#3A3DA6" stroke-width="1.2" transform="rotate(8 16 12)"/><text x="16" y="15.5" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-weight="700" font-size="8" fill="#C4122F" transform="rotate(8 16 12)">9</text></svg>Rami</div>
+  <button id="undoBtn" data-icon="undo" title="Reprend votre dernier coup et ceux joués après"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span><span class="tiny">Annuler</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre un bon coup à jouer maintenant"><span class="long">Que jouer maintenant ?</span><span class="short">Que jouer ?</span><span class="tiny">Idée</span></button>
+  <span class="spacer"></span>
+  <button id="helpBtn" data-icon="help">Règles</button>
+  <button id="newBtn" class="game">Nouvelle partie</button>
+</div>
+<div id="say"><div id="msg" aria-live="polite"></div></div>
+<div id="table">
+  <div class="zone" id="zone1"><span class="zlabel">Odette</span><span class="zempty">Pas encore ouvert</span></div>
+  <div class="zone" id="zone0"><span class="zlabel">Vous</span><div id="gauge"><i class="gf"></i><span></span></div></div>
+  <div class="seat" id="opp"><span class="avw" aria-hidden="true"><img src="../lib/avatars/odette.webp" alt=""></span><div><b>Odette</b><span class="st"><span class="dots"><i></i><i></i><i></i></span><span class="now"></span></span></div>
+    <div class="hold"><div class="fan" aria-hidden="true"></div><span class="badge"></span></div></div>
+  <div id="stock" role="button" aria-label="La pioche"></div>
+  <span class="pill" id="stockN"></span>
+  <div id="pileBox" role="button" aria-label="La défausse"></div>
+  <span class="pill" id="pileN">Défausse</span>
+  <button id="layBtn" class="act"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="9" width="8" height="11" rx="1.5"/><rect x="13" y="9" width="8" height="11" rx="1.5"/><path d="M12 2v5M9.5 4.5 12 7l2.5-2.5"/></svg>Poser</button>
+  <button id="throwBtn" class="act"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="13" rx="1.5"/><path d="M12 16v6M9.5 19.5 12 22l2.5-2.5"/></svg>Jeter</button>
+  <button id="sortBtn" class="act"></button>
+  <div id="bubble" role="status"></div>
+</div>
+<footer id="rail"><div class="zoom"></div></footer>
+<div id="help" data-title="Comment jouer">
+  <section class="page">
+    <h3>Prendre une carte</h3>
+    <div class="hp" aria-hidden="true"><div class="hp-felt">
+      <div class="hp-col"><div class="hp-frame solid"><div data-help-card="dos"></div></div><span class="hp-lbl">Pioche</span></div>
+      <span class="hp-on">ou</span>
+      <div class="hp-col"><div class="hp-frame"><div data-help-card="22"></div></div><span class="hp-lbl">Défausse</span></div>
+    </div></div>
+    <p class="guide-lead">Cliquez sur la pioche ou sur la défausse pour prendre une carte.</p>
+    <p class="guide-more">Le premier qui n'a plus de cartes gagne la partie.</p>
+  </section>
+  <section class="page">
+    <h3>Poser une combinaison</h3>
+    <div class="hp" aria-hidden="true"><div class="hp-felt">
+      <div class="hp-row hp-spread"><div data-help-card="32" class="up"></div><div data-help-card="33" class="up"></div><div data-help-card="34" class="up"></div><div data-help-card="4"></div></div>
+      <span class="guide-btn primary here" data-lay>Poser</span>
+    </div></div>
+    <p class="guide-lead">Cliquez sur vos cartes, puis sur « Poser ».</p>
+    <p class="guide-more">Une suite : 3 cartes qui se suivent, de même couleur. Un brelan : 3 ou 4 cartes de même valeur.</p>
+  </section>
+  <section class="page">
+    <h3>Ouvrir avec 51 points</h3>
+    <div class="hp" aria-hidden="true"><div class="hp-felt hp-pts">
+      <figure><div class="hp-row"><div data-help-card="12"></div><div data-help-card="25"></div><div data-help-card="51"></div></div><figcaption><b>30</b> points</figcaption></figure>
+      <figure><div class="hp-row"><div data-help-card="7"></div><div data-help-card="8"></div><div data-joker="52"></div></div><figcaption><b>27</b> points</figcaption></figure>
+      <span class="hp-sum">= 57</span>
+    </div></div>
+    <p class="guide-lead">La première fois, posez au moins 51 points d'un coup.</p>
+    <p class="guide-more">Figures 10, as 11, le joker compte la carte qu'il remplace.</p>
+  </section>
+  <section class="page">
+    <h3>Ajouter une carte</h3>
+    <div class="hp" aria-hidden="true"><div class="hp-felt">
+      <div class="hp-row hp-spread"><div data-help-card="20" class="up"></div><div data-help-card="2"></div></div>
+      <span class="hp-on">puis</span>
+      <div class="hp-frame solid"><div class="hp-row"><div data-help-card="17"></div><div data-help-card="18"></div><div data-help-card="19"></div></div></div>
+    </div></div>
+    <p class="guide-lead">Choisissez une carte, puis cliquez sur une combinaison de la table.</p>
+    <p class="guide-more">Seulement après avoir ouvert. La vôtre ou celle d'Odette.</p>
+  </section>
+  <section class="page">
+    <h3>Jeter une carte</h3>
+    <div class="hp" aria-hidden="true"><div class="hp-felt">
+      <div class="hp-row hp-spread"><div data-help-card="9"></div><div data-help-card="38" class="up"></div></div>
+      <span class="hp-on">puis</span>
+      <div class="hp-col"><div class="hp-frame solid"><div data-help-card="22"></div></div><span class="hp-lbl">Défausse</span></div>
+    </div></div>
+    <p class="guide-lead">Pour finir votre tour, choisissez une carte et cliquez sur la défausse.</p>
+    <p class="guide-more">La carte prise à la défausse ne se rejette pas le même tour.</p>
+  </section>
+</div>
+
+<script src="../lib/store.js"></script>
+<script src="../lib/cards.js"></script>
+<script src="../lib/kit.js"></script>
+<script src="engine.js"></script>
+<script>
+'use strict';
+const { isJ, rank, suit } = RA;
+const { faceHtml, rd, cap, SUIT_NAMES, RANKS } = Cards;
+const $ = id => document.getElementById(id);
+const motion = matchMedia('(prefers-reduced-motion: reduce)');
+const ODETTE = 'Odette';
+// Pace. A card flies in 520 ms (420 ms in the deal, 75 ms apart). Odette waits 700 ms after a card lands
+// before her next step, and never less than STEP_MS, so each step can be read on the message line.
+const FLY = 520, DEAL_FLY = 420, DEAL_GAP = 75, LAY_GAP = 60, PAUSE = 700, STEP_MS = 1200, FIRST_MS = 900;
+
+/* ---------- State ----------
+   G: the game (see engine.js). undo: the games before each of his moves. sel: the cards he chose in his
+   hand. hint: what the hint shows. sortBy: 'suit' (by colour) or 'rank' (by value). wonNow: this game
+   is counted as won, so a win counts once. */
+let G, undo = [], level = 'facile', stats = { won: 0 }, wonNow = false, started = false, sortBy = 'suit';
+let sel = new Set(), hint = null, gen = 0, timers = [], lastTap = null, stale = false, pendingResult = null, winWrite = null, gameId = 0;
+let fresh = { melds: new Set(), cards: new Set() };
+let dealing = false, landBy = 0;   // the deal is flying in; when the last card in flight lands
+addEventListener('gg-stale', () => { stale = true; cancelAll(); render(); });
+
+const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
+const nameOf = c => isJ(c) ? 'le joker' : Cards.cardName(c);
+const meldWord = m => m.type === 'run' ? 'suite' : m.slots.length === 4 ? 'carré' : 'brelan';
+// Where a card goes, said by who adds it: "à votre suite", "à sa suite", "au brelan d'Odette".
+function toMeld(m, by) {
+  const word = meldWord(m), fem = word === 'suite';
+  if (m.owner === 0) return `à votre ${word}`;
+  if (by === 1) return `à ${fem ? 'sa' : 'son'} ${word}`;
+  return `${fem ? 'à la' : 'au'} ${word} d'${ODETTE}`;
+}
+const mySel = () => G.hands[0].filter(c => sel.has(c));
+
+/* ---------- Saves ---------- */
+async function save() {
+  while (winWrite) await winWrite;
+  return write();
+}
+async function write() {
+  if (stale) return false;
+  const snapshot = G;
+  const parts = [];
+  if (started && G.phase !== 'over') parts.push('Partie en cours');
+  if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
+  const data = { v: 1, G, undo, level, stats, wonNow, started, sortBy };
+  if (await GG.save('rami', data, { summary: parts.join(' · '), undoLimits: [Infinity, 8, 0] })) return true;
+  if (stale || snapshot !== G) return false;
+  Kit.say("La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.");
+  return false;
+}
+// Reads the save. A save that does not hold together starts a new game, keeping the level and the wins.
+// A save without a level plays at Facile. Returns 'ok', 'broken' or 'none'.
+function load() {
+  let v;
+  try { v = GG.load('rami'); } catch (e) { v = null; }
+  if (!v || typeof v !== 'object') return 'none';
+  level = Object.hasOwn(RA.LEVELS, v.level) ? v.level : 'facile';
+  if (v.stats && Number.isInteger(v.stats.won) && v.stats.won >= 0) stats = { won: v.stats.won };
+  if (v.sortBy === 'rank' || v.sortBy === 'suit') sortBy = v.sortBy;
+  if (!RA.valid(v.G)) return 'broken';
+  G = v.G;
+  undo = Array.isArray(v.undo) ? v.undo.filter(u => typeof u === 'string') : [];
+  wonNow = !!v.wonNow; started = v.started !== false;
+  return 'ok';
+}
+// Every change of the game goes through here: a win is counted once, and only when it is saved.
+async function commit(next) {
+  G = next;
+  started = true;
+  if (!(G.phase === 'over' && G.result.winner === 0 && !wonNow)) return save();
+  wonNow = true; stats.won++;
+  const settled = save().then(saved => {
+    if (stale) return;
+    if (saved) GG.track('rami', 'won');
+    else { wonNow = false; stats.won--; render(); }
+  });
+  winWrite = settled;
+  await settled;
+  if (winWrite === settled) winWrite = null;
+}
+
+/* ---------- Messages ---------- */
+function turnMessage() {
+  if (G.phase === 'over') return '';
+  if (G.turn !== 0) return `${ODETTE} joue.`;
+  if (G.phase === 'draw') return 'Prenez une carte : la pioche ou la défausse.';
+  const n = sel.size, open = G.opened[0] && G.melds.length;
+  if (!n) return G.opened[0] ? 'Posez des combinaisons, ajoutez des cartes ou jetez une carte : cliquez sur vos cartes.'
+    : 'Posez des combinaisons ou jetez une carte : cliquez sur vos cartes pour les choisir.';
+  if (n === 1) { const c = mySel()[0]; return open ? `Cliquez sur la défausse pour jeter ${nameOf(c)}, ou sur une combinaison pour l'y ajouter.` : `Cliquez sur la défausse pour jeter ${nameOf(c)}, ou choisissez d'autres cartes.`; }
+  if (n === 2) return open ? 'Choisissez une 3e carte pour poser, ou cliquez sur une combinaison pour y ajouter ces cartes.' : 'Choisissez au moins 3 cartes pour poser une combinaison.';
+  return open ? `Cliquez sur « Poser » pour poser ces ${n} cartes, ou sur une combinaison pour les y ajouter.` : `Cliquez sur « Poser » pour poser ces ${n} cartes.`;
+}
+const LAY_WHY = {
+  few: 'Il faut au moins 3 cartes pour une combinaison.',
+  jokers: "Une combinaison ne peut avoir qu'un seul joker.",
+  set: 'Un brelan ou un carré a 3 ou 4 cartes de même valeur, toutes de couleurs différentes.',
+  ace: "L'as se met avant le 2 ou après le roi, pas les deux à la fois.",
+  gap: 'Ces cartes ne se suivent pas : il manque une carte dans la suite.',
+  mixed: 'Ces cartes ne font pas de combinaison : une suite de même couleur, ou des cartes de même valeur.',
+  keep: 'Gardez une carte à jeter : la carte prise à la défausse ne peut pas être rejetée.',
+  phase: "Prenez d'abord une carte : la pioche ou la défausse.",
+};
+// What Odette or he just did, in one sentence. before: the game before it.
+function describe(before) {
+  const e = G.last, me = e.seat === 0;
+  if (e.kind === 'take') {
+    if (e.from === 'stock') return me ? `Vous prenez ${nameOf(e.card)} dans la pioche.` : `${ODETTE} prend une carte de la pioche.`;
+    return me ? `Vous prenez ${nameOf(e.card)} de la défausse.` : `${ODETTE} prend ${nameOf(e.card)} de la défausse.`;
+  }
+  if (e.kind === 'lay') {
+    const n = e.melds.length, what = n === 1 ? 'une combinaison' : `${n} combinaisons`;
+    const open = e.opening ? (me ? ` : vous ouvrez avec ${e.pts} points` : ` : elle ouvre avec ${e.pts} points`) : '';
+    return (me ? `Vous posez ${what}` : `${ODETTE} pose ${what}`) + open + '.';
+  }
+  if (e.kind === 'add') {
+    const m = G.melds[e.meld], what = e.cards.length === 1 ? nameOf(e.cards[0]) : `${e.cards.length} cartes`;
+    return me ? `Vous ajoutez ${what} ${toMeld(m, 0)}.` : `${ODETTE} ajoute ${what} ${toMeld(m, 1)}.`;
+  }
+  if (e.kind === 'throw') {
+    const mixed = e.shuffled ? ' La pioche est vide : la défausse est mélangée.' : '';
+    return (me ? `Vous jetez ${nameOf(e.card)}.` : `${ODETTE} jette ${nameOf(e.card)}.`) + mixed;
+  }
+  return '';
+}
+const say = Kit.say;
+
+// A refused click: what was clicked shakes, the reason shows in a bubble above it for 3 s, and the
+// message line says it too, with a flash, so he sees that his click was heard.
+let bubbleT = 0;
+function refuse(el, text) {
+  shake(el);
+  say(text);
+  const m = $('msg'); m.classList.remove('flash'); void m.offsetWidth; m.classList.add('flash');
+  if (!el || !L) return;
+  const b = $('bubble');
+  b.textContent = text;
+  b.classList.add('on');
+  const box = el.getBoundingClientRect(), t = table.getBoundingClientRect(), z = Zoom.z();
+  const x = (box.left - t.left) / z + Math.min(box.width / z, el.classList.contains('hand') ? L.stepX || L.w : box.width / z) / 2;
+  const left = Math.max(8, Math.min(x - b.offsetWidth / 2, L.W - b.offsetWidth - 8));
+  b.style.left = left + 'px';
+  b.style.top = Math.max(8, (box.top - t.top) / z - b.offsetHeight - 22) + 'px';
+  b.style.setProperty('--tip', Math.max(20, Math.min(b.offsetWidth - 20, x - left)) + 'px');
+  clearTimeout(bubbleT);
+  bubbleT = setTimeout(hideBubble, 3000);
+}
+function hideBubble() { clearTimeout(bubbleT); $('bubble').classList.remove('on'); }
+// A refused click rocks what was clicked for 420 ms.
+function shake(el) {
+  if (!el || motion.matches) return;
+  el.animate([{ rotate: '0deg' }, { rotate: '-2.5deg', offset: .3 }, { rotate: '2deg', offset: .65 }, { rotate: '0deg' }], { duration: 420, easing: 'ease-in-out', composite: 'add' });
+}
+
+/* ---------- His moves ---------- */
+const myTurn = () => !stale && G && G.turn === 0 && (G.phase === 'draw' || G.phase === 'play');
+const busy = el => refuse(el, G.phase === 'over' ? 'La partie est finie : cliquez sur « Nouvelle partie ».' : `Attendez un instant : ${ODETTE} joue.`);
+function tapCard(c) {
+  if (stale) return;
+  hideBubble();
+  const el = els.get(c);
+  if (!myTurn()) return busy(el);
+  if (G.phase === 'draw') return refuse(el, LAY_WHY.phase);
+  if (sel.has(c)) sel.delete(c); else sel.add(c);
+  hint = null;
+  say(turnMessage());
+  render();
+}
+function tapStock() {
+  if (stale) return;
+  hideBubble();
+  if (!myTurn()) return busy($('stock'));
+  if (G.phase === 'play') return refuse($('stock'), 'Vous avez déjà pris une carte : posez des combinaisons ou jetez une carte.');
+  if (!RA.canTake(G, 'stock')) return refuse($('stock'), 'La pioche est vide : prenez la carte de la défausse.');
+  move(() => RA.take(G, 'stock'));
+}
+function tapPile() {
+  if (stale) return;
+  hideBubble();
+  const box = $('pileBox');
+  if (!myTurn()) return busy(box);
+  if (G.phase === 'draw') {
+    if (!RA.canTake(G, 'pile')) return refuse(box, 'La défausse est vide : prenez une carte de la pioche.');
+    return move(() => RA.take(G, 'pile'));
+  }
+  const s = mySel();
+  if (!s.length) return refuse(box, "Choisissez d'abord la carte à jeter dans votre jeu, puis cliquez sur la défausse.");
+  if (s.length > 1) return refuse(box, 'Pour jeter, choisissez une seule carte.');
+  if (RA.throwCheck(G, s[0]) === 'taken') return refuse(els.get(s[0]), `Vous venez de prendre ${nameOf(s[0])} à la défausse : jetez une autre carte.`);
+  move(() => RA.discard(G, s[0]));
+}
+function tapLay() {
+  if (!myTurn()) return;
+  const s = mySel();
+  if (G.phase === 'draw') return refuse($('layBtn'), LAY_WHY.phase);
+  const c = RA.layCheck(G, s);
+  if (c.why) s.forEach(x => shake(els.get(x)));
+  if (c.why === 'open') return refuse($('layBtn'), `Il manque ${c.missing} ${c.missing > 1 ? 'points' : 'point'} pour ouvrir : il en faut 51.`);
+  if (c.why) return refuse($('layBtn'), LAY_WHY[c.why]);
+  move(() => RA.lay(G, s));
+}
+function tapMeld(i) {
+  if (stale) return;
+  hideBubble();
+  const el = meldEls[i];
+  if (!myTurn()) return busy(el);
+  if (G.phase === 'draw') return refuse(el, LAY_WHY.phase);
+  const s = mySel();
+  if (!s.length) return refuse(el, "Choisissez d'abord une carte de votre jeu, puis cliquez sur la combinaison.");
+  const why = RA.addCheck(G, i, s);
+  if (why === 'closed') return refuse(el, "Ouvrez d'abord avec 51 points : ensuite vous pourrez ajouter des cartes.");
+  if (why === 'joker') return refuse(el, 'Cette combinaison a déjà un joker.');
+  if (why === 'keep') return refuse(el, LAY_WHY.keep);
+  if (why) return refuse(el, s.length === 1 ? `${cap(nameOf(s[0]))} ne va pas sur cette ${meldWord(G.melds[i]) === 'suite' ? 'suite' : 'combinaison'}.` : 'Ces cartes ne vont pas sur cette combinaison.');
+  move(() => RA.add(G, i, s));
+}
+function tapThrow() {
+  if (!myTurn()) return;
+  if (G.phase === 'draw') return refuse($('throwBtn'), LAY_WHY.phase);
+  const s = mySel();
+  if (s.length !== 1) return refuse($('throwBtn'), 'Pour jeter, choisissez une seule carte.');
+  if (RA.throwCheck(G, s[0]) === 'taken') return refuse(els.get(s[0]), `Vous venez de prendre ${nameOf(s[0])} à la défausse : jetez une autre carte.`);
+  move(() => RA.discard(G, s[0]));
+}
+function tapSort() {
+  if (stale) return;
+  sortBy = sortBy === 'suit' ? 'rank' : 'suit';
+  say(sortBy === 'suit' ? 'Vos cartes sont rangées par couleur.' : 'Vos cartes sont rangées par valeur.');
+  save();
+  render(true);
+}
+// One move of his: kept for undo, saved, then shown.
+function move(make) {
+  cancelAll();
+  undo.push(JSON.stringify(G));
+  hint = null;
+  const before = G;
+  commit(make());
+  // The cards that left his hand are no longer chosen.
+  for (const c of [...sel]) if (!G.hands[0].includes(c)) sel.delete(c);
+  if (G.last.kind === 'throw') sel.clear();
+  after(before);
+}
+
+/* ---------- The play ----------
+   After each action the table shows it, the message line says it, and Odette's next action comes
+   after a pause, so he can read each one. */
+function after(before) {
+  const e = G.last;
+  markFresh(e);
+  const text = describe(before);
+  if (G.phase === 'over') { say(text); render(true); return later(() => gameOver(true), landed()); }
+  // His turn comes: what Odette did stays on the line, and his turn is added to it.
+  if (G.turn === 0 && e.seat === 1) say(text + ' À vous : prenez une carte, la pioche ou la défausse.');
+  else if (G.turn === 0) say(text + ' ' + turnMessage());
+  else if (e.seat === 0) say(text + ` ${ODETTE} réfléchit…`);
+  else say(text);
+  render(true);
+  if (e.kind === 'lay' && e.opening && e.seat === 0) ribbon(`Ouvert ! ${e.pts} points`, landed());
+  if (G.turn === 1) later(step, Math.max(e.seat === 0 ? FIRST_MS : STEP_MS, landed() + PAUSE));
+}
+// How long until the cards in flight have landed.
+const landed = () => Math.max(0, Math.round(landBy - performance.now()));
+// Odette's next action: take a card, then each combination, each card added, and the card thrown.
+function step() {
+  if (stale || G.turn !== 1 || G.phase === 'over') return;
+  render();
+  later(() => {
+    const before = G;
+    const a = G.phase === 'draw' ? { type: 'take', from: RA.chooseDraw(G, level) } : RA.planTurn(G, level)[0];
+    commit(RA.apply(G, a));
+    after(before);
+  }, 30);
+}
+// What just changed on the table keeps a white glow for a moment.
+function markFresh(e) {
+  fresh = { melds: new Set(), cards: new Set() };
+  if (e.kind === 'lay') e.melds.forEach(i => fresh.melds.add(i));
+  if (e.kind === 'add') { fresh.melds.add(e.meld); e.cards.forEach(c => fresh.cards.add(c)); }
+  if (fresh.melds.size) later(() => { fresh = { melds: new Set(), cards: new Set() }; render(); }, 2200);
+}
+
+/* ---------- The end ---------- */
+function gameOver(isNew) {
+  render();
+  const won = G.result.winner === 0, pts = G.result.points;
+  say(won ? `Bravo, vous avez gagné ! ${ODETTE} garde ${plural(pts, 'point', 'points')} en main.`
+    : `${ODETTE} a gagné. Il vous reste ${plural(pts, 'point', 'points')} en main.`);
+  if (!isNew) return;
+  const games = ['Retour aux jeux', Kit.home];
+  const how = G.last.kind === 'lay' || G.last.kind === 'add' ? 'en posant ses dernières cartes' : 'en jetant sa dernière carte';
+  if (won) {
+    // His trays lift in a wave, then the cards of the four suits cross the felt, then the dialog.
+    const wave = motion.matches ? 0 : waveTrays();
+    if (!motion.matches) later(celebrate, wave);
+    resultAfter(() => Kit.dialog('Bravo, vous avez gagné !',
+      `Vous n'avez plus de carte, ${G.last.kind === 'throw' ? 'en jetant votre dernière carte' : 'en posant vos dernières cartes'}.\n${ODETTE} garde ${plural(pts, 'point', 'points')} en main.`
+      + (!wonNow ? '' : stats.won === 1 ? "\nC'est votre première victoire." : `\nC'est votre ${stats.won}e victoire.`),
+      [['Nouvelle partie', askNewGame, true], games], true), motion.matches ? 0 : wave + 2400);
+  } else resultAfter(() => Kit.dialog(`${ODETTE} a gagné`,
+    `${ODETTE} n'a plus de carte, ${how}.\nIl vous reste ${plural(pts, 'point', 'points')} en main.`,
+    [['Nouvelle partie', askNewGame, true], games]), motion.matches ? 0 : 500);
+}
+// If he opens the rules or the level chooser, keep the result until he closes it.
+function resultAfter(open, delay) { later(() => { pendingResult = open; showPendingResult(); }, delay); }
+function showPendingResult() {
+  if (!pendingResult || Kit.isOpen()) return;
+  const open = pendingResult;
+  pendingResult = null;
+  open();
+}
+const dialogChanges = new MutationObserver(showPendingResult);
+for (const id of ['help', 'over']) dialogChanges.observe($(id), { attributes: true, attributeFilter: ['class'] });
+
+/* ---------- Buttons ---------- */
+function cancelAll() {
+  gen++;
+  timers.forEach(clearTimeout);
+  timers = [];
+  pendingResult = null;
+  press = null;
+  hideBubble();
+  document.querySelectorAll('#confetti, .card.fly, .ribbon, .shimmer').forEach(el => el.remove());
+}
+function later(fn, ms) { const my = gen; const t = setTimeout(() => { timers = timers.filter(x => x !== t); if (my === gen) fn(); }, ms); timers.push(t); return t; }
+
+// Takes back his last move and every move made after it, also while Odette plays.
+function doUndo() {
+  if (stale) return;
+  while (undo.length) {
+    let g;
+    try { g = JSON.parse(undo.pop()); } catch (e) { continue; }
+    if (!RA.valid(g) || g.turn !== 0 || g.phase === 'over') continue;
+    cancelAll();
+    Kit.closeDialog();
+    G = g; hint = null;
+    for (const c of [...sel]) if (!G.hands[0].includes(c)) sel.delete(c);
+    fresh = { melds: new Set(), cards: new Set() };
+    save();
+    say('Coup annulé. ' + turnMessage());
+    render(true);
+    return;
+  }
+  render();
+}
+
+function showHint() {
+  if (!myTurn() || Kit.isOpen()) return;
+  const h = RA.hint(G);
+  hint = h;
+  if (h.type === 'take') say(h.from === 'pile' ? `Prenez ${nameOf(RA.top(G))} à la défausse : cette carte va avec les vôtres.` : 'Prenez une carte de la pioche : la carte de la défausse ne vous aide pas.');
+  else if (h.type === 'lay') {
+    const pts = h.groups.reduce((a, g) => a + RA.combo(g).pts, 0);
+    say(G.opened[0] ? `Choisissez les ${h.cards.length} cartes entourées de jaune, puis cliquez sur « Poser ».`
+      : `Vous pouvez ouvrir avec ${pts} points : choisissez les ${h.cards.length} cartes entourées, puis « Poser ».`);
+  } else if (h.type === 'add') say(`Choisissez ${nameOf(h.cards[0])}, puis cliquez sur la combinaison entourée de jaune.`);
+  else say(`Jetez ${nameOf(h.card)} : choisissez cette carte, puis cliquez sur la défausse.`);
+  render();
+}
+
+function askNewGame() { Kit.chooseLevel(level, started && G.phase !== 'over', newGame); }
+async function newGame(lv) {
+  cancelAll();
+  if (lv) level = lv;
+  Kit.showLevel(level);
+  clearCards();
+  G = RA.newGame(); undo = []; hint = null; sel = new Set(); wonNow = false; started = false;
+  fresh = { melds: new Set(), cards: new Set() };
+  const id = ++gameId;
+  const written = save();
+  say(turnMessage());
+  // The deal: the cards leave the pioche one by one, his hand and Odette's in turn.
+  dealing = true;
+  render(true);
+  dealing = false;
+  if ((await written) && id === gameId && !stale) GG.track('rami', 'start');
+}
+
+/* ---------- Drawing ---------- */
+const table = $('table');
+const els = new Map();     // card -> its element
+const meldEls = [];        // combination -> its tray, with its name in .lab
+let L = null;              // the layout: sizes and places
+function clearCards() {
+  for (const e of els.values()) e.remove();
+  els.clear();
+  meldEls.splice(0).forEach(e => { e.lab.remove(); e.remove(); });
+  document.querySelectorAll('.gbar').forEach(e => e.remove());
+}
+
+const STAR = '<svg class="s star" viewBox="0 0 100 100"><path d="M50 4l13 30 33 3-25 22 8 33-29-18-29 18 8-33L4 37l33-3z"/></svg>';
+// A joker: a star in the corners and a jester's cap with three bells over the word JOKER.
+const jokerFace = () => `<div class="ix">${STAR}</div><div class="c pic jk"><svg viewBox="0 0 60 74" aria-hidden="true">
+  <path d="M9 44C11 31 8 22 3 15c11 3 17 9 19 17 2-12 5-21 8-27 3 6 6 15 8 27 2-8 8-14 19-17-5 7-8 16-6 29z" fill="currentColor"/>
+  <circle cx="3" cy="15" r="3.6" fill="#E0A526"/><circle cx="30" cy="5" r="3.6" fill="#E0A526"/><circle cx="57" cy="15" r="3.6" fill="#E0A526"/>
+  <rect x="8" y="44" width="44" height="7" rx="3" fill="#E0A526"/>
+  <text x="30" y="69" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-weight="800" font-size="13.5" fill="currentColor">JOKER</text></svg></div><div class="ix end">${STAR}</div>`;
+const SU = s => `<svg viewBox="0 0 100 100" aria-hidden="true"><use href="#su${s}"/></svg>`;
+const RNAME = r => r === 14 || r === 1 ? 'A' : RANKS[r];
+// On the table: a large rank and suit. A joker shows the rank it stands for over a star, on a pale gold face.
+function meldFace(c, m, r) {
+  if (isJ(c)) return `<div class="mx">${RNAME(r)}${STAR.replace('class="s star"', 'aria-hidden="true"')}</div><svg class="mbig" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 4l13 30 33 3-25 22 8 33-29-18-29 18 8-33L4 37l33-3z"/></svg>`;
+  return `<div class="mx">${RANKS[rank(c)]}${SU(suit(c))}</div><svg class="mbig" viewBox="0 0 100 100" aria-hidden="true"><use href="#su${suit(c)}"/></svg>`;
+}
+function cardEl(c) {
+  let e = els.get(c);
+  if (!e) {
+    e = document.createElement('div');
+    e.dataset.c = c;
+    table.appendChild(e);
+    els.set(c, e);
+  }
+  return e;
+}
+// The face of a card for where it lies: 'full' in the hand and the défausse, or on the table.
+function setFace(e, c, mode, m, r) {
+  const key = mode === 'full' ? 'full' : 'meld:' + r;
+  if (e.dataset.mode === key) return;
+  e.dataset.mode = key;
+  e.innerHTML = mode === 'full' ? (isJ(c) ? jokerFace() : faceHtml(c)) : meldFace(c, m, r);
+}
+const colourOf = c => isJ(c) ? (c === 52 ? 'red' : 'black') : rd(c) ? 'red' : 'black';
+
+// The sizes come from the window. A computer: Odette, then the pioche, the défausse and the keys on the
+// left, the two zones of combinations on the right, his hand along the bottom. A phone: one column.
+function layout() {
+  const W = table.clientWidth, H = table.clientHeight;
+  const narrow = W < 700, pad = narrow ? 8 : 14, gap = narrow ? 8 : 12;
+  const low = H < 420, show = narrow ? .78 : low ? .66 : .8;
+  const opp = $('opp');
+  const seatH = opp.offsetHeight || 90;
+  let w;
+  if (narrow) w = Math.floor(Math.max(50, Math.min((W - 2 * pad) / 6.2, (H - 2 * pad - 54 - 4 * gap - 180) / (1.3 * (1 + show) + .2), 76)));
+  else w = Math.floor(Math.max(54, Math.min((H - pad - 2 * gap - seatH - 24) / (1.3 * (1 + show) + .14), (W - 2 * pad - 230) / 6.5, 124)));
+  // lift: how far a chosen card rises. thick: how far the pioche's stack reaches right and down.
+  const h = Math.round(w * 1.3), lift = Math.min(28, Math.round(h * (narrow ? .14 : .26))), thick = 9;
+  const handTop = Math.round(H - h * show);
+  document.documentElement.style.setProperty('--w', w + 'px');
+  document.documentElement.style.setProperty('--h', h + 'px');
+  document.documentElement.style.setProperty('--rise', lift + 'px');
+  const L = { W, H, narrow, pad, gap, low, w, h, lift, handTop, thick };
+  const sortW = $('sortBtn').offsetWidth;
+  if (narrow) {
+    // Row 1: Odette on the left, the pioche and the défausse on the right. Then the two zones, then the keys.
+    const rowH = Math.max(seatH, h + 16);
+    L.stock = [W - pad - 2 * w - gap - thick, pad]; L.pile = [W - pad - w, pad];
+    L.opp = [pad, pad + Math.round((h - seatH) / 2)];
+    const keysY = handTop - lift - 6 - Math.max(46, $('sortBtn').offsetHeight);
+    L.keys = keysY;
+    const zTop = pad + rowH + gap;
+    L.zarea = [pad, zTop, W - 2 * pad, keysY - gap - zTop];
+    L.hand = [pad, W - pad];
+  } else {
+    // The left column: Odette on top, the pioche, the défausse, "Poser" and "Jeter" under her.
+    const keysW = Math.max($('layBtn').offsetWidth, $('throwBtn').offsetWidth, 150);
+    const LW = Math.max(2 * w + 2 * gap + thick + keysW, opp.offsetWidth);
+    const topBot = handTop - lift - 8;
+    const zx = pad + LW + gap + 6, zw = W - pad - zx, zh = Math.floor((topBot - pad - gap) / 2);
+    L.zarea = [zx, pad, zw, topBot - pad];
+    L.opp = [pad, pad];
+    const blockH = Math.max(h + 16, 2 * 54 + gap);
+    const by = Math.max(pad + seatH + gap + 4, Math.min(topBot - blockH, pad + zh + gap + Math.round((zh - blockH) / 2)));
+    L.stock = [pad, by]; L.pile = [pad + w + gap + thick, by];
+    L.keysX = pad + 2 * w + 2 * gap + thick + 4; L.keysY = Math.max(pad + seatH + gap, by + Math.round((Math.min(blockH, h) - (2 * 54 + gap)) / 2));
+    L.hand = [pad + sortW + gap + 6, W - pad];
+  }
+  return L;
+}
+
+// The combinations of each zone in rows, as large as both zones allow. The zones share the height:
+// half each, unless one of them needs more rows.
+function placeMelds(L) {
+  const sides = [0, 1].map(o => G.melds.map((m, i) => [m, i]).filter(([m]) => m.owner === o));
+  const lab = [0, 1].map(o => { const e = $('zone' + o).querySelector('.zlabel'); return [e.offsetWidth + 18, e.offsetHeight + 14]; });
+  const zp = L.narrow ? 6 : 10, mg = L.narrow ? 10 : 16, bp = L.narrow ? 4 : 5, rg = L.narrow ? 6 : 8;
+  const [zx, zt, zw, zH] = L.zarea;
+  const zonesAt = split => { const h1 = Math.floor((zH - L.gap) * split); return [[zx, zt + h1 + L.gap, zw, zH - L.gap - h1], [zx, zt, zw, h1]]; };
+  const fit = (mw, o, zone, force) => {
+    const [x0, y0, , zh] = zone, mh = Math.round(mw * 1.3), rowH = mh + 2 * bp, out = [];
+    let x = lab[o][0], y = zp;
+    for (const [m, i] of sides[o]) {
+      const mwid = Math.round(mw * (1 + (m.slots.length - 1) * .5)) + 2 * bp;
+      if (x + mwid > zw - zp && x > zp) { y += rowH + rg; x = y < lab[o][1] ? lab[o][0] : zp; }
+      if (!force && (y + rowH > zh - zp || x + mwid > zw - zp + 1)) return null;
+      out.push({ i, x: x0 + x, y: y0 + y, w: mwid, h: rowH, mw, bp });
+      x += mwid + mg;
+    }
+    return out;
+  };
+  const max = Math.min(Math.round(L.w * .8), L.narrow ? 50 : 88), min = L.narrow ? 34 : 40;
+  let best = null;
+  for (const split of [.5, .42, .58, .34, .66]) {
+    const zones = zonesAt(split);
+    for (let mw = max; mw >= min && (!best || mw > best.mw); mw -= 2) {
+      const a = fit(mw, 0, zones[0]), b = fit(mw, 1, zones[1]);
+      if (a && b) { best = { mw, zones, places: [...a, ...b] }; break; }
+    }
+    if (best && best.mw === max) break;
+  }
+  // No room even for the smallest cards: they stay at the smallest size and the zone clips them.
+  if (!best) { const zones = zonesAt(.5); best = { zones, places: [...fit(min, 0, zones[0], true), ...fit(min, 1, zones[1], true)] }; }
+  L.zones = best.zones;
+  return best.places;
+}
+
+// The hand in its order: first the combinations he could lay, each together, then the other cards
+// sorted by colour or by value. Kept while the hand and the sort stay the same.
+let groupMemo = { key: '', v: null };
+function handGroups(hand) {
+  const key = sortBy + ':' + hand.slice().sort((a, b) => a - b).join();
+  if (groupMemo.key === key) return groupMemo.v;
+  const pack = hand.length >= 3 ? RA.bestPack(hand, 'pts', false) : null;
+  const sorted = RA.sortHand(hand, sortBy), pos = c => sorted.indexOf(c);
+  const groups = (pack ? pack.groups : []).map(g => RA.combo(g).slots.map(([c]) => c))
+    .sort((a, b) => Math.min(...a.map(pos)) - Math.min(...b.map(pos)));
+  const used = new Set(groups.flat());
+  groupMemo = { key, v: { groups, rest: sorted.filter(c => !used.has(c)) } };
+  return groupMemo.v;
+}
+// The points the cards he chose make in combinations, for the opening gauge.
+const selPoints = () => sel.size >= 3 ? RA.bestPack(mySel(), 'pts', false)?.pts || 0 : 0;
+
+function render(moving = false) {
+  if (!G) return;
+  const phone = table.clientWidth < 700;
+  table.classList.toggle('slim', !phone && table.clientHeight < 380);
+  $('sortBtn').innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3.5 16.5 7 20l3.5-3.5M17 20V4M13.5 7.5 17 4l3.5 3.5"/></svg>${phone ? 'Trier' : sortBy === 'suit' ? 'Trier par valeur' : 'Trier par couleur'}`;
+  fillSeat();
+  L = layout();
+  const { w, h, pad, gap, handTop } = L;
+  const mine = myTurn(), drawing = mine && G.phase === 'draw', playing = mine && G.phase === 'play';
+  const live = new Set(), last = G.last, deal = dealing && moving && !motion.matches;
+  const oppBox = $('opp');
+  oppBox.style.left = L.opp[0] + 'px'; oppBox.style.top = L.opp[1] + 'px';
+  const fan = fanAt();
+  if (deal) oppBox.querySelectorAll('.fan i').forEach((b, i) => b.animate([{ opacity: 0 }, { opacity: 1 }],
+    { duration: 120, delay: (2 * i + 1) * DEAL_GAP + DEAL_FLY - 80, fill: 'backwards' }));
+
+  // The zones, as the combinations need them.
+  const places = placeMelds(L);
+  for (const o of [0, 1]) {
+    const z = $('zone' + o), [zx, zy, zw, zh] = L.zones[o];
+    Object.assign(z.style, { left: zx + 'px', top: zy + 'px', width: zw + 'px', height: zh + 'px' });
+  }
+  const z1 = $('zone1'), empty = z1.querySelector('.zempty'), lab1 = z1.querySelector('.zlabel');
+  empty.hidden = G.melds.some(m => m.owner === 1) || lab1.offsetWidth + 40 + empty.offsetWidth > L.zones[1][2];
+  empty.style.left = lab1.offsetWidth + 26 + 'px';
+  empty.style.top = Math.round(lab1.offsetTop + (lab1.offsetHeight - empty.offsetHeight) / 2) + 'px';
+  // The opening gauge, in his zone until he opens.
+  const gauge = $('gauge'), pts = playing ? selPoints() : 0;
+  gauge.style.display = G.opened[0] || G.phase === 'over' ? 'none' : '';
+  gauge.querySelector('span').innerHTML = `Ouverture : <b>${pts}</b> / 51 points`;
+  gauge.style.setProperty('--p', Math.min(1, pts / RA.OPEN));
+  gauge.classList.toggle('full', pts >= RA.OPEN);
+  const lab0 = $('zone0').querySelector('.zlabel');
+  gauge.style.left = lab0.offsetLeft + lab0.offsetWidth + 12 + 'px';
+  gauge.style.top = Math.round(lab0.offsetTop + (lab0.offsetHeight - gauge.offsetHeight) / 2) + 'px';
+
+  // The pioche: a stack whose thickness follows the cards left.
+  const stock = $('stock'), pileBox = $('pileBox'), ns = G.stock.length;
+  const layers = ns < 3 ? ns : Math.min(6, 3 + Math.floor(ns / 7));
+  if (stock.childElementCount !== layers) stock.innerHTML = '<div class="card down"></div>'.repeat(layers);
+  [...stock.children].forEach((c, i) => { const d = ((layers - 1 - i) * L.thick / 5).toFixed(1); c.style.translate = `${d}px ${d}px`; });
+  stock.style.left = L.stock[0] + 'px'; stock.style.top = L.stock[1] + 'px';
+  pileBox.style.left = L.pile[0] + 'px'; pileBox.style.top = L.pile[1] + 'px';
+  stock.classList.toggle('can', drawing && ns > 0);
+  pileBox.classList.toggle('can', (drawing && G.pile.length > 0) || (playing && sel.size === 1));
+  stock.classList.toggle('hint', !!(hint && hint.type === 'take' && hint.from === 'stock'));
+  pileBox.classList.toggle('hint', !!(hint && ((hint.type === 'take' && hint.from === 'pile') || hint.type === 'throw')));
+  stock.setAttribute('aria-label', `La pioche : ${plural(ns, 'carte', 'cartes')}`);
+  pileBox.setAttribute('aria-label', G.pile.length ? `La défausse : ${nameOf(RA.top(G))}` : 'La défausse, vide');
+  stock.tabIndex = pileBox.tabIndex = mine ? 0 : -1;
+  const sn = $('stockN');
+  sn.innerHTML = ns ? `<b>${ns}</b> ${L.narrow ? '' : 'Pioche'}` : 'Vide';
+  const pn = $('pileN');
+  pn.textContent = 'Défausse';
+  // Each label under its card, inside the table.
+  for (const [el, [x, y]] of [[sn, L.stock], [pn, L.pile]]) {
+    const half = el.offsetWidth / 2;
+    el.style.left = Math.round(Math.max(half + 2, Math.min(L.W - half - 2, x + w / 2))) + 'px'; el.style.top = y + h - 14 + 'px';
+  }
+  // The défausse: the top card straight, the two below at small fixed turns.
+  const shown = G.pile.slice(-3), TURN = [-7, 5];
+  shown.forEach((c, i) => {
+    const depth = shown.length - 1 - i, e = cardEl(c), isNew = !e.style.left;
+    live.add(c);
+    setFace(e, c, 'full');
+    e.className = `card pile ${colourOf(c)}${isJ(c) ? ' joker' : ''} ${depth ? 'under' : 'top'}`;
+    e.style.removeProperty('--w'); e.style.removeProperty('--h');
+    e.querySelector('.tag')?.remove();
+    e.style.setProperty('--rot', depth ? TURN[depth - 1] + 'deg' : '0deg');
+    const thrown = last.kind === 'throw' && last.card === c && !depth;
+    // His card comes from his hand, Odette's from her seat, face up on the way; the first card of the
+    // deal from the pioche. A card that shows because the top one left appears in place.
+    const o = thrown ? { tilt: 4, flip: isNew } : deal ? { flip: true, dur: DEAL_FLY, delay: 26 * DEAL_GAP } : {};
+    placeCard(e, L.pile[0], L.pile[1], thrown && last.seat === 1 ? fan : L.stock, moving && (!isNew || thrown || deal), o);
+    e.style.zIndex = 12 + i;
+    e.removeAttribute('role'); e.tabIndex = -1;
+  });
+
+  // The keys.
+  const layB = $('layBtn'), thrB = $('throwBtn'), sortB = $('sortBtn');
+  const n = playing ? sel.size : 0;
+  layB.disabled = !(playing && n >= 3);
+  thrB.disabled = !(playing && n === 1);
+  layB.classList.toggle('primary', !layB.disabled);
+  thrB.classList.toggle('primary', !thrB.disabled);
+  layB.classList.toggle('hint', !!(hint && hint.type === 'lay' && sel.size && hint.cards.every(c => sel.has(c)) && sel.size === hint.cards.length));
+  // "Poser" pulses only when his selection can be laid (before he opens, with the gauge gold). "Jeter"
+  // pulses only when he has nothing left to lay or add, so a wait never pushes him to throw a useful card;
+  // otherwise the hint button pulses and shows the move.
+  layB.toggleAttribute('data-nudge', !layB.disabled && (G.opened[0] || pts >= RA.OPEN) && !RA.layCheck(G, mySel()).why);
+  thrB.toggleAttribute('data-nudge', !thrB.disabled && RA.hint(G).type === 'throw');
+  if (L.narrow) {
+    const bw = Math.floor((L.W - 2 * pad - 2 * gap) / 3);
+    [layB, thrB, sortB].forEach((b, i) => { b.style.width = bw + 'px'; b.style.left = pad + i * (bw + gap) + 'px'; b.style.top = L.keys + 'px'; });
+  } else {
+    const kw = Math.max(layB.offsetWidth, thrB.offsetWidth, 150);
+    [layB, thrB].forEach((b, i) => { b.style.width = kw + 'px'; b.style.left = L.keysX + 'px'; b.style.top = L.keysY + i * (54 + gap) + 'px'; });
+    sortB.style.width = ''; sortB.style.left = pad + 'px';
+    sortB.style.top = Math.round(Math.min(L.H - sortB.offsetHeight - 6, handTop + (L.H - handTop - sortB.offsetHeight) / 2)) + 'px';
+  }
+
+  // The combinations, each on its tray. The cards laid now land 60 ms apart.
+  while (meldEls.length > G.melds.length) { const b = meldEls.pop(); b.lab.remove(); b.remove(); }
+  const fitting = playing && sel.size ? new Set(G.melds.map((m, i) => i).filter(i => !RA.addCheck(G, i, mySel()))) : new Set();
+  const dimming = playing && sel.size > 0 && G.opened[0];
+  const now = !moving ? new Set() : last.kind === 'lay' ? new Set(last.melds) : last.kind === 'add' ? new Set([last.meld]) : new Set();
+  let landing = 0;
+  for (const p of places) {
+    const m = G.melds[p.i];
+    let box = meldEls[p.i];
+    const made = !box;
+    if (made) {
+      box = meldEls[p.i] = document.createElement('div');
+      box.setAttribute('role', 'button'); box.dataset.m = p.i;
+      box.lab = document.createElement('span');
+      table.append(box, box.lab);
+    }
+    const old = made ? null : { x: parseFloat(box.style.left), y: parseFloat(box.style.top), w: parseFloat(box.style.width), h: parseFloat(box.style.height) };
+    Object.assign(box.style, { left: p.x + 'px', top: p.y + 'px', width: p.w + 'px', height: p.h + 'px' });
+    const dim = dimming && !fitting.has(p.i) ? ' dim' : '';
+    box.className = 'meld' + (fitting.has(p.i) ? ' can' : '') + (hint && hint.type === 'add' && hint.meld === p.i ? ' hint' : '') + (fresh.melds.has(p.i) ? ' fresh' : '') + dim;
+    box.tabIndex = playing ? 0 : -1;
+    box.setAttribute('aria-label', meldLabel(m));
+    const mh = Math.round(p.mw * 1.3), lab = box.lab;
+    lab.className = 'mlab' + dim;
+    lab.textContent = cap(meldWord(m));
+    const lx = p.x + p.bp + 3, ly = p.y + p.bp + mh - lab.offsetHeight - 2;
+    const lold = made ? null : [parseFloat(lab.style.left), parseFloat(lab.style.top)];
+    lab.style.left = lx + 'px'; lab.style.top = ly + 'px';
+    if (moving && !motion.matches) {
+      if (made) {
+        box.animate([{ scale: '.92', opacity: 0 }, { scale: '1', opacity: 1 }], { duration: 260, easing: 'ease-out' });
+        lab.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260, delay: 200, fill: 'backwards' });
+      } else if (old.x !== p.x || old.y !== p.y || old.w !== p.w || old.h !== p.h) {
+        // The tray widens or moves smoothly to its new place.
+        box.animate([{ translate: `${old.x + old.w / 2 - p.x - p.w / 2}px ${old.y + old.h / 2 - p.y - p.h / 2}px`, scale: `${old.w / p.w} ${old.h / p.h}` },
+          { translate: '0px 0px', scale: '1 1' }], { duration: 420, easing: 'cubic-bezier(.2,.7,.3,1)' });
+        lab.animate([{ translate: `${lold[0] - lx}px ${lold[1] - ly}px` }, { translate: '0px 0px' }], { duration: 420, easing: 'cubic-bezier(.2,.7,.3,1)' });
+      }
+    }
+    m.slots.forEach(([c, r], k) => {
+      const e = cardEl(c), isNew = !e.style.left, fromHand = e.classList.contains('hand');
+      live.add(c);
+      const arriving = now.has(p.i) && (isNew || !e.classList.contains('mc'));
+      setFace(e, c, 'meld', m, r);
+      e.className = `card mc ${colourOf(c)}${isJ(c) ? ' joker' : ''}${fresh.cards.has(c) ? ' fresh' : ''}${dim}`;
+      e.style.setProperty('--w', p.mw + 'px'); e.style.setProperty('--h', mh + 'px');
+      // Odette's cards come from her seat and turn face up on the way; his come from his hand.
+      const o = arriving ? { delay: landing++ * LAY_GAP, flip: isNew, scale: fromHand ? L.w / p.mw : isNew ? .6 : 0 } : {};
+      placeCard(e, p.x + p.bp + Math.round(k * p.mw * .5), p.y + p.bp, m.owner === 1 ? fan : L.stock, moving, o);
+      e.style.zIndex = 6 + k;
+      e.removeAttribute('role'); e.tabIndex = -1;
+    });
+    if (made && moving && last.kind === 'lay') shimmer(p, (landing - 1) * LAY_GAP + FLY);
+  }
+
+  // His hand: a gentle arc along the bottom. The combinations he could lay sit together, a small gap
+  // between them, each over a thin gold bar.
+  const { groups, rest } = handGroups(G.hands[0]);
+  const order = [...groups.flat(), ...rest], nh = order.length;
+  const [hx0, hx1] = L.hand, room = hx1 - hx0;
+  const gaps = groups.length - (groups.length && !rest.length ? 1 : 0);
+  const gapX = gaps ? Math.max(0, Math.min(Math.round(w * .22), (room - w - (nh - 1) * w * .36) / gaps)) : 0;
+  const stepX = nh > 1 ? Math.min(w * .78, (room - w - gapX * gaps) / (nh - 1)) : 0;
+  const hx = Math.round(hx0 + (room - w - stepX * (nh - 1) - gapX * gaps) / 2);
+  L.stepX = stepX;
+  const groupOf = new Map();
+  groups.forEach((g, gi) => g.forEach(c => groupOf.set(c, gi)));
+  const hintCards = new Set(hint ? hint.type === 'lay' ? hint.cards : hint.type === 'add' ? hint.cards : hint.type === 'throw' ? [hint.card] : [] : []);
+  const mid = (nh - 1) / 2, turn = nh > 1 ? Math.min(1.4, 10 / (nh - 1)) : 0, xs = [];
+  let gapsBefore = 0;
+  order.forEach((c, i) => {
+    const gi = groupOf.has(c) ? groupOf.get(c) : -1;
+    if (i && gi !== (groupOf.has(order[i - 1]) ? groupOf.get(order[i - 1]) : -1)) gapsBefore++;
+    const x = Math.round(hx + i * stepX + gapsBefore * gapX);
+    xs.push(x);
+    const e = cardEl(c), isNew = !e.style.left;
+    live.add(c);
+    setFace(e, c, 'full');
+    e.className = `card hand ${colourOf(c)}${isJ(c) ? ' joker' : ''}${gi >= 0 ? ' grp' : ''}` + (sel.has(c) ? ' sel' : '') + (hintCards.has(c) && !sel.has(c) ? ' hint' : '') + (mine ? '' : ' wait');
+    e.style.removeProperty('--w'); e.style.removeProperty('--h');
+    const t = mid ? (i - mid) / mid : 0;
+    e.style.setProperty('--rot', ((i - mid) * turn).toFixed(2) + 'deg');
+    e.style.setProperty('--arc', Math.round(t * t * h * .045) + 'px');
+    let tag = e.querySelector('.tag');
+    const taken = G.taken === c && G.turn === 0;
+    if (taken && !tag) e.insertAdjacentHTML('beforeend', '<span class="tag">Prise</span>');
+    else if (!taken && tag) tag.remove();
+    // The deal: his cards leave the pioche every other 75 ms and turn face up. A card drawn from the
+    // pioche turns over on its way; one from the défausse or a card that moves slides.
+    const o = deal ? { flip: true, dur: DEAL_FLY, delay: 2 * G.hands[0].indexOf(c) * DEAL_GAP } : isNew ? { flip: true } : {};
+    placeCard(e, x, handTop, L.stock, moving, o);
+    e.style.zIndex = 100 + i;
+    e.tabIndex = mine ? 0 : -1;
+    e.setAttribute('role', 'button'); e.setAttribute('aria-label', nameOf(c)); e.setAttribute('aria-pressed', sel.has(c) ? 'true' : 'false');
+  });
+  const bars = [...table.querySelectorAll('.gbar')];
+  while (bars.length > groups.length) bars.pop().remove();
+  while (bars.length < groups.length) { const b = document.createElement('i'); b.className = 'gbar'; b.setAttribute('aria-hidden', 'true'); table.appendChild(b); bars.push(b); }
+  let at = 0;
+  groups.forEach((g, gi) => {
+    const x0 = xs[at], x1 = xs[at + g.length - 1] + w;
+    at += g.length;
+    Object.assign(bars[gi].style, { left: x0 + 6 + 'px', width: x1 - x0 - 12 + 'px', top: L.H - 10 + 'px' });
+  });
+
+  // The cards that left the table: into Odette's hand, flying to her seat face down, or back into the
+  // pioche when it is made again from the défausse.
+  let back = 0;
+  for (const [c, e] of els) {
+    if (live.has(c)) continue;
+    els.delete(c);
+    if (!moving || motion.matches) e.remove();
+    else if (G.hands[1].includes(c)) flyOff(e, fan, .3, 0);
+    else if (G.stock.includes(c)) flyOff(e, L.stock, 1, back++ * LAY_GAP);
+    else e.remove();
+  }
+  if (moving && last.kind === 'take' && last.seat === 1 && last.from === 'stock') flyBack(0, FLY);
+  if (deal) for (let i = 0; i < G.hands[1].length; i++) flyBack((2 * i + 1) * DEAL_GAP, DEAL_FLY);
+  if (moving && last.kind === 'throw' && last.shuffled) shuffleStock(FLY + back * LAY_GAP);
+
+  Kit.showWins(stats.won);
+  $('undoBtn').disabled = stale || !undo.length;
+  $('hintBtn').disabled = !mine;
+}
+function meldLabel(m) {
+  const who = m.owner === 0 ? 'Votre' : `Combinaison d'${ODETTE} :`;
+  const list = m.slots.map(([c, r]) => isJ(c) ? `joker pour ${r === 14 || r === 1 ? 'as' : RANKS[r]}` : RANKS[rank(c)]).join(', ');
+  return `${who} ${meldWord(m)}${m.type === 'run' ? ' de ' + SUIT_NAMES[suit(m.slots.find(([c]) => !isJ(c))[0])] : ''} : ${list}`;
+}
+// Odette's seat: what she does, her cards as a tight fan of backs, and their count.
+function fillSeat() {
+  const n = G.hands[1].length, e = $('opp'), turn = G.turn === 1 && G.phase !== 'over';
+  e.querySelector('.now').textContent = turn ? 'réfléchit' : G.phase === 'over' ? (G.result.winner === 1 ? 'a gagné' : 'a perdu') : 'attend';
+  e.querySelector('.badge').textContent = plural(n, 'carte', 'cartes');
+  const fan = e.querySelector('.fan'), k = Math.min(n, 16), slim = table.classList.contains('slim'), key = k + (slim ? 's' : '');
+  if (fan.dataset.k !== key) {
+    fan.dataset.k = key;
+    const bw = slim ? 22 : 30, step = k > 1 ? Math.min(slim ? 4 : 6, 80 / (k - 1)) : 0, mid = (k - 1) / 2;
+    fan.innerHTML = Array.from({ length: k }, (_, i) => `<i style="left:${Math.round(i * step)}px; rotate:${((i - mid) * 2.4).toFixed(1)}deg"></i>`).join('');
+    fan.style.width = k ? bw + Math.round((k - 1) * step) + 'px' : '0px';
+  }
+  e.setAttribute('aria-label', `${ODETTE} : ${plural(n, 'carte', 'cartes')}`);
+  e.classList.toggle('turn', turn);
+}
+// Where a card in Odette's hand flies from or to: the middle of her fan, or of her seat on a phone.
+function fanAt() {
+  const t = table.getBoundingClientRect(), z = Zoom.z(), f = $('opp').querySelector('.fan');
+  const r = (f && f.offsetWidth ? f : $('opp')).getBoundingClientRect();
+  return [Math.round((r.left - t.left + r.width / 2) / z - L.w / 2), Math.round((r.top - t.top + r.height / 2) / z - L.h / 2)];
+}
+
+/* ---------- Animations ----------
+   Transforms and opacity only. A card is set at once where it lands; a flight then plays it from where
+   it was (FLIP). With "reduced motion" nothing flies: cards appear in place at once. */
+// The back of a card over its face during half of a flight: first (face down, then up) or after.
+function addBack(el, first, dur, delay) {
+  const b = document.createElement('div');
+  b.className = 'card down flipback';
+  b.setAttribute('aria-hidden', 'true');
+  el.appendChild(b);
+  const on = { opacity: 1 }, off = { opacity: 0 };
+  b.animate(first ? [on, { ...on, offset: .5 }, { ...off, offset: .5 }, off] : [off, { ...off, offset: .5 }, { ...on, offset: .5 }, on],
+    { duration: dur, delay, fill: 'both' }).onfinish = () => { if (first) b.remove(); };
+  el.flipBack = b;
+}
+// o: delay, dur, flip (turns face up on the way), tilt (lands at a small turn, then settles), scale (the
+// size it starts at, against its size where it lands).
+function placeCard(el, x, y, origin, moving, o = {}) {
+  const oldX = parseFloat(el.style.left), oldY = parseFloat(el.style.top), had = Number.isFinite(oldX);
+  if (had && oldX === x && oldY === y) return;
+  const from = had ? [oldX, oldY] : origin || [x, y];
+  let dx = from[0] - x, dy = from[1] - y;
+  if (el.flight?.playState === 'running') {
+    const [tx, ty] = getComputedStyle(el).translate.split(' ').map(parseFloat);
+    dx += tx || 0; dy += ty || 0;
+  }
+  el.flight?.cancel(); el.flight = null;
+  el.flipBack?.remove(); el.flipBack = null;
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  if (!moving || motion.matches || (!dx && !dy)) return;
+  const dur = o.dur || FLY, delay = o.delay || 0, far = Math.hypot(dx, dy);
+  landBy = Math.max(landBy, performance.now() + delay + dur);
+  // A short move, such as cards sliding apart in the hand, glides.
+  if (!o.flip && !o.tilt && !o.scale && far < (L ? L.w * 1.2 : 120)) {
+    el.flight = el.animate([{ translate: `${dx}px ${dy}px` }, { translate: '0px 0px' }], { duration: Math.max(400, dur - 120), delay, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'backwards' });
+    return;
+  }
+  const up = Math.min(46, far * .14), s0 = o.scale || .96;
+  const f = [
+    { translate: `${dx}px ${dy}px`, scale: `${s0}`, zIndex: 300, easing: 'cubic-bezier(.3,.1,.4,1)' },
+    { translate: `${(dx * .45).toFixed(1)}px ${(dy * .45 - up).toFixed(1)}px`, scale: `${Math.max(1.04, (s0 + 1) / 2).toFixed(3)}`, zIndex: 300, offset: .45, easing: 'cubic-bezier(.3,.1,.4,1)' },
+    { translate: '0px -3px', scale: '1.01', zIndex: 300, offset: .85, easing: 'ease-out' },
+    { translate: '0px 0px', scale: '1', zIndex: 300 },
+  ];
+  const end = o.tilt ? `z ${o.tilt}deg` : o.flip ? 'y 0deg' : null;
+  if (o.flip) [f[0].rotate, f[1].rotate, f[2].rotate, f[3].rotate] = ['y 180deg', 'y 100deg', end, o.tilt ? 'z 0deg' : 'y 0deg'];
+  else if (o.tilt) [f[0].rotate, f[1].rotate, f[2].rotate, f[3].rotate] = ['z 0deg', 'z 0deg', end, 'z 0deg'];
+  el.flight = el.animate(f, { duration: dur, delay, fill: 'backwards' });
+  if (o.flip) addBack(el, true, dur, delay);
+}
+// A card that leaves the table: it flies to where it goes, turns face down and fades.
+function flyOff(e, to, scale, delay) {
+  const x0 = parseFloat(e.style.left), y0 = parseFloat(e.style.top);
+  e.flight?.cancel(); e.flipBack?.remove();
+  e.classList.remove('hand', 'sel', 'hint', 'wait', 'grp', 'dim');
+  e.classList.add('fly');
+  e.removeAttribute('role'); e.tabIndex = -1;
+  e.style.left = to[0] + 'px'; e.style.top = to[1] + 'px';
+  const dx = x0 - to[0], dy = y0 - to[1], s = String(scale);
+  e.animate([
+    { translate: `${dx}px ${dy}px`, scale: '1', rotate: 'y 0deg', opacity: 1, easing: 'cubic-bezier(.3,.1,.4,1)' },
+    { translate: `${(dx * .5).toFixed(1)}px ${(dy * .5 - 24).toFixed(1)}px`, scale: String((1 + scale) / 2), rotate: 'y 90deg', opacity: 1, offset: .5 },
+    { translate: '0px 0px', scale: s, rotate: 'y 180deg', opacity: 1, offset: .85 },
+    { translate: '0px 0px', scale: s, rotate: 'y 180deg', opacity: 0 },
+  ], { duration: FLY, delay, fill: 'both' }).onfinish = () => e.remove();
+  addBack(e, false, FLY, delay);
+  landBy = Math.max(landBy, performance.now() + delay + FLY);
+}
+// A back that travels between the pioche and Odette's fan: when she takes from the pioche, and in the deal.
+function flyBack(delay, dur) {
+  if (motion.matches || !L) return;
+  const [x, y] = fanAt();
+  const el = document.createElement('div');
+  el.className = 'card down fly';
+  el.setAttribute('aria-hidden', 'true');
+  el.style.left = x + 'px'; el.style.top = y + 'px';
+  table.appendChild(el);
+  el.animate([
+    { translate: `${L.stock[0] - x}px ${L.stock[1] - y}px`, scale: '1', opacity: 1, easing: 'cubic-bezier(.3,.1,.4,1)' },
+    { translate: '0px -6px', scale: '.36', opacity: 1, offset: .85 },
+    { translate: '0px 0px', scale: '.3', opacity: 0 },
+  ], { duration: dur, delay, fill: 'both' }).onfinish = () => el.remove();
+  landBy = Math.max(landBy, performance.now() + delay + dur);
+}
+// The pioche made again: its stack shuffles for 700 ms.
+function shuffleStock(delay) {
+  if (motion.matches) return;
+  [...$('stock').children].forEach((c, i) => c.animate([{ translate: c.style.translate }, { translate: `${i % 2 ? 12 : -12}px -2px`, offset: .25 },
+    { translate: `${i % 2 ? -9 : 9}px 1px`, offset: .55 }, { translate: `${i % 2 ? 4 : -4}px 0px`, offset: .8 }, { translate: c.style.translate }],
+  { duration: 700, delay, easing: 'ease-in-out' }));
+}
+// A gold light crosses a new tray once, after its cards land.
+function shimmer(p, delay) {
+  if (motion.matches) return;
+  const el = document.createElement('div');
+  el.className = 'shimmer';
+  el.setAttribute('aria-hidden', 'true');
+  Object.assign(el.style, { left: p.x + 'px', top: p.y + 'px', width: p.w + 'px', height: p.h + 'px' });
+  el.innerHTML = '<i></i>';
+  table.appendChild(el);
+  el.firstChild.animate([{ translate: '-100% 0' }, { translate: '100% 0' }], { duration: 600, delay, easing: 'ease-in-out', fill: 'both' }).onfinish = () => el.remove();
+}
+// "Ouvert ! 57 points": a gold ribbon over his zone for 1.4 s. With reduced motion it shows still.
+function ribbon(text, delay) {
+  document.querySelector('.ribbon')?.remove();
+  if (!L || !L.zones) return;
+  const [zx, zy, zw, zh] = L.zones[0], el = document.createElement('div');
+  el.className = 'ribbon';
+  el.setAttribute('aria-hidden', 'true');
+  el.textContent = text;
+  el.style.left = zx + zw / 2 + 'px'; el.style.top = zy + zh / 2 + 'px';
+  table.appendChild(el);
+  if (!motion.matches) el.animate([{ opacity: 0, scale: '.6' }, { opacity: 1, scale: '1.06', offset: .18 }, { opacity: 1, scale: '1', offset: .3 },
+    { opacity: 1, scale: '1', offset: .85 }, { opacity: 0, scale: '.96' }], { duration: 1400, delay, fill: 'both' });
+  later(() => el.remove(), (motion.matches ? 0 : delay) + 1400);
+}
+// His win: his trays and their cards lift in a wave, 90 ms apart. Returns when the wave ends.
+function waveTrays() {
+  const mine = G.melds.map((m, i) => [m, i]).filter(([m]) => m.owner === 0), start = landed();
+  mine.forEach(([m, i], k) => {
+    const parts = [meldEls[i], meldEls[i]?.lab, ...m.slots.map(([c]) => els.get(c))].filter(Boolean);
+    for (const el of parts) el.animate([{ translate: '0px 0px' }, { translate: '0px -16px', offset: .4 }, { translate: '0px 0px' }],
+      { duration: 560, delay: start + k * 90, easing: 'ease-in-out', composite: 'add' });
+  });
+  return start + (mine.length ? (mine.length - 1) * 90 + 560 : 0);
+}
+// Then small cards of the four suits fan out from his hand and cross the felt for 2.4 s.
+function celebrate() {
+  if (motion.matches || !L) return;
+  document.getElementById('confetti')?.remove();
+  const box = document.createElement('div');
+  box.id = 'confetti';
+  box.setAttribute('aria-hidden', 'true');
+  const t = table.getBoundingClientRect(), z = Zoom.z();
+  const x = t.left / z + L.W / 2, y = t.top / z + L.handTop;
+  let html = '';
+  for (let i = 0; i < 28; i++) {
+    const a = Math.PI * (1.06 + .88 * (i + .5) / 28), r = Math.min(L.W * .46, 540) * (.7 + .3 * (i % 3) / 2), s = i % 4;
+    html += `<i style="--x:${x}px;--y:${y}px;--dx:${Math.round(Math.cos(a) * r)}px;--dy:${Math.round(Math.sin(a) * r * .85)}px;--r:${Math.round(Math.random() * 300 - 150)}deg;--s:${30 + (i % 3) * 6}px;--t:${(1.9 + (i % 4) * .1).toFixed(1)}s;--d:${(i % 7) * 35}ms">`
+      + `<svg viewBox="0 0 100 100" style="fill:${s === 1 || s === 2 ? '#C4122F' : '#14171A'}"><use href="#su${s}"/></svg></i>`;
+  }
+  box.innerHTML = html;
+  document.body.appendChild(box);
+  later(() => box.remove(), 2400);
+}
+
+/* ---------- Mouse, touch and keys ----------
+   A press and release on the same target is a click, if the pointer moved less than 16 px. A second
+   click within half a second near the same spot is a double-click: it counts as one click, so a
+   chosen card is not put back at once. */
+const TARGETS = '.card.hand, #stock, #pileBox, .meld';
+const keyOf = el => el.id || (el.dataset.c !== undefined ? 'c' + el.dataset.c : 'm' + el.dataset.m);
+function tapTarget(el) {
+  if (el.id === 'stock') tapStock();
+  else if (el.id === 'pileBox') tapPile();
+  else if (el.classList.contains('meld')) tapMeld(+el.dataset.m);
+  else tapCard(+el.dataset.c);
+}
+let press = null;
+addEventListener('click', e => {
+  const button = e.target.closest('button');
+  if (!button || !e.detail) return;
+  const t = performance.now();
+  // A second click lands on another key when the first one changed the table, such as a card that rose.
+  const near = lastTap && t - lastTap.t < 500 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 24
+    && lastTap.key !== button && !!button.closest('#table');
+  if (e.detail > 1 || near) { e.preventDefault(); e.stopImmediatePropagation(); return; }
+  lastTap = { t, key: button, x: e.clientX, y: e.clientY };
+}, true);
+addEventListener('keydown', e => {
+  if (e.repeat && ['Enter', ' ', 'Escape', 'z', 'Z'].includes(e.key)) { e.preventDefault(); e.stopImmediatePropagation(); }
+}, true);
+table.addEventListener('pointerdown', e => {
+  if (e.button !== 0 || Kit.isOpen()) return;
+  const el = e.target.closest(TARGETS);
+  press = el ? { key: keyOf(el), x: e.clientX, y: e.clientY, id: e.pointerId, at: G.n + ':' + G.phase + ':' + G.turn } : null;
+});
+addEventListener('pointerup', e => {
+  const p = press; press = null;
+  if (!p || e.pointerId !== p.id || Kit.isOpen()) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY)?.closest(TARGETS);
+  if (!el || keyOf(el) !== p.key || Math.hypot(e.clientX - p.x, e.clientY - p.y) > 16) return;
+  if (p.at !== G.n + ':' + G.phase + ':' + G.turn) return;
+  const t = performance.now(), prev = lastTap;
+  lastTap = { t, key: p.key, x: e.clientX, y: e.clientY };
+  if (prev && t - prev.t < 500 && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) < 24) return;
+  tapTarget(el);
+});
+addEventListener('pointercancel', () => { press = null; });
+table.addEventListener('keydown', e => {
+  const el = e.target.closest && e.target.closest(TARGETS);
+  if (!el || (e.key !== 'Enter' && e.key !== ' ')) return;
+  e.preventDefault();
+  tapTarget(el);
+});
+motion.addEventListener('change', () => { if (motion.matches) for (const el of els.values()) el.flight?.cancel(); });
+
+$('undoBtn').onclick = doUndo;
+$('hintBtn').onclick = showHint;
+$('helpBtn').onclick = () => Kit.openHelp();
+$('newBtn').onclick = askNewGame;
+$('layBtn').onclick = tapLay;
+$('throwBtn').onclick = tapThrow;
+$('sortBtn').onclick = tapSort;
+addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (!Kit.isOpen()) doUndo(); }
+  else if (e.key === 'Escape' && !Kit.escape()) {
+    if (hint) { hint = null; say(turnMessage()); render(); }
+    else if (sel.size && myTurn()) { sel.clear(); say(turnMessage()); render(); }
+  }
+});
+addEventListener('resize', () => render());
+
+// The pictures of the rules: the jokers, and the pointing hand on the pioche.
+document.querySelectorAll('#help [data-joker]').forEach(e => { e.className = 'card joker red'; e.innerHTML = jokerFace(); });
+document.querySelectorAll('#help .hp-frame.solid').forEach(e => e.insertAdjacentHTML('beforeend', Kit.icon('hand')));
+document.querySelectorAll('#help .guide-btn[data-lay]').forEach(e => e.insertAdjacentHTML('afterbegin', $('layBtn').querySelector('svg').outerHTML));
+
+// The rules open by themselves the first time the game is opened.
+const loaded = load();
+if (loaded === 'ok') {
+  Kit.showLevel(level);
+  if (G.phase === 'over') gameOver(false);
+  else if (G.turn === 1) { say(`${ODETTE} réfléchit…`); render(); later(step, 900); }
+  else { say(turnMessage()); render(); }
+} else if (loaded === 'broken') {
+  newGame(level);
+  say("La partie enregistrée n'a pas pu être relue : une nouvelle partie commence.");
+} else {
+  Kit.firstVisit(newGame);
+}
+</script>
+</body>
+</html>
