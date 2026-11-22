@@ -96,7 +96,7 @@ button.game:active { background: #095A4E; }
 /* Message line: under the top bar, where his eyes already are, in the middle of the row. The win count
    (and the flags in the Démineur) are on its left, the size buttons on its right. Dark bold text on a
    warm cream band with a gold edge. A new text flashes once (see Kit.say). */
-#say { display: flex; align-items: center; gap: 10px; padding: 8px clamp(10px, 1.4vw, 18px); margin-bottom: clamp(8px, 8vh - 40px, 40px); }
+#say { display: flex; align-items: center; gap: 10px; padding: 4px clamp(10px, 1.4vw, 18px); margin-bottom: clamp(8px, 8vh - 40px, 40px); }
 #say .zoom { flex: none; }
 #msg {
   flex: 0 1 auto; min-width: 0; height: 52px; margin-inline: auto; padding: 2px 24px 2px 16px; box-sizing: border-box;
@@ -113,7 +113,7 @@ button.game:active { background: #095A4E; }
 @keyframes flash { 25% { background: #FFD666; } }
 @media (prefers-reduced-motion: reduce) { #msg.flash { animation: none; } }
 /* A short page (lib/zoom.js sets the class): the band and the gaps close up, so the board keeps its size. */
-html.short #say { padding-block: 6px; margin-bottom: 8px; }
+html.short #say { padding-block: 4px; margin-bottom: 8px; }
 html.short body { padding-bottom: 8px; }
 /* A narrow page (a tablet, a phone): the message stays under the top bar, and the counts and the size
    buttons go under the board, so the message has the whole width. */
