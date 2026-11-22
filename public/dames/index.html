@@ -214,7 +214,7 @@
     </div>
   </div>
 </div>
-<footer id="rail"><div id="wins"></div><div class="zoom"></div></footer>
+<footer id="rail"><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
   <section class="page">
     <h3>Avancer un pion</h3>
@@ -747,7 +747,7 @@ function render(opts = {}) {
   $('levelB').textContent = 'Niveau ' + Kit.levelNames[level].toLowerCase();
   $('whoB').classList.toggle('turn', phase === 'thinking' || phase === 'anim');
   $('whoW').classList.toggle('turn', phase === 'player' && !G.result);
-  $('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
+  Kit.showWins(stats.won);
   $('undoBtn').disabled = !undo.length && !(sel && sel.path.length);
   $('hintBtn').disabled = phase !== 'player' || !!G.result;
 }

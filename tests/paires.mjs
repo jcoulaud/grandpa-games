@@ -73,7 +73,8 @@ ok(hinted.length === 1 && (!twinSeen || hinted[0] === twin(0)) && /encadrée/.te
 // 6. A pair: it stays up with its tick, and a click on it is refused.
 await click(twin(0));
 ok(/found/.test(await cls(0)) && /found/.test(await cls(twin(0))) && /Bravo, une paire/.test(await msg()), 'two same cards make a pair that stays up');
-ok(/Coups : 3 · Paires : 1 sur 6/.test(await g(() => document.getElementById('count').textContent)), 'the chip counts the turns and the pairs');
+ok(await g(() => document.getElementById('pairs').textContent === '1 sur 6' && document.getElementById('turns').textContent === '3' && !!document.getElementById('score').closest('#table')),
+  'the score card on the table counts the pairs and the turns');
 const after = await card(0).boundingBox();
 ok(after.width === size.width && after.x === size.x, `the cards keep their size and place while he plays: ${Math.round(size.width)} then ${Math.round(after.width)} px`);
 await click(0);

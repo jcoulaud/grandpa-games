@@ -64,12 +64,6 @@ button.primary:hover { background: #FFD666; }
 button.primary:active { background: #F2BB2E; }
 /* A yellow button with nothing to do yet looks idle too, so yellow always means "press me". */
 button.primary:disabled, button.primary:disabled:hover { background: transparent; color: #8C9692; border: 2px dashed #C9D1CE; box-shadow: none; transform: none; }
-/* Win count: a chip at the left of the bottom bar. */
-#wins { flex: none; height: 46px; padding: 0 18px; display: flex; align-items: center; gap: 10px;
-  background: #fff; color: var(--text); font: 600 21px var(--ui); white-space: nowrap;
-  border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,.25); }
-#wins:empty { display: none; }
-#wins::before { content: ""; width: 26px; height: 26px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B2422' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 4h10v5a5 5 0 0 1-10 0z'/%3E%3Cpath d='M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v4M8.5 20h7'/%3E%3C/svg%3E") center / contain no-repeat; }
 @media (max-width: 960px) {
   #bar { overflow-x: auto; }
   #bar > * { flex-shrink: 0; white-space: nowrap; }
@@ -78,6 +72,9 @@ button.primary:disabled, button.primary:disabled:hover { background: transparent
 /* The level, under the name of the game: as large as every other text, lighter and grey. */
 #title .name { display: flex; flex-direction: column; line-height: 1.05; }
 #title #level { font: 500 20px/1.1 var(--ui); color: #4E5A57; letter-spacing: 0; }
+/* The wins follow the level on the same line. A bar short of room drops them first (see fitBar). */
+#title #levelName:not(:empty) + #wins:not(:empty)::before { content: " · "; }
+#bar.fit-nowins #wins { display: none; }
 /* A phone: the bar takes two rows. "Jeux" and "Nouvelle partie" on top, the three game buttons under
    them, sharing the width; a label that does not fit takes two lines. The name of the game goes. */
 @media (max-width: 700px) {
@@ -113,8 +110,8 @@ button.game:active { background: #095A4E; }
 #msg.flash { animation: flash 1s; }
 @keyframes flash { 25% { background: #FFD666; } }
 @media (prefers-reduced-motion: reduce) { #msg.flash { animation: none; } }
-/* Bottom bar, always at the foot of the window: who made the games and the counts on the left, the size
-   buttons on the right. Kit adds the credit. */
+/* Bottom bar, always at the foot of the window: who made the games on the left, the size buttons on the
+   right, and nothing else. A count of the game goes on the table, near the board. Kit adds the credit. */
 #rail { grid-row: 4; /* its own row, also while the table is hidden */ display: flex; align-items: center; gap: 10px; padding: 7px clamp(14px, 2vw, 28px); margin-top: clamp(0px, 4vh - 28px, 24px);
   background: rgba(0,0,0,.18); border-top: 1px solid rgba(255,255,255,.08); }
 #rail .zoom { margin-left: auto; }
@@ -125,13 +122,10 @@ button.game:active { background: #095A4E; }
 .credit img { width: 34px; height: 34px; flex: none; border-radius: 50%; box-shadow: 0 0 0 2px var(--gold, #FFC83D); }
 .credit:hover { background: rgba(255,255,255,.16); }
 .credit:focus-visible { outline: 4px solid #fff; outline-offset: 3px; }
-/* A page 1340 px wide or less (lib/zoom.js sets the class): the counts and the size buttons need the room. */
+/* A page 1340 px wide or less (lib/zoom.js sets the class): the size buttons need the room. */
 html.narrow .credit { display: none; }
-/* A phone has no size buttons and no credit: the bar goes when it has no count to show. */
-@media (max-width: 699px) {
-  .credit { display: none; }
-  #rail:not(:has(> :not(:empty, .zoom, .credit))) { display: none; }
-}
+/* A phone has no size buttons and no credit, so no bottom bar. */
+@media (max-width: 699px) { #rail { display: none; } }
 /* A short page (lib/zoom.js sets the class): the gaps close up, so the board keeps its size. */
 html.short #say { padding-block: 8px; }
 html.short #rail { margin-top: 0; }

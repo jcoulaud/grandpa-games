@@ -54,7 +54,7 @@ const closed = async () => (await cells()).indexOf('.');
 let c = await closed();
 await click(c, 'right');
 ok((await cells())[c] === 'f', 'the right button puts a flag');
-ok(/Drapeaux : 1 sur 22/.test(await g(() => document.getElementById('flags').textContent)), 'the chip counts the flag');
+ok(await g(() => /Drapeaux\s*1 sur 22/.test(document.getElementById('flags').textContent) && !!document.getElementById('flags').closest('#table')), 'the sign by the board counts the flag');
 await click(c);
 ok((await cells())[c] === '.' && /Drapeau retiré/.test(await msg()), 'a left click on a flag takes it off and does not open the square');
 await page.click('#flagBtn');

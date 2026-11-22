@@ -6,7 +6,7 @@
 //
 // Media queries see the window, not the size of the page in it. So the page gets classes for what they
 // would say: "narrow" when the page is 1340 px wide or less, where
-// the win count goes, and "short" and "low" when it is 660 or 600 px high or less,
+// the credit goes, and "short" and "low" when it is 660 or 600 px high or less,
 // where the dialogs close up. The size is also in --z: a length in vw or vh is divided by it.
 //
 // The size is kept on the PC and shared by every window: a change in the library reaches an open game.

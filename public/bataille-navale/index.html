@@ -272,7 +272,7 @@
     <ul class="legend" id="legend" aria-label="Ce que veulent dire les cases"></ul>
   </section>
 </div>
-<footer id="rail"><div id="wins"></div><div class="zoom"></div></footer>
+<footer id="rail"><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
   <section class="page">
     <h3>Tirer sur la flotte adverse</h3>
@@ -647,7 +647,7 @@ function render() {
     $('side' + k).classList.toggle('turn', !G.result && (G.turn === 'me') === (k === 1));
   }
   layout();
-  $('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
+  Kit.showWins(stats.won);
   $('hintBtn').disabled = !!G.result;
   $('moveBtn').hidden = started();
 }

@@ -246,7 +246,7 @@
     <div id="halves"><table id="top"></table><table id="bottom"></table></div>
   </div>
 </div>
-<footer id="rail"><div id="wins"></div><div class="zoom"></div></footer>
+<footer id="rail"><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
   <section class="page">
     <h3>Lancer, garder, marquer</h3>
@@ -716,7 +716,7 @@ function render() {
     e.setAttribute('aria-label', `Bonus, ${p === 0 ? 'vous' : CAST[who].name} : ${t.bonus ? '35 points' : decided ? 'manqué' : `${t.top} points sur 63`}`);
   }
   // The count of wins changes once the computer's last turn has been shown.
-  if (!busy()) $('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
+  if (!busy()) Kit.showWins(stats.won);
   $('undoBtn').disabled = !undo.length;
   $('hintBtn').disabled = !!G.result;
   layout();

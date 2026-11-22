@@ -20,11 +20,11 @@
 <link rel="stylesheet" href="../lib/kit.css">
 <style>
   /* The sudoku plays on a charcoal slate felt. The grid is a school slate in a wooden frame: the digits
-     of the start in white chalk, his own digits in yellow chalk, the block lines thick. */
+     of the start in ivory chalk, his own digits in warm yellow chalk, the block lines thick. */
   :root {
     --felt-top: #4A5560; --felt: #232A31; --shade: 18,22,27; --accent: #3D5466;
-    --chalk: #F4F1E8; --mine: #FFD15C; --slate: #2B3339; --wrong: #FF8F85;
-    --c: 46px; --t: 4px; --f: 14px; --k: 80px; --fd: 32px;
+    --chalk: #F4F1E8; --mine: #FFC53D; --slate: #2B3339; --wrong: #FF8F85;
+    --c: 46px; --t: 4px; --f: 14px; --k: 80px; --fd: 32px; --fb: 20px;
   }
   #title svg { width: 32px; height: 32px; }
   button.game { --accent: #3D5466; }
@@ -33,8 +33,9 @@
 
   /* A window too small for the grid scrolls to the rest of it. */
   #table { position: relative; overflow: auto; display: flex; touch-action: pan-x pan-y; }
-  #stage { margin: auto; padding: 8px 16px 16px; padding-inline: 16px; display: flex; align-items: center; justify-content: center; gap: var(--gap, 36px); }
-  #stage.under { flex-direction: column; padding: 4px 8px 12px; }
+  /* The pad stands on the right of the grid, its top level with the top of the grid (see layout). */
+  #stage { margin: auto; padding: 8px 16px 16px; padding-inline: 16px; display: flex; align-items: flex-start; justify-content: center; gap: var(--gap, 36px); }
+  #stage.under { flex-direction: column; align-items: center; padding: 4px 8px 12px; }
 
   /* The slate: a wooden frame with a fine grain, the dark slate inside. */
   #frame { flex: none; padding: var(--f); border-radius: calc(var(--f) * .9);
@@ -60,17 +61,19 @@
   .cell:active { background: rgba(255,255,255,.14); transform: none; box-shadow: none; }
   .cell:focus-visible { outline: none; box-shadow: none; }
   .cell .d { pointer-events: none; display: block; }
-  /* The digits of the start: white chalk, firm. His digits: yellow chalk. */
+  /* The digits of the start: ivory chalk, firm. His digits: warm yellow chalk, so the two read apart at a
+     glance. Both keep 4.5:1 or more on every light of the slate below. */
   .cell.given { font-weight: 600; color: var(--chalk); text-shadow: 0 0 1px rgba(255,255,255,.35); cursor: default; }
   .cell.mine { color: var(--mine); font-weight: 500; }
-  /* The row, the column and the block of the chosen cell, then the cells with the same digit. */
-  .cell.house { background: rgba(255,255,255,.075); }
-  .cell.same { background: rgba(255,209,92,.22); box-shadow: inset 0 0 0 2px rgba(255,209,92,.55); }
-  .cell.sel { background: rgba(255,200,61,.30); box-shadow: inset 0 0 0 calc(var(--t) * .9) var(--gold); z-index: 4; }
-  .cell.sel:hover { background: rgba(255,200,61,.38); }
+  /* The row, the column and the block of the chosen cell, then the cells with the same digit, in a cool
+     blue chalk, so the yellow stays his. */
+  .cell.house { background: rgba(255,255,255,.10); }
+  .cell.same { background: rgba(120,170,230,.26); box-shadow: inset 0 0 0 2px rgba(160,200,245,.75); }
+  .cell.sel { background: rgba(255,200,61,.16); box-shadow: inset 0 0 0 calc(var(--t) * .9) var(--gold); z-index: 4; }
+  .cell.sel:hover { background: rgba(255,200,61,.24); }
   /* A digit that breaks a rule: red on a red tint, and the digit it meets has a red ring. */
   .cell.bad { color: var(--wrong); background: rgba(214,48,40,.30); }
-  .cell.bad.sel { background: rgba(214,48,40,.42); }
+  .cell.bad.sel { background: rgba(214,48,40,.36); }
   .cell.blame { box-shadow: inset 0 0 0 3px var(--wrong); }
   /* The hint: a yellow ring that glows on the cell, and a soft yellow over the line or block of its reason. */
   .cell.why { background: rgba(255,200,61,.14); }
@@ -79,29 +82,42 @@
   .notes { position: absolute; inset: 6%; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); pointer-events: none; }
   .notes i { font: 600 var(--fn)/1 var(--ui); font-style: normal; color: #D7DCE0; display: flex; align-items: center; justify-content: center; }
 
-  /* The number pad: big keys, then "Effacer" and "Notes". */
+  /* The number pad: the count of empty cells, big keys, then "Effacer" and "Notes". */
   #pad { flex: none; display: grid; gap: var(--kg, 12px); }
   .key { position: relative; min-height: 0; padding: 0; justify-content: center; border-radius: 14px; font: 700 var(--fk)/1 var(--ui);
     background: #FBFAF6; color: #1F2830; border-color: #8C979F; box-shadow: 0 4px 0 #8C979F; }
   .key:hover { background: #FFF3C4; }
+  /* How many of the digit are still to place: a slate blue badge on the corner of its key. */
+  .key .left { position: absolute; top: -10px; right: -10px; min-width: calc(var(--fb) * 1.6); height: calc(var(--fb) * 1.6); padding: 0 6px; border-radius: 999px;
+    display: flex; align-items: center; justify-content: center; font: 700 var(--fb)/1 var(--ui); font-variant-numeric: tabular-nums;
+    background: #3D5466; color: #fff; box-shadow: 0 0 0 3px #fff, 0 2px 6px rgba(0,0,0,.35); pointer-events: none; }
+  .key .left:empty, .key.done .left { display: none; }
   /* A digit in place nine times: a green check in the corner, and the key turns pale. */
   .key.done { background: #E6EAE7; color: #4B5650; }
   .key.done::after { content: ""; position: absolute; top: -9px; right: -9px; width: 30px; height: 30px; border-radius: 50%;
     background: #2F8F4E url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 70% no-repeat;
     box-shadow: 0 0 0 3px #fff, 0 2px 6px rgba(0,0,0,.35); }
   .tool { min-height: 0; justify-content: center; font-size: 22px; padding: 4px 10px; }
+  /* Tool keys too narrow for an icon and a word keep the word. */
+  #pad.slim .tool { font-size: 20px; padding: 2px 6px; }
+  #pad.slim .tool svg { display: none; }
   #notesBtn[aria-pressed="true"] { background: var(--gold); border-color: #C9951A; box-shadow: 0 3px 0 #C9951A; color: #1F1A00; }
   #stage.under .tool { font-size: 20px; gap: 6px; padding: 2px 6px; }
   #stage.under #eraseBtn { flex-direction: column; gap: 0; font-size: 15px; }
 
   #stage.under .tool svg { width: 22px; height: 22px; }
   #stage.under .key.done::after { width: 22px; height: 22px; top: -6px; right: -6px; }
+  #stage.under .key .left { top: -7px; right: -7px; min-width: 26px; height: 26px; font-size: 18px; }
+  @media (min-width: 700px) { #stage.under .key .left { min-width: 30px; height: 30px; font-size: 20px; } }
 
-  /* The count of empty cells: a chip beside the win count. */
-  #count { flex: none; height: 46px; padding: 0 18px; display: flex; align-items: center; gap: 10px;
-    background: #fff; color: var(--text); font: 600 21px var(--ui); white-space: nowrap;
-    border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,.25); font-variant-numeric: tabular-nums; }
-  #count:empty { display: none; }
+  /* The cells still empty: a small slate in the same wooden frame, on top of the pad, or beside "Notes"
+     when the pad is under the grid. */
+  #count { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 2px 12px; border-radius: 10px;
+    background: var(--slate); color: var(--chalk); font: 500 22px/1.05 var(--ui); white-space: nowrap; text-align: center;
+    box-shadow: inset 0 0 0 4px #9A6A38, inset 0 0 0 5px rgba(40,20,5,.5), 0 6px 16px rgba(0,0,0,.35); font-variant-numeric: tabular-nums; }
+  #count b { color: var(--mine); font-weight: 700; }
+  #count:empty { visibility: hidden; }
+  #stage.under #count { flex-direction: column; gap: 0; font-size: 20px; }
 
   /* The rules guide: a line of a grid, drawn small. */
   .ex-line { display: flex; border: 3px solid #E6E3D9; border-radius: 6px; background: var(--slate); padding: 0; }
@@ -113,8 +129,11 @@
   .ex-line .ex-bad { color: var(--wrong); background: rgba(214,48,40,.30); }
   .ex-line .ex-blame { box-shadow: inset 0 0 0 3px var(--wrong); }
   .ex-keys { display: flex; gap: 10px; }
+  .ex-keys { gap: 16px; }
   .ex-keys span { width: 52px; height: 52px; border-radius: 12px; display: flex; align-items: center; justify-content: center; position: relative;
     font: 700 28px var(--ui); background: #FBFAF6; color: #1F2830; border: 2px solid #8C979F; box-shadow: 0 3px 0 #8C979F; }
+  .ex-keys span[data-left]::after { content: attr(data-left); position: absolute; top: -9px; right: -9px; min-width: 28px; height: 28px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center; font: 700 20px/1 var(--ui); background: #3D5466; color: #fff; box-shadow: 0 0 0 2px #fff; }
   .ex-keys .ex-done { background: #E6EAE7; color: #4B5650; }
   .ex-keys .ex-done::after { content: ""; position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; border-radius: 50%;
     background: #2F8F4E url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 70% no-repeat; box-shadow: 0 0 0 2px #fff; }
@@ -172,15 +191,16 @@
   <div id="stage">
     <div id="frame"><div id="grid" role="grid" aria-label="Grille de sudoku"></div></div>
     <div id="pad" role="group" aria-label="Chiffres">
-      <button class="key" data-d="1">1</button><button class="key" data-d="2">2</button><button class="key" data-d="3">3</button>
-      <button class="key" data-d="4">4</button><button class="key" data-d="5">5</button><button class="key" data-d="6">6</button>
-      <button class="key" data-d="7">7</button><button class="key" data-d="8">8</button><button class="key" data-d="9">9</button>
+      <div id="count" role="status"></div>
+      <button class="key" data-d="1">1<span class="left" aria-hidden="true"></span></button><button class="key" data-d="2">2<span class="left" aria-hidden="true"></span></button><button class="key" data-d="3">3<span class="left" aria-hidden="true"></span></button>
+      <button class="key" data-d="4">4<span class="left" aria-hidden="true"></span></button><button class="key" data-d="5">5<span class="left" aria-hidden="true"></span></button><button class="key" data-d="6">6<span class="left" aria-hidden="true"></span></button>
+      <button class="key" data-d="7">7<span class="left" aria-hidden="true"></span></button><button class="key" data-d="8">8<span class="left" aria-hidden="true"></span></button><button class="key" data-d="9">9<span class="left" aria-hidden="true"></span></button>
       <button id="eraseBtn" class="tool" title="Efface le chiffre de la case choisie"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 20H20M4.6 14.6l8.8-8.8a2 2 0 0 1 2.8 0l3 3a2 2 0 0 1 0 2.8L12 18.8a2 2 0 0 1-1.4.6H8.2a2 2 0 0 1-1.4-.6l-2.2-2.2a2 2 0 0 1 0-2zM9 10l6 6"/></svg>Effacer</button>
       <button id="notesBtn" class="tool" aria-pressed="false" title="Écrit les chiffres en petit, pour vous en souvenir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19z"/><path d="M14.5 6.5l3 3"/></svg>Notes</button>
     </div>
   </div>
 </div>
-<footer id="rail"><div id="wins"></div><div id="count"></div><div class="zoom"></div></footer>
+<footer id="rail"><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
   <section class="page">
     <h3>Remplir une case</h3>
@@ -213,8 +233,8 @@
     <p>Cliquez sur « Une aide ? » : le jeu remplit une case et vous dit pourquoi. Si un de vos chiffres est faux, il l'efface. Une aide plus longue se donne en plusieurs étapes : cliquez encore pour la suite.</p>
     <div class="guide-panel">
       <figure class="guide-example">
-        <div class="guide-art ex-keys" aria-hidden="true"><span>4</span><span class="ex-done">5</span><span>6</span></div>
-        <figcaption><strong>Une coche verte :</strong> les neuf 5 sont en place.</figcaption>
+        <div class="guide-art ex-keys" aria-hidden="true"><span data-left="3">4</span><span class="ex-done">5</span><span data-left="1">6</span></div>
+        <figcaption><strong>Le petit chiffre bleu</strong> dit combien il en reste à placer. <strong>Une coche verte :</strong> les neuf 5 sont en place.</figcaption>
       </figure>
     </div>
     <p>« Notes » écrit les chiffres en petit, pour vous en souvenir. Le clavier marche aussi : tapez un chiffre.</p>
@@ -522,56 +542,92 @@ function build() {
   }
   gridEl.insertAdjacentHTML('beforeend', '<svg id="lines" aria-hidden="true"></svg>');
 }
-// The grid is as large as the window allows: the pad stands on its right, or under it on a narrow or
-// tall window. Positions in px: each cell is c wide, the block lines t, the thin lines 1.
+// The grid is as large as the window allows. The pad stands on its right, a cell apart, its top level with
+// the top of the grid and its keys as large as make it as tall as the grid. A window where the grid would
+// be larger with the pad under it, and a phone, put the pad under the grid in rows of five. Positions in
+// px: each cell is c wide, the block lines t, the thin lines 1.
 let geo = { c: 46, t: 4 };
 function cellPos(k) { const b = Math.floor(k / 3); return geo.t + k * geo.c + (k - b) * 1 + b * geo.t; }
-function layout() {
-  const W = table.clientWidth, H = table.clientHeight;
-  const phone = innerWidth < 700;
-  const under = phone || W < H * 1.25;
-  stage.classList.toggle('under', under);
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  // slate: the whole slate with its frame. The stage keeps pv px above and under it.
-  const pv = H < 400 ? 2 : 16;
-  let slate, K = 0, tw = 0, kw = 0, kh = 0, gap, kg;
-  if (!under) {
-    // The pad: three columns of digits, and a fourth for "Effacer" and "Notes".
-    gap = Math.round(clamp(W * .03, 20, 48)); kg = 12;
-    slate = H - pv;
-    for (let n = 0; n < 3; n++) {
-      K = Math.floor(clamp(Math.min(slate * .22, (slate - 2 * kg) / 3), 56, 96));
-      tw = Math.max(150, Math.round(K * 1.75));
-      slate = Math.min(H - pv, W - 32 - gap - (3 * K + tw + 3 * kg));
-    }
-    padEl.style.gridTemplateColumns = `repeat(3, ${K}px) ${tw}px`;
-    padEl.style.gridTemplateRows = `repeat(3, ${K}px)`;
-  } else {
-    // Under the grid: 1 to 5, then 6 to 9 and "Effacer", then "Notes" across.
-    gap = 12; kg = 8; kh = phone ? 48 : 58;
-    const padH = 3 * kh + 2 * kg;
-    slate = Math.min(W - 16, Math.max(H - pv - gap - padH, Math.min(W - 16, 300)));
-    kw = Math.floor((slate - 4 * kg) / 5);
-    padEl.style.gridTemplateColumns = `repeat(5, ${kw}px)`;
-    padEl.style.gridTemplateRows = `repeat(3, ${kh}px)`;
-  }
-  stage.style.paddingBlock = (pv / 3) + 'px ' + (pv * 2 / 3) + 'px';
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+// The slate of a size: its frame f, its block lines t, its cells c and the grid inside the frame gw.
+function slateOf(slate) {
   const f = slate < 360 ? 7 : Math.round(clamp(slate * .03, 8, 20));
   const t = slate < 420 ? 3 : 4;
   const c = Math.max(28, Math.floor((slate - 2 * f - 4 * t - 6) / 9));
+  return { f, t, c, gw: 9 * c + 4 * t + 6 };
+}
+// The pad beside a grid of gw: the count on top (hc high), three rows of keys of K, the tool row of T.
+function sidePad(gw, c, f) {
+  let g = 12, hc = 54;
+  const keyOf = () => {
+    let K = (gw - hc - 4 * g) / 3.66, T = Math.round(K * .66);
+    if (T < 48) { T = 48; K = (gw - hc - 4 * g - T) / 3; }
+    return { K: Math.floor(Math.min(K, 170)), T };
+  };
+  let { K, T } = keyOf();
+  if (K < 70) { g = 8; hc = 46; ({ K, T } = keyOf()); }
+  return { K, T, g, hc, w: 3 * K + 2 * g, gap: Math.max(20, c - f), ok: K >= 48 };
+}
+function layout() {
+  const W = table.clientWidth, H = table.clientHeight;
+  const phone = innerWidth < 700;
+  // The stage keeps pv px above and under the slate.
+  const pv = H < 400 ? 2 : 16;
+  let slate = H - pv, side;
+  for (let n = 0; n < 4; n++) {
+    const s0 = slateOf(slate);
+    side = sidePad(s0.gw, s0.c, s0.f);
+    slate = Math.min(H - pv, W - 32 - side.gap - side.w);
+  }
+  const s0 = slateOf(slate);
+  side = sidePad(s0.gw, s0.c, s0.f);
+  // Under the grid: 1 to 5, then 6 to 9 and "Effacer", then "Notes" and the count.
+  const kh = phone ? 48 : 58, padH = 3 * kh + 2 * 8;
+  const low = Math.min(W - 16, Math.max(H - pv - 12 - padH, Math.min(W - 16, 300)));
+  const under = phone || !side.ok || slate < low;
+  stage.classList.toggle('under', under);
+  if (under) slate = low;
+  const { f, t, c, gw } = slateOf(slate);
   geo = { c, t };
-  const gw = 9 * c + 4 * t + 6;
+  const at = (e, area) => { if (e.style.gridArea !== area) e.style.gridArea = area; };
+  let gap, kg, fk;
+  if (!under) {
+    ({ gap, g: kg } = side);
+    const { K, T, hc } = side;
+    padEl.style.gridTemplateColumns = `repeat(6, ${(3 * K + 2 * kg - 5 * kg) / 6}px)`;
+    padEl.style.gridTemplateRows = `${hc}px repeat(3, ${K}px) ${T}px`;
+    padEl.style.marginTop = f + 'px';
+    padEl.classList.toggle('slim', (3 * K + kg) / 2 < 150);
+    keys.forEach((e, k) => { const r = 2 + Math.floor(k / 3), col = 1 + 2 * (k % 3); at(e, `${r} / ${col} / ${r + 1} / ${col + 2}`); });
+    at($('count'), '1 / 1 / 2 / 7');
+    at($('eraseBtn'), '5 / 1 / 6 / 4');
+    at($('notesBtn'), '5 / 4 / 6 / 7');
+    fk = Math.max(30, K * .46);
+    // The badge of the digits still to place grows with the key, from 20 px.
+    document.documentElement.style.setProperty('--fb', Math.round(clamp(K * .16, 20, 26)) + 'px');
+  } else {
+    gap = 12; kg = 8;
+    const kw = Math.floor((slate - 4 * kg) / 5);
+    padEl.style.gridTemplateColumns = `repeat(5, ${kw}px)`;
+    padEl.style.gridTemplateRows = `repeat(3, ${kh}px)`;
+    padEl.style.marginTop = '';
+    padEl.classList.remove('slim');
+    keys.forEach((e, k) => { const r = 1 + Math.floor(k / 5), col = 1 + k % 5; at(e, `${r} / ${col} / ${r + 1} / ${col + 1}`); });
+    at($('eraseBtn'), '2 / 5 / 3 / 6');
+    at($('notesBtn'), '3 / 1 / 4 / 4');
+    at($('count'), '3 / 4 / 4 / 6');
+    fk = Math.max(26, kh * .56);
+  }
+  stage.style.paddingBlock = (pv / 3) + 'px ' + (pv * 2 / 3) + 'px';
   const root = document.documentElement.style;
   root.setProperty('--c', c + 'px'); root.setProperty('--t', t + 'px'); root.setProperty('--f', f + 'px');
   // The digits: two thirds of a cell, and never under 30 px while the cell holds them.
   root.setProperty('--fd', Math.round(Math.min(c - 1, Math.max(30, c * .66))) + 'px');
   root.setProperty('--fn', Math.max(11, Math.round(c * .27)) + 'px');
-  root.setProperty('--fk', Math.round(under ? Math.max(26, kh * .56) : Math.max(30, K * .48)) + 'px');
+  root.setProperty('--fk', Math.round(fk) + 'px');
   stage.style.setProperty('--gap', gap + 'px');
   padEl.style.setProperty('--kg', kg + 'px');
   gridEl.style.setProperty('--gw', gw + 'px');
-  $('eraseBtn').style.gridArea = under ? '' : '1 / 4';
-  $('notesBtn').style.gridArea = under ? '3 / 1 / 4 / -1' : '2 / 4';
   cells.forEach((e, i) => {
     e.style.left = cellPos(i % 9) + 'px'; e.style.top = cellPos(Math.floor(i / 9)) + 'px';
     e.style.width = c + 'px'; e.style.height = c + 'px';
@@ -596,7 +652,7 @@ function drawLines(gw) {
 }
 function render() {
   build(); layout();
-  if (!G) { cells.forEach(e => { e.className = 'cell'; e.textContent = ''; delete e.dataset.k; }); return; }
+  if (!G) { cells.forEach(e => { e.className = 'cell'; e.textContent = ''; delete e.dataset.k; }); $('count').textContent = ''; return; }
   const b = S.board(G), bad = new Set(S.conflicts(G)), done = new Set(S.complete(G));
   const sd = sel >= 0 ? b[sel] : 0;
   const house = new Set(sel >= 0 ? S.PEERS[sel] : []);
@@ -626,18 +682,21 @@ function render() {
     e.setAttribute('aria-selected', i === sel ? 'true' : 'false');
   });
   keys.forEach(e => {
-    const d = +e.dataset.d, on = done.has(d);
+    const d = +e.dataset.d, on = done.has(d), left = Math.max(0, 9 - b.filter(x => x === d).length);
     e.classList.toggle('done', on);
-    e.setAttribute('aria-label', on ? `${d}, les neuf sont écrits` : String(d));
+    const badge = e.querySelector('.left'), text = on || G.result ? '' : String(left);
+    if (badge.textContent !== text) badge.textContent = text;
+    e.setAttribute('aria-label', on ? `${d}, les neuf sont écrits` : `${d}, encore ${left} à placer`);
   });
   $('notesBtn').setAttribute('aria-pressed', notesOn ? 'true' : 'false');
   $('undoBtn').disabled = !undo.length || !!G.result;
   $('hintBtn').disabled = !!G.result;
   $('eraseBtn').disabled = !!G.result;
   $('notesBtn').disabled = !!G.result;
-  // A phone says it in the message line only, so its bottom bar can go.
-  $('count').textContent = G.result || innerWidth < 700 ? '' : `Cases à remplir : ${empties()}`;
-  $('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
+  const left = empties(), count = G.result ? '<span>Grille</span> <b>complète</b>'
+    : `<span>Encore</span> <b>${plural(left, 'case', 'cases')}</b>`;
+  if ($('count').innerHTML !== count) $('count').innerHTML = count;
+  Kit.showWins(stats.won);
 }
 
 /* ---------- Motion ---------- */

@@ -22,10 +22,18 @@ function layout() {
   const turned = H > W && G.w > G.h;
   const cols = turned ? G.h : G.w, rows = turned ? G.w : G.h;
   const room = (len, n) => (len - 32) / (n + .4);
+  const flags = $('flags');
+  // The flag sign stands on the left of the board when there is room, else under it.
+  flags.classList.remove('under');
+  const fw = flags.offsetWidth;
+  const size = h => Math.floor(Math.max(24, Math.min(room(W, cols), innerWidth < 700 ? 72 : room(h, rows), 72)));
   // A phone scrolls down to the rest of the board rather than make its squares too small.
-  S = Math.floor(Math.max(24, Math.min(room(W, cols), innerWidth < 700 ? 72 : room(H, rows), 72)));
+  S = size(H);
+  let side = (W - cols * S) / 2 - Math.max(8, Math.round(S * .2)) - 20 >= fw + 16;
+  if (!side) { flags.classList.add('under'); S = size(H - flags.offsetHeight - 16); }
   const F = Math.max(8, Math.round(S * .2));
-  const BX = Math.round((W - cols * S) / 2), BY = Math.max(F + 8, Math.round((H - rows * S) / 2));
+  const extra = side ? 0 : flags.offsetHeight + 16;
+  const BX = Math.round((W - cols * S) / 2), BY = Math.max(F + 8, Math.round((H - extra - rows * S) / 2));
   const root = document.documentElement.style;
   root.setProperty('--s', S + 'px'); root.setProperty('--cols', String(G.w));
   boardEl.classList.toggle('turned', turned);
@@ -33,12 +41,18 @@ function layout() {
   const frame = $('frame');
   frame.style.left = BX - F + 'px'; frame.style.top = BY - F + 'px';
   frame.style.width = cols * S + 2 * F + 'px'; frame.style.height = rows * S + 2 * F + 'px';
-  table.style.overflowY = BY + rows * S + F > H ? 'auto' : 'hidden';
+  if (side) { flags.style.left = BX - F - 20 - flags.offsetWidth + 'px'; flags.style.top = BY - F + 'px'; }
+  else { flags.style.left = Math.round((W - flags.offsetWidth) / 2) + 'px'; flags.style.top = BY + rows * S + F + 16 + 'px'; }
+  table.style.overflowY = BY + rows * S + F + extra > H ? 'auto' : 'hidden';
 }
 
 function render() {
   if (!G) return;
-  build(); layout();
+  build();
+  // The sign is filled first: its size places the board.
+  const flagText = `${D.flags(G)} sur ${G.mines}`;
+  if ($('flags').dataset.text !== flagText) { $('flags').dataset.text = flagText; $('flags').innerHTML = FLAG + `<span>Drapeaux</span><b>${flagText}</b>`; }
+  layout();
   const framed = new Set(hint ? hint.cells : []), ringed = new Set(hint && hint.ring ? hint.ring : []);
   const marks = guided() ? D.sure(G) : { safe: [], mine: [] };
   const safe = new Set(marks.safe), danger = new Set(marks.mine);
@@ -57,8 +71,7 @@ function render() {
     const r = Math.floor(i / G.w) + 1, k = i % G.w + 1;
     e.setAttribute('aria-label', `Ligne ${r}, colonne ${k} : ${boom ? 'mine' : c === 'f' ? 'drapeau' : c === 'o' ? (n ? n + (n === 1 ? ' mine autour' : ' mines autour') : 'vide') : marked === 'safe' ? 'fermée, sûre' : marked === 'danger' ? 'fermée, mine repérée' : 'fermée'}`);
   }
-  $('flags').innerHTML = FLAG + `Drapeaux : ${D.flags(G)} sur ${G.mines}`;
-  $('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
+  Kit.showWins(stats.won);
   $('undoBtn').disabled = !undo.length;
   $('hintBtn').disabled = !!G.result;
   $('flagBtn').disabled = !!G.result;
