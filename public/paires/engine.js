@@ -98,6 +98,13 @@
     return { kind: 'new', cells: unseen.slice(0, 1) };
   }
 
+  // A save without its level takes the level of its number of cards.
+  function withLevel(G) {
+    if (!G || typeof G !== 'object' || LEVELS[G.level] || !Array.isArray(G.cards)) return G;
+    const key = Object.keys(LEVELS).find(k => LEVELS[k].cols * LEVELS[k].rows === G.cards.length);
+    return key ? { ...G, level: key, cols: LEVELS[key].cols, rows: LEVELS[key].rows } : G;
+  }
+
   // A save read back must be a game this file could have made.
   function valid(G) {
     const L = G && LEVELS[G.level];
@@ -116,8 +123,11 @@
     }
     if (!Number.isInteger(G.up) || G.up < -1 || G.up >= G.cards.length || (G.up >= 0 && (G.found[G.up] === '1' || G.seen[G.up] === '0'))) return false;
     if (!Number.isInteger(G.turns) || G.turns < pairs(G)) return false;
+    // Each turn shows two cards, and the card up one more: no more cards can have been seen.
+    const seen = [...G.seen].filter(x => x === '1').length;
+    if (seen > 2 * G.turns + (G.up >= 0 ? 1 : 0)) return false;
     return G.result === (pairs(G) === total(G) ? 'won' : '');
   }
 
-  root.Paires = { PICTURES, LEVELS, newGame, flip, hint, refusal, valid, pairs, total, random };
+  root.Paires = { PICTURES, LEVELS, newGame, flip, hint, refusal, valid, withLevel, pairs, total, random };
 })(typeof window !== 'undefined' ? window : globalThis);

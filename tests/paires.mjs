@@ -14,7 +14,8 @@ const g = (fn, arg) => page.evaluate(fn, arg);
 const wait = ms => page.waitForTimeout(ms);
 const msg = () => g(() => document.getElementById('msg').textContent);
 const card = i => page.locator(`.card[data-i="${i}"]`);
-const click = async i => { await card(i).click(); await page.mouse.move(5, 5); };
+// A click, then the mouse moves away and waits, so the next click on the same card is not a double-click.
+const click = async i => { await card(i).click(); await page.mouse.move(5, 5); await wait(520); };
 const cls = i => card(i).getAttribute('class');
 
 // 1. The first visit: the rules open, each page fits without scrolling, then the level.
@@ -104,6 +105,16 @@ await wait(300);
 ok(await g(() => Kit.isOpen()), 'a broken save is not loaded');
 await page.click('#helpClose');
 await page.getByRole('button', { name: 'Facile', exact: true }).click();
+// A double-click on a card counts as one click: it does not start the next turn.
+await card(0).dblclick(); await page.mouse.move(5, 5);
+ok(await g(() => G.up === 0 && G.turns === 0 && !/déjà/.test(document.getElementById('msg').textContent)), 'a double-click turns one card only, without a refusal');
+await wait(600);
+const diff = await g(() => G.cards.findIndex(c => c !== G.cards[0]));
+await card(diff).dblclick(); await page.mouse.move(5, 5);
+ok(await g(() => G.up === -1 && G.turns === 1), 'a double-click on the second card does not turn a third');
+// Any click turns a miss back, even outside the cards.
+await page.mouse.click(5, 300);
+ok(!/up/.test(await cls(0)), 'a click beside the cards turns the miss back');
 
 // 10. The levels: 20 and 30 cards, still large enough.
 for (const [label, n, min] of [['Moyen', 20, 110], ['Difficile', 30, 110]]) {

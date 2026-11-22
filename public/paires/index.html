@@ -30,8 +30,9 @@
   button.game:hover { background: #6C7D24; }
   button.game:active { background: #4C5918; }
 
-  #table { position: relative; overflow: hidden; display: grid; place-items: center; touch-action: pan-y; }
-  #grid { display: grid; gap: var(--gap); grid-template-columns: repeat(var(--cols), var(--s)); grid-auto-rows: var(--s); }
+  /* A window too small for the cards at 40 px scrolls to the rest of them. */
+  #table { position: relative; overflow: auto; display: flex; touch-action: pan-x pan-y; }
+  #grid { margin: auto; padding: 12px; display: grid; gap: var(--gap); grid-template-columns: repeat(var(--cols), var(--s)); grid-auto-rows: var(--s); }
 
   /* A card: a button that turns over. Its back and its face are the two sides of .flip. */
   .card { position: relative; width: var(--s); height: var(--s); min-height: 0; padding: 0; border: 0; border-radius: calc(var(--s) * .1);
@@ -62,8 +63,8 @@
     border-radius: 50%; background: #3E8E4A url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 70% no-repeat;
     box-shadow: 0 0 0 3px #fff, 0 2px 6px rgba(0,0,0,.35); }
   .card.found { cursor: default; }
-  .card.just .flip { animation: pop .5s cubic-bezier(.3,1.6,.5,1) .3s; }
-  @keyframes pop { 50% { transform: rotateY(180deg) scale(1.1); } }
+  .card.just .flip { animation: pairPop .5s cubic-bezier(.3,1.6,.5,1) .3s; }
+  @keyframes pairPop { 50% { transform: rotateY(180deg) scale(1.1); } }
   /* Two cards that do not match: a red frame while they show. */
   .card.miss .face { box-shadow: 0 0 0 calc(var(--s) * .035) #C4122F, 0 6px 14px rgba(0,0,0,.35); }
   /* The hint: a yellow frame that glows. */
@@ -148,6 +149,7 @@ const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
 const playing = () => !!G && !G.result && G.seen.includes('1');
 const pic = i => P.PICTURES[G.cards[i]];
 const cap = s => s[0].toUpperCase() + s.slice(1);
+const FULL = "La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.";
 
 /* ---------- Saves ---------- */
 function save() {
@@ -156,15 +158,24 @@ function save() {
   if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
   if (GG.save('paires', { v: 1, G, level, stats, wonNow }, { summary: parts.join(' · ') })) return (saved = true);
   saved = false;
-  if (!stale) Kit.say("La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.");
+  if (!stale) Kit.say(FULL);
   return false;
 }
 function load() {
   try {
     const v = GG.load('paires');
-    if (!v || !P.valid(v.G)) return false;
-    G = v.G; level = G.level; wonNow = !!v.wonNow;
-    if (v.stats && Number.isInteger(v.stats.won)) stats = { won: v.stats.won, best: v.stats.best && typeof v.stats.best === 'object' ? v.stats.best : {} };
+    const g = v && P.withLevel(v.G);
+    if (!P.valid(g)) return false;
+    G = g; level = G.level;
+    // Only a finished game can be counted as won.
+    wonNow = !!v.wonNow && G.result === 'won';
+    // A best score is at least one turn per pair.
+    const best = {};
+    if (v.stats && v.stats.best && typeof v.stats.best === 'object') for (const [k, L] of Object.entries(P.LEVELS)) {
+      const n = v.stats.best[k];
+      if (Number.isInteger(n) && n >= L.cols * L.rows / 2) best[k] = n;
+    }
+    if (v.stats && Number.isInteger(v.stats.won) && v.stats.won >= 0) stats = { won: v.stats.won, best };
     return true;
   } catch (e) { return false; }
 }
@@ -180,8 +191,13 @@ function hideShown() {
   timers.forEach(clearTimeout); timers = [];
 }
 
+// A second click on the same card within half a second is a double-click: it counts as one click.
+let lastTap = null;
 function tap(i) {
   if (Kit.isOpen() || !G) return;
+  const t = performance.now(), prev = lastTap;
+  lastTap = { i, t };
+  if (prev && prev.i === i && t - prev.t < 500) return;
   hideShown();
   const why = P.refusal(G, i);
   if (why === 'won') return say('Cette partie est gagnée : cliquez sur « Nouvelle partie » pour en commencer une autre.');
@@ -191,6 +207,7 @@ function tap(i) {
   G = r.G; hint = null; just = null;
   const firstWin = G.result === 'won' && !wonNow;
   let record = false;
+  const before = stats.best;
   if (firstWin) {
     wonNow = true; stats.won++;
     const best = stats.best[level];
@@ -199,14 +216,14 @@ function tap(i) {
     if (record) stats.best = { ...stats.best, [level]: G.turns };
   }
   if (save()) { if (firstWin) GG.track('paires', 'won'); }
-  else if (firstWin) { wonNow = false; stats.won--; }
+  else if (firstWin) { wonNow = false; stats.won--; stats.best = before; record = false; }
   if (r.event === 'miss') {
     shown = { a: r.a, b: r.b };
     later(() => { shown = null; render(); }, REDUCED ? SHOW_MS : SHOW_MS + 380);
   }
   if (r.event === 'pair') just = [r.a, r.b];
   render();
-  if (G.result) return finish(!stale, record);
+  if (G.result) { finish(!stale, record); if (!saved && !stale) say(FULL); return; }
   if (!saved) return;
   const A = pic(i);
   if (r.event === 'first') say(`${cap(A.one)}. Où se cache l'autre carte ?`);
@@ -224,7 +241,7 @@ function finish(show, record) {
   const lv = Kit.levelNames[level].toLowerCase();
   const extra = !wonNow || record === 'first' ? '' : record === 'better' ? ` C'est votre meilleur score au niveau ${lv}.`
     : ` Votre meilleur score au niveau ${lv} : ${plural(best, 'coup', 'coups')}.`;
-  later(() => Kit.dialog('Bravo, vous avez gagné !', `Vous avez trouvé les ${n} paires en ${plural(G.turns, 'coup', 'coups')}.${extra}`,
+  later(() => Kit.isOpen() || Kit.dialog('Bravo, vous avez gagné !', `Vous avez trouvé les ${n} paires en ${plural(G.turns, 'coup', 'coups')}.${extra}`,
     [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', home]], true), REDUCED ? 0 : 900);
 }
 const home = () => { location.href = $('home').href; };
@@ -243,7 +260,7 @@ function showHint() {
   else say("Aucune paire n'est connue pour le moment : retournez la carte encadrée, jamais retournée.");
 }
 
-function askNewGame() { Kit.chooseLevel(level, playing(), newGame); }
+function askNewGame() { timers.forEach(clearTimeout); timers = []; shown = null; render(); Kit.chooseLevel(level, playing(), newGame); }
 function newGame(lv) {
   timers.forEach(clearTimeout); timers = [];
   if (lv) level = lv;
@@ -280,11 +297,11 @@ function layout() {
   let best = 0;
   for (let c = 2; c <= n / 2; c++) {
     if (n % c) continue;
-    const S = Math.min(fit(W, c, Math.min(64, W * .06)), fit(H, n / c, 24), 190);
+    const S = Math.min(fit(W, c, Math.max(32, Math.min(64, W * .06))), fit(H, n / c, 32), 190);
     // A tie keeps the grid closest to a square.
     if (S > best + 2 || (S > best - 2 && Math.abs(c - n / c) < Math.abs(cols - n / cols))) { best = Math.max(best, S); cols = c; }
   }
-  const S = Math.floor(Math.max(40, Math.min(fit(W, cols, Math.min(64, W * .06)), fit(H, n / cols, 24), 190)));
+  const S = Math.floor(Math.max(40, Math.min(fit(W, cols, Math.max(32, Math.min(64, W * .06))), fit(H, n / cols, 32), 190)));
   gridEl.style.setProperty('--s', S + 'px');
   gridEl.style.setProperty('--gap', Math.round(S * k) + 'px');
   gridEl.style.setProperty('--cols', String(cols));
@@ -300,7 +317,7 @@ function render() {
       + (just && just.includes(i) ? ' just' : '') + (framed.has(i) ? ' hint' : '');
     if (e.className.replace(' shake', '') !== cls) e.className = cls;
     const r = Math.floor(i / cols) + 1, k = i % cols + 1;
-    e.setAttribute('aria-label', `Ligne ${r}, colonne ${k} : ${found ? pic(i).one + ', paire trouvée' : up ? pic(i).one : 'carte à l\'envers'}`);
+    e.setAttribute('aria-label', `Ligne ${r}, colonne ${k} : ${found ? pic(i).one + ', paire trouvée' : up ? pic(i).one : 'carte à l\'envers'}${framed.has(i) ? ', encadrée par l\'aide' : ''}`);
   });
   $('count').textContent = `Coups : ${G.turns} · Paires : ${P.pairs(G)} sur ${P.total(G)}`;
   $('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
@@ -313,7 +330,9 @@ function shake(i) {
 }
 
 $('hintBtn').onclick = showHint;
-$('helpBtn').onclick = () => Kit.openHelp();
+$('helpBtn').onclick = () => { timers.forEach(clearTimeout); timers = []; shown = null; render(); Kit.openHelp(); };
+// A miss turns back at his next click, wherever it is.
+addEventListener('pointerdown', e => { if (shown && !(e.target.closest && e.target.closest('.card'))) { hideShown(); render(); } }, true);
 $('newBtn').onclick = askNewGame;
 addEventListener('keydown', e => { if (e.key === 'Escape') Kit.escape(); });
 addEventListener('resize', render);
