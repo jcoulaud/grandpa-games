@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bataille navale · Jeux de Papi</title>
+<meta name="description" content="La bataille navale en grand, pour les grands-parents : coulez les cinq bateaux de l'ordinateur avant qu'il coule les vôtres. Trois niveaux. Gratuit, sans publicité, sans compte.">
+<link rel="canonical" href="https://jeux-papi.fr/bataille-navale/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Jeux de Papi">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://jeux-papi.fr/bataille-navale/">
+<meta property="og:title" content="Bataille navale · Jeux de Papi">
+<meta property="og:description" content="La bataille navale en grand, contre l'ordinateur. Gratuit, sans publicité, sans compte.">
+<meta property="og:image" content="https://jeux-papi.fr/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../lib/kit.css">
+<style>
+  /* The bataille navale plays on a grey-blue stormy sea. Each side has a sea of 10 by 10 squares,
+     with the list of its ships beside it. */
+  :root {
+    --felt-top: #4F6D7A; --felt: #22343D; --shade: 14,24,30; --accent: #1F5C7A;
+    --s: 40px; --lab: 40px; --gap: 48px;
+  }
+  #title svg { width: 34px; height: 34px; }
+  #moveBtn[hidden] { display: none; }
+
+  #table { display: flex; align-items: safe center; justify-content: center; gap: var(--gap); padding: 0 16px; overflow: hidden auto; touch-action: pan-y; }
+  .side { display: grid; grid-template-columns: auto auto; column-gap: 16px; row-gap: 8px; align-items: start; }
+  /* Both sides have a row under the sea, so the seas line up: the key of the marks is in the computer's. */
+  #side0 { grid-template-areas: "cap cap" "roster sea" ". under"; grid-template-rows: auto auto 30px; }
+  #side1 { grid-template-areas: "cap cap" "sea roster" "legend legend"; grid-template-rows: auto auto 30px; }
+  /* The columns stay as wide as the sea and the list: the name above and the key below fit in them. */
+  #side0 { grid-template-columns: max-content calc(var(--s) * 10 + var(--lab)); }
+  #side1 { grid-template-columns: calc(var(--s) * 10 + var(--lab)) max-content; }
+  .side.tight .turn-tag .long, .side .turn-tag .short { display: none; }
+  .side.tight .turn-tag .short { display: inline; }
+  /* Above each sea: its name, and whose turn it is. */
+  .cap { grid-area: cap; display: flex; align-items: center; gap: 14px; height: 44px; margin: 0; white-space: nowrap; }
+  #side0 .cap { justify-content: flex-end; padding-right: 0; }
+  #side1 .cap { padding-left: var(--lab); }
+  .cap h2 { margin: 0; font: 700 25px var(--ui); color: #fff; }
+  .turn-tag { height: 40px; padding: 0 16px; display: none; align-items: center; border-radius: 20px; font: 700 21px var(--ui); }
+  .side.turn .turn-tag { display: inline-flex; }
+  #side1 .turn-tag { background: var(--gold); color: #1F1A00; box-shadow: 0 0 0 3px rgba(var(--shade),.5), 0 0 22px rgba(255,200,61,.55); }
+  #side0 .turn-tag { background: #F4F8FA; color: var(--text); }
+
+  /* The list of the ships, each drawn with its name. A sunk ship is crossed out. */
+  .roster { grid-area: roster; width: max-content; margin: var(--s) 0 0; padding: 0; list-style: none;
+    display: flex; flex-direction: column; gap: clamp(4px, calc(var(--s) * .2), 12px); }
+  .roster li { display: flex; flex-direction: column; gap: 2px; color: #fff; font: 600 20px/1.1 var(--ui); }
+  #side0 .roster li { align-items: flex-end; text-align: right; }
+  .roster .pic { height: 26px; display: block; }
+  .roster .pic svg { height: 100%; width: auto; display: block; }
+  #table.bare .roster .nm { display: none; }
+  .roster li.gone { color: rgba(255,255,255,.55); text-decoration: line-through 3px #F0625F; }
+  .roster li.gone .pic { filter: grayscale(1) brightness(.5); }
+
+  .sea { grid-area: sea; display: grid; grid-template-columns: var(--lab) repeat(10, var(--s)); grid-auto-rows: var(--s); width: calc(var(--s) * 10 + var(--lab)); position: relative; }
+  .lab { display: grid; place-items: center; font: 600 clamp(20px, calc(var(--s) * .48), 26px) / 1 var(--ui); color: #E4ECF0; }
+  /* The sea he fires on, during his turn, is framed in yellow. */
+  .sea::after { content: ""; position: absolute; left: calc(var(--lab) - 5px); top: calc(var(--s) - 5px); right: -5px; bottom: -5px;
+    border-radius: 9px; border: 5px solid transparent; pointer-events: none; z-index: 4; }
+  .side.turn#side1 .sea::after { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(var(--shade),.7), 0 0 28px rgba(255,200,61,.55); }
+
+  /* A square of sea, with small waves. */
+  .q { position: relative; display: grid; place-items: center;
+    background: radial-gradient(60% 30% at 30% 35%, rgba(255,255,255,.08), transparent), linear-gradient(160deg, #2F80B5, #1D5F8E);
+    box-shadow: inset 0 0 0 1px rgba(10,40,70,.6); }
+  #sea1 .q { cursor: crosshair; }
+  #side1.turn .q.open:hover { background: linear-gradient(160deg, #FFE08A, #F2C14A); }
+  /* The marks of the shots sit above the ships. */
+  .q > svg { width: 82%; height: 82%; position: relative; z-index: 3; pointer-events: none; }
+  /* Water beside a sunk ship: no ship can be there, so the square is pale, with a small dot. */
+  .q.clear { background: linear-gradient(160deg, #7BA6C4, #6690AE); }
+  .q.clear::after { content: ""; width: 14%; height: 14%; border-radius: 50%; background: rgba(255,255,255,.6); }
+  /* On a sunk ship the fire is smaller, so the ship shows. */
+  .q.wreck > svg { width: 50%; height: 50%; }
+  /* A hit on a ship not sunk yet, on the computer's sea: dark red under the fire. */
+  .q.burn { background: linear-gradient(160deg, #8E2A1C, #5E140C); }
+  /* The last shot on each sea has a yellow ring, so he sees where the computer fired. */
+  .q.last::before { content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none;
+    box-shadow: inset 0 0 0 4px var(--gold), inset 0 0 0 6px rgba(var(--shade),.8); }
+  /* A shot: the yellow ring closes in on the square, the mark pops up, and a wave spreads from it:
+     white for the water, orange for a hit. */
+  .q.last::before { animation: aim .35s ease-out both; }
+  .q.last > svg { animation: pop .45s .25s cubic-bezier(.2,1.5,.4,1) both; }
+  .q > svg .wave { display: none; transform-origin: 50% 50%; }
+  .q.last > svg .wave { display: inline; animation: wave .9s .3s ease-out both; }
+  @keyframes aim { from { transform: scale(2.4); opacity: 0; } }
+  @keyframes pop { from { transform: scale(.2); opacity: 0; } }
+  @keyframes wave { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.9); opacity: 0; } }
+  /* A ship just sunk comes up dark from the sea; the squares around it turn pale. */
+  .boat.appear { animation: surface .7s ease-out both; }
+  @keyframes surface { from { opacity: 0; transform: scale(1.12); } }
+  .q.clear.fresh { animation: fade .6s .3s both; }
+  @keyframes fade { from { background: linear-gradient(160deg, #2F80B5, #1D5F8E); } }
+  /* The sign of whose turn it is slides in when the turn changes. */
+  .side.turn .turn-tag { animation: tag .35s ease-out both; }
+  @keyframes tag { from { opacity: 0; transform: translateY(8px); } }
+  /* The hint: the square framed in yellow, the hits it follows ringed. */
+  .q.hint::after {
+    content: ""; position: absolute; inset: 2px; border: 5px solid var(--gold); border-radius: 6px; z-index: 4;
+    box-shadow: inset 0 0 0 1.5px rgba(var(--shade),.8), 0 0 0 1.5px rgba(var(--shade),.8); animation: pulse 1.4s ease-in-out infinite;
+  }
+  .q.ring::after { content: ""; position: absolute; inset: 3px; border: 4px solid var(--gold); border-radius: 50%; z-index: 4; }
+  @keyframes pulse { 50% { background: rgba(255,200,61,.45); } }
+  .q.shake { animation: sh .3s; }
+
+  /* A ship: one picture over its squares, under the marks of the shots. */
+  .boat { position: relative; z-index: 2; pointer-events: none; padding: 2px; filter: drop-shadow(0 3px 3px rgba(0,0,0,.35)); }
+  .boat svg { width: 100%; height: 100%; display: block; }
+  .boat.sunk { filter: grayscale(.7) brightness(.55); }
+  /* At the end of a lost game, the computer's ships left afloat show, pale. */
+  .boat.reveal { opacity: .55; }
+
+  #helpText .ships { display: grid; grid-template-columns: auto 1fr; gap: 6px 18px; align-items: center; margin: 4px 0 10px; }
+  #helpText .ships svg { height: 30px; width: auto; display: block; }
+  #helpText .ships span { font-weight: 600; }
+
+  /* The key of the marks, under the computer's ships. */
+  .legend { grid-area: legend; margin: 0; padding: 0 0 0 var(--lab); list-style: none; display: flex; gap: 26px;
+    font: 600 20px var(--ui); color: #E4ECF0; white-space: nowrap; }
+  .legend li { display: flex; align-items: center; gap: 10px; }
+  .legend i { width: 28px; height: 28px; flex: none; display: grid; place-items: center; border-radius: 4px;
+    background: linear-gradient(160deg, #2F80B5, #1D5F8E); box-shadow: inset 0 0 0 1px rgba(10,40,70,.6); }
+  .legend i.burn { background: linear-gradient(160deg, #8E2A1C, #5E140C); }
+  .legend i.clear { background: linear-gradient(160deg, #7BA6C4, #6690AE); }
+  .legend i.clear::after { content: ""; width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.7); }
+  .legend svg { width: 26px; height: 26px; }
+  .legend svg .wave { display: none; }
+  /* A phone: the computer's sea on top, his own under it, each with its ships listed under it. */
+  @media (max-width: 700px) {
+    #table { flex-direction: column; justify-content: flex-start; overflow-y: auto; padding: 0 0 16px; gap: 22px; }
+    #side1 { order: -1; }
+    #side0, #side1 { grid-template-areas: "cap" "sea" "roster"; grid-template-columns: auto; grid-template-rows: none; }
+    #side1 { grid-template-areas: "cap" "sea" "legend" "roster"; }
+    .legend { font-size: 15px; gap: 16px; }
+    .legend i { width: 22px; height: 22px; }
+    .legend svg { width: 20px; height: 20px; }
+    #side0 .cap, #side1 .cap { justify-content: flex-start; padding-left: var(--lab); height: 36px; }
+    .cap h2 { font-size: 19px; }
+    .turn-tag { height: 30px; font-size: 16px; padding: 0 12px; }
+    .roster { width: auto; margin: 0 0 0 var(--lab); flex-direction: row; flex-wrap: wrap; gap: 6px 14px; }
+    #side0 .roster li, .roster li { align-items: flex-start; text-align: left; font-size: 14px; }
+    .roster .pic { height: 16px; }
+    .lab { font-size: 14px; }
+    #moveBtn { order: 1; flex: 1 1 0; min-width: 0; padding: 4px 8px; gap: 6px; justify-content: center;
+      font-size: 20px; line-height: 1.05; white-space: normal; text-align: left; }
+    #moveBtn svg { width: 22px; height: 22px; }
+    /* Three buttons share the row: each puts its icon above its word. */
+    #hintBtn, #moveBtn, #helpBtn { flex-direction: column; gap: 0; padding: 3px 2px; text-align: center; font-size: 18px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .q.hint::after, .q.shake, .q.last::before, .q.last > svg, .q.last > svg .wave, .boat.appear, .q.clear.fresh, .side.turn .turn-tag { animation: none; }
+    .q.last > svg .wave { display: none; }
+  }
+</style>
+<script src="../lib/zoom.js"></script>
+</head>
+<body>
+<div id="bar">
+  <div id="title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 13.5h19l-2.6 5H5z" fill="#A9B5BE" stroke="#1C2B33" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 13.5V10h6v3.5M10.5 10V6" fill="#8E9BA5" stroke="#1C2B33" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/><path d="M2 21q2.5-1.6 5 0t5 0 5 0 5 0" fill="none" stroke="#2E7DB0" stroke-width="1.6" stroke-linecap="round"/></svg>Bataille navale</div>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre une bonne case où tirer et explique pourquoi">Aide</button>
+  <button id="moveBtn" title="Place vos bateaux autrement, avant le premier tir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/></svg><span class="long">Placer mes bateaux autrement</span><span class="short">Changer mes bateaux</span><span class="tiny">Bateaux</span></button>
+  <span class="spacer"></span>
+  <button id="helpBtn" data-icon="help">Règles</button>
+  <button id="newBtn" class="game">Nouvelle partie</button>
+</div>
+<div id="table">
+  <section class="side" id="side0" aria-label="Votre flotte">
+    <div class="cap"><span class="turn-tag"><span class="long">L'ordinateur tire…</span><span class="short">Il tire…</span></span><h2>Votre flotte</h2></div>
+    <ul class="roster" id="roster0" aria-label="Vos bateaux"></ul>
+    <div class="sea" id="sea0" role="grid" aria-label="Votre mer"></div>
+  </section>
+  <section class="side" id="side1" aria-label="La flotte de l'ordinateur">
+    <div class="cap"><h2>L'ordinateur</h2><span class="turn-tag"><span class="long">À vous de tirer</span><span class="short">À vous</span></span></div>
+    <div class="sea" id="sea1" role="grid" aria-label="La mer de l'ordinateur : cliquez sur une case pour tirer"></div>
+    <ul class="roster" id="roster1" aria-label="Ses bateaux"></ul>
+    <ul class="legend" id="legend" aria-label="Ce que veulent dire les cases"></ul>
+  </section>
+</div>
+<footer id="msgRail"><div id="msg" aria-live="polite"></div><div id="wins"></div><div class="zoom"></div></footer>
+<div id="help" data-title="Comment jouer">
+  <section class="page">
+    <h3>Le but</h3>
+    <p>Vous et l'ordinateur avez chacun cinq bateaux cachés sur une mer de 100 cases. Coulez les cinq bateaux de l'ordinateur avant qu'il coule les vôtres.</p>
+    <p>Votre flotte est à gauche : vous voyez vos bateaux. La mer de l'ordinateur est à droite : ses bateaux sont cachés.</p>
+  </section>
+  <section class="page">
+    <h3>Tirer</h3>
+    <p>Quand « À vous de tirer » est affiché, cliquez sur une case de la mer de l'ordinateur. Une gerbe d'eau blanche veut dire « à l'eau ». Une explosion veut dire « touché » : un bateau est dessous. Quand toutes ses cases sont touchées, le bateau est coulé et il apparaît.</p>
+    <p>Puis l'ordinateur tire sur votre mer. Sa dernière case visée est entourée de jaune.</p>
+  </section>
+  <section class="page">
+    <h3>Les bateaux</h3>
+    <div class="ships" id="shipList"></div>
+    <p>Un bateau est droit. Deux bateaux ne se touchent jamais, même par un coin : les cases autour d'un bateau coulé sont vides, et le jeu les marque d'un petit point.</p>
+  </section>
+  <section class="page">
+    <h3>Les boutons</h3>
+    <p>« Aide » encadre une bonne case où tirer et dit pourquoi.</p>
+    <p>Avant votre premier tir, « Changer mes bateaux » place vos bateaux autrement. « Nouvelle partie » vous permet de choisir le niveau. La partie est enregistrée à chaque tir.</p>
+  </section>
+</div>
+
+<script src="../lib/store.js"></script>
+<script src="../lib/kit.js"></script>
+<script src="engine.js"></script>
+<script src="ships.js"></script>
+<script>
+'use strict';
+const B = Bataille;
+const $ = id => document.getElementById(id);
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const THINK = REDUCED ? 250 : 900;
+// The same width as the style sheet: a phone puts the computer's sea on top.
+const PHONE = matchMedia('(max-width: 700px)');
+const where = () => PHONE.matches ? 'en haut' : 'à droite';
+const SHIP_NAMES = ['Porte-avions', 'Croiseur', 'Contre-torpilleur', 'Sous-marin', 'Torpilleur'];
+
+/* ---------- State ----------
+   G: the game (see engine.js). hint: the squares the hint shows, until his next shot. lastShot: his
+   last shot, for double-clicks. wonNow: this game is counted as won (a win counts once). told: what
+   his last shot did, said again with the computer's answer. */
+let G, level = 'facile', stats = { won: 0 }, wonNow = false, hint = null, lastShot = null, timers = [], told = '';
+let stale = false, saved = true;
+addEventListener('gg-stale', () => { stale = true; });
+
+const fired = k => [...G.shots[k]].filter(x => x !== '.').length;
+const started = () => fired(1) > 0;
+const playing = () => started() && !G.result;
+const shipName = s => B.FLEET[s].name;
+
+/* ---------- Saves ---------- */
+function save() {
+  const parts = [];
+  if (playing()) parts.push('Partie en cours');
+  if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
+  if (GG.save('bataille-navale', { v: 1, G, level, stats, wonNow }, { summary: parts.join(' · ') })) return (saved = true);
+  saved = false;
+  if (!stale) Kit.say("La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.");
+  return false;
+}
+function load() {
+  try {
+    const v = GG.load('bataille-navale');
+    if (!v || !B.check(v.G)) return false;
+    G = v.G; level = G.level; wonNow = !!v.wonNow;
+    stats = v.stats && Number.isInteger(v.stats.won) && v.stats.won >= 0 ? v.stats : { won: 0 };
+    return true;
+  } catch (e) { return false; }
+}
+
+/* ---------- The shots ---------- */
+const say = Kit.say;
+
+// A win counts once, and only when it is saved: a stale window cannot count it a second time.
+function commit(next) {
+  G = next; hint = null;
+  const firstWin = G.result === 'won' && !wonNow;
+  if (firstWin) { wonNow = true; stats.won++; }
+  if (save()) { if (firstWin) GG.track('bataille-navale', 'won'); }
+  else if (firstWin) { wonNow = false; stats.won--; }
+  render();
+}
+
+// A click on square i of sea k. Returns true when it fires.
+function tap(k, i) {
+  if (Kit.isOpen()) return false;
+  if (G.result) { say(G.result === 'won' ? 'Cette partie est gagnée : cliquez sur « Nouvelle partie » pour en commencer une autre.'
+    : "L'ordinateur a gagné cette partie : cliquez sur « Nouvelle partie » pour prendre votre revanche."); return false; }
+  if (G.turn !== 'me') { say("Attendez : l'ordinateur tire."); return false; }
+  if (k === 0) return refuse(0, i, `C'est votre flotte : tirez sur la mer de l'ordinateur, ${where()}.`);
+  const v = B.view(G, 1), at = B.name(i);
+  if (v[i] === 'c') return refuse(1, i, `La case ${at} touche un bateau coulé : elle est vide, car les bateaux ne se touchent jamais.`);
+  if (v[i] !== '.') return refuse(1, i, `Vous avez déjà tiré en ${at} : choisissez une autre case.`);
+  const shot = B.fire(G, 1, i);
+  told = shot.kind === 'eau' ? `${at} : à l'eau.` : shot.kind === 'touche' ? `${at} : touché !`
+    : `${at} : touché, coulé ! C'était son ${shipName(shot.ship)}.`;
+  commit(shot.G);
+  if (G.result) { finish(!stale); return true; }
+  // A stale window shows the kit's reload prompt. A move that could not be saved keeps the warning
+  // of save() on the message line, and the game still goes on.
+  if (stale) return true;
+  if (saved) say(told + " L'ordinateur tire…");
+  later(answer, THINK);
+  return true;
+}
+
+// The computer's shot. Its square depends only on the game, so a reload in between gives the same shot.
+function answer() {
+  if (G.result || G.turn !== 'them') return;
+  const i = B.aim(G);
+  if (i < 0) return;
+  const at = B.name(i), shot = B.fire(G, 0, i);
+  const theirs = shot.kind === 'eau' ? `L'ordinateur tire en ${at} : à l'eau.`
+    : shot.kind === 'touche' ? `L'ordinateur tire en ${at} : touché, votre ${shipName(shot.ship)}.`
+    : `L'ordinateur tire en ${at} : coulé, votre ${shipName(shot.ship)} !`;
+  commit(shot.G);
+  if (G.result) return finish(!stale);
+  if (saved) say((told ? told + ' ' : '') + theirs + ' À vous.');
+  told = '';
+}
+function refuse(k, i, text) { shake(k, i); say(text); return false; }
+
+/* ---------- End of the game ---------- */
+function finish(show) {
+  hint = null;
+  render();
+  // A result shown late does not cover a dialog he opened in between, such as the levels.
+  const dialog = (...a) => later(() => { if (!Kit.isOpen()) Kit.dialog(...a); }, REDUCED ? 0 : 700);
+  // A result that could not be saved keeps the warning on the message line, and the dialog says it.
+  const lost = saved ? '' : " Attention : la partie n'a pas pu être enregistrée, la mémoire de l'ordinateur est pleine.";
+  const tell = text => { if (saved) say(text); };
+  if (G.result === 'won') {
+    tell(`Bravo, vous avez gagné : les cinq bateaux de l'ordinateur sont coulés, en ${fired(1)} tirs.`);
+    if (show) dialog('Bravo, vous avez gagné !', `Vous avez coulé les cinq bateaux de l'ordinateur en ${fired(1)} tirs.${!wonNow ? '' : stats.won === 1 ? " C'est votre première victoire." : ` C'est votre ${stats.won}e victoire.`}${lost}`,
+      [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', home]], true);
+  } else {
+    const left = B.sunk(G, 1).filter(x => !x).length;
+    tell("L'ordinateur a coulé vos cinq bateaux. Ses bateaux restants sont montrés en pâle.");
+    if (show) dialog("L'ordinateur a gagné", `Il a coulé vos cinq bateaux. Il lui restait ${left === 1 ? 'un bateau' : left + ' bateaux'} : ils sont montrés sur sa mer.${lost}`,
+      [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', home]]);
+  }
+}
+const home = () => { location.href = $('home').href; };
+
+/* ---------- Buttons ---------- */
+function later(fn, ms) { const t = setTimeout(() => { timers = timers.filter(x => x !== t); fn(); }, ms); timers.push(t); return t; }
+
+function showHint() {
+  if (G.result || Kit.isOpen()) return;
+  if (G.turn !== 'me') return say("Attendez : l'ordinateur tire.");
+  const h = B.hint(G);
+  if (!h) return;
+  const at = B.name(h.cell);
+  hint = { cells: [h.cell], ring: h.hits };
+  render();
+  if (h.rule === 'search') return say(`Tirez en ${at} : c'est la case où les bateaux qui restent à couler ont le plus de place.`);
+  if (h.rule === 'line') return say(`Les cases touchées en ${B.name(h.hits[0])} et ${B.name(h.hits[h.hits.length - 1])} montrent le sens du bateau : il continue ${h.across ? 'sur cette ligne' : 'dans cette colonne'}. Tirez en ${at}.`);
+  if (h.rule === 'beside') return say(`Le bateau touché en ${B.name(h.hits[0])} n'est pas encore coulé : il continue à côté. Tirez en ${at}.`);
+  say(`Tirez en ${at} : un bateau touché n'est pas encore coulé, et c'est là qu'il a le plus de place.`);
+}
+
+function moveShips() {
+  if (Kit.isOpen() || started()) return;
+  G = B.replace(G, crypto.getRandomValues(new Uint32Array(1))[0]);
+  hint = null;
+  save(); render();
+  if (saved) say(`Vos bateaux sont placés autrement. Cliquez sur la mer de l'ordinateur, ${where()}, pour tirer.`);
+}
+
+function askNewGame() {
+  Kit.chooseLevel(level, playing(), newGame);
+}
+function newGame(lv) {
+  timers.forEach(clearTimeout); timers = [];
+  if (lv) level = lv;
+  Kit.showLevel(level);
+  const seed = crypto.getRandomValues(new Uint32Array(1))[0];
+  G = B.newGame(level, seed); hint = null; lastShot = null; wonNow = false; told = '';
+  // A stale window cannot save, so it does not count a game either.
+  if (save()) GG.track('bataille-navale', 'start');
+  render();
+  if (saved) say(startText());
+}
+const startText = () => `Cliquez sur une case de la mer de l'ordinateur, ${where()}, pour tirer.`;
+
+/* ---------- Drawing ---------- */
+const table = $('table'), seas = [$('sea0'), $('sea1')];
+const squares = [[], []];
+function build() {
+  if (squares[0].length) return;
+  for (let k = 0; k < 2; k++) {
+    const el = seas[k];
+    // Each square has its place in the grid, so the ships can lie over them.
+    const lab = (t, r, c) => { const e = document.createElement('div'); e.className = 'lab'; e.textContent = t; e.setAttribute('aria-hidden', 'true'); e.style.gridArea = `${r} / ${c}`; el.appendChild(e); };
+    for (let c = 0; c < B.N; c++) lab('ABCDEFGHIJ'[c], 1, c + 2);
+    for (let r = 0; r < B.N; r++) {
+      lab(String(r + 1), r + 2, 1);
+      for (let c = 0; c < B.N; c++) {
+        const e = document.createElement('div');
+        e.className = 'q'; e.dataset.k = k; e.dataset.i = r * B.N + c; e.setAttribute('role', 'gridcell');
+        e.style.gridArea = `${r + 2} / ${c + 2}`;
+        el.appendChild(e); squares[k].push(e);
+      }
+    }
+  }
+}
+// The two seas side by side, each with its list of ships on the outside, with squares as large as
+// fit (56 px at most). A phone puts them one under the other and scrolls down to the second.
+function layout() {
+  const W = table.clientWidth, H = table.clientHeight;
+  // The lists of ships are as wide as their longest name. When the names take the room of the seas
+  // (a narrow page, or a wide font), the lists keep only the pictures. A row label takes at least
+  // 30 px, so "10" fits.
+  const high = (H - 16 - 52 - 38) / 11;
+  const wide = () => {
+    const R = Math.max($('roster0').offsetWidth, $('roster1').offsetWidth);
+    const s = (W - 32 - 2 * (R + 16)) / 23.2;
+    return s >= 30 ? s : (W - 32 - 2 * (R + 16 + 30)) / 21.2;
+  };
+  table.classList.remove('bare');
+  if (!PHONE.matches && wide() < Math.min(high, 30)) table.classList.add('bare');
+  const S = PHONE.matches ? Math.floor(Math.min((W - 8) / 11, 40)) : Math.floor(Math.max(22, Math.min(wide(), high, 56)));
+  const L = PHONE.matches ? S : Math.max(S, 30);
+  const root = document.documentElement.style;
+  root.setProperty('--s', S + 'px');
+  root.setProperty('--lab', L + 'px');
+  // A name and its sign of the turn too long for the side: the sign gets shorter.
+  for (const side of [$('side0'), $('side1')]) {
+    side.classList.remove('tight');
+    const cap = side.querySelector('.cap'), tag = cap.querySelector('.turn-tag');
+    const need = cap.querySelector('h2').offsetWidth + 14 + tag.querySelector('.long').offsetWidth + 34 + L;
+    side.classList.toggle('tight', need > 10 * S + L + (PHONE.matches ? 0 : 16 + side.querySelector('.roster').offsetWidth));
+  }
+  root.setProperty('--gap', Math.round(S * 1.2) + 'px');
+
+}
+
+// The ships shown on a sea: all of his, and the computer's once sunk (all of them after a loss).
+function drawBoats(k) {
+  const sea = seas[k], gone = B.sunk(G, k);
+  const want = G.fleets[k].map((ship, s) => {
+    if (k === 1 && !gone[s] && G.result !== 'lost') return '';
+    const down = ship[1] - ship[0] !== 1, r = Math.floor(ship[0] / B.N) + 2, c = ship[0] % B.N + 2;
+    const area = down ? `${r} / ${c} / span ${ship.length} / span 1` : `${r} / ${c} / span 1 / span ${ship.length}`;
+    return `${s}|${area}|${down}|${gone[s] ? 'sunk' : k === 1 ? 'reveal' : ''}`;
+  }).filter(Boolean).join(';');
+  if (sea.dataset.boats === want) return;
+  // A ship that was not shown sunk before comes up with a short animation, but not when the page opens.
+  const before = sea.dataset.boats === undefined ? null : sea.dataset.boats.split(';');
+  sea.dataset.boats = want;
+  sea.querySelectorAll('.boat').forEach(e => e.remove());
+  for (const item of want ? want.split(';') : []) {
+    const [s, area, down, cls] = item.split('|');
+    const e = document.createElement('div');
+    e.className = 'boat ' + cls + (before && cls === 'sunk' && !before.includes(item) ? ' appear' : ''); e.style.gridArea = area;
+    e.innerHTML = Ships.ship(+s, down === 'true');
+    sea.appendChild(e);
+  }
+}
+function drawRoster(k) {
+  const gone = B.sunk(G, k);
+  const html = B.FLEET.map((f, s) => `<li class="${gone[s] ? 'gone' : ''}" aria-label="${SHIP_NAMES[s]}, ${f.size} cases${gone[s] ? ', coulé' : ''}">`
+    + `<span class="pic">${Ships.ship(s, false)}</span><span class="nm">${SHIP_NAMES[s]}</span></li>`).join('');
+  const el = $('roster' + k);
+  if (el.dataset.html !== html) { el.innerHTML = html; el.dataset.html = html; }
+}
+
+function render() {
+  if (!G) return;
+  build();
+  const framed = new Set(hint ? hint.cells : []), ringed = new Set(hint ? hint.ring : []);
+  for (let k = 0; k < 2; k++) {
+    const v = B.view(G, k);
+    for (let i = 0; i < B.SIZE; i++) {
+      const e = squares[k][i], x = v[i];
+      let cls = 'q' + (x === '.' ? ' open' : x === 'c' ? ' clear' : '');
+      // A square that turns pale now, beside a ship just sunk, fades to it.
+      if (x === 'c' && e.className && !e.classList.contains('clear') && e.classList.contains('open')) cls += ' fresh';
+      else if (x === 'c' && e.classList.contains('fresh')) cls += ' fresh';
+      if (k === 1 && x === 'x') cls += ' burn';
+      if (x === 's') cls += ' wreck';
+      if (G.last[k] === i) cls += ' last';
+      if (k === 1 && framed.has(i)) cls += ' hint';
+      if (k === 1 && ringed.has(i)) cls += ' ring';
+      const html = x === 'x' || x === 's' ? Ships.hit : x === 'o' ? Ships.splash : '';
+      if (e.className.replace(' shake', '') !== cls) e.className = cls;
+      if (e.dataset.html !== html) { e.innerHTML = html; e.dataset.html = html; }
+      const ship = B.shipAt(G, k, i);
+      const state = x === 'o' ? "à l'eau" : x === 'c' ? "vide, à côté d'un bateau coulé" : x === 's' ? 'coulé'
+        : x === 'x' ? 'touché' : k === 0 && ship >= 0 ? 'votre ' + shipName(ship) : 'pas encore visée';
+      e.setAttribute('aria-label', `${B.name(i)} : ${state}`);
+    }
+    drawBoats(k); drawRoster(k);
+    $('side' + k).classList.toggle('turn', !G.result && (G.turn === 'me') === (k === 1));
+  }
+  layout();
+  $('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
+  $('hintBtn').disabled = !!G.result;
+  $('moveBtn').hidden = started();
+}
+function shake(k, i) {
+  const e = squares[k][i];
+  if (!e) return;
+  e.classList.remove('shake'); void e.offsetWidth; e.classList.add('shake');
+}
+
+/* ---------- Mouse and touch ----------
+   A press and release on the same square is a click; the hand may move up to 16 px. A press made
+   before a shot, released after it, does nothing. A second click on the square just fired, within
+   half a second, is a double-click: it counts as one click. */
+const squareOf = el => { const q = el && el.closest && el.closest('.q'); return q ? { k: +q.dataset.k, i: +q.dataset.i } : null; };
+const moves = () => fired(0) + fired(1);
+let press = null;
+table.addEventListener('pointerdown', e => {
+  if (e.button !== 0 || Kit.isOpen() || !G) return;
+  const at = squareOf(e.target);
+  if (!at) return;
+  press = { ...at, x: e.clientX, y: e.clientY, pointer: e.pointerId, moves: moves() };
+});
+addEventListener('pointerup', e => {
+  if (!press || e.pointerId !== press.pointer) return;
+  const p = press; press = null;
+  if (p.moves !== moves()) return;
+  const at = squareOf(document.elementFromPoint(e.clientX, e.clientY));
+  const same = at && at.k === p.k && at.i === p.i;
+  if (!same && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 16) return;
+  const t = performance.now();
+  if (lastShot && lastShot.k === p.k && lastShot.i === p.i && t - lastShot.t < 500) return;
+  if (tap(p.k, p.i)) lastShot = { t, k: p.k, i: p.i };
+});
+addEventListener('pointercancel', () => { press = null; });
+
+// The key of the marks, beside the computer's sea.
+$('legend').innerHTML = `<li><i>${Ships.splash}</i>À l'eau</li><li><i class="burn">${Ships.hit}</i>Touché</li><li><i class="clear"></i>Vide</li>`;
+
+// The ships on the third page of the rules, drawn with their names.
+const list = document.querySelector('#helpText #shipList');
+if (list) list.innerHTML = B.FLEET.map((f, s) => `${Ships.ship(s, false)}<span>${SHIP_NAMES[s]} : ${f.size} cases</span>`).join('');
+
+$('hintBtn').onclick = showHint;
+$('moveBtn').onclick = moveShips;
+$('helpBtn').onclick = () => Kit.openHelp();
+$('newBtn').onclick = askNewGame;
+addEventListener('keydown', e => { if (e.key === 'Escape') Kit.escape(); });
+addEventListener('resize', render);
+// The names of the ships take their room once the font is loaded: lay the table out again then.
+if (document.fonts) { document.fonts.ready.then(render); document.fonts.addEventListener('loadingdone', render); }
+
+// The rules open by themselves the first time the game is opened.
+if (load()) {
+  Kit.showLevel(level);
+  if (G.result) finish(false);
+  else {
+    render();
+    if (G.turn === 'them') { say("L'ordinateur tire…"); later(answer, THINK); }
+    else say(started() ? "À vous : cliquez sur une case de la mer de l'ordinateur pour tirer." : startText());
+  }
+} else {
+  Kit.firstVisit(newGame);
+}
+</script>
+</body>
+</html>

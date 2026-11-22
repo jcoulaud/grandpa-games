@@ -4,7 +4,7 @@ import { gameUrl, launch } from './harness.mjs';
 
 const browser = await launch();
 try {
-  for (const game of ['solitaire', 'freecell', 'dames', 'dame-de-pique', 'demineur', 'yams']) {
+  for (const game of ['solitaire', 'freecell', 'dames', 'dame-de-pique', 'demineur', 'yams', 'bataille-navale']) {
     const page = await browser.newPage({ reducedMotion: 'reduce' });
     await page.goto(gameUrl(game));
     assert.equal(await page.evaluate(id => GG.load(id), game), null);
@@ -22,7 +22,7 @@ try {
       if (first) assert.equal(await page.locator('#overBtns button.primary').textContent(), 'Facile');
       if (texts[0] === back) assert.equal(await page.locator('#overBtns button.primary').textContent(), back);
       const choice = choices.getByText(label, { exact: true });
-      if (game === 'dames' || game === 'dame-de-pique' || game === 'demineur' || game === 'yams') {
+      if (game === 'dames' || game === 'dame-de-pique' || game === 'demineur' || game === 'yams' || game === 'bataille-navale') {
         await choice.click();
       } else {
         // Inspect the chosen deal in the click handler's turn, before automatic moves.
