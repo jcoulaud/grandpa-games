@@ -155,6 +155,24 @@ try {
   await page.mouse.move(...await letter(ds)); await page.mouse.down();
   await page.mouse.move(...await letter(de), { steps: 10 }); await page.mouse.up();
   ok(await g(() => G.found.includes(1)), 'mots mêlés at 130 %: a drag from the first letter to the last finds the word');
+  // 6. Petits chevaux at 130 %: a click on a framed horse moves that horse, also beside a red one.
+  await page.goto(gameUrl('petits-chevaux'));
+  await page.click('#helpClose');
+  await page.locator('#overBtns button', { hasText: 'Facile' }).click();
+  await wait(300);
+  await g(() => {
+    calm();
+    const red = (PetitsChevaux.abs(0, 11) - PetitsChevaux.START[1] + 56) % 56;
+    G = view = { ...PetitsChevaux.newGame('facile', 4), horses: [[10, -1], [red, -1], [-1, -1], [-1, -1]], die: 3 };
+    render(); afterThrow();
+    window.taps = [];
+    const tap = tapHorse;
+    tapHorse = (p, h) => { taps.push([p, h]); return tap(p, h); };
+  });
+  const pawn = await g(() => { const r = document.querySelector('.horse[data-p="0"][data-h="0"]').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
+  await page.mouse.click(...pawn); await page.mouse.move(5, 5); await wait(300);
+  ok(await g(() => JSON.stringify(taps) === '[[0,0]]' && G.horses[0][0] === 13), 'petits chevaux at 130 %: the click picks the horse under the mouse, which takes the red horse');
+  await page.screenshot({ path: `${OUT}/zoom-petits-chevaux-130.png` });
 
   // 7. A smaller window lowers the size it can hold; a phone stays at 100 % and shows no buttons.
   await page.setViewportSize({ width: 1093, height: 530 }); await wait(200);

@@ -234,6 +234,8 @@ const GAMES = [
     felt: ['#4A5560', '#232A31'], scene: slateArt },
   { id: 'mots-meles', title: 'Mots mêlés', text: 'Retrouvez les mots cachés dans une grille de lettres.',
     felt: ['#C8576B', '#6E2234'], scene: wordsArt },
+  { id: 'petits-chevaux', title: 'Petits chevaux', text: 'Sortez vos chevaux avec un 6 et menez-les au centre, contre l’ordinateur.',
+    felt: ['#2BA3A8', '#0F5A60'], scene: horsesArt },
 ];
 
 // A card as the games draw it, centred on (x, y), w wide, turned by rot degrees.
@@ -452,6 +454,56 @@ function wordsArt() {
       <rect x="-70" y="-5" width="9" height="10" rx="2" fill="#E88AA0"/><rect x="-61" y="-5.5" width="4" height="11" fill="#B8B8B8"/>
     </g>
   </svg>`;
+}
+
+// The petits chevaux: a corner of the painted board seen at a slant, a red stable and the track, with
+// a blue and a red horse racing along it and the die tumbling in the air above them.
+function horsesArt() {
+  const P = (c, r, z = 0) => [84 + (c - r) * 19, 36 + (c + r) * 9.5 - z];
+  const pts = list => list.map(q => P(...q).join(',')).join(' ');
+  const quad = (c, r, w, h, fill, extra = '') => `<polygon points="${pts([[c, r], [c + w, r], [c + w, r + h], [c, r + h]])}" fill="${fill}" ${extra}/>`;
+  // The board: its wooden edge, then the cream top.
+  let out = `<polygon points="${pts([[0, 4], [6, 4], [6, 4, -9], [0, 4, -9]])}" fill="#8A5627"/>`
+    + `<polygon points="${pts([[6, 0], [6, 4], [6, 4, -9], [6, 0, -9]])}" fill="#6E4220"/>`
+    + quad(-.25, -.25, 6.25, 4.25, '#C98A4B') + quad(0, 0, 6, 4, '#E4D3B0');
+  // The red stable in the corner, with a place for a horse.
+  out += quad(.1, .1, 2.8, 1.8, '#D7263D') + quad(.3, .3, 2.4, 1.4, '#FBDADF');
+  const [ex, ey] = P(1.5, 1);
+  out += `<ellipse cx="${ex}" cy="${ey}" rx="11" ry="5.5" fill="#fff" stroke="#D7263D" stroke-width="1.4" stroke-dasharray="3 2"/>`;
+  // Two rows of the track: white squares, the red start square with its arrow.
+  for (let c = 0; c < 6; c++) for (const r of [2, 3]) {
+    const start = c === 0 && r === 2;
+    out += quad(c + .06, r + .06, .88, .88, start ? '#D7263D' : '#FFFDF7', `stroke="${start ? '#82101F' : '#C9B48C'}" stroke-width=".8"`);
+  }
+  for (let c = 3; c < 6; c++) out += quad(c + .06, .06 + 1, .88, .88, '#D7E7FB', 'stroke="#0E3F86" stroke-width=".8"');
+  const [ax, ay] = P(.5, 2.5);
+  out += `<path d="M${ax - 5} ${ay - 2}l6 3-6 3z" fill="#fff" transform="rotate(26 ${ax} ${ay})"/>`;
+  // A horse pawn, as in the game, standing on (c, r).
+  const horse = (c, r, col, dark, light, s) => {
+    const [x, y] = P(c + .5, r + .5);
+    // Mirrored: they face the way they race, down the track.
+    return `<g transform="translate(${x + 50 * s} ${y - 90 * s}) scale(${-s} ${s})">
+      <ellipse cx="50" cy="93" rx="34" ry="7" fill="rgba(0,0,0,.3)"/>
+      <path d="M17 83Q17 75 27 74H73Q83 75 83 83V87Q83 94 73 94H27Q17 94 17 87Z" fill="${dark}"/>
+      <ellipse cx="50" cy="80" rx="31" ry="7.5" fill="${col}"/>
+      <path d="M31 79C30 66 34 57 42 50C36 52.5 28 54.5 22 52.5C15 50.5 11.5 45 13.5 40C15.5 35 20 32 26 29C30 22 34.5 17 39.5 14L41 4C46 7 49 11 50 15.5C63 17 73 27 76 41C79 55 77.5 68 73 79Z" fill="${col}" stroke="${dark}" stroke-width="3.2" stroke-linejoin="round"/>
+      <path d="M50.5 16C62 19.5 70 29 72.5 42C74.5 53 73.5 66 70.5 77" fill="none" stroke="${dark}" stroke-width="7" stroke-linecap="round"/>
+      <path d="M20 37C25 31 31 25 37.5 21" fill="none" stroke="${light}" stroke-width="3.4" stroke-linecap="round"/>
+      <circle cx="34.5" cy="28.5" r="4" fill="#111"/><circle cx="33.2" cy="27.2" r="1.4" fill="#fff"/></g>`;
+  };
+  // Speed lines behind each horse, along the track.
+  const speed = (c, r) => { const [x, y] = P(c + .5, r + .5); return `<path d="M${x - 18} ${y - 26}h-16M${x - 16} ${y - 17}h-22M${x - 18} ${y - 8}h-14" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".9" transform="rotate(26.6 ${x} ${y})"/>`; };
+  out += speed(1.1, 2) + horse(1.1, 2, '#D7263D', '#82101F', '#F59AA6', .46);
+  out += speed(3.9, 3) + horse(3.9, 3, '#1F6FD1', '#0E3F86', '#8CBDF5', .5);
+  // The die in the air, turning, with its shadow on the board.
+  const [sx, sy] = P(4.8, .9);
+  out += `<ellipse cx="${sx}" cy="${sy}" rx="10" ry="4" fill="rgba(0,0,0,.22)"/>`
+    + `<g transform="translate(178 26) rotate(-24) scale(.32) translate(-50 -50)">
+      <rect x="4" y="10" width="96" height="96" rx="18" fill="rgba(0,0,0,.25)"/>
+      <rect x="2" y="2" width="96" height="96" rx="18" fill="#FFFDF6" stroke="#BDB39C" stroke-width="3"/>
+      ${[[28, 24], [72, 24], [28, 50], [72, 50], [28, 76], [72, 76]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="9" fill="#1B1B1B"/>`).join('')}</g>`
+    + '<path d="M148 50q4-12 14-16M156 57q6-10 16-12" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2.4" stroke-linecap="round"/>';
+  return `<svg class="field" viewBox="0 0 210 147" aria-hidden="true">${out}</svg>`;
 }
 const ICON_TROPHY = '<svg viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v4M8.5 20h7"/></svg>';
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
