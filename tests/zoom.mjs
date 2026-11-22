@@ -175,6 +175,17 @@ try {
   await page.screenshot({ path: `${OUT}/zoom-petits-chevaux-130.png` });
 
   // 7. A smaller window lowers the size it can hold; a phone stays at 100 % and shows no buttons.
+  // 5b. Morpion at 130 %: a click near the edge of a square of the big sheet plays that square.
+  await page.goto(gameUrl('morpion'));
+  await page.click('#helpClose');
+  await page.locator('#overBtns button', { hasText: 'Moyen' }).click();
+  await wait(400);
+  const target = await g(() => G.n * G.n - 2);
+  const box = await page.locator(`.cell[data-i="${target}"]`).boundingBox();
+  await page.mouse.click(box.x + box.width - 3, box.y + 3); await page.mouse.move(5, 5); await wait(300);
+  ok(await g(t => Morpion.board(G)[t] === Morpion.X && G.moves.length >= 1 && G.moves[0] === t, target), 'morpion at 130 %: the cross goes on the square clicked');
+
+  // 6. A smaller window lowers the size it can hold; a phone stays at 100 % and shows no buttons.
   await page.setViewportSize({ width: 1093, height: 530 }); await wait(200);
   ok(await zoomText() === '100 %', 'a 1093 by 530 window holds 100 % at most: ' + await zoomText());
   await page.setViewportSize({ width: 390, height: 760 }); await wait(200);
