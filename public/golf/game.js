@@ -62,10 +62,6 @@ function render(message) {
   inked.innerHTML = holes()
     .map((_, i) => '<td' + (i === h.index ? ' class="now"' : '') + '>' + (i < h.index || (i === h.index && done) ? game.rounds[i].length : '') + '</td>')
     .join('');
-  const played = game.rounds.slice(0, done ? h.index + 1 : h.index),
-    strokes = played.reduce((n, r) => n + r.length, 0),
-    par = holes().slice(0, played.length).reduce((n, x) => n + x.par, 0);
-  $('total').innerHTML = 'Bilan : <b>' + (played.length ? gap(strokes - par).toLowerCase() : 'pas encore') + '</b>';
   const shoot = $('shoot');
   shoot.disabled = !done;
   shoot.textContent = finished() ? 'Voir le résultat' : done ? 'Trou suivant' : 'Taper la balle';
@@ -114,7 +110,8 @@ function step(by) {
     dz = target.z - ball.z,
     d = Math.hypot(dx, dz) || 1,
     s = Math.min(1, Math.max(0.1, Math.round((strengthOf(h, d) + by) * 10) / 10)),
-    reach = distOf(h, s);
+    // « Plus fort » never shortens a hint aimed past the longest pull.
+    reach = Math.max(distOf(h, s), by > 0 ? d : 0);
   aim({ x: ball.x + (dx / d) * reach, z: ball.z + (dz / d) * reach });
   Kit.say('Force ' + Math.round(s * 10) + ' sur 10 : cliquez sur « Taper la balle », ou changez la force.');
 }
@@ -317,7 +314,12 @@ async function shoot() {
     game.credited = true;
   }
   if (win) game.won = true;
-  const [written] = await Promise.all([save(), view.animate(shot)]);
+  // The win counts as soon as it is saved, so leaving during the animation does not lose it.
+  const saved = save().then((ok) => {
+    if (ok && win) GG.track('golf', 'won');
+    return ok;
+  });
+  const [written] = await Promise.all([saved, view.animate(shot)]);
   view.remember(shot.sunk ? null : shot);
   const count = game.rounds.at(-1).length,
     away = Math.hypot(shot.end.x - h.cup.x, shot.end.z - h.cup.z);
@@ -340,7 +342,6 @@ async function shoot() {
           ' du trou.'
   );
   if (written) {
-    if (win) GG.track('golf', 'won');
     if (end) card(true);
   } else if (!stale) Kit.say('La partie ne peut pas être enregistrée sur cet appareil.');
   busy = false;
@@ -394,7 +395,7 @@ function init() {
       if (press) cancel();
       else Kit.escape();
     }
-    if (e.ctrlKey && e.key === 'z') {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
       e.preventDefault();
       back();
     }

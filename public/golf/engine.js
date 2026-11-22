@@ -545,12 +545,12 @@ export function playout(h, slip = 0, stretch = 0) {
 // The par: what a player needs, played twice with slips of the hand (the worse of the two), never under
 // what the hint needs. The slips are larger in Facile and smaller in Difficile: a harder level asks for a
 // steadier hand. Null when the hole is too hard for par 4.
-export function parOf(h) {
+function parOf(h) {
   const hinted = playout(h);
   if (hinted > 4) return null;
   const [a, d] = LEVEL[h.level].slip,
     human = Math.max(playout(h, a, d), playout(h, -a, -d));
-  if (human > 5) return null;
+  if (human > 4) return null;
   return clamp(Math.max(hinted, human), 2, 4);
 }
 

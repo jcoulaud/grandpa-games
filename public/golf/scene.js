@@ -188,6 +188,7 @@ export function createScene(canvas) {
     flag,
     flagBase,
     sails = null,
+    arches = [],
     cupDisc,
     preview,
     island = null,
@@ -389,10 +390,16 @@ export function createScene(canvas) {
         const r = p.width / 2 + 0.16,
           g = new T.CylinderGeometry(r, r, p.len, 24, 1, true, 0, Math.PI);
         g.rotateZ(Math.PI / 2);
+        // Its own see-through materials: the arch fades while the ball is under it, so the ball and its
+        // ring stay in sight.
+        const glass = [M.mound.clone(), M.inside.clone()];
+        glass.forEach((m) => (m.transparent = true));
+        trash.push(...glass);
         const [tx, tz] = along(p, 0, 0),
-          roof = mesh(course, g, M.mound, tx, 0.24, tz),
-          inner = mesh(course, g, M.inside, tx, 0.24, tz, false);
+          roof = mesh(course, g, glass[0], tx, 0.24, tz),
+          inner = mesh(course, g, glass[1], tx, 0.24, tz, false);
         roof.rotation.y = inner.rotation.y = angleOf(p);
+        arches.push({ roof, glass, len: p.len / 2 + 0.1, r });
         // A darker stone ring frames each mouth.
         for (const u of [-1, 1]) {
           const ring = new T.RingGeometry(r - 0.1, r + 0.06, 24, 1, 0, Math.PI),
@@ -638,6 +645,7 @@ export function createScene(canvas) {
     course = new T.Group();
     scene.add(course);
     sails = null;
+    arches = [];
     tall = [];
     const pal = PALETTES[h.palette % PALETTES.length];
     M.wood.color.setHex(pal.rail);
@@ -897,6 +905,11 @@ export function createScene(canvas) {
     ballMesh.position.set(p.x, y + (sunk ? -radius * 1.4 : radius), p.z);
     ballMesh.visible = !sunk;
     halo.position.set(p.x, y + 0.012, p.z);
+    for (const a of arches) {
+      const q = a.roof.worldToLocal(v.set(p.x, y, p.z)),
+        under = !sunk && Math.abs(q.x) < a.len && Math.abs(q.z) < a.r;
+      a.glass.forEach((m) => (m.opacity = under ? 0.3 : 1));
+    }
   }
   function pose(p, ready, sunk = false) {
     place(p, sunk);
@@ -917,7 +930,8 @@ export function createScene(canvas) {
     if (shot) {
       const n = full ? shot.path.length - 1 : reveal(level, shot),
         whole = n === shot.path.length - 1,
-        fade = whole ? 0 : FADE[level] || 0,
+        // Difficile never shows where the ball stops, also on a short putt.
+        fade = full ? 0 : whole && level !== 'fort' ? 0 : FADE[level] || 0,
         list = whole && shot.sunk ? gold : dots,
         mat = new T.Matrix4(),
         at = [0];
@@ -1019,13 +1033,15 @@ export function createScene(canvas) {
   // The sails turn back to where every stroke starts.
   function settleMill(t) {
     if (!sails) return;
+    // Bound to this mill: a hole loaded meanwhile does not stop the drawing.
+    const turning = sails.userData.turning;
     const from = millAngle(h.mill, t),
       to = from + ((h.mill.phase - from) % (Math.PI / 2) + Math.PI / 2) % (Math.PI / 2),
       start = performance.now();
     tasks.add((now) => {
       const k = Math.min(1, Math.max(0, now - start) / 900),
         e = 1 - (1 - k) ** 3;
-      sails.userData.turning.rotation.x = -(from + (to - from) * e);
+      turning.rotation.x = -(from + (to - from) * e);
       return k < 1;
     });
   }
@@ -1048,7 +1064,8 @@ export function createScene(canvas) {
       mat = new T.Matrix4(),
       q = new T.Quaternion(),
       e = new T.Euler(),
-      one = new T.Vector3(1, 1, 1);
+      at = new T.Vector3(),
+      size = new T.Vector3();
     bits.frustumCulled = false;
     course.add(bits);
     tasks.add((now) => {
@@ -1057,7 +1074,7 @@ export function createScene(canvas) {
         const y = Math.max(y0 - 0.08, y0 + p.vy * t - 4.2 * t * t),
           k = Math.max(0, 1 - Math.max(0, t - 1) / 0.6);
         q.setFromEuler(e.set(p.spin * t, p.spin * t * 0.7, 0));
-        mat.compose(new T.Vector3(h.cup.x + p.vx * t, y, h.cup.z + p.vz * t), q, one.clone().multiplyScalar(k));
+        mat.compose(at.set(h.cup.x + p.vx * t, y, h.cup.z + p.vz * t), q, size.setScalar(k));
         bits.setMatrixAt(i, mat);
       });
       bits.instanceMatrix.needsUpdate = true;
