@@ -87,27 +87,39 @@
 <div id="table"></div>
 <footer id="rail"><div id="wins"></div><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
-    <section class="page">
-      <h3>Le but</h3>
-      <p>Rangez toutes les cartes sur les quatre piles « Rangement », en haut à droite. Chaque pile reçoit une seule couleur : pique, cœur, carreau ou trèfle. On commence par l'as, puis le 2, le 3, et ainsi de suite jusqu'au roi.</p>
-      <h3>Les colonnes</h3>
-      <p>Dans les sept colonnes, une carte se pose sur une carte d'une valeur juste au-dessus et de l'autre couleur. Par exemple, un 7 rouge va sur un 8 noir, et un 7 noir sur un 8 rouge.</p>
-      <p>On peut déplacer une carte avec toutes les cartes posées dessus. Seul un roi peut aller sur une colonne vide. Une carte cachée se retourne toute seule quand elle est libérée.</p>
-    </section>
-    <section class="page">
-      <h3>La pioche et la défausse</h3>
-      <p>Cliquez sur la pioche pour tourner une carte sur la défausse, juste à côté. La carte de la défausse peut aller sur une colonne ou au rangement. Aucune carte ne peut être posée sur la défausse.</p>
-      <p>Quand la pioche est vide, cliquez dessus pour la retourner. Vous pouvez la retourner autant de fois que vous voulez.</p>
-      <h3>Déplacer une carte</h3>
-      <p>Cliquez sur la carte. Si elle n'a qu'une place possible, elle y va toute seule. Sinon, les places possibles sont entourées de jaune : cliquez sur celle que vous voulez. Vous pouvez aussi faire glisser la carte avec la souris.</p>
-    </section>
-    <section class="page">
-      <h3>Les boutons</h3>
-      <p>« Que jouer maintenant ? » montre un bon coup à jouer. « Annuler le dernier coup » revient un coup en arrière, autant de fois que vous voulez. « Nouvelle partie » vous permet de choisir le niveau. « Règles » ouvre ces explications.</p>
-      <h3>Bon à savoir</h3>
-      <p>Si une carte ne peut pas aller quelque part, la ligne sous les boutons explique pourquoi.</p>
-      <p>Toutes les parties peuvent être gagnées. Les cartes qui ne servent plus vont toutes seules au rangement. La partie est enregistrée à chaque coup : vous la retrouvez en rouvrant le jeu.</p>
-    </section>
+  <section class="page">
+    <h3>Déplacer une carte</h3>
+    <p>Cliquez sur une carte visible. Si elle a une seule place, elle y va toute seule. Si plusieurs places sont encadrées en jaune, choisissez-en une.</p>
+    <div class="guide-panel">
+      <figure class="guide-example">
+        <div class="guide-art" aria-hidden="true"><div data-help-card="19"></div><span class="guide-arrow">→</span><div data-help-card="7"></div></div>
+        <figcaption><strong>Posez le 7 de cœur sur le 8 de pique.</strong> Dans les colonnes, descendez d'une valeur et alternez rouge et noir.</figcaption>
+      </figure>
+    </div>
+    <p>Déplacez une suite d'un seul coup. Seul un roi peut commencer une colonne vide.</p>
+  </section>
+  <section class="page">
+    <h3>Ranger les cartes pour gagner</h3>
+    <p>Rangez toutes les cartes sur les quatre piles « Rangement », en haut à droite.</p>
+    <div class="guide-panel">
+      <figure class="guide-example">
+        <div class="guide-art" aria-hidden="true"><div data-help-card="13"></div><span class="guide-arrow">→</span><div data-help-card="14"></div><span class="guide-arrow">→</span><div data-help-card="15"></div></div>
+        <figcaption>Commencez par l'as. Posez le 2, puis le 3, jusqu'au roi. Gardez le même symbole sur chaque pile.</figcaption>
+      </figure>
+    </div>
+    <p>Dans les colonnes, une carte cachée se retourne dès que vous la libérez.</p>
+  </section>
+  <section class="page">
+    <h3>Utiliser la pioche</h3>
+    <div class="guide-panel">
+      <figure class="guide-example">
+        <div class="guide-art" aria-hidden="true"><div data-help-card="dos"></div><span class="guide-arrow">→</span><div data-help-card="9"></div></div>
+        <figcaption>Cliquez sur la <strong>pioche</strong> pour retourner une carte sur la <strong>défausse</strong>. Jouez cette carte sur une colonne ou au rangement.</figcaption>
+      </figure>
+    </div>
+    <p>Si la pioche est vide, cliquez dessus pour la retourner.</p>
+    <p>Si vous hésitez, cliquez sur « Que jouer maintenant ? ». Pour reprendre un coup, cliquez sur « Annuler le dernier coup ».</p>
+  </section>
 </div>
 
 <script src="../lib/store.js"></script>

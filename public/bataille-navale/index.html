@@ -75,20 +75,20 @@
   .side.turn#side1 .sea::after { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(var(--shade),.7), 0 0 28px rgba(255,200,61,.55); }
 
   /* A square of sea, with small waves. */
-  .q { position: relative; display: grid; place-items: center;
+  .q, .guide-shot { position: relative; display: grid; place-items: center;
     --water: radial-gradient(60% 30% at 30% 35%, rgba(255,255,255,.08), transparent), linear-gradient(160deg, #2F80B5, #1D5F8E);
     background: var(--water); box-shadow: inset 0 0 0 1px rgba(10,40,70,.6); }
   #sea1 .q { cursor: crosshair; }
   #side1.turn .q.open:hover { background: linear-gradient(160deg, #FFE08A, #F2C14A); }
   /* The marks of the shots sit above the ships. */
-  .q > svg { width: 82%; height: 82%; position: relative; z-index: 3; pointer-events: none; }
+  :is(.q, .guide-shot) > svg { width: 82%; height: 82%; position: relative; z-index: 3; pointer-events: none; }
   /* Water beside a sunk ship: no ship can be there, so the square is pale, with a small dot. */
-  .q.clear { background: linear-gradient(160deg, #7BA6C4, #6690AE); }
-  .q.clear::after { content: ""; width: 14%; height: 14%; border-radius: 50%; background: rgba(255,255,255,.6); }
+  :is(.q, .guide-shot).clear { background: linear-gradient(160deg, #7BA6C4, #6690AE); }
+  :is(.q, .guide-shot).clear::after { content: ""; width: 14%; height: 14%; border-radius: 50%; background: rgba(255,255,255,.6); }
   /* On a sunk ship the fire is smaller, so the ship shows. */
   .q.wreck > svg { width: 50%; height: 50%; }
   /* A hit on a ship not sunk yet, on the computer's sea: dark red under the fire. */
-  .q.burn { background: linear-gradient(160deg, #8E2A1C, #5E140C); }
+  :is(.q, .guide-shot).burn { background: linear-gradient(160deg, #8E2A1C, #5E140C); }
   /* The last shot on each sea has a yellow ring, so he sees where the computer fired. */
   .q.last::before { content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none;
     box-shadow: inset 0 0 0 4px var(--gold), inset 0 0 0 6px rgba(var(--shade),.8); }
@@ -200,9 +200,14 @@
   /* At the end of a lost game, the computer's ships left afloat show, pale. */
   .boat.reveal { opacity: .55; }
 
-  #helpText .ships { display: grid; grid-template-columns: auto 1fr; gap: 6px 18px; align-items: center; margin: 4px 0 10px; }
-  #helpText .ships svg { height: 30px; width: auto; display: block; }
-  #helpText .ships span { font-weight: 600; }
+  .guide-shot { width: 52px; height: 52px; flex: none; border-radius: 6px; }
+  #shipList svg { height: 30px; width: auto; display: block; }
+  #shipList .guide-ship { width: 150px; flex: none; }
+  #shipList li + li { margin-top: 2px; }
+  @media (max-width: 700px) {
+    #shipList .guide-ship { width: 90px; }
+    #shipList svg { max-width: 100%; }
+  }
 
   /* The key of the marks, under the computer's ships. */
   .legend { grid-area: legend; margin: 0; padding: 0 0 0 var(--lab); list-style: none; display: flex; gap: 26px;
@@ -270,24 +275,34 @@
 <footer id="rail"><div id="wins"></div><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
   <section class="page">
-    <h3>Le but</h3>
-    <p>Vous et l'ordinateur avez chacun cinq bateaux cachés sur une mer de 100 cases. Coulez les cinq bateaux de l'ordinateur avant qu'il coule les vôtres.</p>
-    <p>Votre flotte est à gauche : vous voyez vos bateaux. La mer de l'ordinateur est à droite : ses bateaux sont cachés.</p>
+    <h3>Tirer sur la flotte adverse</h3>
+    <p>Pour gagner, coulez les cinq bateaux de l'ordinateur.</p>
+    <div class="guide-panel">
+      <ol>
+        <li>Attendez « À vous de tirer ».</li>
+        <li>Cliquez sur une case de la grille « L'ordinateur ».</li>
+      </ol>
+    </div>
+    <p>L'ordinateur tire ensuite sur « Votre flotte ». Le cadre jaune montre le dernier tir sur chaque grille.</p>
   </section>
   <section class="page">
-    <h3>Tirer</h3>
-    <p>Quand « À vous de tirer » est affiché, cliquez sur une case de la mer de l'ordinateur. Une gerbe d'eau blanche veut dire « à l'eau ». Une explosion veut dire « touché » : un bateau est dessous. Quand toutes ses cases sont touchées, le bateau est coulé et il apparaît.</p>
-    <p>Puis l'ordinateur tire sur votre mer. Sa dernière case visée est entourée de jaune.</p>
+    <h3>Lire le résultat du tir</h3>
+    <ul class="guide-key">
+      <li><span id="helpSplash" class="guide-shot" aria-hidden="true"></span><span><strong>À l'eau.</strong> La gerbe blanche signale un tir manqué.</span></li>
+      <li><span id="helpHit" class="guide-shot burn" aria-hidden="true"></span><span><strong>Touché.</strong> L'explosion signale une case de bateau.</span></li>
+      <li><span class="guide-shot clear" aria-hidden="true"></span><span><strong>Aucun bateau.</strong> Le point signale une case vide autour d'un bateau coulé.</span></li>
+    </ul>
+    <p>Quand vous touchez toutes les cases d'un bateau, il apparaît sur la grille. Il est coulé.</p>
   </section>
   <section class="page">
-    <h3>Les bateaux</h3>
-    <div class="ships" id="shipList"></div>
-    <p>Un bateau est droit. Deux bateaux ne se touchent jamais, même par un coin : les cases autour d'un bateau coulé sont vides, et le jeu les marque d'un petit point.</p>
+    <h3>Reconnaître les bateaux</h3>
+    <ul class="guide-key" id="shipList"></ul>
+    <p>Les bateaux sont droits. Ils ne se touchent jamais, même en diagonale.</p>
   </section>
   <section class="page">
-    <h3>Les boutons</h3>
-    <p>« Que jouer maintenant ? » encadre une bonne case où tirer et dit pourquoi.</p>
-    <p>Avant votre premier tir, « Changer mes bateaux » place vos bateaux autrement. « Nouvelle partie » vous permet de choisir le niveau. La partie est enregistrée à chaque tir.</p>
+    <h3>Choisir une case ou déplacer sa flotte</h3>
+    <p>« Que jouer maintenant ? » encadre une case où tirer et explique son choix.</p>
+    <p>Si vous voulez changer la position de vos bateaux, cliquez sur « Placer mes bateaux autrement » avant le premier tir.</p>
   </section>
 </div>
 
@@ -671,9 +686,11 @@ addEventListener('pointercancel', () => { press = null; });
 // The key of the marks, beside the computer's sea.
 $('legend').innerHTML = `<li><i>${Ships.splash}</i>À l'eau</li><li><i class="burn">${Ships.hit}</i>Touché</li><li><i class="clear"></i>Aucun bateau</li>`;
 
-// The ships on the third page of the rules, drawn with their names.
-const list = document.querySelector('#helpText #shipList');
-if (list) list.innerHTML = B.FLEET.map((f, s) => `${Ships.ship(s, false)}<span>${SHIP_NAMES[s]} : ${f.size} cases</span>`).join('');
+// The guide uses the same shot marks and ships as the two grids.
+$('helpSplash').innerHTML = Ships.splash;
+$('helpHit').innerHTML = Ships.hit;
+$('shipList').innerHTML = B.FLEET.map((f, s) =>
+  `<li><span class="guide-ship" aria-hidden="true">${Ships.ship(s, false)}</span><span>${SHIP_NAMES[s]} · ${f.size} cases</span></li>`).join('');
 
 $('hintBtn').onclick = showHint;
 $('moveBtn').onclick = moveShips;

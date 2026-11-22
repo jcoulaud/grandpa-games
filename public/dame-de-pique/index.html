@@ -180,11 +180,10 @@
   .mini .face { width: 34px; height: 34px; line-height: 34px; }
   #lastText { margin: 10px 0 0; font: 600 20px/1.3 var(--ui); color: #3A4542; }
 
-  #helpText .demo { display: flex; gap: 22px; align-items: center; margin: 6px 0 10px; }
-  #helpText .demo .pair { display: flex; gap: 10px; flex: none; }
-  #helpText .tag { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 10px; background: #fff;
-    border: 1px solid #C9C1AE; font: 700 26px var(--ui); }
-  #helpText .tag svg { width: 24px; height: 24px; }
+  .guide-suit { width: 62px; min-height: 46px; flex: none; display: inline-flex; align-items: center;
+    justify-content: center; gap: 4px; border: 1px solid #9AA6A1; border-radius: 8px; background: var(--face); font-weight: 700; }
+  .guide-suit.red { color: var(--red); }
+  .guide-suit svg { width: 24px; height: 24px; fill: currentColor; }
 
   @media (prefers-reduced-motion: reduce) {
     .card.hand, .card.trick { transition: none; }
@@ -230,35 +229,53 @@
 <footer id="rail"><div id="wins"></div><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
   <section class="page">
-    <h3>Le but</h3>
-    <p>Vous jouez à quatre : vous, en bas, et trois joueurs de l'ordinateur, <span id="castLine">Jeanne à gauche, Paul en face et Louise à droite</span>. Ce ne sont pas les mêmes à chaque partie.</p>
-    <div class="demo">
-      <div class="pair"><span class="tag" style="color:#C4122F"><svg viewBox="0 0 100 100" fill="#C4122F"><use href="#su1"/></svg></span><span class="tag">D<svg viewBox="0 0 100 100" fill="#14171A"><use href="#su0"/></svg></span></div>
-      <p>Chaque cœur que vous ramassez vaut 1 point. La dame de pique vaut 13 points. Il faut en prendre le moins possible.</p>
-    </div>
-    <p>La partie s'arrête quand un joueur atteint 100 points. Celui qui a le moins de points gagne. S'ils sont plusieurs à égalité, ils partagent la victoire.</p>
-  </section>
-  <section class="page">
     <h3>Donner trois cartes</h3>
-    <p>Au début de chaque manche, chacun donne 3 cartes à un voisin : à gauche, puis à droite, puis en face. À la quatrième manche, on garde ses cartes.</p>
-    <p>Cliquez sur 3 cartes : elles montent. Cliquez encore sur une carte pour la reprendre. Puis cliquez sur « Donner ces 3 cartes ». Les cartes reçues portent l'étiquette « Reçue ».</p>
+    <ol>
+      <li>Cliquez sur trois cartes de votre main. Elles se soulèvent.</li>
+      <li>Cliquez sur le bouton « Donner » qui indique le nom du joueur.</li>
+    </ol>
+    <p>Si vous changez d'avis, cliquez de nouveau sur la carte soulevée. Les cartes que vous recevez portent l'étiquette « Reçue ».</p>
+    <p>Le jeu indique à qui donner les cartes. Toutes les quatre manches, vous gardez votre main.</p>
   </section>
   <section class="page">
     <h3>Jouer un pli</h3>
-    <p>Celui qui a le 2 de trèfle commence. Chacun pose une carte, à tour de rôle. Il faut jouer la même couleur que la première carte du pli si vous en avez. Sinon, posez la carte de votre choix.</p>
-    <p>La plus forte carte de la couleur demandée ramasse le pli et commence le suivant. L'as est la plus forte.</p>
-    <p>Pour jouer, cliquez sur une carte. Les cartes un peu sombres ne peuvent pas être jouées maintenant.</p>
+    <p>Chacun joue une carte par pli. Le 2 de trèfle ouvre le premier pli.</p>
+    <div class="guide-panel">
+      <figure class="guide-example">
+        <div class="guide-art" aria-hidden="true"><div data-help-card="42"><span class="first">1er</span></div><div data-help-card="49"></div></div>
+        <figcaption>Si le 4 de trèfle ouvre le pli, jouez un trèfle si vous en avez. Le valet bat le 4.</figcaption>
+      </figure>
+    </div>
+    <p>Cliquez sur la carte à jouer. Le jeu assombrit les cartes interdites.</p>
+    <p>La plus forte carte du symbole demandé gagne le pli. L'as bat toutes les autres cartes de ce symbole.</p>
   </section>
   <section class="page">
-    <h3>Deux règles de plus</h3>
-    <p>Au premier pli, on ne donne pas de point : ni cœur, ni dame de pique. On ne commence pas un pli par un cœur tant que personne n'a joué de cœur, sauf si on n'a plus que des cœurs.</p>
-    <h3>Le grand chelem</h3>
-    <p>Un joueur qui ramasse tous les cœurs et la dame de pique dans la même manche marque 0, et chacun des autres 26 points.</p>
+    <h3>Éviter les points</h3>
+    <div class="guide-panel">
+      <ul class="guide-key">
+        <li><span class="guide-suit red" aria-hidden="true"><svg viewBox="0 0 100 100"><use href="#su1"/></svg></span><span><strong>1 point</strong> par carte de cœur ramassée</span></li>
+        <li><span class="guide-suit" aria-hidden="true">D<svg viewBox="0 0 100 100"><use href="#su0"/></svg></span><span><strong>13 points</strong> pour la dame de pique</span></li>
+      </ul>
+    </div>
+    <p>La partie s'arrête dès qu'un joueur a 100 points ou plus. Le plus petit total gagne. En cas d'égalité, la victoire est partagée.</p>
+    <p><strong>Grand chelem.</strong> Si vous prenez les 13 cœurs et la dame de pique, vous marquez 0. Les autres marquent 26 points chacun.</p>
   </section>
   <section class="page">
-    <h3>Les boutons</h3>
-    <p>« Quelle carte jouer ? » montre une bonne carte. « Annuler le dernier coup » reprend votre dernière carte et celles posées après. « Nouvelle partie » vous permet de choisir le niveau.</p>
-    <p>Les points de chacun sont à droite, avec le dernier pli. La partie est enregistrée à chaque carte.</p>
+    <h3>Quand jouer un cœur</h3>
+    <ul>
+      <li>Si vous n'avez pas le symbole demandé, jouez une autre carte.</li>
+      <li>Au premier pli, si vous pouvez jouer une carte sans point, vous devez le faire.</li>
+      <li>Pour ouvrir un pli avec un cœur, attendez qu'un cœur ait déjà été joué. Si votre main ne contient que des cœurs, vous pouvez ouvrir avec un cœur.</li>
+    </ul>
+    <p>Le joueur qui prend le pli ouvre le suivant.</p>
+  </section>
+  <section class="page">
+    <h3>Trouver de l'aide pendant la partie</h3>
+    <ul>
+      <li>« Quelle carte jouer ? » montre une carte à jouer.</li>
+      <li>« Annuler le dernier coup » reprend votre dernière carte et les cartes jouées après elle.</li>
+      <li>Le panneau des points affiche aussi le dernier pli.</li>
+    </ul>
   </section>
 </div>
 
@@ -294,7 +311,6 @@ function setCast(ids) {
     ...ids.map((id, i) => ({ ...CAST[id], id, where: WHERE[i + 1] }))];
   // To whom the cards go, as he sees it.
   TO = { 1: `à ${PLAYERS[1].name}, à votre gauche`, 2: `à ${PLAYERS[2].name}, en face de vous`, 3: `à ${PLAYERS[3].name}, à votre droite` };
-  $('castLine').textContent = `${PLAYERS[1].name} à gauche, ${PLAYERS[2].name} en face et ${PLAYERS[3].name} à droite`;
 }
 function newCast() {
   const pool = Object.keys(CAST).filter(id => !cast.includes(id));

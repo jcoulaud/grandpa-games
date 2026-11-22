@@ -18,6 +18,19 @@ These rules hold for the library, every game, its rules pages and its dialogs. C
   - the laptop and the monitor at the largest size of the size buttons, 130 % and 175 %.
 - **The longest message.** Try the longest kind of sentence the game says, for example "Vous pouvez déplacer 3 cartes à la fois pour le moment. Videz une case libre ou une colonne pour en déplacer plus."
 
+## Write a rules guide
+
+Teach the player enough to start on page one. Use the later pages to explain decisions that come up during play.
+
+1. **Start with the first action.** Give the page a heading such as « Avancer un pion ». Say what to click and what the game does next. State how to win early in the guide.
+2. **Give each page one job.** Use short French sentences and the exact labels from the game. Use a numbered list when the player must follow steps in order. Put special rules on the page where they affect a move. Use a table for scores the player may need to look up.
+3. **Show one example when a rule is hard to picture.** Reuse the game's cards, pieces, dice, and symbols. Name the important part in the caption, such as « Posez le 7 de cœur sur le 8 de pique ». The caption must explain the rule even if the player cannot see the picture.
+4. **Check the guide against the game.** Try each example with the implemented rules. Verify that the button labels, scoring, and exceptions match what the player sees.
+
+Use the shared `#help` dialog with one `<section class="page">` and an `<h3>` for each page. Wire the **Règles** button to `Kit.openHelp()` and use `Kit.firstVisit(newGame)` when there is no saved game. Use `.guide-panel` and `.guide-example` for an illustration with a caption. Use guide-specific classes for the illustration so the game treats only the real cards, pieces, and squares as playable.
+
+Use [Solitaire](../public/solitaire/index.html) as the example for a move with a caption, [Démineur](../public/demineur/index.html) for a key to symbols, and [Yams](../public/yams/index.html) for a scoring table. Check every page at the window and zoom sizes above. Confirm that **Fermer** works on every page and that **Précédent** and **Suivant** stay in place.
+
 ## What the research said
 
 - Every senior-focused solitaire sells the same things: oversized cards, tap-to-move next to drag, unlimited undo, hints and solvable deals. See Boomer Solitaire: https://apps.apple.com/us/app/solitaire/id1230169843

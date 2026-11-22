@@ -106,7 +106,7 @@
   .pc b { position: absolute; inset: 3%; border-radius: 50%; translate: 0 var(--lift); display: none; }
   .pc.can { pointer-events: auto; cursor: pointer; }
   .pc.can:hover b { display: block; border: 3px solid #fff; }
-  .pc.must b { display: block; border: 4px dashed var(--gold); box-shadow: 0 0 0 1.5px rgba(var(--shade),.7); }
+  .pc.must b, .guide-board.capture .pc.w b { display: block; border: 4px dashed var(--gold); box-shadow: 0 0 0 1.5px rgba(var(--shade),.7); }
   .pc.sel b, .pc.hint b { display: block; border: 5px solid var(--gold); box-shadow: 0 0 0 2px rgba(var(--shade),.8), 0 0 22px 8px rgba(255,200,61,.6); }
   .pc.hint b { animation: glow 1.4s ease-in-out infinite; }
   @keyframes glow { 50% { box-shadow: 0 0 0 2px rgba(var(--shade),.8), 0 0 30px 14px rgba(255,200,61,.85); } }
@@ -154,8 +154,19 @@
   #drawNote { background: #FFF4D6; color: var(--text); border-radius: 16px; padding: 12px 16px; font: 600 21px/1.3 var(--ui); box-shadow: 0 2px 10px rgba(0,0,0,.25); }
   #drawNote:empty { display: none; }
 
-  #helpText .demo { display: flex; gap: 24px; align-items: center; margin: 6px 0 10px; }
-  #helpText .demo svg { width: 180px; height: 180px; flex: none; border-radius: 6px; }
+  .guide-board, .guide-crown { --s: 46px; position: relative; flex: none; }
+  .guide-board {
+    display: grid; grid-template-columns: repeat(3, var(--s)); grid-auto-rows: var(--s);
+    background: conic-gradient(#EEDCB6 25%, #8F5B39 0 50%, #EEDCB6 0 75%, #8F5B39 0) 0 0 / calc(2 * var(--s)) calc(2 * var(--s));
+    border-radius: 6px; overflow: hidden;
+  }
+  .guide-board .pc { position: relative; }
+  .guide-board .guide-landing { margin: 4px; border: 4px dashed var(--gold); border-radius: 7px;
+    background: rgba(255,200,61,.28); box-shadow: inset 0 0 0 1.5px rgba(var(--shade),.7); }
+  .guide-board.advance .guide-landing:nth-child(2), .guide-board.capture .guide-landing { grid-area: 1 / 3; }
+  .guide-board.advance .pc, .guide-board.capture .pc.b { grid-area: 2 / 2; }
+  .guide-board.capture .pc.w { grid-area: 3 / 1; }
+  .guide-crown { width: var(--s); height: var(--s); }
 
   @media (prefers-reduced-motion: reduce) {
     .pc, .pc.moving { transition: none; }
@@ -198,32 +209,50 @@
 <footer id="rail"><div id="wins"></div><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
   <section class="page">
-    <h3>Le but</h3>
-    <p>Vous jouez les pions blancs, en bas. L'ordinateur joue les noirs. Pour gagner, prenez toutes ses pièces, ou bloquez-les pour qu'elles ne puissent plus bouger.</p>
-    <h3>Avancer</h3>
-    <p>Un pion avance d'une case en diagonale, vers l'avant, sur une case vide.</p>
-    <p>Cliquez sur votre pion, puis sur une case entourée de jaune. Vous pouvez aussi faire glisser le pion avec la souris.</p>
-  </section>
-  <section class="page">
-    <h3>Prendre</h3>
-    <div class="demo">
-      <svg viewBox="0 0 3 3" aria-hidden="true"><rect width="3" height="3" fill="#F0E2C4"/><rect width="1" height="1" fill="#A06D48"/><rect x="2" width="1" height="1" fill="#A06D48"/><rect x="1" y="1" width="1" height="1" fill="#A06D48"/><rect y="2" width="1" height="1" fill="#A06D48"/><rect x="2" y="2" width="1" height="1" fill="#A06D48"/><circle cx="1.5" cy="1.5" r=".38" fill="#24211F"/><circle cx="0.5" cy="2.5" r=".38" fill="#F4EEDF" stroke="#B5AC97" stroke-width=".05"/><rect x="2.08" y=".08" width=".84" height=".84" rx=".1" fill="rgba(255,200,61,.35)" stroke="#FFC83D" stroke-width=".08" stroke-dasharray=".16 .1"/><path d="M.75 2.25 2.2 .8" stroke="#C4122F" stroke-width=".09" fill="none" stroke-linecap="round"/><path d="M2.27 .73 1.95 .83 2.17 1.05z" fill="#C4122F"/></svg>
-      <p>Quand un pion noir touche le vôtre en diagonale et que la case derrière lui est vide, sautez par-dessus : il est pris. Un pion prend en avant et en arrière.</p>
+    <h3>Avancer un pion</h3>
+    <p>Vous jouez les blancs. Pour gagner, prenez toutes les pièces noires ou bloquez-les.</p>
+    <div class="guide-panel">
+      <figure class="guide-example">
+        <div class="guide-board advance" aria-hidden="true">
+          <span class="guide-landing"></span><span class="guide-landing"></span>
+          <span class="pc w"><i></i><b></b></span>
+        </div>
+        <figcaption>Cliquez sur votre pion. Puis cliquez sur une case encadrée en jaune. Un pion avance d'une case en diagonale vers le haut.</figcaption>
+      </figure>
     </div>
-    <p>La prise est obligatoire. Si le pion peut encore prendre après un saut, il continue. Il faut prendre le plus de pièces possible.</p>
-    <p>Cliquez sur chaque case où le pion se pose. Les pièces prises sont barrées, puis retirées à la fin du coup.</p>
   </section>
   <section class="page">
-    <h3>La dame</h3>
-    <p>Un pion qui finit son coup sur la dernière rangée, tout en haut, devient une dame : il porte une couronne.</p>
-    <p>La dame va aussi loin qu'elle veut en diagonale, en avant et en arrière. Elle prend de loin : elle saute une pièce de sa diagonale et se pose sur une des cases vides derrière.</p>
-    <p>Un pion qui passe par la dernière rangée pendant une prise, puis repart, reste un pion.</p>
+    <h3>Prendre une pièce</h3>
+    <div class="guide-panel">
+      <figure class="guide-example">
+        <div class="guide-board capture" aria-hidden="true">
+          <span class="guide-landing"></span><span class="pc b"><i></i></span>
+          <span class="pc w"><i></i><b></b></span>
+        </div>
+        <figcaption><strong>Sautez par-dessus le pion noir.</strong> Cliquez sur la case vide juste derrière lui. Vous pouvez sauter en avant ou en arrière.</figcaption>
+      </figure>
+    </div>
+    <p>Si vous pouvez prendre, vous devez le faire. Choisissez le trajet qui prend le plus de pièces.</p>
+    <p>Pour enchaîner les prises, cliquez sur chaque case d'arrivée.</p>
   </section>
   <section class="page">
-    <h3>Partie nulle</h3>
-    <p>La partie est nulle si la même position revient trois fois. Elle est nulle aussi après 25 coups de dame chacun sans prise ni coup de pion, ou si une fin de partie avec très peu de pièces dure trop longtemps. Dans ces deux cas, le jeu compte les coups qui restent.</p>
-    <h3>Les boutons</h3>
-    <p>« Que jouer maintenant ? » montre un bon coup. « Annuler le dernier coup » reprend votre coup et la réponse de l'ordinateur. « Nouvelle partie » vous permet de choisir le niveau. La partie est enregistrée à chaque coup.</p>
+    <h3>Jouer une dame</h3>
+    <div class="guide-panel">
+      <figure class="guide-example">
+        <div class="guide-crown" aria-hidden="true"></div>
+        <figcaption>Si un pion termine son coup sur la dernière rangée, il reçoit une couronne et devient une dame.</figcaption>
+      </figure>
+    </div>
+    <p>Une dame peut avancer ou reculer de plusieurs cases en diagonale.</p>
+    <p>Pour prendre, sautez une pièce adverse sur cette diagonale. Choisissez une case vide derrière elle.</p>
+  </section>
+  <section class="page">
+    <h3>Trouver de l'aide pendant la partie</h3>
+    <ul>
+      <li>« Que jouer maintenant ? » montre un coup possible.</li>
+      <li>« Annuler le dernier coup » reprend votre coup et la réponse de l'ordinateur.</li>
+    </ul>
+    <p><strong>Partie nulle.</strong> Si la même position revient trois fois, la partie s'arrête sans gagnant. Dans certaines longues fins de partie, le jeu affiche le nombre de coups restants.</p>
   </section>
 </div>
 
@@ -238,6 +267,7 @@ const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const HOP_MS = 520;        // between two landings of the computer's piece
 const THINK_MS = 700;      // the computer never answers faster, so his own move is seen landing first
 const CROWN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 8.5l4.2 3.6L12 5l4.3 7.1 4.2-3.6-1.8 10H5.3z"/><circle cx="12" cy="15" r="1.6"/></svg>';
+document.querySelector('.guide-crown').innerHTML = `<span class="pc w k"><i>${CROWN}</i></span>`;
 
 // The levels of the computer. Facile searches two plies and sometimes picks a weaker move, but never
 // one that loses much more. Moyen and Fort search deeper. The hint always plays its best.
