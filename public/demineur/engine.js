@@ -74,7 +74,7 @@
     const nb = neighbours(w, h);
     const front = [];
     for (let i = 0; i < K.length; i++) {
-      if (K[i] < 1) continue;
+      if (K[i] < 0) continue;  // an open blank with a closed square: a flag taken off after it opened
       const closed = [];
       let found = 0;
       for (const j of nb[i]) { if (K[j] === UNKNOWN) closed.push(j); else if (K[j] === MINE) found++; }

@@ -73,7 +73,7 @@ const game = (level, layout, first = -1) => ({ ...D.newGame(level, 1), layout, f
   // One number with its flag: the rest is safe. One number with as many closed squares as mines.
   const one = D.step([1, -2, _, _, _, _], 3, 2, 1, false);
   ok(one && one.kind === 'safe' && one.rule === 'one' && same(one.cells, [3, 4]), 'one number with its flag: the others are safe', JSON.stringify(one));
-  const full = D.step([_, 1, 0, 0, 0, 0], 3, 2, 1, false);
+  const full = D.step([_, 1, 0, 1, 1, 0], 3, 2, 1, false);
   ok(full && full.kind === 'mine' && same(full.cells, [0]), 'one number with one closed square: a mine', JSON.stringify(full));
   const count = D.step([-2, 1, _, 1, 1, _], 3, 2, 1, false);
   ok(count && count.kind === 'safe' && count.rule !== 'two', 'every mine found: the closed squares are safe', JSON.stringify(count));
@@ -99,6 +99,14 @@ for (const level of Object.keys(D.LEVELS)) {
   }
   ok(start === 60, `${level}: before the first click, the hint says to click anywhere`);
   ok(won === 60 && wrongSeen >= 50, `${level}: following the hint wins 60 games of 60, and it finds the wrong flag first`, `won ${won}, wrong ${wrongSeen}`);
+}
+
+// A flag taken off next to an open blank: the blank shows the square is safe, without a peek.
+{
+  let G = D.open(D.newGame('facile', 45), 0);
+  G = D.flag(G, 14); G = D.open(G, 4); G = D.flag(G, 14);
+  let h = D.hint(G);
+  ok(h && h.rule !== 'peek', 'an open blank next to a closed square gives the hint its reason', JSON.stringify(h));
 }
 
 // 7. Undo of the first click: the same square gives the same board again.

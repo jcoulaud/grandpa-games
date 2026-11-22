@@ -32,6 +32,8 @@ for (let n = 0; n < 4; n++) {
   await page.click('#helpNext');
 }
 await page.getByRole('button', { name: 'Facile', exact: true }).click();
+// A fixed seed, so the steps below meet the same board each time.
+await g(() => { G = Demineur.newGame('facile', 12345); save(); render(); });
 ok(await page.locator('.c').count() === 81, 'Facile has 9 by 9 squares');
 ok(await g(() => G.first === -1 && G.layout === null), 'no mine is placed before the first click');
 
@@ -77,12 +79,13 @@ await click(c, 'right');
 const num = await g(() => [...G.cells].findIndex((x, i) => x === 'o' && Demineur.number(G, i) > 0
   && Demineur.neighbours(G.w, G.h)[i].some(j => G.cells[j] === '.' && !Demineur.isMine(G, j))));
 await click(num);
-ok(/touche aucun drapeau : il en faut/.test(await msg()), 'a number with too few flags says how many it needs: ' + await msg());
+ok(/ne touche aucun drapeau : il en faut/.test(await msg()), 'a number with too few flags says how many it needs: ' + await msg());
 await g(i => { for (const j of Demineur.neighbours(G.w, G.h)[i]) if (Demineur.isMine(G, j) && G.cells[j] === '.') G = Demineur.flag(G, j); render(); }, num);
 await click(num);
 ok(await g(i => Demineur.neighbours(G.w, G.h)[i].every(j => G.cells[j] !== '.'), num), 'with the right flags, a click on the number opens the squares around it');
 
 // 7. A mine: it goes off, the dialog offers to undo first, and undo takes back only that click.
+ok(await g(() => G.result === null && G.layout.some(i => G.cells[i] === '.')), 'the game goes on with mines still closed');
 const before = await cells();
 const mine = await g(() => G.layout.find(i => G.cells[i] === '.'));
 await click(mine);

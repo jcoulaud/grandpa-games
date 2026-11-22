@@ -26,14 +26,15 @@
   }
   #title svg { width: 32px; height: 32px; }
 
-  #table { position: relative; overflow: hidden; }
+  /* A phone scrolls down the table to the rest of a tall board. */
+  #table { position: relative; overflow: hidden; touch-action: pan-y; }
   #frame {
     position: absolute; border-radius: 12px;
     background: linear-gradient(160deg, rgba(255,255,255,.12), transparent 40%, rgba(0,0,0,.25)), #5A3D1E;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.2), inset 0 0 0 1px rgba(0,0,0,.4), 0 24px 60px rgba(0,0,0,.45), 0 6px 14px rgba(0,0,0,.3);
   }
   #board {
-    position: absolute; display: grid; touch-action: none; background: #3B5E2A;
+    position: absolute; display: grid; touch-action: pan-y; background: #3B5E2A;
     grid-template-columns: repeat(var(--cols), var(--s)); grid-auto-rows: var(--s);
     box-shadow: 0 0 0 2px #2A1A0B;
   }
@@ -123,7 +124,7 @@
   <section class="page">
     <h3>Les chiffres</h3>
     <div class="demo">
-      <svg viewBox="0 0 3 3" aria-hidden="true"><rect width="3" height="3" fill="#F1E4C3"/><rect x="2" width="1" height="1" fill="#6AAE45" stroke="#3B5E2A" stroke-width=".04"/><path d="M2.4.82V.2l.4.17-.4.18" fill="#C4122F" stroke="#7A0D0B" stroke-width=".03"/><path d="M2.4.84V.2" stroke="#2A1A0B" stroke-width=".06"/><text x="1.5" y="1.5" font-family="Segoe UI, sans-serif" font-weight="700" font-size=".66" fill="#1F4FB8" text-anchor="middle" dominant-baseline="central">1</text><text x="1.5" y="2.5" font-family="Segoe UI, sans-serif" font-weight="700" font-size=".66" fill="#1F4FB8" text-anchor="middle" dominant-baseline="central">1</text><path d="M0 1h3M0 2h3M1 0v3M2 0v3" stroke="rgba(120,90,40,.35)" stroke-width=".03"/></svg>
+      <svg viewBox="0 0 3 3" aria-hidden="true"><rect width="3" height="3" fill="#F1E4C3"/><rect x="2" width="1" height="1" fill="#6AAE45"/><path d="M2.4.82V.2l.4.17-.4.18" fill="#C4122F" stroke="#7A0D0B" stroke-width=".03"/><path d="M2.4.84V.2" stroke="#2A1A0B" stroke-width=".06"/><g font-family="Segoe UI, sans-serif" font-weight="700" font-size=".66" fill="#1F4FB8" text-anchor="middle" dominant-baseline="central"><text x="1.5" y=".5">1</text><text x="1.5" y="1.5">1</text><text x="2.5" y="1.5">1</text></g><path d="M0 1h3M0 2h3M1 0v3M2 0v3" stroke="rgba(120,90,40,.35)" stroke-width=".03"/></svg>
       <p>Un chiffre dit combien de mines touchent sa case, en comptant les huit cases autour, en diagonale aussi.</p>
     </div>
     <p>Une case ouverte sans chiffre ne touche aucune mine : les cases autour d'elle s'ouvrent toutes seules.</p>
@@ -156,7 +157,7 @@ const MINE = '<svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#141211" st
    hint shows, until his next move. arming: the next click puts or takes off a flag.
    wonNow: this game is counted as won (undo keeps it, so a win counts once). */
 let G, undo = [], level = 'facile', stats = { won: 0 }, wonNow = false, hint = null, arming = false, lastTap = null, timers = [];
-let stale = false;
+let stale = false, saved = true;
 addEventListener('gg-stale', () => { stale = true; });
 
 const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
@@ -169,9 +170,10 @@ function save() {
   if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
   for (const n of [Infinity, 200, 40, 0]) {
     const data = { v: 1, G, undo: n ? undo.slice(-n) : [], level, stats, wonNow };
-    if (GG.save('demineur', data, { summary: parts.join(' · ') })) return true;
-    if (stale) return false;
+    if (GG.save('demineur', data, { summary: parts.join(' · ') })) return (saved = true);
+    if (stale) return (saved = false);
   }
+  saved = false;
   Kit.say("La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.");
   return false;
 }
@@ -191,7 +193,8 @@ function load() {
 }
 
 /* ---------- His moves ---------- */
-const say = Kit.say;
+// While a move cannot be saved, the warning stays on the message line.
+const say = text => { if (saved) Kit.say(text); };
 const nb = i => D.neighbours(G.w, G.h)[i];
 const flagsLeft = () => G.mines - D.flags(G);
 
@@ -204,7 +207,8 @@ function play(next, text) {
   if (save()) { if (firstWin) GG.track('demineur', 'won'); }
   else if (firstWin) { wonNow = false; stats.won--; }
   render();
-  if (G.result) return finish(true);
+  // A stale window shows the kit's reload prompt, not the result.
+  if (G.result) return finish(!stale);
   say(text);
 }
 
@@ -229,7 +233,7 @@ function tap(i, how) {
     if (!n) return say('Cette case est déjà ouverte.');
     const closed = nb(i).filter(j => G.cells[j] === '.').length, flags = nb(i).filter(j => G.cells[j] === 'f').length;
     if (!closed) return say(`Les cases autour de ce ${n} sont déjà toutes ouvertes ou marquées.`);
-    if (flags !== n) return refuse(i, `Ce ${n} touche ${flags ? plural(flags, 'drapeau', 'drapeaux') : 'aucun drapeau'} : il en faut ${n} pour ouvrir d'un clic les cases autour.`);
+    if (flags !== n) return refuse(i, `Ce ${n} ${flags ? 'touche ' + plural(flags, 'drapeau', 'drapeaux') : 'ne touche aucun drapeau'} : il en faut ${n} pour ouvrir d'un clic les cases autour.`);
     const next = D.openAround(G, i);
     return play(next, 'Les cases autour du ' + n + ' sont ouvertes. ' + nextText());
   }
@@ -277,7 +281,7 @@ function doUndo() {
   if (!undo.length) return;
   timers.forEach(clearTimeout); timers = [];
   Kit.closeDialog();
-  G = JSON.parse(undo.pop()); hint = null; setArming(false);
+  G = JSON.parse(undo.pop()); hint = null; lastTap = null; setArming(false);
   save(); render();
   say(G.first < 0 ? 'Coup annulé. Cliquez sur une case pour commencer.' : 'Coup annulé. ' + nextText());
 }
@@ -291,7 +295,8 @@ function hintText(h) {
   const na = h.a >= 0 ? D.number(G, h.a) : 0, nb2 = h.b >= 0 ? D.number(G, h.b) : 0;
   const left = i => D.number(G, i) - nb(i).filter(j => G.cells[j] === 'f').length;
   switch (h.kind + '-' + h.rule) {
-    case 'safe-one': return `Le ${na} entouré a déjà ${na === 1 ? 'son drapeau' : `ses ${na} drapeaux`} : ${them}.`;
+    case 'safe-one': if (!na) return `La case vide entourée ne touche aucune mine : ${them}.`;
+      return `Le ${na} entouré a déjà ${na === 1 ? 'son drapeau' : `ses ${na} drapeaux`} : ${them}.`;
     case 'mine-one': {
       const k = h.cells.length;
       return k === 1 ? `Le ${na} entouré n'a plus qu'une case fermée pour sa mine : ${flagIt}.`
@@ -300,7 +305,7 @@ function hintText(h) {
     case 'safe-two': return `Il manque autant de mines au ${nb2} qu'au ${na}, tous deux entourés, et toutes les cases fermées du ${na} touchent le ${nb2} : ${them}.`;
     case 'mine-two': {
       const d = left(h.b) - left(h.a);
-      return `Il manque ${plural(d, 'mine', 'mines')} de plus au ${nb2} qu'au ${na}, tous deux entourés, et seule${many ? 's les cases encadrées touchent' : ' la case encadrée touche'} le ${nb2} sans toucher le ${na} : ${flagIt}.`;
+      return `Il manque ${plural(d, 'mine', 'mines')} de plus au ${nb2} qu'au ${na}, tous deux entourés, et parmi les cases fermées, seule${many ? 's les cases encadrées touchent' : ' la case encadrée touche'} le ${nb2} sans toucher le ${na} : ${flagIt}.`;
     }
     case 'safe-count': return `Toutes les mines ont leur drapeau : ${them}.`;
     case 'mine-count': return `Il reste ${plural(h.left, 'mine', 'mines')} et ${plural(h.left, 'case fermée', 'cases fermées')} : ${flagIt}.`;
@@ -327,7 +332,7 @@ function newGame(lv) {
   if (lv) level = lv;
   Kit.showLevel(level);
   const seed = crypto.getRandomValues(new Uint32Array(1))[0];
-  G = D.newGame(level, seed); undo = []; hint = null; wonNow = false; setArming(false);
+  G = D.newGame(level, seed); undo = []; hint = null; lastTap = null; wonNow = false; setArming(false);
   // A stale window cannot save, so it does not count a game either.
   if (save()) GG.track('demineur', 'start');
   render();
