@@ -4,8 +4,7 @@
 //
 // The cells are numbered 0 to 80, row by row. A grid is a string of 81 characters, '0' for an empty cell.
 // A game G: { level, seed, givens: the grid at the start, solution: the full grid, cells: the digits he
-//   wrote ('0' where he wrote none, and always '0' on a given), notes: 81 numbers, bit d set when he
-//   noted the digit d in that cell, result: '' or 'won' }.
+//   wrote ('0' where he wrote none, and always '0' on a given), result: '' or 'won' }.
 //
 // The levels follow the techniques a solver that reasons like a person needs, never a guess:
 //   1, singles: a cell with one possible digit, or a digit with one possible cell in a row, column or block.
@@ -362,7 +361,7 @@
   function newGame(level, seed) {
     const key = isLevel(level) ? level : 'facile';
     const { givens, solution } = make(key, seed);
-    return { level: key, seed: seed >>> 0, givens, solution, cells: '0'.repeat(81), notes: new Array(81).fill(0), result: '' };
+    return { level: key, seed: seed >>> 0, givens, solution, cells: '0'.repeat(81), result: '' };
   }
   // The grid he sees: the givens and his digits.
   const board = G => Array.from(G.givens, (c, i) => c !== '0' ? +c : +G.cells[i]);
@@ -393,35 +392,24 @@
   const filled = G => board(G).every(Boolean);
   const finish = G => ({ ...G, result: filled(G) && !conflicts(G).length && board(G).join('') === G.solution ? 'won' : '' });
 
-  // Why cell i cannot take a digit, an erase or a note now, or ''.
+  // Why cell i cannot take a digit or an erase now, or ''.
   function refusal(G, i, what, d) {
     if (G.result) return 'won';
     if (isGiven(G, i)) return 'given';
     if (what === 'place' && +G.cells[i] === d) return 'same';
-    if (what === 'erase' && G.cells[i] === '0' && !G.notes[i]) return 'empty';
-    if (what === 'note' && G.cells[i] !== '0') return 'filled';
+    if (what === 'erase' && G.cells[i] === '0') return 'empty';
     return '';
   }
-  // Writes d in cell i. The notes of the cell go, and d leaves the notes of its row, column and block.
+  // Writes d in cell i.
   function write(G, i, d) {
     if (refusal(G, i, 'place', d)) return null;
-    const notes = G.notes.slice();
-    notes[i] = 0;
-    for (const j of PEERS[i]) notes[j] &= ~(1 << d);
-    const g = finish({ ...G, cells: setAt(G.cells, i, String(d)), notes });
+    const g = finish({ ...G, cells: setAt(G.cells, i, String(d)) });
     return { G: g, clash: clash(g, i) };
   }
-  // Erases the digit of cell i, or its notes when it has no digit.
+  // Erases the digit of cell i.
   function erase(G, i) {
     if (refusal(G, i, 'erase')) return null;
-    if (G.cells[i] !== '0') return { G: { ...G, cells: setAt(G.cells, i, '0') }, was: +G.cells[i] };
-    const notes = G.notes.slice(); notes[i] = 0;
-    return { G: { ...G, notes }, was: 0 };
-  }
-  function note(G, i, d) {
-    if (refusal(G, i, 'note', d)) return null;
-    const notes = G.notes.slice(); notes[i] ^= 1 << d;
-    return { G: { ...G, notes }, on: !!(notes[i] & (1 << d)) };
+    return { G: { ...G, cells: setAt(G.cells, i, '0') }, was: +G.cells[i] };
   }
 
   // The hint, from the simplest reason:
@@ -506,41 +494,42 @@
       if (G.givens[i] !== '0' && (G.givens[i] !== G.solution[i] || G.cells[i] !== '0')) return false;
     }
     if (countSolutions(G.givens) !== 1) return false;
-    if (!Array.isArray(G.notes) || G.notes.length !== 81 || G.notes.some(n => !Number.isInteger(n) || n < 0 || n & ~ALL)) return false;
     return G.result === finish(G).result;
   }
   // Reads back a save: { G, undo, level, stats, wonNow }, or null for a save that cannot be played.
-  // A save without a known level takes Facile; missing notes or result are filled in.
+  // A save without a known level takes Facile; a missing result is filled in. The game had notes once:
+  // the notes of an old save are left out, with the steps of the undo that only changed notes.
   function restore(data) {
     if (!data || typeof data !== 'object' || !data.G || typeof data.G !== 'object') return null;
     const g = { ...data.G };
+    delete g.notes;
     if (!isLevel(g.level)) g.level = isLevel(data.level) ? data.level : 'facile';
-    if (g.notes === undefined) g.notes = new Array(81).fill(0);
     if (g.result === undefined) g.result = finish(g).result;
     if (!Number.isInteger(g.seed)) g.seed = 0;
     try { if (!valid(g)) return null; } catch (e) { return null; }
-    // Each step of the undo is { cells, notes } of the same grid. A broken step drops itself and the
-    // steps before it, so an undo never jumps over a gap.
+    // Each step of the undo is { cells } of the same grid. A broken step drops itself and the steps
+    // before it, so an undo never jumps over a gap.
     const undo = [];
     for (const s of Array.isArray(data.undo) ? data.undo : []) {
       let u;
       try { u = typeof s === 'string' ? JSON.parse(s) : s; } catch (e) { u = null; }
       if (!u || !grid81(u.cells) || ![...u.cells].every((c, i) => c === '0' || g.givens[i] === '0')
-        || !Array.isArray(u.notes) || u.notes.length !== 81 || u.notes.some(n => !Number.isInteger(n) || n < 0 || n & ~ALL)
         // A won grid takes no more moves, so it is never the grid before a move.
         || finish({ ...g, cells: u.cells }).result) { undo.length = 0; continue; }
-      undo.push(JSON.stringify({ cells: u.cells, notes: u.notes }));
+      undo.push(u.cells);
     }
+    // A step with the same digits as the grid after it was a move on notes only: it goes.
+    const steps = undo.filter((c, k) => c !== (k + 1 < undo.length ? undo[k + 1] : g.cells)).map(cells => JSON.stringify({ cells }));
     const won = data.stats && Number.isInteger(data.stats.won) && data.stats.won >= 0 ? data.stats.won : 0;
-    return { G: g, undo, level: g.level, stats: { won }, wonNow: !!data.wonNow && g.result === 'won' };
+    return { G: g, undo: steps, level: g.level, stats: { won }, wonNow: !!data.wonNow && g.result === 'won' };
   }
-  const snapshot = G => JSON.stringify({ cells: G.cells, notes: G.notes });
-  const back = (G, s) => { const u = JSON.parse(s); return finish({ ...G, cells: u.cells, notes: u.notes }); };
+  const snapshot = G => JSON.stringify({ cells: G.cells });
+  const back = (G, s) => finish({ ...G, cells: JSON.parse(s).cells });
 
   root.Sudoku = {
     LEVELS, UNITS, PEERS, ROW, COL, BOX, random,
     countSolutions, solve, grade, make, candidates: g => candidates(typeof g === 'string' ? toArray(g) : g),
-    newGame, board, isGiven, clash, conflicts, complete, filled, refusal, write, erase, note, hint,
+    newGame, board, isGiven, clash, conflicts, complete, filled, refusal, write, erase, hint,
     valid, restore, snapshot, back, digitsOf,
     source: '(' + factory.toString() + ')(self);',
   };

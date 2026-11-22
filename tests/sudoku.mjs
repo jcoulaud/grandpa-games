@@ -1,5 +1,5 @@
 // Plays the sudoku with a real mouse and keyboard: the rules, choosing a cell, writing, a digit that
-// breaks a rule, refusals, undo, notes, the hint, a reload, a digit complete, the win, a broken save,
+// breaks a rule, refusals, undo, the hint, a reload, a digit complete, the win, a broken save,
 // the levels, and the layout at every window size of docs/design.md.
 import { launch, gameUrl, OUT } from './harness.mjs';
 const browser = await launch();
@@ -111,30 +111,23 @@ if (givens[e3] === '0') {
   ok(after.sel === (before.sel % 9 ? before.sel - 1 : before.sel + 8) && after.cells === before.cells, 'the keypad 4 without Num Lock moves the cell and writes nothing');
 }
 
-// 7. Notes: small digits, a second click takes one off, and a double-click counts once.
+// 7. A double-click on a key, a key held down and a double-click on undo each count once.
 await cell(e2).click();
-await page.locator('#notesBtn').dblclick();
-ok(await page.locator('#notesBtn').getAttribute('aria-pressed') === 'true' && /petit/.test(await msg()), 'the "Notes" key turns notes on, even with a double-click');
-await key(3).click(); await key(7).click();
-ok(await g(i => G.notes[i], e2) === (1 << 3 | 1 << 7) && await page.locator(`.cell[data-i="${e2}"] .notes i:not(:empty)`).count() === 2, 'two notes show in the cell');
-await key(4).dblclick();
-ok(await g(i => G.notes[i] & (1 << 4), e2) !== 0, 'a double-click on a key adds one note, not two');
-// A keyboard digit held down repeats: the note stays.
-await page.keyboard.down('5'); await page.keyboard.down('5'); await page.keyboard.down('5'); await page.keyboard.up('5');
-ok(await g(i => G.notes[i] & (1 << 5), e2) !== 0, 'a digit held down on the keyboard notes once');
-await wait(550);
-await key(4).click();
-ok(await g(i => G.notes[i] & (1 << 4), e2) === 0, 'a second click takes the note off');
-await page.click('#notesBtn');
-ok(await page.locator('#notesBtn').getAttribute('aria-pressed') === 'false', 'a second click on "Notes" writes big again');
-// A double-click on undo takes one move back, not two.
 {
   const n = await g(() => undo.length);
+  await key(3).dblclick();
+  ok(await g(() => undo.length) === n + 1 && await g(i => G.cells[i], e2) === '3', 'a double-click on a key writes once');
+  await wait(550);
+  await page.keyboard.down('5'); await page.keyboard.down('5'); await page.keyboard.down('5'); await page.keyboard.up('5');
+  ok(await g(() => undo.length) === n + 2 && await g(i => G.cells[i], e2) === '5', 'a digit held down on the keyboard writes once');
   await page.locator('#undoBtn').dblclick();
-  ok(await g(() => undo.length) === n - 1, 'a double-click on undo takes one move back');
+  ok(await g(() => undo.length) === n + 1 && await g(i => G.cells[i], e2) === '3', 'a double-click on undo takes one move back');
   await wait(550);
 }
-await page.screenshot({ path: `${OUT}/sudoku-notes.png` });
+await page.keyboard.press('Backspace');
+ok(await g(i => G.cells[i], e2) === '0' && (await msg()) === 'Le 3 est effacé.', 'Backspace erases the 3 and says so');
+ok(await page.locator('#notesBtn').count() === 0 && !/notes/i.test(await page.locator('#help').textContent()), 'the game has no notes, and the rules do not speak of them');
+await wait(550);
 
 // 8. The hint fills a cell and says why.
 await page.click('#hintBtn');
@@ -152,13 +145,13 @@ if (legal) {
   ok(await g(i => G.cells[i] === '0', e4) && /n'est pas le bon chiffre/.test(await msg()), 'the hint erases it and says so');
 }
 
-// 9. A reload keeps the grid, the notes and the undo.
+// 9. A reload keeps the grid and the undo.
 await g(() => GG.flush());
-const before = await g(() => ({ cells: G.cells, notes: G.notes.join(), undo: undo.length }));
+const before = await g(() => ({ cells: G.cells, undo: undo.length }));
 await page.reload();
 await wait(300);
-const after = await g(() => ({ cells: G.cells, notes: G.notes.join(), undo: undo.length }));
-ok(JSON.stringify(before) === JSON.stringify(after) && !(await g(() => Kit.isOpen())), 'a reload keeps the digits, the notes and the undo');
+const after = await g(() => ({ cells: G.cells, undo: undo.length }));
+ok(JSON.stringify(before) === JSON.stringify(after) && !(await g(() => Kit.isOpen())), 'a reload keeps the digits and the undo');
 ok(await g(() => GG.meta('sudoku').summary === 'Partie en cours'), 'the tile says a game is in progress');
 await page.click('#eraseBtn');
 ok((await msg()) === "Cliquez d'abord sur la case à effacer.", 'Effacer before a cell asks for the cell to erase, not an empty one');
@@ -378,7 +371,7 @@ for (const [w, h, z] of WINDOWS) {
     const tr = t.getBoundingClientRect();
     const buttons = [...document.querySelectorAll('button:not(.cell)')].filter(vis).filter(b => !b.closest('#over, #help'));
     const small = buttons.filter(b => b.getBoundingClientRect().height < 44 * Zoom.z() - .5).map(b => b.textContent.trim() || b.id);
-    const texts = [...document.querySelectorAll('body *')].filter(e => !e.closest('.notes, svg, #help, #over') && [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && vis(e));
+    const texts = [...document.querySelectorAll('body *')].filter(e => !e.closest('svg, #help, #over') && [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && vis(e));
     const tiny = texts.filter(e => parseFloat(getComputedStyle(e).fontSize) < (phone ? 13 : 20)).map(e => e.textContent.trim().slice(0, 20));
     const msg = document.getElementById('msg');
     const cell = document.querySelector('.cell').getBoundingClientRect().width / Zoom.z();
