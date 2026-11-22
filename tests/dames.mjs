@@ -96,7 +96,11 @@ ok(await g(() => document.querySelectorAll('.pc.must').length === 1), 'the piece
 await click(31);
 ok((await msg()).includes('obligatoire'), 'a man that cannot take is refused: ' + await msg());
 await click(46);
-ok(JSON.stringify(await goes()) === '[19]', 'only the landing that keeps the most pieces is framed');
+ok(JSON.stringify(await goes()) === '[30,35]', 'the ends of the captures that take the most pieces are framed');
+ok(await g(() => document.querySelector('.sq[data-n="19"]').classList.contains('stop') && document.querySelectorAll('#ways circle').length === 1), 'the landing on the way is a round stop');
+ok(await g(() => document.querySelectorAll('#ways path.line').length === 2), 'the path of each capture is drawn');
+ok(await g(() => [...document.querySelectorAll('.pc.prey')].map(e => +e.dataset.n).sort().join() === '23,24'), 'both pieces to take are ringed in red');
+ok((await msg()).includes("2 pièces d'un coup"), 'the line says both pieces go in one click: ' + await msg());
 await click(14);
 ok((await msg()).includes('entourée'), 'a wrong square keeps the piece: ' + await msg());
 await click(19);
@@ -149,7 +153,10 @@ await setPos('12,K28', '17,27,K39,1');
 await click(28);
 ok((await msg()).includes('le plus de pièces'), 'taking fewer pieces is refused: ' + await msg());
 await click(12);
-ok(JSON.stringify(await goes()) === '[21]', 'the man that takes two shows its first landing');
+ok(JSON.stringify(await goes()) === '[32]', 'the man that takes two shows where its capture ends');
+await click(32);
+ok(await g(() => undo.length === 1 && JSON.parse(undo[0]).G.b[12] === 1 && G.b[17] === 0 && G.b[27] === 0), 'one click on the end plays the whole capture: both pieces are taken');
+await waitTurn();
 
 // 9. The loss, and undo from its dialog.
 await setPos('36', '27');

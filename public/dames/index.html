@@ -62,6 +62,12 @@
   }
   .sq.go:hover::before, .sq.go.over::before { border-style: solid; background-color: rgba(255,200,61,.5); }
   .sq.go.hint::before { border: 6px solid var(--gold); animation: pulse 1.4s ease-in-out infinite; }
+  /* A landing on the way of a capture: a round yellow stop on the drawn path. It accepts a click too. */
+  .sq.stop { cursor: pointer; }
+  #ways { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; pointer-events: none; overflow: visible; }
+  #ways .edge { fill: none; stroke: rgba(var(--shade),.75); stroke-width: .26; stroke-linecap: round; stroke-linejoin: round; }
+  #ways .line { fill: none; stroke: var(--gold); stroke-width: .13; stroke-linecap: round; stroke-linejoin: round; }
+  #ways circle { fill: var(--gold); stroke: rgba(var(--shade),.85); stroke-width: .05; }
   /* During a hint, only the hinted square is framed. The other squares still accept a click. */
   #board.hinting .sq.go:not(.hint)::before { display: none; }
   @keyframes pulse { 50% { background-color: rgba(255,200,61,.62); } }
@@ -108,6 +114,8 @@
   .pc.can:hover b { display: block; border: 3px solid #fff; }
   .pc.must b, .guide-board.capture .pc.w b { display: block; border: 4px dashed var(--gold); box-shadow: 0 0 0 1.5px rgba(var(--shade),.7); }
   .pc.sel b, .pc.hint b { display: block; border: 5px solid var(--gold); box-shadow: 0 0 0 2px rgba(var(--shade),.8), 0 0 22px 8px rgba(255,200,61,.6); }
+  /* A piece the chosen piece will take: a red ring. */
+  .pc.prey b { display: block; border: 5px solid #E0313F; box-shadow: 0 0 0 2px #fff, 0 0 14px 4px rgba(224,49,63,.55); }
   .pc.hint b { animation: glow 1.4s ease-in-out infinite; }
   @keyframes glow { 50% { box-shadow: 0 0 0 2px rgba(var(--shade),.8), 0 0 30px 14px rgba(255,200,61,.85); } }
   .pc.moving { z-index: 50; transition: left .38s ease-in-out, top .38s ease-in-out; }
@@ -233,7 +241,7 @@
       </figure>
     </div>
     <p>Si vous pouvez prendre, vous devez le faire. Choisissez le trajet qui prend le plus de pièces.</p>
-    <p>Pour enchaîner les prises, cliquez sur chaque case d'arrivée.</p>
+    <p>Pour prendre plusieurs pièces d'un coup, cliquez sur la dernière case du chemin jaune.</p>
   </section>
   <section class="page">
     <h3>Jouer une dame</h3>
@@ -326,11 +334,14 @@ function routesFrom(from, path) {
     if (path.every((s, i) => r.path[i] === s)) out.push({ m, r });
   return out;
 }
-// Where the chosen piece can land next.
-function nextLandings() {
+// The routes the chosen piece can still follow: all of them, or only the hinted one.
+function shownRoutes() {
   if (!sel) return [];
-  return [...new Set(routesFrom(sel.from, sel.path).map(x => x.r.path[sel.path.length]))];
+  const xs = routesFrom(sel.from, sel.path);
+  const h = hint && xs.filter(x => x.r.path.join() === hint.r.path.join());
+  return h && h.length ? h : xs;
 }
+const endOf = r => r.path[r.path.length - 1];
 // The square the chosen piece stands on now, and the pieces it has taken so far.
 const selAt = () => sel && sel.path.length ? sel.path[sel.path.length - 1] : sel ? sel.from : 0;
 const selTaken = () => { const x = sel && sel.path.length ? routesFrom(sel.from, sel.path)[0] : null; return x ? x.r.caps.slice(0, sel.path.length) : []; };
@@ -348,12 +359,14 @@ function turnMessage() {
   return 'À vous : cliquez sur une de vos pièces, puis sur une case entourée de jaune.';
 }
 function chosenMessage() {
-  const x = routesFrom(sel.from, sel.path)[0];
+  const xs = routesFrom(sel.from, sel.path), x = xs[0];
+  const many = new Set(xs.map(y => endOf(y.r))).size > 1;
+  const where = many ? 'une des cases entourées de jaune' : 'la case entourée de jaune';
+  const w = pieceWord(G.b[sel.from]);
+  if (!x.m.caps.length) return `Cliquez sur ${where} pour y poser votre ${w}.`;
   const left = x.r.caps.length - sel.path.length;
-  if (!x.m.caps.length) return 'Cliquez sur une case entourée de jaune pour y poser votre ' + pieceWord(G.b[sel.from]) + '.';
-  if (!sel.path.length) return left === 1 ? 'Cliquez sur une case entourée de jaune, derrière la pièce à prendre.'
-    : `Prenez ${left} pièces : cliquez sur chaque case où votre ${pieceWord(G.b[sel.from])} se pose.`;
-  return left === 1 ? 'Encore une pièce à prendre : cliquez sur une case entourée de jaune.' : `Encore ${left} pièces à prendre : cliquez sur une case entourée de jaune.`;
+  if (left === 1) return `Cliquez sur ${where} pour prendre ${many ? 'une pièce marquée' : 'la pièce marquée'} en rouge.`;
+  return `Cliquez sur ${where} : votre ${w} prend ${left} pièces d'un coup, en suivant le chemin jaune.`;
 }
 
 function select(n) {
@@ -380,7 +393,7 @@ function tap(n) {
   }
   const v = G.b[n];
   if (sel) {
-    if (nextLandings().includes(n)) return land(n);
+    if (reach(n)) return;
     if (sel.path.length) {
       if (n === selAt()) return say('Continuez la prise : cliquez sur une case entourée de jaune.');
       if (v < 0 && !selTaken().includes(n)) return say('Cliquez sur une case entourée de jaune, derrière la pièce à prendre.');
@@ -401,17 +414,42 @@ function tap(n) {
   say("Cliquez d'abord sur une de vos pièces.");
 }
 
-// One landing of the chosen piece. When the route is complete, the move is played.
-function land(n) {
-  sel.path.push(n);
-  const xs = routesFrom(sel.from, sel.path);
-  const done = xs.find(x => x.r.path.length === sel.path.length);
+// A click on a square the chosen piece can reach. The end of a move plays the whole move, every piece
+// on the way taken at once. A landing on the way moves the piece there, and the capture goes on from it.
+// Returns false when the piece cannot reach the square.
+function reach(n) {
+  const k0 = sel.path.length, xs = routesFrom(sel.from, sel.path);
+  const ending = xs.filter(x => endOf(x.r) === n);
+  const h = hint && ending.find(x => x.r.path.join() === hint.r.path.join());
+  if (ending.length && ending.every(x => x.m === ending[0].m)) { commit((h || ending[0]).m, (h || ending[0]).r, k0); return true; }
+  const ways = xs.map(x => { const i = x.r.path.indexOf(n, k0); return i < 0 ? null : x.r.path.slice(0, i + 1).join(); }).filter(Boolean);
+  if (!ways.length) return false;
+  if (ways.some(p => p !== ways[0])) { say("Plusieurs chemins mènent à cette case : cliquez d'abord sur le premier rond jaune du chemin que vous voulez."); return true; }
+  sel.path = ways[0].split(',').map(Number);
   if (hint && !(hint.r.path.slice(0, sel.path.length).every((s, i) => s === sel.path[i]))) hint = null;
-  if (!done) { say(chosenMessage()); render(); save(); return; }
-  commit(done.m, done.r);
+  const done = routesFrom(sel.from, sel.path).find(x => x.r.path.length === sel.path.length);
+  if (done) { commit(done.m, done.r, k0); return true; }
+  say(chosenMessage()); render(); save();
+  return true;
+}
+// The squares a click or a drop can reach with the chosen piece.
+const reachable = n => !!sel && routesFrom(sel.from, sel.path).some(x => x.r.path.indexOf(n, sel.path.length) >= 0);
+
+// Shows a move landing by landing, from landing k (0 is the start square), then calls done.
+// o: { from (light the start square), first and each (ms before the first and each next hop), end }.
+function showHops(before, m, r, k, o, done) {
+  const my = gen, steps = [m.from, ...r.path], k0 = k;
+  const hop = () => {
+    if (my !== gen) return;
+    render({ shown: before, moving: m.from, at: steps[k], taken: r.caps.slice(0, k), slide: k > k0, from: o.from });
+    if (k++ < r.path.length) return later(hop, k === k0 + 1 ? o.first : o.each);
+    later(() => { if (my === gen) done(); }, o.end);
+  };
+  hop();
 }
 
-async function commit(m, r) {
+// k0: the landings he has already clicked, shown on the board.
+async function commit(m, r, k0 = 0) {
   undo.push(JSON.stringify({ G, last }));
   const before = G;
   G = advance(G, m);
@@ -425,13 +463,8 @@ async function commit(m, r) {
   if (await save()) { if (firstWin) GG.track('dames', 'won'); }
   else if (firstWin) { wonNow = false; stats.won--; }
   if (my !== gen) return;
-  // His piece slides to its last landing, then the pieces taken leave the board.
-  render({ shown: before, moving: m.from, at: r.path.length > 1 ? r.path[r.path.length - 2] : m.from, taken: r.caps });
-  later(() => {
-    if (my !== gen) return;
-    render({ shown: before, moving: m.from, at: m.to, taken: r.caps, slide: true });
-    later(() => { if (my === gen) afterPlayer(); }, REDUCED ? 150 : 330);
-  }, 20);
+  // His piece hops over each piece it takes, then the pieces taken leave the board.
+  showHops(before, m, r, k0, { first: 20, each: REDUCED ? 150 : 420, end: REDUCED ? 150 : 330 }, afterPlayer);
 }
 function afterPlayer() {
   if (G.result) return finish(true);
@@ -483,16 +516,8 @@ function computerPlays(m) {
   last = { by: BLACK, from: m.from, path: r.path, caps: r.caps };
   save();
   phase = 'anim';
-  const my = gen;
-  const steps = [m.from, ...r.path];
-  let k = 0;
-  const hop = () => {
-    if (my !== gen) return;
-    render({ shown: before, moving: m.from, at: steps[k], taken: r.caps.slice(0, k), slide: k > 0, from: m.from });
-    if (k++ < r.path.length) return later(hop, k === 1 ? 380 : HOP_MS);
-    later(() => { if (my !== gen) return; phase = 'player'; render(); computerSaid(before, m); if (G.result) finish(true); }, r.caps.length ? 350 : 120);
-  };
-  hop();
+  showHops(before, m, r, 0, { from: m.from, first: 380, each: HOP_MS, end: r.caps.length ? 350 : 120 },
+    () => { phase = 'player'; render(); computerSaid(before, m); if (G.result) finish(true); });
 }
 function computerSaid(before, m) {
   const n = m.caps.length;
@@ -600,6 +625,7 @@ function build() {
     e.className = 'sq'; e.dataset.n = n;
     boardEl.appendChild(e); squares[n] = e;
   }
+  boardEl.insertAdjacentHTML('beforeend', '<svg id="ways" viewBox="0 0 10 10" preserveAspectRatio="none" aria-hidden="true"></svg>');
 }
 // The board fills the height of the table, in the middle. On a wide window, the computer's panel sits
 // on the left by its pieces and the player's on the right by his. Narrower, both go on the right.
@@ -657,7 +683,19 @@ function render(opts = {}) {
   const mine = phase === 'player' && !opts.shown ? legal() : [];
   const movable = new Set(mine.map(m => m.from));
   const must = mine.length && mine[0].caps.length && !sel ? new Set(mine.map(m => m.from)) : new Set();
-  const go = new Set(phase === 'player' && !opts.shown ? nextLandings() : []);
+  // The way of the chosen piece: where each move ends (framed), the landings on the way (round stops on
+  // a yellow path) and the pieces it will take (ringed in red).
+  const routes = phase === 'player' && !opts.shown ? shownRoutes() : [];
+  const go = new Set(routes.map(x => endOf(x.r)));
+  const stops = new Set(), prey = new Set();
+  for (const { r } of routes) {
+    r.path.slice(sel.path.length, -1).forEach(s => stops.add(s));
+    r.caps.slice(sel.path.length).forEach(s => prey.add(s));
+  }
+  const c = s => `${colOf(s) + .5} ${rowOf(s) + .5}`;
+  const lines = routes.filter(x => x.r.caps.length).map(x => 'M' + [selAt(), ...x.r.path.slice(sel.path.length)].map(c).join('L'));
+  $('ways').innerHTML = lines.map(d => `<path class="edge" d="${d}"/>`).join('') + lines.map(d => `<path class="line" d="${d}"/>`).join('')
+    + [...stops].map(s => `<circle cx="${colOf(s) + .5}" cy="${rowOf(s) + .5}" r=".17"/>`).join('');
   const taken = new Set(opts.shown ? opts.taken || [] : selTaken());
   const at = opts.shown ? opts.at : selAt();
   const moving = opts.shown ? opts.moving : sel ? sel.from : 0;
@@ -666,12 +704,13 @@ function render(opts = {}) {
   const lastSq = new Set();
   if (opts.from) lastSq.add(opts.from);
   else if (last && !opts.shown && !sel && last.by === BLACK) { lastSq.add(last.from); lastSq.add(last.path[last.path.length - 1]); }
-  const hintSq = hint && sel ? hint.r.path[sel.path.length] : 0;
+  const hintSq = hint && sel ? endOf(hint.r) : 0;
   boardEl.classList.toggle('hinting', !!hintSq && go.has(hintSq));
   for (let n = 1; n <= 50; n++) {
     const e = squares[n];
     e.classList.toggle('go', go.has(n));
     e.classList.toggle('hint', go.has(n) && n === hintSq);
+    e.classList.toggle('stop', stops.has(n));
     e.classList.toggle('last', lastSq.has(n));
     e.classList.remove('over');
   }
@@ -691,6 +730,7 @@ function render(opts = {}) {
     e.style.left = x + 'px'; e.style.top = y + 'px';
     if (isMover && opts.shown) e.classList.add('moving');
     if (taken.has(n)) e.classList.add('taken');
+    else if (prey.has(n)) e.classList.add('prey');
     if (!opts.shown) {
       if (movable.has(n) && !(sel && sel.path.length)) e.classList.add('can');
       if (sel && n === sel.from) e.classList.add(hint && hint.from === n && !sel.path.length ? 'hint' : 'sel');
@@ -781,7 +821,7 @@ addEventListener('pointerup', e => {
   const d = drag; drag = null;
   const n = squareAt(e);
   if (d.started) {
-    if (n && nextLandings().includes(n)) return tap(n);
+    if (n && reachable(n)) return tap(n);
     render();
     if (n && n !== selAt()) tap(n);
     return;
