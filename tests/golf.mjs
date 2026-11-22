@@ -221,7 +221,7 @@ try {
   await page.reload();
   await page.waitForFunction(() => /nouveau parcours/.test(document.querySelector('#msg').textContent));
   assert.match(await page.textContent('#level'), /difficile/);
-  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('gg:save:golf')).data.v), 2);
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('gg:save:golf')).data.v), 3);
 
   // 11. No WebGL: a plain message.
   await page.addInitScript(() => {

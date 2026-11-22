@@ -158,6 +158,8 @@ export function createScene(canvas) {
     wood: std(0xa86b39, { map: grain, roughness: 0.7, side: T.DoubleSide }),
     deck: std(0xc58d55, { map: grain, roughness: 0.7 }),
     water: std(0x46a9d6, { roughness: 0.12, metalness: 0.1 }),
+    sand: std(0xe8cf92, { map: stoneMap, roughness: 1 }),
+    rock: std(0xb4ab9c, { map: stoneMap, flatShading: true }),
     waterRim: std(0xa5dcef, { roughness: 0.4 }),
     ball: std(0xffffff, { map: ballMap, roughness: 0.35, emissive: 0x2a2a2a }),
     cup: new T.MeshStandardMaterial({ map: cupMap, transparent: true, roughness: 0.9 }),
@@ -702,11 +704,15 @@ export function createScene(canvas) {
     for (const g of h.regions) {
       if (g.kind === 'stone') block(g.pts, 0.38, h.parts.some((p) => p.kind === 'tunnel') ? [M.mound, M.stone] : M.stone);
       else if (g.kind === 'mill') block(g.pts, 1.25, M.brick, 0.03);
+      else if (g.kind === 'rock') block(g.pts, 0.42, M.rock, 0.09);
+      else if (g.kind === 'board') block(g.pts, 0.2, M.wood, 0.02);
       else if (g.kind === 'water') {
         flat(g.pts, 0.004, M.water);
         rail(g.pts, -1, 0.1, 0.12, M.wood, -0.02, false);
       }
     }
+    // Sand sits a hair above the turf.
+    for (const g of h.sands) flat(g.pts, 0.008, M.sand);
     for (const b of h.bumpers) {
       const y = yAt(b.x, b.z);
       mesh(course, new T.CylinderGeometry(b.r * 0.62, b.r * 0.7, 0.2, 18), M.stem, b.x, y + 0.1, b.z);
