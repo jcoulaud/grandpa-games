@@ -51,6 +51,10 @@
   .mark.hint { border: 6px solid var(--gold); animation: pulse 1.6s ease-in-out infinite; }
   @keyframes pulse { 50% { background: rgba(255,200,61,.52); } }
 
+  /* A card about to go home by itself: framed in yellow first, then a slow flight the eye can follow. */
+  .card.auto, .card.auto:hover { outline: 5px solid var(--gold); outline-offset: 0; box-shadow: 0 0 24px 6px rgba(255,200,61,.55); }
+  .card.slow { transition-duration: .8s; transition-timing-function: ease-in-out; }
+
   @media (prefers-reduced-motion: reduce) { .mark.hint { animation: none; } }
 </style>
 <script src="../lib/zoom.js"></script>
@@ -103,6 +107,7 @@ const last = a => a[a.length - 1];
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const LAND_MS = 1000; // how long a card that just moved keeps its yellow outline
 const AUTO_DELAY = 450, FINISH_DELAY = 140; // between two automatic cards: in play, and once the game is decided
+const SHOW_MS = 1000, FLY_MS = 800; // an automatic card in play: how long it is shown before it moves, and its flight
 
 const HELLO = "Cliquez sur la carte à déplacer. Si elle a plusieurs places possibles, cliquez ensuite sur celle que vous voulez.";
 
@@ -114,6 +119,7 @@ const { solve, sApply, sMoves, sNormalize, sFits, sSafe, sRun } = Solver;
 let level = 'facile';
 let S, undo = [], stats = { won: 0 }, autoT = 0, zT = 0, winT = 0, busy = false, autoCount = 0;
 let drag = null, plan = null, sel = null, hintDst = null, lastTap = null, dealT = 0;
+let autoId = null; // the card shown before it goes home by itself
 
 function toSolver() {
   return { c: S.tab.map(p => p.slice()), l: S.cells.filter(id => id !== null).sort((a, b) => a - b), f: S.found.map(f => f.length) };
@@ -272,7 +278,7 @@ function act(fn, text) {
   changed(text);
   return true;
 }
-function clearSel() { sel = null; hintDst = null; }
+function clearSel() { sel = null; hintDst = null; autoId = null; }
 function changed(text) {
   clearSel(); setMsg(text || HELLO); render(); save();
   autoCount = 0;
@@ -355,11 +361,21 @@ function autoStep() {
   for (const loc of cands) {
     const id = pileOf(loc)[loc.k];
     if (canFound(id) && (finishing || sSafe(x, id))) {
+      // In play, the card and its pile are framed first, so the player sees what moves and where.
+      if (!finishing && autoId !== id) {
+        autoId = id;
+        setMsg(`${cap(cardName(id))} va au rangement.`);
+        render();
+        autoT = setTimeout(autoStep, SHOW_MS);
+        return;
+      }
+      autoId = null;
       S.found[st(id)].push(lift(loc)[0]);
       autoCount++;
-      render(); save();
+      if (!finishing && !REDUCED) { E[id].classList.add('slow'); setTimeout(() => E[id].classList.remove('slow'), FLY_MS); }
+      render({ slow: !finishing }); save();
       if (!finishing) flash([id]);
-      autoT = setTimeout(autoStep, finishing ? FINISH_DELAY : AUTO_DELAY);
+      autoT = setTimeout(autoStep, finishing ? FINISH_DELAY : FLY_MS + AUTO_DELAY);
       return;
     }
   }
@@ -591,6 +607,7 @@ function render(opts = {}) {
     el.dataset.z = z;
     el.style.zIndex = moved && !opts.instant ? 1000 + z : z;
     el.classList.toggle('can', selectable(id));
+    el.classList.toggle('auto', id === autoId);
     if (wasDown && !opts.instant && !REDUCED) el.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }],
       { duration: 220, delay: opts.deal ? order * 25 : 0, easing: 'ease-out', fill: 'backwards' });
   }
@@ -598,7 +615,7 @@ function render(opts = {}) {
   zT = setTimeout(() => E.forEach(el => {
     if (!el.classList.contains('dragging')) el.style.zIndex = el.dataset.z;
     el.style.transitionDelay = '';
-  }), opts.deal ? 1700 : 360);
+  }), opts.deal ? 1700 : opts.slow ? FLY_MS + 60 : 360);
 
   drawMarks();
   document.getElementById('undoBtn').disabled = !undo.length;
@@ -607,7 +624,14 @@ function render(opts = {}) {
 function drawMarks() {
   ring.style.display = 'none';
   marks.forEach(m => m.remove()); marks = [];
-  if (sel === null) return;
+  if (sel === null) {
+    // The pile where the card about to go home by itself will land.
+    if (autoId !== null && !drag) {
+      const f = S.found[st(autoId)];
+      const m = mk('mark hint'); put(m, ...(f.length ? pos[last(f)] : foundXY(st(autoId)))); marks.push(m);
+    }
+    return;
+  }
   const loc = locate(sel), p = pileOf(loc);
   if (!(drag && drag.started)) {
     const [x, y] = pos[sel], yEnd = pos[last(p)][1] + L.h;

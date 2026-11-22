@@ -65,6 +65,10 @@
   .mark.hint { border: 6px solid var(--gold); animation: pulse 1.6s ease-in-out infinite; }
   @keyframes pulse { 50% { background: rgba(255,200,61,.52); } }
 
+  /* A card about to go home by itself: framed in yellow first, then a slow flight the eye can follow. */
+  .card.auto, .card.auto:hover { outline: 5px solid var(--gold); outline-offset: 0; box-shadow: 0 0 24px 6px rgba(255,200,61,.55); }
+  .card.slow { transition-duration: .8s; transition-timing-function: ease-in-out; }
+
 
   @media (prefers-reduced-motion: reduce) { .mark.hint { animation: none; } }
 </style>
@@ -117,6 +121,7 @@ const last = a => a[a.length - 1];
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const LAND_MS = 1000; // how long a card that just moved keeps its yellow outline
 const AUTO_DELAY = 450, FINISH_DELAY = 140; // between two automatic cards: in play, and once the game is decided
+const SHOW_MS = 1000, FLY_MS = 800; // an automatic card in play: how long it is shown before it moves, and its flight
 
 const HELLO = "Cliquez sur la carte à déplacer. Si elle a plusieurs places possibles, cliquez ensuite sur celle que vous voulez.";
 
@@ -386,7 +391,8 @@ function act(fn, text) {
   return true;
 }
 function flipTops() { S.tab.forEach(p => { const t = last(p); if (t) t.up = true; }); }
-function clearSel() { sel = null; hintDst = null; hintStock = false; }
+let autoId = null; // the card shown before it goes home by itself
+function clearSel() { sel = null; hintDst = null; hintStock = false; autoId = null; }
 function changed(text) {
   flipTops(); clearSel(); setMsg(text || HELLO); render(); save();
   autoCount = 0;
@@ -476,11 +482,21 @@ function autoStep() {
   for (const loc of cands) {
     const id = pileOf(loc)[loc.k].id;
     if (canFound(id) && !pileOf(loc)[loc.k].kept && (finishing || sSafe(x, id))) {
+      // In play, the card and its pile are framed first, so the player sees what moves and where.
+      if (!finishing && autoId !== id) {
+        autoId = id;
+        setMsg(`${cap(cardName(id))} va au rangement.`);
+        render();
+        autoT = setTimeout(autoStep, SHOW_MS);
+        return;
+      }
+      autoId = null;
       S.found[st(id)].push(pileOf(loc).pop());
       autoCount++; turns = 0;
-      flipTops(); render(); save();
+      if (!finishing && !REDUCED) { E[id].classList.add('slow'); setTimeout(() => E[id].classList.remove('slow'), FLY_MS); }
+      flipTops(); render({ slow: !finishing }); save();
       if (!finishing) flash([id]);
-      autoT = setTimeout(autoStep, finishing ? FINISH_DELAY : AUTO_DELAY);
+      autoT = setTimeout(autoStep, finishing ? FINISH_DELAY : FLY_MS + AUTO_DELAY);
       return;
     }
   }
@@ -760,13 +776,14 @@ function render(opts = {}) {
     el.dataset.z = z;
     el.style.zIndex = moved && !opts.instant ? 1000 + z : z;
     el.classList.toggle('can', c.id === stockTop || (c.up && selectable(c.id)));
+    el.classList.toggle('auto', c.id === autoId);
     if (wasDown && c.up && !opts.instant && !REDUCED) el.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: 220, easing: 'ease-out' });
   }
   clearTimeout(zT);
   zT = setTimeout(() => E.forEach(el => {
     if (!el.classList.contains('dragging')) el.style.zIndex = el.dataset.z;
     el.style.transitionDelay = '';
-  }), opts.deal ? 1700 : 360);
+  }), opts.deal ? 1700 : opts.slow ? FLY_MS + 60 : 360);
 
   drawMarks();
   document.getElementById('undoBtn').disabled = !undo.length;
@@ -777,6 +794,11 @@ function drawMarks() {
   marks.forEach(m => m.remove()); marks = [];
   const addMark = (x, y, cls, key) => { const m = mk('mark ' + cls); put(m, x, y); m.dataset.key = key; marks.push(m); };
   if (hintStock) addMark(bankX(0), L.top, 'hint', 'stock');
+  // The pile where the card about to go home by itself will land.
+  if (sel === null && autoId !== null && !drag) {
+    const f = S.found[st(autoId)];
+    addMark(...(f.length ? pos[last(f).id] : foundXY(st(autoId))), 'hint', 'auto');
+  }
   if (sel === null) return;
   const loc = locate(sel), p = pileOf(loc);
   if (!(drag && drag.started)) {
