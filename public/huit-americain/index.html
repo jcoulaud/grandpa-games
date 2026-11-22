@@ -31,12 +31,17 @@
   #table { position: relative; overflow: clip; }
   .card { z-index: 10; }
 
-  /* His hand. A card that fits rises under the mouse. A card that does not fit is darker, and still
-     clickable for the reason. */
-  .card.hand { transition: transform .15s; }
-  .card.hand.can { cursor: pointer; }
-  .card.hand.can:hover { transform: translateY(calc(var(--h) * -.1)); outline: 3px solid #fff; }
-  .card.hand.no { cursor: pointer; filter: brightness(.68) saturate(.75); }
+  /* His hand. On his turn, a card that fits stands up, bright, with a white glow, and rises a little
+     more under the mouse. A card that does not fit stays down under a veil of the felt colour: it keeps
+     its colours, so it never looks grey or dirty, and a click on it still says why. */
+  .card.hand { transition: transform .15s, box-shadow .15s; }
+  .card.hand::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+    background: rgba(70,8,40,.42); opacity: 0; transition: opacity .15s; }
+  .card.hand.no::after { opacity: 1; }
+  .card.hand.no { cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,.3); }
+  .card.hand.can { cursor: pointer; transform: translateY(calc(var(--h) * -.1));
+    box-shadow: 0 0 0 3px rgba(255,255,255,.85), 0 0 18px 4px rgba(255,214,236,.55), 0 10px 18px rgba(0,0,0,.35); }
+  .card.hand.can:hover { transform: translateY(calc(var(--h) * -.14)); outline: 4px solid #fff; }
   .card.hand.hint, .card.hand.hint:hover { transform: translateY(calc(var(--h) * -.14)); outline: 5px solid var(--gold);
     box-shadow: 0 0 0 2px rgba(var(--shade),.8), 0 0 26px 8px rgba(255,200,61,.7); }
   /* The card just drawn that fits: it stands up a little with a white tag. */
@@ -59,14 +64,18 @@
   #stock.hint .card:last-of-type { outline: 5px solid var(--gold); box-shadow: 0 0 26px 8px rgba(255,200,61,.7); }
   #stock.empty .card { display: none; }
   #stock.empty { border: 3px dashed rgba(255,255,255,.4); }
-  #stock .count { position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 20; min-width: 44px; padding: 2px 10px; border-radius: 999px;
-    background: #fff; color: var(--text); font: 700 21px/1.3 var(--ui); text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+  #stock .count { position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 20; min-width: 44px; padding: 3px 10px; border-radius: 14px;
+    background: #fff; color: var(--text); font: 700 21px/1.2 var(--ui); text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,.35);
+    display: flex; flex-direction: column; align-items: center; }
+  #stock .count small { font: 600 20px/1.15 var(--ui); color: #5A6461; }
+  #stock.slim .count small { display: none; }
   #stock.empty .count { background: transparent; color: #fff; box-shadow: none; }
   #stock.mix { animation: mix .8s ease-in-out; }
   @keyframes mix { 30% { transform: rotate(-4deg) scale(1.05); } 60% { transform: rotate(4deg) scale(1.05); } }
 
   /* "Piocher": the big yellow key beside the pioche, when no card fits. "Passer mon tour" after a draw. */
-  #drawBtn { position: absolute; z-index: 30; min-height: 64px; padding: 8px 22px; font-size: 24px; font-weight: 700; justify-content: center; text-align: center; }
+  #drawBtn { position: absolute; z-index: 30; min-height: 64px; max-width: 190px; padding: 8px 20px; font-size: 24px; font-weight: 700; line-height: 1.15;
+    justify-content: center; text-align: center; white-space: normal; }
   #drawBtn[hidden] { display: none; }
   #drawBtn.hint { outline: 5px solid var(--gold); outline-offset: 4px; box-shadow: 0 0 26px 8px rgba(255,200,61,.7); }
   #drawBtn svg { width: 28px; height: 28px; }
@@ -82,24 +91,28 @@
   #badge.pop .disc { animation: pop2 .6s cubic-bezier(.2,1.5,.4,1); }
   @keyframes pop2 { from { transform: scale(.84) rotate(-10deg); } }
 
-  /* The ring of arrows around the middle: the way of play. It turns over when an as is played. */
+  /* The round mat in the middle, and the ring of the way of play on its edge. When the side players sit
+     by the middle, the ring runs through the four places, so the arrows go from one player to the next.
+     It turns over when an as is played. */
   #ring { position: absolute; z-index: 2; pointer-events: none; overflow: visible; transition: transform .7s cubic-bezier(.4,0,.2,1); }
   #ring.ccw { transform: scaleX(-1); }
-  #ring .track { fill: none; stroke: rgba(255,255,255,.22); stroke-width: 5; }
-  #ring .head { fill: rgba(255,255,255,.75); }
+  #ring .mat { fill: rgba(40,0,22,.24); }
+  #ring .track { fill: none; stroke: rgba(255,255,255,.32); stroke-width: 12; }
+  #ring .head { fill: #fff; stroke: rgba(70,8,40,.35); stroke-width: 2; paint-order: stroke; }
   #ring.flip .head { animation: heads .9s ease-in-out; }
-  @keyframes heads { 40% { fill: var(--gold); } }
+  @keyframes heads { 40% { fill: var(--turn); } }
 
   /* The three players of the computer. */
   .seat {
-    position: absolute; z-index: 20; display: grid; grid-template-columns: auto auto; align-items: center; column-gap: 12px; row-gap: 8px; padding: 10px 16px 10px 10px;
-    background: #FFFDF6; color: var(--text); border-radius: 20px; border: 3px solid transparent;
-    box-shadow: 0 4px 18px rgba(0,0,0,.32); transition: border-color .2s, box-shadow .2s;
+    position: absolute; z-index: 20; display: grid; grid-template-columns: auto auto; align-items: center; column-gap: 14px; row-gap: 8px; padding: 12px 18px 12px 12px;
+    background: #FFFDF6; color: var(--text); border-radius: 22px; border: 4px solid #E9C6D8;
+    box-shadow: 0 6px 22px rgba(30,0,15,.45); transition: border-color .2s, box-shadow .2s, scale .3s;
   }
-  .seat.turn { border-color: var(--turn); box-shadow: 0 0 0 5px rgba(255,179,217,.45), 0 4px 18px rgba(0,0,0,.32); }
-  .ava { width: 50px; height: 50px; border-radius: 50%; flex: none; display: grid; place-items: center;
-    font: 700 25px var(--ui); color: #2B0A1C; box-shadow: inset 0 -3px 0 rgba(0,0,0,.14); }
-  .seat b { display: block; font: 700 23px/1.15 var(--ui); white-space: nowrap; }
+  #table:not(.cols) .seat.turn:not(#seat0) { scale: 1.04; }
+  .seat.turn { border-color: var(--turn); box-shadow: 0 0 0 6px rgba(255,179,217,.5), 0 0 30px 6px rgba(255,179,217,.45), 0 6px 22px rgba(30,0,15,.45); }
+  .ava { width: 58px; height: 58px; border-radius: 50%; flex: none; display: grid; place-items: center;
+    font: 700 28px var(--ui); color: #2B0A1C; box-shadow: inset 0 -3px 0 rgba(0,0,0,.14), 0 0 0 3px #fff, 0 0 0 5px rgba(0,0,0,.08); }
+  .seat b { display: block; font: 700 25px/1.15 var(--ui); white-space: nowrap; }
   .seat .tot { display: block; font: 500 20px/1.3 var(--ui); color: #5A6461; white-space: nowrap; }
   .seat .now { display: none; align-items: center; gap: 8px; font: 600 20px/1.3 var(--ui); color: #85205A; white-space: nowrap; }
   .seat.turn .now { display: flex; }
@@ -110,8 +123,8 @@
   @keyframes dot { 50% { opacity: .2; } }
   /* How many cards each one holds: a small fan of backs, and the number. */
   .hold { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; }
-  .fan { position: relative; height: 34px; flex: none; }
-  .fan i { position: absolute; top: 0; width: 24px; height: 34px; border-radius: 4px; border: 1px solid #0B1D33;
+  .fan { position: relative; height: 40px; flex: none; }
+  .fan i { position: absolute; top: 0; width: 29px; height: 40px; border-radius: 4px; border: 1px solid #0B1D33;
     background: repeating-linear-gradient(45deg, rgba(255,210,74,.35) 0 1px, transparent 1px 6px), repeating-linear-gradient(-45deg, rgba(255,210,74,.35) 0 1px, transparent 1px 6px), var(--back);
     box-shadow: inset 0 0 0 2px var(--back), inset 0 0 0 3px rgba(255,255,255,.7); }
   .hold span { font: 600 20px/1.2 var(--ui); color: #3A4542; white-space: nowrap; }
@@ -124,12 +137,16 @@
      name, the total and the number of cards, as on a phone. */
   #table.cols .seat:not(#seat0) { grid-template-columns: minmax(0, 1fr); row-gap: 4px; padding: 6px 8px; border-radius: 14px; }
   #table.cols .seat:not(#seat0) .ava, #table.cols .seat .now .dots, #table.cols .fan { display: none; }
+  /* A wide window in three columns keeps the initial, the name, the total and the number of cards on a row. */
+  #table.cols.wide .seat:not(#seat0) { grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 12px; padding: 8px 16px 8px 8px; }
+  #table.cols.wide .seat:not(#seat0) .ava { display: grid; width: 48px; height: 48px; font-size: 23px; }
+  #table.cols.wide .seat:not(#seat0) .hold { grid-column: auto; }
   #table.cols .seat:not(#seat0) .fx { width: max-content; max-width: 100%; white-space: normal; text-align: center; }
   /* His own seat: a strip on the left of his hand, or above it on a phone. */
-  #seat0 { display: flex; align-items: center; gap: 12px; padding: 6px 18px 6px 6px; border-radius: 16px; z-index: 25; }
-  #seat0 .ava { width: 42px; height: 42px; font-size: 20px; background: var(--gold); }
+  #seat0 { display: flex; align-items: center; gap: 12px; padding: 8px 20px 8px 8px; border-radius: 18px; z-index: 25; }
+  #seat0 .ava { width: 50px; height: 50px; font-size: 24px; background: var(--gold); }
   #seat0 .who { display: flex; flex-direction: column; }
-  #seat0 b { font-size: 22px; }
+  #seat0 b { font-size: 25px; }
   #seat0.turn .now { display: flex; }
   html.low #seat0 { padding: 4px 14px 4px 4px; gap: 8px; } html.low #seat0 .ava { width: 34px; height: 34px; } html.low #seat0 b { font-size: 20px; line-height: 1.1; } html.low #seat0 .tot, html.low #seat0 .now { line-height: 1.15; }
   /* A word over a seat for a special card: "+2 cartes", "Passe son tour". */
@@ -198,23 +215,75 @@
     100% { transform: translate(calc(-50% + var(--dx) * 1.2), calc(-50% + var(--dy) + 60vh)) scale(.9) rotate(calc(var(--r) * 2)); opacity: 0; }
   }
 
-  /* The rules. */
-  .guide-chip { width: 66px; min-height: 42px; flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 2px;
-    border: 1px solid #9AA6A1; border-radius: 8px; background: var(--face); color: var(--ink); font-weight: 700; }
-  .guide-chip.red { color: var(--red); }
-  .guide-chip svg { width: 24px; height: 24px; fill: currentColor; }
-  .guide-scores { width: 100%; border-collapse: collapse; text-align: left; }
-  .guide-scores th, .guide-scores td { padding: 4px 10px; }
-  .guide-scores th { width: 38%; }
-  .guide-scores tr:nth-child(odd) { background: #F2F5F3; }
-  #help .guide-art .card { --w: 76px; --h: 99px; }
-  .guide-on { font-size: 20px; color: #55605C; font-weight: 600; }
-  #helpText .guide-key li + li { margin-top: 8px; }
+  /* The rules: one picture per page, made of the real cards on a piece of the felt, and one or two short
+     sentences under it. Yellow, a ring or the pointing hand, marks what to click, as in the game. */
+  .hp { container-type: inline-size; display: flex; justify-content: center; margin: 2px 0 14px; }
+  .hp-felt { --cw: min(84px, 12.5cqw); position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px;
+    padding: 14px 28px 18px; border-radius: 22px; background: radial-gradient(130% 100% at 50% 15%, #A8306E, #551237);
+    box-shadow: inset 0 0 0 3px rgba(255,255,255,.14); }
+  #help .hp .card { --w: var(--cw); --h: calc(var(--cw) * 1.3); }
+  .hp-row { display: flex; align-items: center; gap: calc(var(--cw) * .4); }
+  /* A piece of the table: the middle, and his hand cut by the edge, as in the game. */
+  .hp-table { --cw: min(74px, 11cqw); padding-bottom: 0; overflow: hidden; }
+  .hp-mid { --cw: min(64px, 9.5cqw); }
+  .hp-table .hp-hand { margin-bottom: calc(var(--cw) * -.36); padding-right: 30px; }
+  .hp-me { display: flex; align-items: center; gap: 8px; margin-right: 16px; align-self: flex-start; margin-top: 4px; padding: 5px 14px 5px 5px;
+    border-radius: 14px; background: #FFFDF6; border: 3px solid var(--turn); font: 700 20px/1.2 var(--ui); color: var(--text); }
+  .hp-me i { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--gold); font: 700 18px var(--ui); font-style: normal; }
+  .hp-top { rotate: -4deg; }
+  .hp-disc { width: calc(var(--cw) * 1.05); aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; background: var(--face);
+    box-shadow: 0 0 0 5px rgba(255,255,255,.25); }
+  .hp-disc svg { width: 62%; height: 62%; fill: var(--ink); }
+  .hp-hand { gap: 0; padding-top: 10px; }
+  .hp-hand .card + .card { margin-left: calc(var(--cw) * -.3); }
+  #help .hp .card.can { translate: 0 -10px; box-shadow: 0 0 0 3px rgba(255,255,255,.85), 0 0 14px 3px rgba(255,214,236,.55), 0 8px 14px rgba(0,0,0,.35); }
+  #help .hp .card.no::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; background: rgba(70,8,40,.42); }
+  #help .hp .ring { outline: 5px solid var(--gold); outline-offset: 2px; box-shadow: 0 0 20px 6px rgba(255,200,61,.75); z-index: 2; }
+  .hp-ptr { position: absolute; z-index: 5; right: -30px; bottom: -24px; width: 44px; height: 55px; rotate: -18deg;
+    filter: drop-shadow(0 3px 3px rgba(0,0,0,.45)); pointer-events: none; }
+  .hp-btn { position: relative; display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 15px;
+    background: var(--gold); color: #1F1A00; font: 700 24px/1.2 var(--ui); box-shadow: 0 3px 0 #C9951A; }
+  .hp-btn svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+  .hp-on { font: 600 22px var(--ui); color: #FFE4F1; }
+  .hp-suits { display: grid; grid-template-columns: repeat(4, auto); gap: 12px; }
+  .hp-suits span { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 12px 6px; border-radius: 14px;
+    background: #fff; color: var(--text); font: 700 20px/1.2 var(--ui); box-shadow: 0 3px 0 #C9C2B4; }
+  .hp-suits svg { width: 40px; height: 40px; }
+  .hp-suits .red svg { fill: var(--red); } .hp-suits .black svg { fill: var(--ink); }
+  .hp-table .hp-hand .hp-ptr { right: -34px; bottom: 8px; }
+  .hp-suits .hp-ptr { width: 32px; height: 40px; right: -16px; bottom: -22px; }
+  .hp-cols { flex-direction: row; align-items: flex-start; gap: 22px; }
+  .hp-cols figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; width: min(168px, 26cqw); }
+  .hp-cols figcaption { font: 700 20px/1.2 var(--ui); color: #fff; text-align: center; }
+  .hp-turn { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; vertical-align: -4px; margin-right: 4px; }
+  .hp-pts figure { width: auto; }
+  .hp-ringfig { width: min(190px, 27cqw) !important; align-self: center; }
+  .hp-ringfig svg { width: 100%; }
+  .hp-ringfig .m { fill: rgba(40,0,22,.3); } .hp-ringfig .t { fill: none; stroke: rgba(255,255,255,.4); stroke-width: 6; }
+  .hp-ringfig .h { fill: #fff; } .hp-ringfig text { font: 700 16px var(--ui); text-anchor: middle; fill: #2B0A1C; }
+  .hp-pts figcaption { min-width: 60px; padding: 2px 12px; border-radius: 12px; background: #fff; color: var(--text); font-size: 24px; }
+  .hp-pts figcaption { font-size: 20px; } .hp-pts figcaption b { font-size: 26px; }
+  .hp-fan { display: flex; }
+  .hp-fan .card + .card { margin-left: calc(var(--cw) * -.62); }
+  /* A narrow guide, on a phone: the pictures wrap on two rows and the cards grow. */
+  @container (max-width: 520px) {
+    .hp-me { display: none; }
+    .hp-table { --cw: 15cqw; } .hp-mid { --cw: 13cqw; }
+    .hp-cols { flex-wrap: wrap; justify-content: center; row-gap: 16px; }
+    .hp-cols { --cw: 17cqw; column-gap: 8px; }
+    .hp-cols figure { width: 28cqw; }
+    .hp-cols figcaption { font-size: 17px; }
+    .hp-cols .hp-ringfig { flex-basis: 100%; }
+    .hp-ringfig svg { width: 44cqw; }
+    .hp-pts figure { width: 36cqw; }
+  }
+  #helpText p.hp-key { margin: 0 0 6px; font: 700 24px/1.3 var(--ui); color: var(--text); text-align: center; }
+  #helpText p.hp-more { margin: 0; font: 400 22px/1.3 var(--ui); text-align: center; }
   @media (max-width: 699px) {
-    .guide-scores { font-size: 18px; }
-    #help .guide-art .card { --w: 50px; --h: 65px; }
-    #help .guide-art { gap: 6px; }
-    .guide-extra { display: none; }
+    .hp-felt { padding: 12px 14px 16px; }
+    .hp-suits { grid-template-columns: repeat(2, auto); }
+    .hp-cols { gap: 10px; }
+    #stock .count small { font-size: 15px; }
     /* A phone: the seats in three columns on top (#table.cols), in a smaller text. */
     .seat b { font-size: 18px; }
     .seat .tot, .seat .now, .hold span { font-size: 16px; }
@@ -249,7 +318,7 @@
 <div id="say"><div id="msg" aria-live="polite"></div></div>
 <div id="table">
   <svg id="ring" aria-hidden="true"></svg>
-  <div id="stock" role="button" aria-label="La pioche"><div class="card down"></div><div class="card down"></div><div class="card down"></div><span class="count"></span></div>
+  <div id="stock" role="button" aria-label="La pioche"><div class="card down"></div><div class="card down"></div><div class="card down"></div><span class="count"><span class="n"></span><small>Pioche</small></span></div>
   <button id="drawBtn" class="primary" hidden></button>
   <div id="badge" role="status"><div class="disc"><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#su1"/></svg></div><span class="lbl"></span></div>
   <div id="bubble" role="status"></div>
@@ -271,62 +340,56 @@
   <button id="nextBtn" class="primary" data-nudge></button>
 </div>
 <footer id="rail"><div class="zoom"></div></footer>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="haPtr" viewBox="0 0 40 50"><path d="M14 7a4 4 0 0 1 8 0v13a3.5 3.5 0 0 1 7 0v1a3 3 0 0 1 6 0v13c0 7-5 12-12 12h-3c-4 0-7-2-9-5l-6-9a3 3 0 0 1 5-3l4 4z" fill="#fff" stroke="#1B2422" stroke-width="2.4" stroke-linejoin="round"/><path d="M22 20v8M29 21v7" fill="none" stroke="#1B2422" stroke-width="2" stroke-linecap="round"/></symbol>
+</defs></svg>
 <div id="help" data-title="Comment jouer">
   <section class="page">
     <h3>Poser une carte</h3>
-    <p>Chacun reçoit 7 cartes. Le premier qui n'a plus de cartes gagne la manche.</p>
-    <p>À votre tour, cliquez sur une carte de la même couleur ou de la même valeur que la carte du dessus de la défausse.</p>
-    <div class="guide-panel">
-      <figure class="guide-example">
-        <div class="guide-art" aria-hidden="true"><div data-help-card="16"></div><span class="guide-on">ou</span><div data-help-card="8"></div><span class="guide-on">sur le</span><div data-help-card="21"></div></div>
-        <figcaption>Sur le 9 de cœur, posez un cœur, comme le 4 de cœur, ou un 9, comme le 9 de pique.</figcaption>
-      </figure>
-    </div>
-    <p class="guide-extra">Les cartes qui ne vont pas sont plus sombres.</p>
+    <div class="hp" aria-hidden="true"><div class="hp-felt hp-table">
+      <div class="hp-row hp-mid"><div data-help-card="dos"></div><div data-help-card="47" class="hp-top"></div><div class="hp-disc"><svg viewBox="0 0 100 100"><use href="#su3"/></svg></div></div>
+      <div class="hp-row hp-hand"><span class="hp-me"><i>V</i>Vous</span><div data-help-card="4" class="no"></div><div data-help-card="16" class="no"></div><div data-help-card="21" class="can"></div><div data-help-card="28" class="no"></div><div data-help-card="42" class="can ring"><svg class="hp-ptr" viewBox="0 0 40 50"><use href="#haPtr"/></svg></div></div>
+    </div></div>
+    <p class="hp-key">Cliquez sur une carte levée&nbsp;: même couleur ou même valeur que la carte du milieu.</p>
+    <p class="hp-more">Le premier qui n'a plus de cartes gagne la manche.</p>
   </section>
   <section class="page">
     <h3>Quand aucune carte ne va</h3>
-    <ol>
-      <li>Cliquez sur « Piocher », ou sur la pioche.</li>
-      <li>Si la carte piochée va, cliquez dessus pour la poser. Vous pouvez aussi la garder : cliquez sur « Passer mon tour ».</li>
-      <li>Si elle ne va pas, votre tour passe.</li>
-    </ol>
-    <p>On pioche seulement quand aucune carte ne va.</p>
-    <p>Quand la pioche est vide, on mélange la défausse pour refaire la pioche. La carte du dessus reste en place.</p>
+    <div class="hp" aria-hidden="true"><div class="hp-felt hp-table">
+      <div class="hp-row hp-mid"><span class="hp-btn ring"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="12" height="15" rx="2"/><path d="M8 7V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/></svg>Piocher<svg class="hp-ptr" viewBox="0 0 40 50"><use href="#haPtr"/></svg></span><div data-help-card="dos"></div><div data-help-card="47" class="hp-top"></div><div class="hp-disc"><svg viewBox="0 0 100 100"><use href="#su3"/></svg></div></div>
+      <div class="hp-row hp-hand"><span class="hp-me"><i>V</i>Vous</span><div data-help-card="4" class="no"></div><div data-help-card="16" class="no"></div><div data-help-card="25" class="no"></div><div data-help-card="28" class="no"></div></div>
+    </div></div>
+    <p class="hp-key">Aucune carte ne va&nbsp;? Cliquez sur «&nbsp;Piocher&nbsp;».</p>
+    <p class="hp-more">Si la carte piochée va, vous pouvez la poser.</p>
   </section>
   <section class="page">
-    <h3>Les cartes spéciales</h3>
-    <div class="guide-panel">
-      <ul class="guide-key">
-        <li><span class="guide-chip red" aria-hidden="true">8<svg viewBox="0 0 100 100"><use href="#su1"/></svg></span><span><strong>Le 8</strong> se pose sur n'importe quelle carte. Vous choisissez ensuite la couleur à jouer.</span></li>
-        <li><span class="guide-chip" aria-hidden="true">A<svg viewBox="0 0 100 100"><use href="#su0"/></svg></span><span><strong>L'as</strong> change le sens du jeu.</span></li>
-        <li><span class="guide-chip red" aria-hidden="true">2<svg viewBox="0 0 100 100"><use href="#su2"/></svg></span><span><strong>Le 2</strong> : le joueur suivant pioche deux cartes et passe son tour.</span></li>
-        <li><span class="guide-chip" aria-hidden="true">V<svg viewBox="0 0 100 100"><use href="#su3"/></svg></span><span><strong>Le valet</strong> : le joueur suivant passe son tour.</span></li>
-      </ul>
-    </div>
-    <p>Au milieu, le grand rond montre la couleur à jouer, et les flèches le sens du jeu.</p>
+    <h3>Le 8 va partout</h3>
+    <div class="hp" aria-hidden="true"><div class="hp-felt hp-eight">
+      <div class="hp-row"><div data-help-card="33"></div><span class="hp-on">sur</span><div data-help-card="47"></div></div>
+      <div class="hp-suits"><span class="black"><svg viewBox="0 0 100 100"><use href="#su0"/></svg>Pique</span><span class="red ring"><svg viewBox="0 0 100 100"><use href="#su1"/></svg>Cœur<svg class="hp-ptr" viewBox="0 0 40 50"><use href="#haPtr"/></svg></span><span class="red"><svg viewBox="0 0 100 100"><use href="#su2"/></svg>Carreau</span><span class="black"><svg viewBox="0 0 100 100"><use href="#su3"/></svg>Trèfle</span></div>
+    </div></div>
+    <p class="hp-key">Le 8 se pose sur toutes les cartes.</p>
+    <p class="hp-more">Puis cliquez sur la couleur que le joueur suivant devra poser.</p>
+  </section>
+  <section class="page">
+    <h3>L'as, le 2 et le valet</h3>
+    <div class="hp" aria-hidden="true"><div class="hp-felt hp-cols">
+      <figure class="hp-ringfig"><svg viewBox="-80 -56 160 112"><ellipse class="m" rx="58" ry="38"/><ellipse class="t" rx="58" ry="38"/><path class="h" transform="translate(41 26.9) rotate(146.7)" d="M-8 -10 L10 0 L-8 10 L-4 0 Z"/><path class="h" transform="translate(-41 26.9) rotate(213.3)" d="M-8 -10 L10 0 L-8 10 L-4 0 Z"/><path class="h" transform="translate(-41 -26.9) rotate(-33.3)" d="M-8 -10 L10 0 L-8 10 L-4 0 Z"/><path class="h" transform="translate(41 -26.9) rotate(33.3)" d="M-8 -10 L10 0 L-8 10 L-4 0 Z"/><circle cx="0" cy="38" r="13" fill="#FFC83D"/><text x="0" y="44">V</text><circle cx="-58" cy="0" r="13" fill="#F7B9D3"/><circle cx="0" cy="-38" r="13" fill="#BCD8F2"/><circle cx="58" cy="0" r="13" fill="#F5DA9A"/></svg></figure>
+      <figure><div data-help-card="0"></div><figcaption><svg class="hp-turn" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/></svg>Change<br>de sens</figcaption></figure>
+      <figure><div data-help-card="14"></div><figcaption>Le suivant<br>pioche 2 cartes</figcaption></figure>
+      <figure><div data-help-card="49"></div><figcaption>Le suivant<br>passe son tour</figcaption></figure>
+    </div></div>
+    <p class="hp-key">Les flèches du milieu montrent qui joue après.</p>
   </section>
   <section class="page">
     <h3>Compter les points</h3>
-    <p>À la fin de la manche, chacun compte les cartes qui lui restent en main :</p>
-    <table class="guide-scores" aria-label="Points des cartes">
-      <tbody>
-        <tr><th scope="row">Un 8</th><td>50 points</td></tr>
-        <tr><th scope="row">Roi, dame, valet</th><td>10 points</td></tr>
-        <tr><th scope="row">As</th><td>1 point</td></tr>
-        <tr><th scope="row">Les autres</th><td>leur valeur : le 7 vaut 7 points</td></tr>
-      </tbody>
-    </table>
-    <p>Le gagnant de la manche marque 0. La partie s'arrête quand un joueur atteint 100 points. Le plus petit total gagne. En cas d'égalité, la victoire est partagée.</p>
-  </section>
-  <section class="page">
-    <h3>Trouver de l'aide pendant la partie</h3>
-    <ul>
-      <li>« Quelle carte jouer ? » montre une bonne carte à jouer, ou le bouton « Piocher ».</li>
-      <li>« Annuler le dernier coup » reprend votre dernier coup et ceux des autres joueurs après lui. Vous pouvez annuler autant de fois que vous voulez dans la manche.</li>
-      <li>Les autres joueurs jouent l'un après l'autre. Le message en haut dit ce que chacun a fait.</li>
-      <li>La partie est enregistrée après chaque coup.</li>
-    </ul>
+    <div class="hp" aria-hidden="true"><div class="hp-felt hp-cols hp-pts">
+      <figure><div data-help-card="20"></div><figcaption><b>50</b> points</figcaption></figure>
+      <figure><div class="hp-fan"><div data-help-card="12"></div><div data-help-card="37"></div><div data-help-card="49"></div></div><figcaption><b>10</b> points</figcaption></figure>
+      <figure><div data-help-card="39"></div><figcaption><b>1</b> point</figcaption></figure>
+      <figure><div data-help-card="32"></div><figcaption><b>7</b> points</figcaption></figure>
+    </div></div>
+    <p class="hp-key">Les cartes gardées en main comptent. À 100 points, le plus petit total gagne.</p>
   </section>
 </div>
 
@@ -344,7 +407,8 @@ const motion = matchMedia('(prefers-reduced-motion: reduce)');
 const STEP_MS = 900;       // between two actions of the computer players
 const EFFECT_MS = 1600;    // after a special card, so he can read what it did
 const FIRST_MS = 800;      // before the first one answers his card
-const BTN_W = 270;         // the room left of the pioche for "Passer mon tour", the wider label of the key, and its gap
+const BTN_W = 206;         // the room left of the pioche for the key "Piocher" or "Passer mon tour" (190 px), and its gap
+const SIDE_GAP = 30;       // between the middle and a side player beside it
 
 // The players the computer can seat. Each new game seats three of them, none from the game before.
 const CAST = {
@@ -771,11 +835,11 @@ function layout() {
   const cx = Math.round(W / 2);
   const seats = [s1, s2, s3];
   seats.forEach(e => { e.style.width = ''; });
-  table.classList.remove('row');
+  table.classList.remove('row', 'wide');
   table.classList.toggle('cols', narrow);
   let f = fit((narrow ? s1.offsetHeight + 8 : s2.offsetHeight + 10) || 100);
   // The side players sit by the middle when they fit between the top band and his hand.
-  const roomy = !narrow && pad + s1.offsetWidth <= cx - f.rowW / 2 - 24 && cx + f.rowW / 2 + 24 + s3.offsetWidth <= W - pad
+  const roomy = !narrow && pad + s1.offsetWidth <= cx - f.rowW / 2 - SIDE_GAP && cx + f.rowW / 2 + SIDE_GAP + s3.offsetWidth <= W - pad
     && f.cy - s1.offsetHeight / 2 >= 10 && f.cy + s1.offsetHeight / 2 <= f.handTop - 8;
   // Else the three of them sit in one row on top, each on one line, if the three lines fit side by side.
   // Else in three equal columns, with the short words of a phone.
@@ -787,6 +851,7 @@ function layout() {
     if (pad + s1.offsetWidth + 12 > cx - half || cx + half + 12 > W - pad - s3.offsetWidth) {
       cols = true;
       table.classList.replace('row', 'cols');
+      table.classList.toggle('wide', (PW - 16) / 3 >= 300);
       fillSeats(true);
     }
     f = fit(Math.max(...seats.map(e => e.offsetHeight)) + 10);
@@ -814,8 +879,9 @@ function render(moving = false) {
   L.pileX = pileX; L.midY = midY; L.stockX = stockX;
   const stock = $('stock');
   stock.style.left = stockX + 'px'; stock.style.top = midY + 'px';
-  stock.querySelector('.count').textContent = G.stock.length;
+  stock.querySelector('.count .n').textContent = G.stock.length;
   stock.classList.toggle('empty', !G.stock.length);
+  stock.classList.toggle('slim', w < 92);
   stock.classList.toggle('can', mine && canDraw(G));
   stock.classList.toggle('hint', !!(hint && hint.draw));
   stock.setAttribute('aria-label', `La pioche : ${plural(G.stock.length, 'carte', 'cartes')}`);
@@ -826,6 +892,8 @@ function render(moving = false) {
   btn.className = drawn ? '' : 'primary';
   btn.classList.toggle('hint', !!(hint && hint.draw));
   btn.innerHTML = drawn ? 'Passer mon tour' : ICON_DRAW + 'Piocher';
+  // "Piocher" is the one thing he can do, so the kit pulses it when he waits.
+  btn.toggleAttribute('data-nudge', !drawn);
   const badge = $('badge');
   badge.style.setProperty('--d', d + 'px');
   badge.style.width = badgeW + 'px';
@@ -836,17 +904,24 @@ function render(moving = false) {
   badge.querySelector('use').setAttribute('href', '#su' + G.suit);
   badge.querySelector('.lbl').textContent = cap(SUIT_NAMES[G.suit]);
   badge.setAttribute('aria-label', `Couleur à jouer : ${SUIT_NAMES[G.suit]}`);
-  drawRing(cx, cy, rowW, h);
 
   const s1 = $('seat1'), s2 = $('seat2'), s3 = $('seat3');
   if (L.cols) {
     const sw = Math.floor((PW - 16) / 3);
     [s1, s2, s3].forEach((e, i) => { e.style.width = sw + 'px'; e.style.left = pad + i * (sw + 8) + 'px'; e.style.top = '8px'; });
-  } else {
+  } else if (L.roomy) {
+    // The side players sit right by the middle, level with it, and the player across on top.
     s2.style.left = Math.round(cx - s2.offsetWidth / 2) + 'px'; s2.style.top = '10px';
-    // The side players sit by the middle, or in the top corners when the middle needs the room.
-    s1.style.left = pad + 'px'; s3.style.left = W - pad - s3.offsetWidth + 'px';
-    s1.style.top = s3.style.top = (L.roomy ? Math.round(cy - s1.offsetHeight / 2) : 10) + 'px';
+    s1.style.left = Math.round(cx - rowW / 2 - SIDE_GAP - s1.offsetWidth) + 'px';
+    s3.style.left = Math.round(cx + rowW / 2 + SIDE_GAP) + 'px';
+    s1.style.top = Math.round(cy - s1.offsetHeight / 2) + 'px'; s3.style.top = Math.round(cy - s3.offsetHeight / 2) + 'px';
+  } else {
+    // The three of them in one row on top: the side players as close to the middle one as the row allows.
+    const w1 = s1.offsetWidth, w2 = s2.offsetWidth, w3 = s3.offsetWidth, rowGap = Math.min(40, Math.floor((PW - w1 - w2 - w3) / 2));
+    const left2 = Math.round(cx - w2 / 2);
+    s2.style.left = left2 + 'px'; s2.style.top = '10px';
+    s1.style.left = Math.max(pad, left2 - rowGap - w1) + 'px'; s3.style.left = Math.min(W - pad - w3, left2 + w2 + rowGap) + 'px';
+    s1.style.top = s3.style.top = '10px';
   }
 
   // The défausse: the last four cards, each turned a little, always the same way.
@@ -870,13 +945,15 @@ function render(moving = false) {
   if (fx0) s0.appendChild(fx0);
   s0.classList.toggle('turn', mine);
   const hand = G.hands[0], n = hand.length;
-  // The hand fans out right of his seat, centred when it has the room.
-  const left = narrow ? pad : pad + s0.offsetWidth + 16, room = W - pad - left;
+  // His seat sits right by his hand, on its left, and the two are centred together. A phone puts it above.
+  const s0w = narrow ? 0 : s0.offsetWidth + 16, room = PW - s0w;
   const stepX = n > 1 ? Math.min(w * .7, (room - w) / (n - 1)) : 0, handW = w + stepX * (n - 1);
-  const hx = Math.max(left, Math.min(cx - handW / 2, W - pad - handW));
+  const gx = Math.max(pad, Math.min(Math.round(cx - (s0w + handW) / 2), W - pad - s0w - handW));
+  const hx = gx + s0w;
   L.stepX = stepX;
-  s0.style.left = pad + 'px';
-  s0.style.top = Math.round(narrow ? handTop - s0.offsetHeight - 12 - h * .12 : Math.min(handTop + 4, L.H - s0.offsetHeight - 4)) + 'px';
+  s0.style.left = (narrow ? pad : gx) + 'px';
+  s0.style.top = Math.round(narrow ? handTop - s0.offsetHeight - 12 - h * .12
+    : Math.min(handTop + Math.max(4, (L.H - handTop - s0.offsetHeight) / 2), L.H - s0.offsetHeight - 4)) + 'px';
   // A phone: on the right, in the row of his seat, above his hand. The words go on two lines when the
   // row is too short for them.
   if (narrow) {
@@ -887,6 +964,10 @@ function render(moving = false) {
     btn.style.maxWidth = '';
     btn.style.left = Math.round(stockX - 16 - btn.offsetWidth) + 'px'; btn.style.top = Math.round(cy - btn.offsetHeight / 2) + 'px';
   }
+  // The ring of the way of play: through the four places when the side players sit by the middle,
+  // else around the middle. An arrow head that would hide under his hand is left out.
+  if (L.roomy) drawRing(cx, cy, Math.round(cx - (s1.offsetLeft + s1.offsetWidth / 2)), Math.round(cy - (s2.offsetTop + s2.offsetHeight / 2)), [hx - 20, hx + handW + 20, handTop - h * .14 - 24]);
+  else drawRing(cx, cy, Math.round(Math.min(rowW / 2 + 28, W / 2 - 14)), Math.round(h / 2 + (L.low ? 12 : 22)), null, rowW / 2 + 28 > W / 2 - 14);
   hand.forEach((c, i) => {
     const e = cardEl(c); live.add(c);
     e.className = 'card hand ' + (rd(c) ? 'red' : 'black');
@@ -961,7 +1042,7 @@ function fillSeats(short) {
     const fx = e.querySelector('.fx');
     e.innerHTML = `${ava(s)}<div><b>${p.name}</b><span class="tot">${short ? 'Total ' + G.scores[s] : 'Total : ' + total(G.scores[s])}</span>
       <span class="now"><span class="dots"><i></i><i></i><i></i></span>${short ? 'joue' : p.name + ' joue'}</span></div>
-      <div class="hold"><div class="fan" style="width:${n ? 24 + Math.round((Math.min(n, 30) - 1) * step) : 0}px">${backs}</div><span>${plural(n, 'carte', 'cartes')}</span></div>`;
+      <div class="hold"><div class="fan" style="width:${n ? 29 + Math.round((Math.min(n, 30) - 1) * step) : 0}px">${backs}</div><span>${plural(n, 'carte', 'cartes')}</span></div>`;
     if (fx) e.appendChild(fx);
     e.setAttribute('aria-label', `${p.name}, ${p.where} : ${plural(n, 'carte', 'cartes')}, ${ptsText(G.scores[s])}`);
     e.classList.toggle('turn', turnSeat === s);
@@ -990,19 +1071,26 @@ function placeSheet(el) {
    Each one has its own function and CSS class, so they can be tuned alone. All of them respect
    "reduced motion": the CSS turns them off, and celebrate() does nothing. */
 
-// The ring of arrows around the middle: the way of play. Clockwise, as the play goes 0, 1, 2, 3.
-function drawRing(cx, cy, rowW, h) {
-  const ring = $('ring');
-  const rx = Math.round(Math.min(rowW / 2 + 18, L.W / 2 - 14)), ry = Math.round(h / 2 + (L.low ? 12 : 20));
-  ring.setAttribute('width', 2 * rx + 40); ring.setAttribute('height', 2 * ry + 40);
-  ring.setAttribute('viewBox', `${-rx - 20} ${-ry - 20} ${2 * rx + 40} ${2 * ry + 40}`);
-  ring.style.left = cx - rx - 20 + 'px'; ring.style.top = cy - ry - 20 + 'px';
-  // Arrow heads at the four sides, pointing the way of play: right on top, down on the right side,
-  // left at the bottom, up on the left side.
-  const head = (x, y, a) => `<path class="head" transform="translate(${x} ${y}) rotate(${a})" d="M-10 -11 L12 0 L-10 11 L-5 0 Z"/>`;
-  const key = `${rx},${ry}`;
+// The ring of the way of play, on the edge of the round mat: clockwise, as the play goes 0, 1, 2, 3, from
+// his hand at the bottom to the player on his left. Four large arrow heads sit between the places.
+// tight: the ring touches the ends of the middle row, so the heads at its sides are left out. A low
+// window keeps only those two, clear of the seats above and his cards below.
+function drawRing(cx, cy, rx, ry, hand, tight) {
+  const ring = $('ring'), m = 30;
+  ring.setAttribute('width', 2 * rx + 2 * m); ring.setAttribute('height', 2 * ry + 2 * m);
+  ring.setAttribute('viewBox', `${-rx - m} ${-ry - m} ${2 * rx + 2 * m} ${2 * ry + 2 * m}`);
+  ring.style.left = cx - rx - m + 'px'; ring.style.top = cy - ry - m + 'px';
+  const key = `${rx},${ry},${hand},${tight},${L.low}`;
   if (ring.dataset.key !== key) {
-    ring.innerHTML = `<ellipse class="track" rx="${rx}" ry="${ry}"/>${head(0, -ry, 0)}${head(rx, 0, 90)}${head(0, ry, 180)}${head(-rx, 0, 270)}`;
+    // Through the places, the heads sit between them. Around the middle, at its four sides.
+    // At the angle t of the ellipse, the way of play points along (-rx sin t, ry cos t).
+    const heads = (hand ? [45, 135, 225, 315] : tight ? [90, 270] : L.low ? [0, 180] : [0, 90, 180, 270]).map(d => {
+      const t = d * Math.PI / 180, x = rx * Math.cos(t), y = ry * Math.sin(t);
+      if (hand && cx + x > hand[0] && cx + x < hand[1] && cy + y > hand[2]) return '';
+      const a = Math.atan2(ry * Math.cos(t), -rx * Math.sin(t)) * 180 / Math.PI;
+      return `<path class="head" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${a.toFixed(1)})" d="M-16 -19 L20 0 L-16 19 L-8 0 Z"/>`;
+    }).join('');
+    ring.innerHTML = `<ellipse class="mat" rx="${rx}" ry="${ry}"/><ellipse class="track" rx="${rx}" ry="${ry}"/>${heads}`;
     ring.dataset.key = key;
   }
   ring.classList.toggle('ccw', G.dir === -1);

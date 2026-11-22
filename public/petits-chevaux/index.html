@@ -37,28 +37,6 @@
 
   #table { display: flex; align-items: center; justify-content: center; gap: calc(34px * var(--k)); padding: 0 clamp(12px, 2vw, 32px); overflow: hidden; }
 
-  /* ---------- The four players, in the order they play ---------- */
-  #seats { flex: none; width: calc(250px * var(--k)); display: flex; flex-direction: column; gap: calc(10px * var(--k)); }
-  .seat { position: relative; display: flex; align-items: center; gap: calc(12px * var(--k)); min-height: calc(68px * var(--k)); padding: 6px 14px 6px 8px;
-    border-radius: 18px; background: var(--paper); color: var(--text); border: 3px solid rgba(0,0,0,.08); box-shadow: 0 6px 18px rgba(0,0,0,.28);
-    transition: transform .35s ease-out; }
-  .seat .ico { flex: none; width: calc(50px * var(--k)); height: calc(50px * var(--k)); border-radius: 14px; display: grid; place-items: center; background: var(--t); }
-  .seat .ico svg { width: 92%; height: 92%; overflow: visible; }
-  .seat .who { min-width: 0; flex: 1; }
-  .seat b { display: block; font: 700 calc(22px * var(--k))/1.15 var(--ui); }
-  .seat .now { display: block; font: 500 calc(20px * var(--k))/1.2 var(--ui); color: #4E5A57; white-space: nowrap; }
-  /* Four marks: one per horse, filled once it has reached the centre. */
-  .seat .home { display: flex; gap: 4px; margin-top: 3px; }
-  .seat .home i { width: calc(13px * var(--k)); height: calc(13px * var(--k)); border-radius: 50%; border: 2px solid var(--d); background: #fff; }
-  .seat .home i.in { background: var(--c); }
-  .seat .home i.out { background: var(--t); }
-  .seat.turn { border-color: var(--c); box-shadow: 0 0 0 5px color-mix(in srgb, var(--c), transparent 65%), 0 6px 18px rgba(0,0,0,.28); transform: translateX(calc(8px * var(--k))); }
-  .seat.turn .now { color: var(--d); font-weight: 700; }
-  .seat.c0 { --c: var(--c0); --d: var(--d0); --t: var(--t0); }
-  .seat.c1 { --c: var(--c1); --d: var(--d1); --t: var(--t1); }
-  .seat.c2 { --c: var(--c2); --d: var(--d2); --t: var(--t2); }
-  .seat.c3 { --c: var(--c3); --d: var(--d3); --t: var(--t3); }
-
   /* ---------- The board: a painted wooden board in a wooden frame ---------- */
   #frame { flex: none; position: relative; padding: calc(var(--cell) * .42); border-radius: calc(var(--cell) * .55);
     background: linear-gradient(145deg, #DDA265, var(--wood) 45%, #A9682F);
@@ -86,25 +64,39 @@
   .horse.c1 { --hc: var(--c1); --hd: var(--d1); --hl: var(--l1); }
   .horse.c2 { --hc: var(--c2); --hd: var(--d2); --hl: var(--l2); }
   .horse.c3 { --hc: var(--c3); --hd: var(--d3); --hl: var(--l3); }
-  /* A horse he can move: a dashed yellow frame and a soft glow. A click near it counts too (see nearest()). */
+  /* A horse he can move: a thick yellow ring on its square that glows, and the horse bobs up and down in
+     it. A click near it counts too (see nearest()). */
   .horse.can { cursor: pointer; }
-  .horse.can::before { content: ""; position: absolute; left: 50%; top: 66%; width: 128%; height: 128%; translate: -50% -50%; border-radius: 50%;
-    border: calc(var(--cell) * .12) dashed var(--gold); box-shadow: 0 0 0 1.5px rgba(var(--shade),.85), inset 0 0 0 1.5px rgba(var(--shade),.85), 0 0 18px rgba(255,200,61,.65);
-    background: rgba(255,200,61,.22); animation: canGlow 1.6s ease-in-out infinite; }
-  @keyframes canGlow { 50% { opacity: .78; } }
-  .horse.can.hover svg { scale: 1.14; }
-  .horse.can.hover::before { background: rgba(255,200,61,.5); border-style: solid; }
-  /* The hint: a thick yellow ring that pulses. */
-  .horse.hint::before { border: calc(var(--cell) * .16) solid var(--gold); background: rgba(255,200,61,.4); animation: hintPulse 1.1s ease-in-out infinite; }
-  @keyframes hintPulse { 50% { scale: 1.12; } }
+  .horse.can::before { content: ""; position: absolute; left: 50%; top: 66%; width: 124%; height: 124%; translate: -50% -50%; border-radius: 50%;
+    border: calc(var(--cell) * .14) solid var(--gold); box-shadow: 0 0 0 2px rgba(var(--shade),.9), inset 0 0 0 2px rgba(var(--shade),.9), 0 0 calc(var(--cell) * .7) calc(var(--cell) * .12) rgba(255,200,61,.85);
+    background: rgba(255,200,61,.3); animation: canGlow 1.2s ease-in-out infinite; }
+  @keyframes canGlow { 50% { box-shadow: 0 0 0 2px rgba(var(--shade),.9), inset 0 0 0 2px rgba(var(--shade),.9), 0 0 calc(var(--cell) * .25) 0 rgba(255,200,61,.5); } }
+  .horse.can svg { animation: bob 1.2s ease-in-out infinite; }
+  @keyframes bob { 50% { translate: 0 -16%; } }
+  .horse.can.hover svg { scale: 1.14; animation: none; }
+  .horse.can.hover::before { background: rgba(255,200,61,.6); }
+  /* The hint: the ring grows and shrinks, and only that horse keeps bobbing. */
+  #pieces.hinting .horse.can:not(.hint) svg { animation: none; }
+  #pieces.hinting .horse.can:not(.hint)::before { animation: none; box-shadow: 0 0 0 2px rgba(var(--shade),.9), inset 0 0 0 2px rgba(var(--shade),.9); }
+  .horse.hint::before { border-width: calc(var(--cell) * .18); background: rgba(255,200,61,.45); animation: hintPulse 1.1s ease-in-out infinite; }
+  @keyframes hintPulse { 50% { scale: 1.14; } }
   /* The horse that moved last keeps a ring of its colour until the next throw. */
-  .horse.moved svg { filter: drop-shadow(0 0 0 transparent) drop-shadow(0 calc(var(--cell) * .07) calc(var(--cell) * .06) rgba(0,0,0,.45)); }
   .horse.moved::before { content: ""; position: absolute; left: 50%; top: 66%; width: 118%; height: 118%; translate: -50% -50%; border-radius: 50%;
     border: calc(var(--cell) * .09) solid #fff; box-shadow: 0 0 0 2px var(--hd); }
 
-  /* Where the horse under the mouse would go: a ghost of it on the square, in a yellow ring. */
-  #ghost { position: absolute; z-index: 2500; width: calc(var(--cell) * 1.15); height: calc(var(--cell) * 1.15); translate: -50% -50%; border-radius: 50%; pointer-events: none;
-    border: calc(var(--cell) * .1) solid var(--gold); background: rgba(255,200,61,.35); box-shadow: 0 0 0 1.5px rgba(var(--shade),.8); display: none; }
+  /* Where each horse he can move would land: a pale blue horse in a dashed yellow ring, and yellow dots on
+     the squares it passes. A click on the ring moves that horse. Under the mouse, the other routes fade. */
+  #marks { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+  #marks .land { position: absolute; width: calc(var(--cell) * 1.04); height: calc(var(--cell) * 1.04); translate: -50% -50%; border-radius: 50%;
+    border: calc(var(--cell) * .1) dashed var(--gold); background: rgba(255,200,61,.3); box-shadow: 0 0 0 1.5px rgba(var(--shade),.8), inset 0 0 0 1.5px rgba(var(--shade),.8);
+    pointer-events: auto; cursor: pointer; transition: opacity .2s; }
+  #marks .land svg { position: absolute; left: 50%; top: 40%; width: 120%; height: 120%; translate: -50% -50%; opacity: .5; overflow: visible; pointer-events: none; }
+  #marks .dot { position: absolute; width: calc(var(--cell) * .36); height: calc(var(--cell) * .36); translate: -50% -50%; border-radius: 50%;
+    background: var(--gold); box-shadow: 0 0 0 1.5px rgba(var(--shade),.85); transition: opacity .2s; }
+  #marks .dim { opacity: .25; }
+  /* Where the horse under the mouse would go: a solid yellow ring on its landing square. */
+  #ghost { position: absolute; z-index: 2; width: calc(var(--cell) * 1.15); height: calc(var(--cell) * 1.15); translate: -50% -50%; border-radius: 50%; pointer-events: none;
+    border: calc(var(--cell) * .12) solid var(--gold); box-shadow: 0 0 0 1.5px rgba(var(--shade),.8); display: none; }
   #ghost.on { display: block; animation: ghostIn .25s ease-out; }
   @keyframes ghostIn { from { scale: .4; opacity: 0; } }
 
@@ -139,26 +131,34 @@
     25%, 70% { opacity: 1; transform: translateY(-18%) scale(1); }
     100% { opacity: 0; transform: translateY(-45%) scale(.96); }
   }
-  .horse.nudge svg { animation: nudge .36s ease-in-out; }
-  @keyframes nudge { 25% { rotate: -6deg; } 75% { rotate: 4deg; } }
+  .horse.shake svg { animation: shake .36s ease-in-out; }
+  @keyframes shake { 25% { rotate: -6deg; } 75% { rotate: 4deg; } }
   .horse.party svg { animation: hop .55s cubic-bezier(.3,1.6,.5,1) calc(var(--i) * 110ms) 3 both; }
 
-  /* ---------- The die and the throw ---------- */
-  #side { flex: none; width: calc(240px * var(--k)); display: flex; flex-direction: column; align-items: center; gap: calc(14px * var(--k)); }
-  #dieBox { position: relative; width: 100%; padding: calc(14px * var(--k)) 12px calc(18px * var(--k)); border-radius: 22px; text-align: center;
-    background: rgba(0,0,0,.2); border: 3px solid rgba(255,255,255,.18); box-shadow: inset 0 3px 12px rgba(0,0,0,.25); }
+  /* ---------- The side panel: whose turn, the die, and what to do now ---------- */
+  #side { flex: none; width: calc(290px * var(--k)); display: flex; flex-direction: column; align-items: stretch; gap: calc(14px * var(--k)); }
+  #dieBox { position: relative; padding: calc(14px * var(--k)) 12px calc(20px * var(--k)); border-radius: 22px; text-align: center;
+    background: rgba(0,0,0,.22); border: 4px solid rgba(255,255,255,.18); box-shadow: inset 0 3px 12px rgba(0,0,0,.25); }
   #dieBox.p0 { border-color: var(--c0); } #dieBox.p1 { border-color: var(--c1); } #dieBox.p2 { border-color: var(--c2); } #dieBox.p3 { border-color: var(--c3); }
-  #dieWho { display: inline-flex; align-items: center; justify-content: center; min-height: calc(36px * var(--k)); padding: 0 16px; margin-bottom: calc(10px * var(--k));
-    border-radius: 999px; background: #fff; color: var(--text); font: 700 calc(21px * var(--k))/1.1 var(--ui); white-space: nowrap; }
-  #dieWho i { width: 16px; height: 16px; border-radius: 50%; margin-right: 8px; background: var(--dc, #999); box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(0,0,0,.25); }
-  #die { width: calc(116px * var(--k)); height: calc(116px * var(--k)); min-height: 0; padding: 0; margin: 0 auto; border: 0; border-radius: 22%; background: none; box-shadow: none; display: block; }
+  /* Whose turn: the horse of that colour and "À vous" or "Rouge joue", on a white tag. */
+  #dieWho { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: calc(40px * var(--k)); padding: 0 18px 0 10px; margin-bottom: calc(12px * var(--k));
+    border-radius: 999px; background: #fff; color: var(--text); font: 700 calc(23px * var(--k))/1.1 var(--ui); white-space: nowrap; }
+  #dieWho svg { width: calc(32px * var(--k)); height: calc(32px * var(--k)); overflow: visible; }
+  #die { position: relative; width: calc(130px * var(--k)); height: calc(130px * var(--k)); min-height: 0; padding: 0; margin: 0 auto; border: 0; border-radius: 22%; background: none; box-shadow: none; display: block; }
   #die:hover, #die:active { background: none; box-shadow: none; transform: none; }
-  #die:not(:disabled) { cursor: pointer; }
-  #die:not(:disabled):hover svg { scale: 1.05; }
   #die:disabled { border: 0; }
   #die svg { width: 100%; height: 100%; display: block; overflow: visible; transition: scale .15s; }
   #die.blank .pips { opacity: 0; }
-  #die.blank svg { opacity: .55; }
+  /* His throw is due: the die glows in a yellow ring and a hand points at it. */
+  #die.ready { cursor: pointer; box-shadow: 0 0 0 calc(6px * var(--k)) var(--gold), 0 0 0 calc(8px * var(--k)) #8A6200, 0 0 calc(30px * var(--k)) calc(8px * var(--k)) rgba(255,200,61,.75); animation: dieCall 1.4s ease-in-out infinite; }
+  #die.ready:hover { box-shadow: 0 0 0 calc(8px * var(--k)) var(--gold), 0 0 0 calc(10px * var(--k)) #8A6200, 0 0 calc(30px * var(--k)) calc(10px * var(--k)) rgba(255,200,61,.9); }
+  #die.ready:hover svg { scale: 1.05; }
+  @keyframes dieCall { 50% { scale: 1.05; } }
+  #dieWrap { position: relative; display: block; width: max-content; margin: 0 auto; }
+  #dieBox .hand { position: absolute; width: 48%; height: 48%; left: 66%; top: 62%;
+    rotate: -28deg; overflow: visible; pointer-events: none; display: none; filter: drop-shadow(0 3px 3px rgba(0,0,0,.4)); }
+  #dieBox.ready .hand { display: block; animation: poke 1.4s ease-in-out infinite; }
+  @keyframes poke { 50% { translate: -6% -10%; } }
   /* A throw: the die tumbles, bounces and settles while its face changes (see rollAnim()). */
   #die.rolling svg { animation: tumble .9s cubic-bezier(.25,.8,.35,1) both; }
   @keyframes tumble {
@@ -169,14 +169,20 @@
     80% { transform: translate(2%, 2%) rotate(5deg); }
     100% { transform: none; }
   }
-  #dieBox .six { position: absolute; left: 50%; bottom: calc(-16px * var(--k)); translate: -50% 0; padding: 2px 14px; border-radius: 10px; background: var(--gold); color: #2B2000;
-    font: 700 calc(20px * var(--k))/1.3 var(--ui); white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,.35); display: none; }
+  #dieBox .six { position: absolute; left: 50%; bottom: calc(-18px * var(--k)); translate: -50% 0; padding: 2px 14px; border-radius: 10px; background: var(--gold); color: #2B2000;
+    font: 700 calc(21px * var(--k))/1.3 var(--ui); white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,.35); display: none; }
   #dieBox .six.on { display: block; animation: pop .35s cubic-bezier(.2,1.4,.4,1); }
-  #rollBtn { width: 100%; min-height: calc(60px * var(--k)); padding: 8px 14px; font-size: calc(23px * var(--k)); justify-content: center; white-space: nowrap; }
-  #rollBtn svg { width: calc(30px * var(--k)); height: calc(30px * var(--k)); }
-  /* When his framed horses stand close together, one large button for each under the die. */
-  #pick { width: 100%; display: flex; flex-direction: column; gap: calc(10px * var(--k)); }
-  #pick[hidden], #rollBtn[hidden] { display: none; }
+  #act { display: flex; flex-direction: column; gap: calc(10px * var(--k)); }
+  #rollBtn { width: 100%; min-height: calc(64px * var(--k)); padding: 8px 14px; font-size: calc(25px * var(--k)); justify-content: center; white-space: nowrap; }
+  #rollBtn svg { width: calc(32px * var(--k)); height: calc(32px * var(--k)); }
+  /* What to do now, in big words: "Cliquez sur un cheval bleu", or who plays. It is not a button. */
+  #todo { display: flex; align-items: center; gap: 10px; min-height: calc(64px * var(--k)); padding: 6px 4px; color: #fff; font: 700 calc(25px * var(--k))/1.2 var(--ui); text-wrap: balance; }
+  #todo svg { flex: none; width: calc(48px * var(--k)); height: calc(48px * var(--k)); overflow: visible; }
+  #todo.wait { font-weight: 600; font-size: calc(22px * var(--k)); color: #E3F4F3; }
+  #todo.wait svg { width: calc(36px * var(--k)); height: calc(36px * var(--k)); }
+  #rollBtn[hidden], #todo[hidden], #pick[hidden] { display: none; }
+  /* When his framed horses stand close together, one large button for each under the words. */
+  #pick { display: flex; flex-direction: column; gap: calc(10px * var(--k)); }
   #pick button { width: 100%; min-height: calc(54px * var(--k)); padding: 6px 12px; font-size: calc(21px * var(--k)); line-height: 1.15; justify-content: center; text-align: center; white-space: normal; }
   #pick button.hint { outline: 4px solid #1B2422; outline-offset: 3px; box-shadow: 0 0 0 3px #fff; }
   /* Three or four choices (an older save with four horses): two columns with short names, so the
@@ -184,39 +190,46 @@
   #pick.grid { display: grid; grid-template-columns: 1fr 1fr; }
   #pick.grid button { padding: 6px 4px; font-size: calc(20px * var(--k)); }
   #side.picking #die { width: calc(72px * var(--k)); height: calc(72px * var(--k)); }
-  #table.col #side.picking #die { width: 64px; height: 64px; }
+  #side.picking #todo { min-height: 0; }
 
-  /* ---------- The rules guide ---------- */
-  .guide-board { display: block; overflow: visible; }
-  .guide-board text { font-family: var(--ui); font-weight: 800; }
+  /* ---------- The rules guide: one large picture and one or two sentences a page ---------- */
+  .pc-page h3 { text-align: center; }
+  .pc-pic { display: block; width: 100%; height: 230px; margin: 6px 0 10px; overflow: visible; }
+  .pc-pic text { font-family: var(--ui); font-weight: 800; }
+  .pc-key { margin: 0 0 6px !important; text-align: center; font: 700 24px/1.25 var(--ui); color: var(--text); }
+  .pc-more { margin: 0 !important; text-align: center; }
+  /* A low window (600 px high or less): a smaller picture, so both sentences still show. */
+  html.low .pc-pic { height: 175px; margin-block: 2px 6px; }
 
-  /* A low window (his laptop with the text at 125 %): the players close up and drop their marks. */
-  #table.low #seats { gap: 8px; }
-  #table.low .seat { min-height: 0; padding-block: 5px; }
-  #table.low .seat .home { display: none; }
+  /* A low window (his laptop with the text at 125 %): the panel closes up. */
+  #table.low #side { gap: 8px; }
+  #table.low #dieWho { margin-bottom: 6px; min-height: 36px; }
+  #table.low #dieBox { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 10px 12px 14px; }
+  #table.low #dieWho { margin: 0; }
+  #table.low #dieWrap { margin: 0; }
+  #table.low #die { width: calc(96px * var(--k)); height: calc(96px * var(--k)); }
+  #table.low #act { gap: 8px; }
+  #table.low #todo { min-height: 0; padding-block: 0; }
 
-  /* A narrow window: the board on top, the die and the players under it. */
+  /* A narrow window: the board on top, the panel under it. */
   #table.col { flex-direction: column; justify-content: flex-start; gap: 14px; padding-top: 4px; overflow-y: auto; touch-action: pan-y; }
-  #table.col #under { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
-  #under { display: contents; }
-  #table.col #frame { order: 0; } #table.col #under { order: 1; }
-  #table.col #seats { order: 2; width: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  #table.col #side { width: auto; flex-direction: row; }
-  #table.col #pick { width: calc(240px * var(--k)); }
-  #table.col .seat.turn { transform: none; }
-  #table.col #dieBox { width: auto; display: flex; align-items: center; gap: 12px; padding: 8px 12px; }
-  #table.col #dieWho { margin: 0; }
+  #table.col #side { width: auto; flex-direction: row; align-items: center; justify-content: center; }
+  #table.col #act { width: calc(250px * var(--k)); }
+  #table.col #dieBox { display: flex; flex-direction: column; align-items: center; padding: 8px 14px 18px; }
+  #table.col #dieWho { margin: 0 0 8px; }
   #table.col #die { width: 84px; height: 84px; margin: 0; }
+  #table.col #side.picking #die { width: 64px; height: 64px; }
   @media (max-width: 700px) {
     #table { padding: 10px 8px 16px; }
-    #table.col #side { flex-direction: column; gap: 10px; }
-    .seat { min-height: 0; gap: 8px; padding: 6px 8px 6px 6px; }
-    .seat .ico { width: 34px; height: 34px; border-radius: 10px; }
-    .seat b { font-size: 16px; } .seat .now { font-size: 14px; }
-    .seat .home i { width: 10px; height: 10px; }
-    #dieWho { font-size: 16px; }
-    #rollBtn { font-size: 20px; min-height: 52px; }
-    #dieBox .six { font-size: 15px; bottom: -14px; }
+    #table.col #side { gap: 12px; }
+    #table.col #act { width: 190px; }
+    #dieWho { font-size: 18px; }
+    #rollBtn { font-size: 21px; min-height: 52px; }
+    #todo { font-size: 20px; } #todo.wait { font-size: 18px; }
+    #todo svg { width: 36px; height: 36px; }
+    #dieBox .six { font-size: 16px; bottom: -14px; }
+    .pc-pic { height: 150px; }
+    .pc-key { font-size: 21px; }
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition: none !important; animation: none !important; }
@@ -247,6 +260,11 @@
   </symbol>
   <linearGradient id="ivory" x1="0" y1="0" x2=".9" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".55" stop-color="#FBF6EA"/><stop offset="1" stop-color="#E6DAC0"/></linearGradient>
   <radialGradient id="gloss" cx=".3" cy=".22" r=".75"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".5" stop-color="#fff" stop-opacity=".15"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+  <!-- A white hand that points up with one finger: "click here". -->
+  <symbol id="hand" viewBox="0 0 24 24" overflow="visible">
+    <path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L6 15V4a2 2 0 0 1 4 0v5.5a2 2 0 0 1 4 .5 2 2 0 0 1 4 1Z" fill="#fff" stroke="#1B2422" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M10 9.5V12M14 10v2M18 11v1.5" fill="none" stroke="#1B2422" stroke-width="1.6" stroke-linecap="round"/>
+  </symbol>
   <radialGradient id="pip" cx=".42" cy=".38" r=".7"><stop offset="0" stop-color="#4A4A4A"/><stop offset=".6" stop-color="#151515"/><stop offset="1" stop-color="#000"/></radialGradient>
 </defs></svg>
 <div id="bar">
@@ -259,68 +277,47 @@
 </div>
 <div id="say"><div id="msg" aria-live="polite"></div></div>
 <div id="table">
-  <div id="seats"></div>
-  <div id="frame"><div id="board"><svg id="art" viewBox="0 0 15 15" aria-hidden="true"></svg><div id="pieces"></div><div id="ghost"></div><div id="fx"></div></div></div>
-  <div id="under">
-    <div id="side">
-      <div id="dieBox"><div id="dieWho"></div><button id="die" aria-label="Lancer le dé"></button><div class="six" aria-hidden="true">6 : on rejoue</div></div>
-      <button id="rollBtn" class="primary"></button>
+  <div id="frame"><div id="board"><svg id="art" viewBox="0 0 15 15" aria-hidden="true"></svg><div id="marks"></div><div id="pieces"></div><div id="ghost"></div><div id="fx"></div></div></div>
+  <div id="side">
+    <div id="dieBox"><div id="dieWho"></div><span id="dieWrap"><button id="die" aria-label="Lancer le dé"></button><svg class="hand" viewBox="0 0 24 24" aria-hidden="true"><use href="#hand"/></svg></span><div class="six" aria-hidden="true">6 : on rejoue</div></div>
+    <div id="act">
+      <button id="rollBtn" class="primary" data-nudge hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>Lancer le dé</button>
+      <div id="todo"></div>
       <div id="pick" hidden></div>
     </div>
   </div>
 </div>
 <footer id="rail"><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
-  <section class="page">
-    <h3>Lancer le dé et avancer</h3>
-    <p>Vous jouez les chevaux <strong>bleus</strong>, contre Rouge, Vert et Jaune.</p>
-    <ol>
-      <li>Cliquez sur « Lancer le dé ».</li>
-      <li>Les chevaux qui peuvent bouger sont encadrés en jaune. Cliquez sur l'un d'eux.</li>
-      <li>Il avance du nombre du dé, dans le sens des aiguilles d'une montre.</li>
-    </ol>
-    <p><strong>Pour gagner :</strong> amenez tous vos chevaux au centre avant les autres.</p>
+  <section class="page pc-page">
+    <h3>Lancer le dé</h3>
+    <div class="guide-art" id="demoRoll" aria-hidden="true"></div>
+    <p class="pc-key">Cliquez sur le dé pour le lancer.</p>
+    <p class="pc-more">Vous jouez les bleus. Amenez vos chevaux au centre avant les autres.</p>
   </section>
-  <section class="page">
+  <section class="page pc-page">
     <h3>Sortir de l'écurie</h3>
-    <div class="guide-panel">
-      <figure class="guide-example">
-        <div class="guide-art" id="demoOut" aria-hidden="true"></div>
-        <figcaption><strong>Avec un 6, le cheval sort de l'écurie.</strong> Il se pose sur la case de départ, celle de sa couleur avec une flèche.</figcaption>
-      </figure>
-    </div>
-    <p>Chaque cheval commence dans l'écurie. Sans 6, il y reste.</p>
-    <p><strong>Après un 6, vous rejouez.</strong></p>
+    <div class="guide-art" id="demoOut" aria-hidden="true"></div>
+    <p class="pc-key">Avec un 6, cliquez sur un cheval qui brille.</p>
+    <p class="pc-more">Il sort sur la case bleue. Après un 6, vous rejouez.</p>
   </section>
-  <section class="page">
-    <h3>Renvoyer un cheval à l'écurie</h3>
-    <div class="guide-panel">
-      <figure class="guide-example">
-        <div class="guide-art" id="demoHit" aria-hidden="true"></div>
-        <figcaption><strong>Avec un 3, le cheval bleu tombe sur le cheval rouge.</strong> Le cheval rouge retourne à son écurie.</figcaption>
-      </figure>
-    </div>
-    <p>Un cheval peut sauter par-dessus les autres. Deux chevaux de la même couleur peuvent partager une case.</p>
+  <section class="page pc-page">
+    <h3>Avancer</h3>
+    <div class="guide-art" id="demoMove" aria-hidden="true"></div>
+    <p class="pc-key">Cliquez sur le cheval qui brille.</p>
+    <p class="pc-more">Il avance du nombre du dé, jusqu'au rond jaune.</p>
   </section>
-  <section class="page">
-    <h3>Monter l'échelle jusqu'au centre</h3>
-    <div class="guide-panel">
-      <figure class="guide-example">
-        <div class="guide-art" id="demoLadder" aria-hidden="true"></div>
-        <figcaption><strong>Il faut un 1 pour la marche 1, un 2 pour la marche 2, et ainsi de suite.</strong> Le 6 amène au centre.</figcaption>
-      </figure>
-    </div>
-    <p>Après un tour complet, le cheval doit tomber juste sur le pied de son échelle. S'il fait trop, il ne peut pas bouger.</p>
+  <section class="page pc-page">
+    <h3>Renvoyer un cheval</h3>
+    <div class="guide-art" id="demoHit" aria-hidden="true"></div>
+    <p class="pc-key">Tombez sur un autre cheval : il retourne à son écurie.</p>
+    <p class="pc-more">Les autres peuvent aussi renvoyer les vôtres.</p>
   </section>
-  <section class="page">
-    <h3>Les boutons</h3>
-    <ul>
-      <li>« Que jouer maintenant ? » encadre le cheval conseillé et dit pourquoi.</li>
-      <li>« Annuler le dernier coup » reprend votre dernier cheval déplacé. Le dé reste le même.</li>
-      <li>Si aucun cheval ne peut bouger, le jeu dit pourquoi et passe au joueur suivant. Après un 6, vous relancez.</li>
-      <li>Quand vos chevaux sont serrés, cliquez sur « Le cheval de devant » ou « Le cheval de derrière », sous le dé.</li>
-      <li>Un joueur qui peut bouger un cheval doit le faire.</li>
-    </ul>
+  <section class="page pc-page">
+    <h3>Monter au centre</h3>
+    <div class="guide-art" id="demoLadder" aria-hidden="true"></div>
+    <p class="pc-key">Sur l'échelle, il faut le nombre juste.</p>
+    <p class="pc-more">Un 1 pour la marche 1, un 2 pour la marche 2, et un 6 pour le centre.</p>
   </section>
 </div>
 
@@ -475,12 +472,12 @@ function choices(g) {
 }
 function chooseText(g) {
   const ms = choices(g), d = g.die;
-  if (PC.moves(g).length === 1) return `Vous avez fait ${d}. Un seul cheval peut bouger : cliquez sur le cheval encadré.`;
+  if (PC.moves(g).length === 1) return `Vous avez fait ${d}. Un seul cheval peut bouger : cliquez sur le cheval qui brille.`;
   if (ms.length === 1) return ms[0].from < 0 ? `Vous avez fait 6 : cliquez sur un de vos chevaux pour le sortir de l'écurie.`
-    : `Vous avez fait ${d} : cliquez sur un des chevaux encadrés pour le faire avancer.`;
-  if (crowded) return `Vous avez fait ${d} : cliquez sur un cheval encadré, ou sur son bouton sous le dé.`;
-  if (d === 6 && ms.some(m => m.from < 0)) return "Vous avez fait 6 : sortez un cheval de l'écurie, ou faites avancer un autre cheval encadré.";
-  return `Vous avez fait ${d} : cliquez sur un cheval encadré pour le faire avancer.`;
+    : `Vous avez fait ${d} : cliquez sur un cheval qui brille pour le faire avancer.`;
+  if (crowded) return `Vous avez fait ${d} : cliquez sur un cheval qui brille, ou sur son bouton sous le dé.`;
+  if (d === 6 && ms.some(m => m.from < 0)) return "Vous avez fait 6 : sortez un cheval de l'écurie, ou faites avancer un autre cheval qui brille.";
+  return `Vous avez fait ${d} : cliquez sur un cheval qui brille. Le rond jaune montre où il ira.`;
 }
 const turnText = () => 'À vous : lancez le dé.';
 
@@ -501,7 +498,7 @@ function refuseBusy() {
 async function rollDice() {
   if (Kit.isOpen() || refuseBusy()) return;
   if (anim) return;
-  if (G.die !== null) return tell(PC.moves(G).length ? 'Vous avez déjà lancé le dé : cliquez sur un cheval encadré.' : noMoveText(G));
+  if (G.die !== null) return tell(PC.moves(G).length ? 'Vous avez déjà lancé le dé : cliquez sur un cheval qui brille.' : noMoveText(G));
   hint = null; moved = null;
   G = view = PC.roll(G);
   const current = G;
@@ -539,7 +536,7 @@ async function tapHorse(p, h) {
   if (p !== 0 && !showing && G.turn === 0 && G.result === null) return shake(horseEl(p, h)), tell(`Ce cheval est à ${NAMES[p]} : vos chevaux sont les bleus.`);
   if (refuseBusy()) return;
   if (anim) return;
-  if (G.die === null) return shake(horseEl(p, h)), tell("Lancez d'abord le dé : cliquez sur « Lancer le dé ».");
+  if (G.die === null) return shake(horseEl(p, h)), tell("Lancez d'abord le dé : cliquez sur le dé.");
   if (!PC.moves(G).some(m => m.horse === h)) return shake(horseEl(p, h)), tell(blockedText(G, h));
   undo.push(JSON.stringify(G));
   $('undoBtn').disabled = false;
@@ -699,18 +696,18 @@ function doUndo() {
   G = view = { ...G, rng: [crypto.getRandomValues(new Uint32Array(1))[0], ...G.rng.slice(1)] };
   hint = null; moved = null;
   save(); render();
-  tell(`Coup annulé : vous avez toujours ${G.die}. ${PC.moves(G).length > 1 ? 'Choisissez un cheval encadré.' : 'Cliquez sur le cheval encadré.'}`);
+  tell(`Coup annulé : vous avez toujours ${G.die}. ${PC.moves(G).length > 1 ? 'Cliquez sur un cheval qui brille.' : 'Cliquez sur le cheval qui brille.'}`);
 }
 function showHint() {
   if (anim || Kit.isOpen() || refuseBusy()) return;
-  if (G.die === null) { hint = null; render(); return tell('Cliquez sur « Lancer le dé » pour commencer votre tour.'); }
+  if (G.die === null) { hint = null; render(); return tell('Cliquez sur le dé, ou sur « Lancer le dé », pour commencer votre tour.'); }
   const a = PC.advice(G);
   if (!a) return tell(noMoveText(G));
   hint = a.horse;
   render();
   const step = a.to - FOOT;
   const why = {
-    only: 'Un seul cheval peut bouger : cliquez sur le cheval encadré.',
+    only: 'Un seul cheval peut bouger : cliquez sur le cheval qui brille.',
     capture: () => `Avancez le cheval encadré : il renvoie ${horsesWords(a.captured[0][0], a.captured.length)} à l'écurie.`,
     arrive: 'Avancez le cheval encadré : il arrive au centre.',
     ladder: () => `Avancez le cheval encadré : il monte sur la marche ${step}.`,
@@ -733,7 +730,7 @@ async function newGame(lv) {
   const id = gameId;
   const written = save();
   render();
-  tell('Vous jouez les chevaux bleus. À vous : lancez le dé. Il faut un 6 pour sortir.');
+  tell('Vous jouez les chevaux bleus. Cliquez sur le dé pour le lancer : il faut un 6 pour sortir.');
   if (await written && id === gameId) GG.track('petits-chevaux', 'start');
 }
 
@@ -747,8 +744,10 @@ function drawBoard(n) {
   drawn = n;
   let s = '<rect width="15" height="15" rx=".22" fill="#E4D3B0"/>';
   const sq = (c, r, fill, stroke = '#C9B48C') => `<rect x="${c + .05}" y="${r + .05}" width=".9" height=".9" rx=".14" fill="${fill}" stroke="${stroke}" stroke-width=".04"/>`;
-  // The stables: the colour, a pale yard with four places, and the player's name.
+  // The stables: the colour, a pale yard with four places, and the player's name. His own, blue, has a
+  // white frame, so it stands out among the four.
   PC.STABLE.forEach(([x, y], p) => {
+    if (p === 0) s += `<rect x="${x + .04}" y="${y + .04}" width="5.92" height="5.92" rx=".66" fill="#fff" stroke="${DARK[0]}" stroke-width=".06"/>`;
     s += `<rect x="${x + .2}" y="${y + .2}" width="5.6" height="5.6" rx=".55" fill="${COL[p]}"/>`
       + `<rect x="${x + .45}" y="${y + .45}" width="5.1" height="5.1" rx=".4" fill="${TINT[p]}" stroke="${DARK[p]}" stroke-opacity=".25" stroke-width=".05"/>`;
     for (const [px, py] of PC.pads(n)) s += `<circle cx="${x + px}" cy="${y + py}" r=".86" fill="#fff" fill-opacity=".7" stroke="${COL[p]}" stroke-width=".09" stroke-dasharray=".22 .14"/>`;
@@ -763,18 +762,19 @@ function drawBoard(n) {
       s += `<path d="M-.26 -.2L.06 -.2L.06 -.34L.34 0L.06 .34L.06 .2L-.26 .2Z" fill="#fff" transform="translate(${c + .5} ${r + .5}) rotate(${ang})"/>`;
     }
   });
-  // The foot of each ladder: a ring of its colour and a chevron into the ladder.
-  [0, 1, 2, 3].forEach(p => {
+  // The foot of his ladder: a ring of blue and a chevron into the ladder. The other players' ladders
+  // carry no marks or numbers, so the board stays calm: he needs only his own.
+  [0].forEach(p => {
     const [c, r] = PC.TRACK[PC.abs(p, FOOT)], [lc, lr] = PC.LADDER[p][0];
     const ang = Math.atan2(lr - r, lc - c) * 180 / Math.PI;
     s += `<rect x="${c + .12}" y="${r + .12}" width=".76" height=".76" rx=".12" fill="none" stroke="${COL[p]}" stroke-width=".1"/>`
       + `<path d="M-.1 -.22L.14 0L-.1 .22" fill="none" stroke="${COL[p]}" stroke-width=".11" stroke-linecap="round" stroke-linejoin="round" transform="translate(${c + .5} ${r + .5}) rotate(${ang})"/>`;
   });
-  // The ladders: squares 1 to 6 in their colour, 6 at the centre.
+  // The ladders: squares 1 to 6 in their colour, 6 at the centre. Only his own is numbered.
   PC.LADDER.forEach((steps, p) => steps.forEach(([c, r], k) => {
     const last = k === 5;
     s += sq(c, r, last ? COL[p] : TINT[p], DARK[p]);
-    s += `<text x="${c + .5}" y="${r + .72}" text-anchor="middle" font-size=".62" fill="${last ? '#fff' : DARK[p]}" opacity="${last ? .95 : .9}">${k + 1}</text>`;
+    if (p === 0) s += `<text x="${c + .5}" y="${r + .72}" text-anchor="middle" font-size=".62" fill="${last ? '#fff' : DARK[p]}" opacity="${last ? .95 : .9}">${k + 1}</text>`;
   }));
   // The centre: four triangles, each toward its colour's step 6, and a gold rosette with a horseshoe.
   const tri = [[[7, 8], [8, 8]], [[7, 7], [7, 8]], [[7, 7], [8, 7]], [[8, 7], [8, 8]]];
@@ -828,32 +828,16 @@ const dieSvg = n => `<svg viewBox="0 0 100 100" aria-hidden="true">`
   + `<g class="pips">${pipsSvg(n)}</g></svg>`;
 $('die').innerHTML = dieSvg(6);
 
-const seatIco = p => `<span class="ico"><svg viewBox="0 0 100 100" aria-hidden="true" style="--hc:${COL[p]};--hd:${DARK[p]};--hl:#fff"><use href="#horse"/></svg></span>`;
-function seatHtml(p, g) {
-  const hs = g.horses[p], home = hs.filter(x => x === ARRIVED).length;
-  let line;
-  if (g.result !== null) line = g.result === p ? 'A gagné' : 'Partie finie';
-  else if (g.turn === p) line = p === 0 ? 'À vous de jouer' : 'Joue';
-  else if (home) line = `${home} au centre`;
-  else line = hs.some(x => x >= 0) ? plural(hs.filter(x => x >= 0).length, 'sorti', 'sortis') : "À l'écurie";
-  const rank = x => x === ARRIVED ? 0 : x >= 0 ? 1 : 2;
-  const marks = hs.slice().sort((a, b) => rank(a) - rank(b)).map(x => `<i class="${['in', 'out', ''][rank(x)]}"></i>`).join('');
-  return `${seatIco(p)}<div class="who"><b>${NAMES[p]}</b><span class="now">${line}</span><span class="home" aria-hidden="true">${marks}</span></div>`;
-}
+// A small horse of a player's colour, for the panel.
+const horseIco = p => `<svg viewBox="0 0 100 100" aria-hidden="true" style="--hc:${COL[p]};--hd:${DARK[p]};--hl:#fff"><use href="#horse"/></svg>`;
+// A blue horse in a yellow ring, for "Cliquez sur un cheval bleu".
+const pickIco = `<svg viewBox="0 0 100 100" aria-hidden="true" style="--hc:${COL[0]};--hd:${DARK[0]};--hl:#fff"><circle cx="50" cy="62" r="46" fill="rgba(255,200,61,.35)" stroke="#FFC83D" stroke-width="9"/><use href="#horse" x="8" y="6" width="84" height="84"/></svg>`;
 
 function render() {
   if (!G) return;
   const g = view, mine = g === G && g.turn === 0 && g.result === null && !busy();
   const can = mine && g.die !== null ? new Set(PC.moves(g).map(m => m.horse)) : new Set();
   if (drawn !== g.horses[0].length) drawBoard(g.horses[0].length);
-  // The players
-  const seats = $('seats');
-  if (!seats.children.length) for (let p = 0; p < 4; p++) seats.insertAdjacentHTML('beforeend', `<div class="seat c${p}" id="seat${p}"></div>`);
-  for (let p = 0; p < 4; p++) {
-    const e = $('seat' + p), html = seatHtml(p, g);
-    if (e.dataset.html !== html) { e.innerHTML = html; e.dataset.html = html; }
-    e.classList.toggle('turn', g.result === null && g.turn === p);
-  }
   // The horses: two each, or four in an older save.
   horseEls.forEach(e => { e.style.display = +e.dataset.h < g.horses[0].length ? '' : 'none'; });
   if (!anim) for (const pl of places(g)) {
@@ -867,8 +851,10 @@ function render() {
     e.tabIndex = pl.p === 0 && c ? 0 : -1;
     e.setAttribute('aria-label', `${pl.p === 0 ? 'Votre cheval' : 'Cheval ' + ADJ[pl.p]} ${pl.h + 1}, ${where(pl.pos)}${c ? ', peut bouger' : ''}`);
   }
+  pieces.classList.toggle('hinting', hint !== null && can.has(hint));
   if (!can.size) { hideGhost(); if (hovered !== null) horseEl(0, hovered).classList.remove('hover'); hovered = null; }
-  // The die
+  drawMarks(can.size && !anim ? choices(g) : []);
+  // The die, and whose turn it is
   const d = $('die'), box = $('dieBox');
   if (!rolling) {
     const face = g.die;
@@ -876,15 +862,29 @@ function render() {
     if (face !== null && d.dataset.face !== String(face)) { d.innerHTML = dieSvg(face); d.dataset.face = String(face); }
   }
   const p = g.result !== null ? g.result : g.turn;
-  box.className = 'p' + p;
-  $('dieWho').innerHTML = `<i style="--dc:${COL[p]}"></i>${g.result !== null ? (p === 0 ? 'Vous avez gagné' : NAMES[p] + ' a gagné') : p === 0 ? 'À vous' : NAMES[p] + ' joue'}`;
-  box.querySelector('.six').classList.toggle('on', !rolling && g.die === 6);
   const canRoll = mine && g.die === null;
+  box.className = 'p' + p + (canRoll ? ' ready' : '');
+  d.classList.toggle('ready', canRoll);
+  const who = `${horseIco(p)}${g.result !== null ? (p === 0 ? 'Vous avez gagné' : NAMES[p] + ' a gagné') : p === 0 ? 'À vous' : NAMES[p] + ' joue'}`;
+  if ($('dieWho').dataset.html !== who) { $('dieWho').innerHTML = who; $('dieWho').dataset.html = who; }
+  box.querySelector('.six').classList.toggle('on', !rolling && g.die === 6);
   d.disabled = !canRoll;
-  const rb = $('rollBtn');
-  const label = g.result !== null ? 'Partie finie' : g.turn !== 0 ? `${NAMES[g.turn]} joue` : rolling ? 'Le dé roule' : anim ? 'Le cheval avance' : !mine ? 'Un instant' : g.die === null ? 'Lancer le dé' : can.size ? 'Choisir un cheval' : 'Le tour passe';
-  rb.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>' + label;
-  rb.disabled = !canRoll;
+  // What to do now: the throw button on his turn, else big words. It is never a grey button.
+  $('rollBtn').hidden = !canRoll;
+  const todo = $('todo');
+  let words, wait = true;
+  if (g.result !== null) words = 'Partie finie';
+  else if (g.turn !== 0) words = `${NAMES[g.turn]} joue. Attendez votre tour.`;
+  else if (rolling) words = 'Le dé roule…';
+  else if (anim) words = 'Le cheval avance…';
+  else if (!mine) words = 'Un instant…';
+  else if (g.die === null) words = '';
+  else if (can.size) { words = 'Cliquez sur un cheval bleu'; wait = false; }
+  else words = 'Aucun cheval ne peut bouger.';
+  const html = words ? (wait ? (g.turn !== 0 && g.result === null ? horseIco(g.turn) : '') : pickIco) + `<span>${words}</span>` : '';
+  if (todo.dataset.html !== html) { todo.innerHTML = html; todo.dataset.html = html; }
+  todo.hidden = !words;
+  todo.classList.toggle('wait', wait);
   if (!showing) Kit.showWins(stats.won);
   $('undoBtn').disabled = !undo.length;
   $('hintBtn').disabled = G.result !== null;
@@ -898,8 +898,8 @@ function drawPick(list) {
   const r = $('board').getBoundingClientRect(), px = r.width / 15;
   const at = new Map(places(G).filter(pl => pl.p === 0).map(pl => [pl.h, [pl.x, pl.y - .2 * pl.s]]));
   crowded = list.some((a, i) => list.some((b, j) => j > i && Math.hypot(at.get(a.horse)[0] - at.get(b.horse)[0], at.get(a.horse)[1] - at.get(b.horse)[1]) * px < 44));
-  const pick = $('pick'), rb = $('rollBtn');
-  pick.hidden = !crowded; rb.hidden = crowded;
+  const pick = $('pick');
+  pick.hidden = !crowded;
   $('side').classList.toggle('picking', crowded);
   if (!crowded) { if (pick.dataset.html) { pick.innerHTML = ''; pick.dataset.html = ''; } return; }
   list = list.slice().sort((a, b) => b.from - a.from);
@@ -946,7 +946,7 @@ function stopAnim() {
   clearTimeout(animationTimer);
   finishStep = null;
   horseEls.forEach(e => {
-    e.classList.remove('hit', 'fly', 'arrive', 'party', 'nudge');
+    e.classList.remove('hit', 'fly', 'arrive', 'party', 'shake');
     e.querySelector('svg').getAnimations().forEach(a => a.cancel());
   });
   $('die').classList.remove('rolling');
@@ -1052,7 +1052,7 @@ function party() {
   later(() => horseEls.forEach(e => e.classList.remove('party')), 2400);
 }
 // A refused click: the horse shakes its head.
-function shake(e) { if (!e || reducedMotion.matches) return; e.classList.remove('nudge'); void e.offsetWidth; e.classList.add('nudge'); later(() => e.classList.remove('nudge'), 400); }
+function shake(e) { if (!e || reducedMotion.matches) return; e.classList.remove('shake'); void e.offsetWidth; e.classList.add('shake'); later(() => e.classList.remove('shake'), 400); }
 
 // Where a horse under the mouse would go.
 const ghost = $('ghost');
@@ -1064,6 +1064,20 @@ function showGhost(h) {
   ghost.classList.add('on');
 }
 function hideGhost() { ghost.classList.remove('on'); }
+// Where each horse he can move would land, and the squares it passes: drawn for every choice, so he
+// sees the result before he clicks.
+function drawMarks(list) {
+  const pct = ([x, y]) => `left:${(x / 15 * 100).toFixed(3)}%;top:${(y / 15 * 100).toFixed(3)}%`;
+  let html = '';
+  for (const m of list) {
+    const route = PC.path(0, m.from, m.to, m.horse);
+    for (const at of route.slice(0, -1)) html += `<i class="dot" data-h="${m.horse}" style="${pct(at)}"></i>`;
+    html += `<i class="land" data-h="${m.horse}" style="${pct(PC.point(0, m.to, m.horse, count()))};--hc:${COL[0]};--hd:${DARK[0]};--hl:#fff">${horseSvg}</i>`;
+  }
+  const marks = $('marks');
+  if (marks.dataset.html !== html) { marks.innerHTML = html; marks.dataset.html = html; }
+  for (const e of marks.children) e.classList.toggle('dim', hovered !== null && +e.dataset.h !== hovered);
+}
 
 // The board fills the height under the message line; the players and the die stand beside it, or
 // under it when the window is narrow.
@@ -1075,55 +1089,81 @@ function layout() {
   const k = phone ? 1 : Math.max(1, Math.min(1.35, W / 1366, H / 470));
   root.setProperty('--k', k.toFixed(3));
   // The board and its frame take 15.84 squares.
-  const sideW = (250 + 240 + 2 * 34) * k + 40;
+  const sideW = (290 + 34) * k + 40;
   const byRow = Math.min((H - 12) / 15.84, (W - sideW) / 15.84, 62);
   const byCol = phone ? Math.min((W - 16) / 15.84, 40) : Math.min((W - 24) / 15.84, (H - 150) / 15.84, 62);
   const row = !phone && byRow >= byCol * .92;
   table.classList.toggle('col', !row);
-  table.classList.toggle('low', row && H < 420 * k);
+  table.classList.toggle('low', row && H < 440 * k);
   const cell = row ? byRow : byCol;
   root.setProperty('--cell', Math.max(16, Math.floor(cell)) + 'px');
 }
 
-/* ---------- The rules guide ---------- */
-// Small pictures of the board, drawn like the real one, for the guide. They cannot be clicked.
-let guideId = 0;
-function guideSquares(list, w, h) {
-  const arrow = 'gArrow' + ++guideId;
-  const horse = (x, y, p, s = 1) => `<g transform="translate(${x - .61 * s} ${y - .8 * s}) scale(${1.22 * s / 100})" style="--hc:${COL[p]};--hd:${DARK[p]};--hl:#fff"><use href="#horse" width="100" height="100"/></g>`;
-  let s = '';
-  for (const it of list) {
-    if (it.sq) s += `<rect x="${it.x + .05}" y="${it.y + .05}" width=".9" height=".9" rx=".14" fill="${it.fill || '#FFFDF7'}" stroke="${it.stroke || '#C9B48C'}" stroke-width=".04"/>`
-      + (it.n ? `<text x="${it.x + .5}" y="${it.y + .69}" text-anchor="middle" font-size=".56" fill="${it.ink}">${it.n}</text>` : '')
-      + (it.arrow !== undefined ? `<path d="M-.26 -.2L.06 -.2L.06 -.34L.34 0L.06 .34L.06 .2L-.26 .2Z" fill="#fff" transform="translate(${it.x + .5} ${it.y + .5}) rotate(${it.arrow})"/>` : '');
-    if (it.horse !== undefined) s += horse(it.x + .5, it.y + .5, it.horse, it.s);
-    if (it.die) s += `<g transform="translate(${it.x} ${it.y}) scale(${1 / 100})">${dieSvg(it.die).replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g>`;
-    if (it.arc) s += `<path d="${it.arc}" fill="none" stroke="#1B2422" stroke-width=".08" stroke-dasharray=".18 .12" marker-end="url(#${arrow})"/>`;
-    if (it.cross) s += `<path d="M${it.x + .15} ${it.y + .15}l.7 .7M${it.x + .85} ${it.y + .15}l-.7 .7" stroke="#E0322F" stroke-width=".12" stroke-linecap="round"/>`;
-  }
-  const marker = `<defs><marker id="${arrow}" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4" markerHeight="4" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#1B2422"/></marker></defs>`;
-  return `<svg class="guide-board" viewBox="-.2 -.4 ${w + .4} ${h + .6}" width="${Math.round((w + .4) * 44)}" height="${Math.round((h + .6) * 44)}">${marker}${s}</svg>`;
-}
+/* ---------- The rules guide ----------
+   One large picture a page, drawn like the real game: the same squares, horses, die and yellow rings. One
+   unit is one square. The pictures cannot be clicked. */
+const G_ = {
+  sq: (x, y, fill = '#FFFDF7', stroke = '#C9B48C') => `<rect x="${x + .05}" y="${y + .05}" width=".9" height=".9" rx=".14" fill="${fill}" stroke="${stroke}" stroke-width=".04"/>`,
+  num: (x, y, n, ink) => `<text x="${x + .5}" y="${y + .72}" text-anchor="middle" font-size=".62" fill="${ink}">${n}</text>`,
+  arrowSq: (x, y, ang = 0) => `<path d="M-.26 -.2L.06 -.2L.06 -.34L.34 0L.06 .34L.06 .2L-.26 .2Z" fill="#fff" transform="translate(${x + .5} ${y + .5}) rotate(${ang})"/>`,
+  // A horse with its base on (x, y); ring: the yellow ring of a horse he can move.
+  horse: (x, y, p, s = 1, ring = false) => (ring ? `<circle cx="${x}" cy="${y}" r="${.72 * s}" fill="rgba(255,200,61,.35)" stroke="#FFC83D" stroke-width="${.16 * s}"/>`
+    + `<circle cx="${x}" cy="${y}" r="${.81 * s}" fill="none" stroke="#04282C" stroke-opacity=".75" stroke-width=".04"/>` : '')
+    + `<g transform="translate(${x - .61 * s} ${y - .8 * s}) scale(${1.22 * s / 100})" style="--hc:${COL[p]};--hd:${DARK[p]};--hl:#fff"><use href="#horse" width="100" height="100"/></g>`,
+  // Where a horse would land: a pale horse in a dashed yellow ring; and a yellow dot on a square it passes.
+  land: (x, y, ghost = true) => `<circle cx="${x}" cy="${y}" r=".44" fill="rgba(255,200,61,.35)" stroke="#FFC83D" stroke-width=".1" stroke-dasharray=".2 .12"/>`
+    + (ghost ? `<g opacity=".5" transform="translate(${x - .58} ${y - .78}) scale(.0116)" style="--hc:${COL[0]};--hd:${DARK[0]};--hl:#fff"><use href="#horse" width="100" height="100"/></g>` : ''),
+  dot: (x, y) => `<circle cx="${x}" cy="${y}" r=".15" fill="#FFC83D" stroke="#04282C" stroke-opacity=".8" stroke-width=".03"/>`,
+  die: (x, y, size, n, ready = false) => (ready ? `<rect x="${x - .14}" y="${y - .14}" width="${size + .28}" height="${size + .28}" rx="${size * .26}" fill="none" stroke="#FFC83D" stroke-width=".2"/>` : '')
+    + `<g transform="translate(${x} ${y}) scale(${size / 100})">${dieSvg(n).replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g>`,
+  // The hand, its finger on (x, y), pointing up and a little to the left.
+  hand: (x, y, size = 1.6, rot = -28) => `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${size / 24})"><use href="#hand" x="-8" y="-2" width="24" height="24"/></g>`,
+  arc: (d, color = '#1B2422') => `<path d="${d}" fill="none" stroke="${color}" stroke-width=".09" stroke-dasharray=".2 .13" stroke-linecap="round"/>`
+    + `<path d="${d}" fill="none" stroke="none" marker-end="url(#gArrow${color === '#1B2422' ? '' : 'Red'})"/>`,
+  stable: (x, y, w, h, p, name) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx=".5" fill="${COL[p]}"/>`
+    + `<rect x="${x + .25}" y="${y + .25}" width="${w - .5}" height="${h - .5}" rx=".36" fill="${TINT[p]}"/>`
+    + (name ? `<text x="${x + w / 2}" y="${y + h - .45}" text-anchor="middle" font-size=".8" fill="${DARK[p]}">${name}</text>` : ''),
+  pic: (x, y, w, h, body) => `<svg class="pc-pic guide-board" viewBox="${x} ${y} ${w} ${h}"><defs>`
+    + '<marker id="gArrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4" markerHeight="4" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#1B2422"/></marker>'
+    + '<marker id="gArrowRed" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4" markerHeight="4" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#D7263D"/></marker>'
+    + `</defs>${body}</svg>`,
+};
 function drawGuide() {
-  // Leaving the stable: the stable corner with a horse, the 6, and the start square with its arrow.
-  $('demoOut').innerHTML = guideSquares([
-    { sq: 1, x: 0, y: 0, fill: TINT[0], stroke: COL[0] }, { sq: 1, x: 1, y: 0, fill: TINT[0], stroke: COL[0] },
-    { x: 0, y: 0, horse: 0, s: 1.2 }, { x: 1, y: 0, horse: 0, s: 1.2 },
-    { sq: 1, x: 3, y: 0, fill: COL[0], stroke: DARK[0], arrow: 0 }, { sq: 1, x: 4, y: 0 },
-    { arc: 'M1.6 -.05Q2.6 -.6 3.35 .1' }, { die: 6, x: 1.95, y: .55 },
-  ], 5, 1.5);
-  // A capture: the blue horse three squares behind the red one.
-  $('demoHit').innerHTML = guideSquares([
-    ...[0, 1, 2, 3, 4].map(x => ({ sq: 1, x, y: 1 })),
-    { x: 0, y: 1, horse: 0 }, { x: 3, y: 1, horse: 1 }, { cross: 1, x: 3, y: .55 },
-    { arc: 'M.6 .3Q1.9 -.5 3.2 .3' }, { die: 3, x: 5.3, y: 1 },
-  ], 6.3, 2);
-  // The ladder: the foot, then steps 1 to 6.
-  $('demoLadder').innerHTML = guideSquares([
-    { sq: 1, x: 0, y: 0, stroke: COL[0] },
-    ...[1, 2, 3, 4, 5, 6].map(k => ({ sq: 1, x: k, y: 0, fill: k === 6 ? COL[0] : TINT[0], stroke: DARK[0], n: String(k), ink: k === 6 ? '#fff' : DARK[0] })),
-    { x: 0, y: 0, horse: 0 }, { arc: 'M.6 -.2Q1 -.6 1.4 -.15' }, { die: 1, x: .1, y: 1.05 },
-  ], 7, 2);
+  const g = G_;
+  // 1. The table: his blue stable, and on the right the die in its yellow ring with the hand, and the button.
+  $('demoRoll').innerHTML = g.pic(-.3, -.3, 13.6, 6.4,
+    g.stable(0, 0, 5.4, 5.6, 0, 'Vous') + g.horse(1.55, 2.5, 0, 1.45) + g.horse(3.85, 2.5, 0, 1.45)
+    + `<rect x="6.6" y="0" width="6.4" height="5.8" rx=".5" fill="#0F5A60" stroke="${COL[0]}" stroke-width=".12"/>`
+    + `<rect x="7.9" y=".3" width="3.8" height=".9" rx=".45" fill="#fff"/><text x="9.8" y="1" text-anchor="middle" font-size=".6" fill="#1B2422">À vous</text>`
+    + g.die(8.7, 1.55, 2.2, 5, true) + g.hand(10.4, 3.3, 1.8)
+    + '<rect x="7" y="4.4" width="5.6" height="1.15" rx=".3" fill="#FFC83D" stroke="#C9951A" stroke-width=".06"/>'
+    + '<text x="9.8" y="5.2" text-anchor="middle" font-size=".62" fill="#1F1A00">Lancer le dé</text>');
+  // 2. A 6: his horses in the stable glow; one leaves for the blue start square, where the ring shows it lands.
+  $('demoOut').innerHTML = g.pic(-.3, -.5, 10, 5.6,
+    g.stable(0, .2, 4.6, 4.8, 0, 'Vous') + g.horse(1.25, 2.4, 0, 1.2, true) + g.horse(3.35, 2.4, 0, 1.2, true)
+    + g.sq(5.2, 3.8, COL[0], DARK[0]) + g.arrowSq(5.2, 3.8) + [6.2, 7.2, 8.2].map(x => g.sq(x, 3.8)).join('')
+    + g.land(5.7, 4.3) + g.arc('M3.7 1.05Q5.3 .4 5.65 3.55')
+    + g.die(7.2, .2, 1.9, 6) + g.hand(3.5, 2.6, 1.5));
+  // 3. A 4: the horse that glows goes four squares, along the yellow dots, to the yellow ring.
+  $('demoMove').innerHTML = g.pic(-.4, -.3, 9.4, 3.7,
+    [0, 1, 2, 3, 4, 5].map(x => g.sq(x, 1.4)).join('')
+    + g.dot(1.5, 1.9) + g.dot(2.5, 1.9) + g.dot(3.5, 1.9) + g.land(4.5, 1.9)
+    + g.horse(.5, 1.9, 0, 1, true) + g.hand(.75, 2.15, 1.3)
+    + g.arc('M.8 .85Q2.5 -.1 4.25 1.15') + g.die(6.7, .7, 2, 4));
+  // 4. A 3 onto the red horse: the red horse goes back to its stable.
+  $('demoHit').innerHTML = g.pic(-.3, -.5, 9.4, 4.9,
+    [0, 1, 2, 3, 4].map(x => g.sq(x, 2.4)).join('')
+    + g.horse(.5, 2.9, 0) + g.horse(3.5, 2.9, 1)
+    + g.arc('M.75 1.85Q2.1 .7 3.25 1.75')
+    + g.stable(5.8, .9, 3.2, 3.2, 1, '') + `<circle cx="7.4" cy="2.5" r=".86" fill="#fff" fill-opacity=".7" stroke="${COL[1]}" stroke-width=".09" stroke-dasharray=".22 .14"/>`
+    + g.arc('M4 3.55Q5.6 4.3 6.6 3.05', '#D7263D')
+    + g.die(4.4, -.35, 1.4, 3));
+  // 5. The ladder: from the foot, a 1 for step 1, ... and a 6 for the centre.
+  $('demoLadder').innerHTML = g.pic(-.4, -.6, 9.6, 3.3,
+    g.sq(0, 1.2) + `<rect x=".12" y="1.32" width=".76" height=".76" rx=".12" fill="none" stroke="${COL[0]}" stroke-width=".1"/>`
+    + [1, 2, 3, 4, 5, 6].map(k => g.sq(k, 1.2, k === 6 ? COL[0] : TINT[0], DARK[0]) + g.num(k, 1.2, k, k === 6 ? '#fff' : DARK[0])).join('')
+    + g.horse(.5, 1.7, 0, 1, true) + g.land(1.5, 1.7, false)
+    + g.arc('M.7 .65Q1.1 -.1 1.45 .9') + g.die(7.5, .55, 1.6, 1));
 }
 
 /* ---------- Mouse, touch and keys ---------- */
@@ -1146,6 +1186,8 @@ function nearest(e) {
 // The horse a click or the mouse points at: the pawn under it, else the nearest framed horse.
 // A click from the keyboard (Enter on a horse) takes the horse that has the focus.
 function aimed(e) {
+  const land = e.target.closest('.land');
+  if (land) return [0, +land.dataset.h];
   const b = e.target.closest('.horse');
   if (b) return [+b.dataset.p, +b.dataset.h];
   const h = e.detail === 0 && e.type === 'click' ? null : nearest(e);
@@ -1156,8 +1198,8 @@ $('board').addEventListener('click', e => {
   if (a) { if (once('horse' + a[0] + a[1])) tapHorse(a[0], a[1]); return; }
   // A click on the board beside the horses says what to do.
   if (Kit.isOpen() || busy() || !G || G.turn !== 0 || G.result !== null) return;
-  if (G.die === null) tell("Lancez d'abord le dé : cliquez sur « Lancer le dé ».");
-  else if (PC.moves(G).length) tell('Cliquez sur un de vos chevaux encadrés en jaune.');
+  if (G.die === null) tell("Lancez d'abord le dé : cliquez sur le dé.");
+  else if (PC.moves(G).length) tell('Cliquez sur un cheval bleu qui brille.');
 });
 // Under the mouse, the nearest framed horse grows and a ring shows where it would land.
 let hovered = null;
@@ -1166,6 +1208,7 @@ function hoverHorse(h) {
   if (h === hovered) return;
   if (hovered !== null) horseEl(0, hovered).classList.remove('hover');
   hovered = h;
+  for (const e of $('marks').children) e.classList.toggle('dim', h !== null && +e.dataset.h !== h);
   if (h === null) return hideGhost();
   horseEl(0, h).classList.add('hover');
   showGhost(h);

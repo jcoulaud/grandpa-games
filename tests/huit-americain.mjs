@@ -126,6 +126,16 @@ await g(() => { setCast(['josette', 'lucien', 'ginette']); save(); render(); });
 // 2. A refused card says why; a card that fits is played with one click.
 await setRound(['9H 4H KC 3D 5S', '3S 5D 6D 7D', '6S 7S 10D', '10S JS QD'], '9C', '2D 3H 4C');
 ok(await g(() => document.querySelectorAll('.card.hand.no').length === 3 && document.querySelectorAll('.card.hand.can').length === 2), 'the cards that do not fit are darker');
+// The table at 1366x680: the side players sit by the middle, the ring runs through the places, his seat
+// stands right by his hand, and the cards that fit stand up above the others.
+ok(await g(() => {
+  const R = id => document.getElementById(id).getBoundingClientRect(), stock = R('stock'), badge = R('badge'), s1 = R('seat1'), s3 = R('seat3');
+  const first = [...document.querySelectorAll('.card.hand')].map(e => e.getBoundingClientRect()).sort((a, b) => a.left - b.left)[0];
+  return L.roomy && stock.left - s1.right < 260 && s3.left - badge.right < 80 && Math.abs(first.left - R('seat0').right - 16) < 2
+    && document.querySelectorAll('#ring .head').length >= 3;
+}), 'the players sit by the middle, the ring runs through them, his seat is by his hand');
+ok(await g(() => { const top = s => document.querySelector(`.card.hand.${s}`).getBoundingClientRect().top;
+  return top('can') < top('no') - 5; }), 'the cards that fit stand up above the others');
 await clickCard(card('4H'));
 ok(await g(c => G.hands[0].includes(c), card('4H')) && (await msg()) === 'Il faut un trèfle ou un 9.', 'a card that does not fit stays, and the line says why: ' + await msg());
 ok(await g(c => {
@@ -171,12 +181,14 @@ ok((await msg()) === 'Vous posez un 8 et choisissez le trèfle.', 'the line says
 // 4. No card fits: "Piocher", a card that fits, "Passer mon tour".
 await setRound(['4C KC', '3S 5D 6D', '6S 7S 10D', '10S JS QD'], '9H', '2D 3H');
 ok(await g(() => !document.getElementById('drawBtn').hidden && document.getElementById('drawBtn').textContent === 'Piocher'), 'no card fits: the big "Piocher" key shows');
+ok(await g(() => document.getElementById('drawBtn').hasAttribute('data-nudge')), '"Piocher" is the key the kit pulses when he waits');
 ok((await msg()) === "Vous n'avez ni cœur ni 9, ni 8 : cliquez sur « Piocher ».", 'the line says why he draws: ' + await msg());
 await page.click('#hintBtn');
 ok(await g(() => document.getElementById('drawBtn').classList.contains('hint')) && (await msg()).includes('Piocher'), 'the hint frames "Piocher"');
 await clickEl('#stock');
 ok(await g(c => G.phase === 'drawn' && G.drawn === c && G.hands[0].includes(c), card('3H')), 'a click on the pioche draws the 3 de cœur');
 ok(await g(() => document.getElementById('drawBtn').textContent === 'Passer mon tour' && !!document.querySelector('.card.hand.drawn .tag')), 'the card drawn stands up with a tag, and "Passer mon tour" shows');
+ok(await g(() => !document.getElementById('drawBtn').hasAttribute('data-nudge')), '"Passer mon tour" is not pulsed: he may also play the card');
 ok((await msg()).startsWith('Vous avez pioché le 3 de cœur. Cette carte va'), 'the line says he may play it: ' + await msg());
 await clickCard(card('4C'));
 ok((await msg()).startsWith('Vous venez de piocher'), 'another card is refused after a draw');

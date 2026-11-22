@@ -81,6 +81,8 @@
   }
   fitBar();
   addEventListener('resize', fitBar);
+  // A game may change a label later, such as the hint during the bids: the bar fits itself again.
+  if (bar) new MutationObserver(fitBar).observe(bar, { childList: true, characterData: true, subtree: true });
   if (document.fonts) document.fonts.ready.then(fitBar);
 
   // Message line
