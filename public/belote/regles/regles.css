@@ -1,0 +1,45 @@
+/* The belote trick illustration and score table. The guide layout is in lib/rules.css. */
+.rules.belote { --felt: #6a3f1a; }
+
+/* The trick of the example, seen from above: your partner at the top, you at the bottom, the two
+   opponents at the sides. Each card shows who played it and in which order. */
+.belote figure { background: var(--guide-light); }
+.trick {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 9rem));
+  grid-template-areas: ". north ." "west . east" ". south .";
+  justify-content: center;
+  gap: .5rem clamp(.5rem, 3vw, 2rem);
+  padding: clamp(1rem, 3vw, 1.75rem) .75rem;
+  background: var(--felt);
+  color: #fffaf0;
+}
+.trick-seat { display: grid; justify-items: center; gap: .35rem; }
+.trick-seat.north { grid-area: north; }
+.trick-seat.west { grid-area: west; }
+.trick-seat.east { grid-area: east; }
+.trick-seat.south { grid-area: south; }
+.trick .example-card { width: clamp(52px, 12vw, 80px); font-size: clamp(1.25rem, 4vw, 1.75rem); }
+.trick-who { display: flex; align-items: center; gap: .4em; font-size: 18px; line-height: 1.2; white-space: nowrap; }
+.trick-who b {
+  display: grid;
+  place-items: center;
+  width: 1.6em;
+  height: 1.6em;
+  border-radius: 50%;
+  background: #fffaf0;
+  color: var(--felt);
+  font-size: 15px;
+}
+
+/* The two columns of the score table: the atout column in the colour of the game. */
+.belote .score th:nth-child(-n+2), .belote .score td:nth-child(-n+2) { background: var(--guide-light); }
+
+@media (max-width: 560px) {
+  .trick { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem .25rem; }
+  .trick-who { flex-direction: column; gap: .2em; font-size: 15px; white-space: normal; }
+  .trick-who b { font-size: 13px; }
+}
+@media print {
+  .trick { background: white; color: black; }
+}

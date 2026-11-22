@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://jeux-papi.fr/</loc></url>
+  <url><loc>https://jeux-papi.fr/belote/regles/</loc></url>
+  <url><loc>https://jeux-papi.fr/dames/regles/</loc></url>
+  <url><loc>https://jeux-papi.fr/solitaire/regles/</loc></url>
   <url><loc>https://jeux-papi.fr/solitaire/</loc></url>
   <url><loc>https://jeux-papi.fr/freecell/</loc></url>
   <url><loc>https://jeux-papi.fr/dames/</loc></url>
@@ -15,4 +18,9 @@
   <url><loc>https://jeux-papi.fr/belote/</loc></url>
   <url><loc>https://jeux-papi.fr/huit-americain/</loc></url>
   <url><loc>https://jeux-papi.fr/rami/</loc></url>
+  <url><loc>https://jeux-papi.fr/demineur/regles/</loc></url>
+  <url><loc>https://jeux-papi.fr/yams/regles/</loc></url>
+  <url><loc>https://jeux-papi.fr/huit-americain/regles/</loc></url>
+  <url><loc>https://jeux-papi.fr/blog/</loc></url>
+  <url><loc>https://jeux-papi.fr/blog/jeux-pour-seniors/</loc></url>
 </urlset>

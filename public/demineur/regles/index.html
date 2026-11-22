@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Règles du démineur : jouer sans deviner · Jeux de Papi</title>
+  <meta name="description" content="Apprenez trois déductions pour repérer les mines, poser un drapeau et ouvrir les cases sûres.">
+  <link rel="canonical" href="https://jeux-papi.fr/demineur/regles/">
+  <meta property="og:type" content="article">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:site_name" content="Jeux de Papi">
+  <meta property="og:url" content="https://jeux-papi.fr/demineur/regles/">
+  <meta property="og:title" content="Règles du démineur : jouer sans deviner">
+  <meta property="og:description" content="Ce que veulent dire les chiffres, quand poser un drapeau et comment trouver une case sûre.">
+  <meta property="og:image" content="https://jeux-papi.fr/og/demineur.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Règles du démineur. Un coin de champ en blocs d’herbe, avec des chiffres 1 et 2 et un drapeau rouge.">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="../icon.svg">
+  <link rel="stylesheet" href="../../lib/site-nav.css">
+  <link rel="stylesheet" href="../../lib/rules.css">
+  <script src="../../lib/zoom.js"></script>
+</head>
+<body class="rules demineur">
+<a class="skip" href="#contenu">Aller au texte</a>
+<header class="site-nav">
+  <div class="site-nav-inner">
+    <a class="site-nav-brand" href="../../"><img src="../../icons/logo.webp" width="48" height="48" alt="">Jeux de Papi</a>
+    <nav class="site-nav-links" aria-label="Navigation principale">
+      <a href="../../#games">Les jeux</a>
+      <details class="site-menu is-current">
+        <summary>Règles</summary>
+        <div class="site-menu-panel">
+          <p class="site-menu-title">Règles des jeux</p>
+          <a href="../../belote/regles/"><img src="../../belote/icon.svg" width="40" height="40" alt="">Belote</a>
+          <a href="../../dames/regles/"><img src="../../dames/icon.svg" width="40" height="40" alt="">Jeu de dames</a>
+          <a href="../../solitaire/regles/"><img src="../../solitaire/icon.svg" width="40" height="40" alt="">Solitaire</a>
+          <a href="./" aria-current="page"><img src="../../demineur/icon.svg" width="40" height="40" alt="">Démineur</a>
+          <a href="../../yams/regles/"><img src="../../yams/icon.svg" width="40" height="40" alt="">Yams</a>
+          <a href="../../huit-americain/regles/"><img src="../../huit-americain/icon.svg" width="40" height="40" alt="">Huit américain</a>
+        </div>
+      </details>
+      <a href="../../blog/">Blog</a>
+    </nav>
+  </div>
+</header>
+<main id="contenu">
+  <header class="rules-head">
+    <div class="rules-head-inner">
+      <div>
+        <nav class="crumbs" aria-label="Vous êtes ici">
+          <ol><li><a href="../../">Les jeux</a></li><li><a href="../">Démineur</a></li><li aria-current="page">Règles</li></ol>
+        </nav>
+        <h1>Comment jouer au démineur sans deviner ?</h1>
+        <p class="intro">Ouvrez toutes les cases sans mine. Chaque chiffre vous donne un indice sur les huit cases qui l’entourent.</p>
+        <a class="play" href="../" aria-label="Jouer au démineur">Jouer</a>
+      </div>
+      <div class="rules-art"><img src="hero.webp" width="1200" height="800" alt="" fetchpriority="high"></div>
+    </div>
+  </header>
+
+  <div class="rules-layout" id="sommaire">
+    <nav class="rules-contents" aria-labelledby="contents-title">
+      <h2 id="contents-title">Sommaire</h2>
+      <ul>
+        <li><a href="#but">Le but du jeu</a></li>
+        <li><a href="#mine">Repérer une mine</a></li>
+        <li><a href="#sure">Ouvrir une case sûre</a></li>
+        <li><a href="#comparer">Comparer un 1 et un 2</a></li>
+        <li><a href="#aide">S’entraîner</a></li>
+      </ul>
+      <a class="play" href="../" aria-label="Jouer au démineur">Jouer</a>
+    </nav>
+    <article class="rules-article">
+      <section id="but">
+        <h2>Que veulent dire les chiffres ?</h2>
+        <p>Un 1 indique qu’une mine touche la case. Un 2 indique qu’il y en a deux. Comptez aussi les cases en diagonale.</p>
+        <p>Le premier clic est sans danger sur Jeux de Papi. Cliquez sur une case pour l’ouvrir. Utilisez le bouton « Poser un drapeau », ou le clic droit, pour marquer une mine.</p>
+      </section>
+
+      <section id="mine">
+        <h2>Un 1 et une seule case fermée</h2>
+        <p>Regardez toutes les voisines du 1. Si elles sont toutes ouvertes sauf une, la mine est dans la dernière case fermée.</p>
+        <figure><div class="mine-example" aria-hidden="true"><span>1</span><span class="closed">?</span></div><figcaption>Le 1 touche une seule case encore fermée et aucun drapeau. Posez un drapeau sur cette case.</figcaption></figure>
+      </section>
+
+      <section id="sure">
+        <h2>Un 1 touche déjà un drapeau</h2>
+        <p>Si le drapeau est bien placé, vous avez déjà trouvé la mine du 1. Les autres cases fermées qui touchent ce 1 sont sûres.</p>
+        <figure><div class="mine-example" aria-hidden="true"><span class="flag">⚑</span><span>1</span><span class="closed">?</span></div><figcaption>Le drapeau à gauche compte pour une mine. Ouvrez la case fermée à droite.</figcaption></figure>
+      </section>
+
+      <section id="comparer">
+        <h2>Deux chiffres peuvent partager des voisines</h2>
+        <p>Comparez les cases fermées que touchent deux chiffres. Si le 2 touche les mêmes cases que le 1, plus une seule autre, cette autre case cache une mine.</p>
+        <figure><div class="mine-example comparison" aria-hidden="true"><span class="closed">A</span><span class="closed">B</span><span class="closed">C</span><span>1</span><span>2</span><span class="other">·</span></div><figcaption>Toutes les autres voisines sont ouvertes et aucune mine n’a été marquée. Le 1 touche A et B. Le 2 touche A, B et C. A et B contiennent une seule mine ensemble, donc C contient l’autre mine du 2.</figcaption></figure>
+      </section>
+
+      <section id="aide">
+        <h2>Essayez le niveau facile</h2>
+        <p>Le niveau facile vous montre les cases sûres et les mines que vous pouvez déduire. Il vous aide à repérer ces motifs quand ils apparaissent au milieu d’une vraie grille.</p>
+        <p>Quand vous voulez trouver le prochain coup par vous-même, passez au niveau moyen. Le jeu propose des grilles que vous pouvez résoudre sans deviner.</p>
+      </section>
+    </article>
+  </div>
+
+  <nav class="rules-more" aria-labelledby="more-title">
+    <h2 id="more-title">Les règles des autres jeux</h2>
+    <ul>
+      <li><a href="../../belote/regles/"><img src="../../belote/icon.svg" width="48" height="48" alt="">Règles de la belote</a></li>
+      <li><a href="../../dames/regles/"><img src="../../dames/icon.svg" width="48" height="48" alt="">Règles du jeu de dames</a></li>
+      <li><a href="../../solitaire/regles/"><img src="../../solitaire/icon.svg" width="48" height="48" alt="">Règles du solitaire</a></li>
+      <li><a href="../../yams/regles/"><img src="../../yams/icon.svg" width="48" height="48" alt="">Règles du Yams</a></li>
+      <li><a href="../../huit-americain/regles/"><img src="../../huit-americain/icon.svg" width="48" height="48" alt="">Règles du Huit américain</a></li>
+      <li><a href="../../"><img src="../../icons/logo.webp" width="48" height="48" alt="">Tous les jeux</a></li>
+    </ul>
+  </nav>
+</main>
+<footer class="rules-footer">
+  <div class="rules-footer-inner">
+    <details class="rules-jump">
+      <summary><span class="rules-jump-label">Sommaire</span><span class="rules-jump-now">Choisir une partie</span></summary>
+      <ul class="rules-jump-list">
+        <li><a href="#contenu">Haut de la page</a></li>
+        <li><a href="#but">Le but du jeu</a></li>
+        <li><a href="#mine">Repérer une mine</a></li>
+        <li><a href="#sure">Ouvrir une case sûre</a></li>
+        <li><a href="#comparer">Comparer un 1 et un 2</a></li>
+        <li><a href="#aide">S’entraîner</a></li>
+      </ul>
+    </details>
+    <a class="play" href="../" aria-label="Jouer au démineur">Jouer</a>
+  </div>
+</footer>
+<footer class="site-foot"><div class="in">
+  <a class="credit" href="https://x.com/JulienCoulaud" target="_blank" rel="noopener"><img src="../../icons/julien.webp" width="34" height="34" alt=""><span>Par <b>Julien Coulaud</b></span><span class="sr">, s’ouvre dans un nouvel onglet</span></a>
+  <div class="footer-controls"><div class="zoom"></div></div>
+</div></footer>
+<script src="../../lib/site-nav.js" defer></script>
+</body>
+</html>
