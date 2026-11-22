@@ -302,9 +302,9 @@ export function simulate(h, start, target, record = true) {
     sunk = false,
     over = false,
     step = 0,
-    // A ball that a slope holds against a wall shivers in place: it counts as stopped once it moves less
-    // than 3 cm in 2 s.
-    still = point(x, z);
+    // A ball that a slope holds against a wall shivers in place: it counts as stopped once it travels less
+    // than 3 cm in 2 s. A ball rocking in a dip travels far more, even if it comes back to the same place.
+    travel = 0;
   // The rim adds its pull to the slope, so a ball that stops hanging over the hole still falls in.
   const lip = () => {
     const dx = x - cup.x,
@@ -317,6 +317,8 @@ export function simulate(h, start, target, record = true) {
     g[1] += (dz / d) * (LIP / SLOPE) * k;
   };
   while (++step <= STEPS) {
+    const fx = x,
+      fz = z;
     slope(h, x, z, g);
     lip();
     vx -= SLOPE * g[0] * dt;
@@ -327,7 +329,7 @@ export function simulate(h, start, target, record = true) {
     if (v <= fr * dt) {
       vx = vz = 0;
       // At rest, unless the slope is steeper than the friction can hold.
-      if (SLOPE * Math.hypot(g[0], g[1]) <= (sand ? SAND : REST)) break;
+      if (SLOPE * Math.hypot(g[0], g[1]) <= fr) break;
       if (record) path.push(point(x, z));
       continue;
     }
@@ -458,9 +460,10 @@ export function simulate(h, start, target, record = true) {
     }
     if (record) path.push(point(x, z));
     if (sunk) break;
+    travel += Math.hypot(x - fx, z - fz);
     if (step % 120 === 0) {
-      if (Math.hypot(x - still.x, z - still.z) < 0.03 && Math.hypot(vx, vz) < SLOW) break;
-      still = point(x, z);
+      if (travel < 0.03 && Math.hypot(vx, vz) < SLOW) break;
+      travel = 0;
     }
   }
   return { path, end: point(x, z), firstBounce, sunk, steps: step };

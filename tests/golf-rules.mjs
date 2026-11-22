@@ -134,6 +134,8 @@ test('wild shots from anywhere never leave the lane', () => {
           for (const q of shot.path) assert.ok(G.free(h, q.x, q.z) || shot.sunk, level + ' ' + seed + ' ' + h.name);
           // No shot keeps him waiting: a ball held in sand or against a wall on a slope stops.
           assert.ok(shot.steps < 25 * 60, level + ' ' + seed + ' ' + h.name + ' ran to the time limit');
+          // And it stops only where it would stay: let go again from there, it does not roll on.
+          if (!shot.sunk) assert.ok(G.simulate(h, shot.end, shot.end, false).steps <= 121, level + ' ' + seed + ' ' + h.name + ' stopped while rolling');
           if (!shot.sunk) p = shot.end;
         }
       }
@@ -154,6 +156,13 @@ test('most holes have two obstacles, and sand slows the ball', () => {
     plain = G.simulate({ ...h, sands: [] }, h.tee, target);
   const run = (shot) => shot.path.reduce((d, p, i) => (i ? d + Math.hypot(p.x - shot.path[i - 1].x, p.z - shot.path[i - 1].z) : 0), 0);
   assert.ok(run(sandy) < run(plain) - 0.2, run(sandy) + ' ' + run(plain));
+});
+
+test('a ball rocking in a dip is not stopped on its side', () => {
+  // This shot comes back to almost the same place 2 s apart while it still rolls in the dip.
+  const h = G.course('moyen', 4)[2],
+    shot = G.simulate(h, h.tee, { x: 5.16, z: 0.41 });
+  assert.ok(G.simulate(h, shot.end, shot.end, false).steps <= 121);
 });
 
 test('the mill turns on a clock that restarts at each stroke', () => {
