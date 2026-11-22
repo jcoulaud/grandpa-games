@@ -303,8 +303,10 @@ export function simulate(h, start, target, record = true) {
     over = false,
     step = 0,
     // A ball that a slope holds against a wall shivers in place: it counts as stopped once it travels less
-    // than 3 cm in 2 s. A ball rocking in a dip travels far more, even if it comes back to the same place.
-    travel = 0;
+    // than 3 cm in 2 s while touching a wall in a quarter of the steps or more. A ball rocking in a dip
+    // travels far more, and a ball creeping over a crest touches no wall.
+    travel = 0,
+    contacts = 0;
   // The rim adds its pull to the slope, so a ball that stops hanging over the hole still falls in.
   const lip = () => {
     const dx = x - cup.x,
@@ -339,6 +341,7 @@ export function simulate(h, start, target, record = true) {
     v *= f;
     const n = Math.ceil((v * dt) / STEP),
       hs = dt / n;
+    let touched = false;
     for (let i = 0; i < n; i++) {
       const ox = x,
         oz = z;
@@ -433,6 +436,7 @@ export function simulate(h, start, target, record = true) {
         [vx, vz] = vel;
       }
       if (hit && firstBounce === null) firstBounce = step;
+      touched ||= hit;
       const dx = x - cup.x,
         dz = z - cup.z,
         inside = dx * dx + dz * dz < cupR2;
@@ -461,9 +465,10 @@ export function simulate(h, start, target, record = true) {
     if (record) path.push(point(x, z));
     if (sunk) break;
     travel += Math.hypot(x - fx, z - fz);
+    if (touched) contacts++;
     if (step % 120 === 0) {
-      if (travel < 0.03 && Math.hypot(vx, vz) < SLOW) break;
-      travel = 0;
+      if (travel < 0.03 && contacts >= 30 && Math.hypot(vx, vz) < SLOW) break;
+      travel = contacts = 0;
     }
   }
   return { path, end: point(x, z), firstBounce, sunk, steps: step };

@@ -26,6 +26,12 @@ function playHole(h, error = 0) {
   return { count, sunk, seen };
 }
 
+// A ball that stopped stays within 3 cm when it is let go again from there.
+const stays = (h, p) => {
+  const again = G.simulate(h, p, p, false);
+  return again.sunk || Math.hypot(again.end.x - p.x, again.end.z - p.z) < 0.03;
+};
+
 test('200 seeds per level give nine sound holes each, in time', () => {
   for (const level of G.levels) {
     const times = [];
@@ -135,7 +141,7 @@ test('wild shots from anywhere never leave the lane', () => {
           // No shot keeps him waiting: a ball held in sand or against a wall on a slope stops.
           assert.ok(shot.steps < 25 * 60, level + ' ' + seed + ' ' + h.name + ' ran to the time limit');
           // And it stops only where it would stay: let go again from there, it does not roll on.
-          if (!shot.sunk) assert.ok(G.simulate(h, shot.end, shot.end, false).steps <= 121, level + ' ' + seed + ' ' + h.name + ' stopped while rolling');
+          if (!shot.sunk) assert.ok(stays(h, shot.end), level + ' ' + seed + ' ' + h.name + ' stopped while rolling');
           if (!shot.sunk) p = shot.end;
         }
       }
@@ -158,11 +164,12 @@ test('most holes have two obstacles, and sand slows the ball', () => {
   assert.ok(run(sandy) < run(plain) - 0.2, run(sandy) + ' ' + run(plain));
 });
 
-test('a ball rocking in a dip is not stopped on its side', () => {
-  // This shot comes back to almost the same place 2 s apart while it still rolls in the dip.
-  const h = G.course('moyen', 4)[2],
-    shot = G.simulate(h, h.tee, { x: 5.16, z: 0.41 });
-  assert.ok(G.simulate(h, shot.end, shot.end, false).steps <= 121);
+test('a ball still rolling on a slope is not stopped', () => {
+  // A ball rocking in a dip comes back to almost the same place 2 s apart; another creeps over a wave.
+  for (const [seed, hole, x, z] of [[4, 2, 5.16, 0.41], [2, 5, 7.873, -0.108]]) {
+    const h = G.course('moyen', seed)[hole];
+    assert.ok(stays(h, G.simulate(h, h.tee, { x, z }).end), seed + ' ' + hole);
+  }
 });
 
 test('the mill turns on a clock that restarts at each stroke', () => {
