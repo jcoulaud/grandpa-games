@@ -148,7 +148,7 @@
   #sheet td.shake { animation: sh .3s; }
   /* A number just written: it is stamped into its box. */
   #sheet td.ink { animation: ink .5s cubic-bezier(.2,1.5,.4,1); }
-  @keyframes ink { 0% { scale: 1.9; opacity: 0; } 60% { opacity: 1; } }
+  @keyframes ink { 0% { scale: 1.5; opacity: 0; } 60% { opacity: 1; } }
 
   #helpText .boxes { display: grid; grid-template-columns: auto 1fr; gap: 2px 22px; margin: 4px 0 8px; }
   #helpText .boxes b { white-space: nowrap; }
@@ -342,7 +342,7 @@ function save() {
 }
 function valid(g) {
   const int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
-  const sheetOk = s => Array.isArray(s) && s.length === 13 && s.every(v => v === null || int(v, 0, 50));
+  const sheetOk = s => Array.isArray(s) && s.length === 13 && s.every((v, b) => v === null || Y.possible(b, v));
   if (!g || !Object.hasOwn(Y.LEVELS, g.level) || !(g.turn === 0 || g.turn === 1) || !Array.isArray(g.sheets) || g.sheets.length !== 2 || !g.sheets.every(sheetOk)) return false;
   if (!Array.isArray(g.rng) || g.rng.length !== 2 || !g.rng.every(v => int(v, 0, 2 ** 32 - 1))) return false;
   if (!Array.isArray(g.kept) || g.kept.length !== 5 || !g.kept.every(k => typeof k === 'boolean') || !int(g.rolls, 0, 3)) return false;
@@ -351,7 +351,10 @@ function valid(g) {
   if (g.turn === 1 && g.dice !== null) return false;
   // He always starts: on his turn both sheets have as many boxes, on the computer's he has one more.
   const n = g.sheets.map(s => s.filter(v => v !== null).length);
-  if (g.result) return n[0] === 13 && n[1] === 13 && ['won', 'lost', 'tie'].includes(g.result);
+  if (g.result) {
+    const a = Y.totals(g.sheets[0]).total, b = Y.totals(g.sheets[1]).total;
+    return n[0] === 13 && n[1] === 13 && g.result === (a > b ? 'won' : a < b ? 'lost' : 'tie');
+  }
   return g.result === null && n[0] === n[1] + g.turn && n[0] < 13 + g.turn && n[1] < 13;
 }
 function load() {
@@ -360,7 +363,7 @@ function load() {
     if (!v || !valid(v.G)) return false;
     G = view = v.G; wonNow = !!v.wonNow; level = G.level;
     // Undo steps that do not read back as a game are dropped.
-    undo = (Array.isArray(v.undo) ? v.undo : []).filter(u => { try { const g = JSON.parse(u); return valid(g) && g.turn === 0 && g.dice !== null; } catch (e) { return false; } });
+    undo = (Array.isArray(v.undo) ? v.undo : []).filter(u => { try { const g = JSON.parse(u); return valid(g) && !g.result && g.turn === 0 && g.dice !== null; } catch (e) { return false; } });
     stats = { won: 0, best: 0, ...(v.stats || {}) };
     if (Object.hasOwn(CAST, v.who)) who = v.who;
     return true;
@@ -392,11 +395,12 @@ function turnText() {
 /* ---------- His actions ---------- */
 let lastTap = null;
 // A second click on the same thing within half a second is a double-click: it counts as one click.
-function once(key) {
-  const t = performance.now(), prev = lastTap;
-  lastTap = { key, t };
-  // A die appears where the cup was: a click on it just after the throw is the second click of a double-click.
-  return !(prev && t - prev.t < 500 && (prev.key === key || (prev.key === 'cup' && key.startsWith('die'))));
+function once(key, e) {
+  const t = performance.now(), prev = lastTap, x = e ? e.clientX : 0, y = e ? e.clientY : 0;
+  lastTap = { key, t, x, y };
+  // A die appears where the cup was: a click on it just after the throw, at the same place, is the
+  // second click of a double-click.
+  return !(prev && t - prev.t < 500 && (prev.key === key || (prev.key === 'cup' && key.startsWith('die') && Math.hypot(x - prev.x, y - prev.y) < 24)));
 }
 function refuseBusy() {
   if (busy() || (G.turn !== 0 && !G.result)) return say(`Attendez : c'est à ${them()} de jouer.`), true;
@@ -408,6 +412,7 @@ function rollDice() {
   if (G.rolls >= 3) return say('Vous avez lancé trois fois : cliquez sur une case de votre colonne pour marquer vos points.');
   if (G.dice && G.kept.every(k => k)) return say('Vous gardez les cinq dés : cliquez sur un dé pour le relancer, ou sur une case pour marquer.');
   const thrown = G.dice ? G.kept.map((k, i) => k ? -1 : i).filter(i => i >= 0) : [0, 1, 2, 3, 4];
+  stopParty();
   G = view = Y.roll(G); hint = null; fresh = null;
   save(); rolling = thrown; render(); rolling = [];
   if (!saved) return;
@@ -432,6 +437,7 @@ function tapBox(player, box) {
   if (player !== 0) return shakeBox(player, box), say(`Cette colonne est celle de ${them()} : marquez dans la colonne « Vous ».`);
   if (!G.dice) return shakeBox(player, box), say("Lancez d'abord les dés avec le bouton « Lancer les dés ».");
   if (G.sheets[0][box] !== null) return shakeBox(player, box), say('Cette case est déjà remplie : choisissez une case vide.');
+  stopParty();
   undo.push(JSON.stringify(G));
   G = Y.write(G, box); view = G; hint = null; fresh = { player: 0, box, at: performance.now() };
   afterWrite(writeText(G, 0, box));
@@ -466,6 +472,7 @@ function computerPlays() {
   const steps = Y.computerTurn(G);
   if (!steps.length) return;
   showing = true;
+  stopParty();
   let at = 0;
   const show = () => {
     const s = steps[at++], prev = at > 1 ? steps[at - 2].G : null;
@@ -536,6 +543,7 @@ function later(fn, ms) { const t = setTimeout(() => { timers = timers.filter(x =
 // Stops what is moving: the timers, the ribbon, the hops and the faces that flicker.
 function calm() {
   timers.forEach(clearTimeout); timers = [];
+  showing = false;
   $('ribbon').classList.remove('on');
   dieEls.forEach(e => { e.classList.remove('party', 'rolling'); e.dataset.html = ''; });
 }
@@ -544,6 +552,9 @@ function doUndo() {
   calm();
   Kit.closeDialog();
   G = view = JSON.parse(undo.pop()); hint = null; fresh = null; showing = false;
+  // His next throws are drawn again, so an undo cannot show him what a throw would give. The computer
+  // keeps its own numbers: the same box gives it the same turn.
+  G = view = { ...G, rng: [crypto.getRandomValues(new Uint32Array(1))[0], G.rng[1]] };
   save(); render();
   if (saved) say('Coup annulé : vos dés sont revenus, choisissez une autre case. ' + (G.rolls < 3 ? 'Vous pouvez aussi relancer.' : ''));
 }
@@ -682,17 +693,25 @@ function render() {
   layout();
 }
 // Five dice alike: the ribbon says "Yams !" for a moment, and the dice hop.
-let partyTimers = [];
+let partyTimers = [], hopTimer = null;
+// Ends a celebration still on screen: the next throw or box starts clean.
+function stopParty() {
+  partyTimers.forEach(clearTimeout); partyTimers = [];
+  clearTimeout(hopTimer);
+  $('ribbon').classList.remove('on');
+  dieEls.forEach(e => e.classList.remove('party'));
+}
 function ribbon() {
   const r = $('ribbon');
-  partyTimers.forEach(clearTimeout);
-  r.classList.remove('on'); void r.offsetWidth; r.classList.add('on');
+  stopParty();
+  void r.offsetWidth; r.classList.add('on');
   partyTimers = [later(() => r.classList.remove('on'), 1900), later(party, 650)];
 }
 function party() {
   if (REDUCED) return;
+  clearTimeout(hopTimer);
   dieEls.forEach((e, i) => { e.style.setProperty('--i', i); e.classList.remove('party'); void e.offsetWidth; e.classList.add('party'); });
-  partyTimers.push(later(() => dieEls.forEach(e => e.classList.remove('party')), 2200));
+  hopTimer = later(() => dieEls.forEach(e => e.classList.remove('party')), 2200);
 }
 // While a die flies, its pips change every 70 ms, then it shows the face it landed on.
 function flicker(e, face, delay) {
@@ -756,7 +775,7 @@ function layout() {
 /* ---------- Mouse, touch and keys ---------- */
 diceEl.addEventListener('click', e => {
   const d = e.target.closest('.die');
-  if (d && once('die' + d.dataset.i)) tapDie(+d.dataset.i);
+  if (d && once('die' + d.dataset.i, e)) tapDie(+d.dataset.i);
 });
 $('sheet').addEventListener('click', e => {
   const c = e.target.closest('td[data-b]');
@@ -768,7 +787,7 @@ $('sheet').addEventListener('keydown', e => {
 });
 $('rollBtn').onclick = () => { if (once('roll')) rollDice(); };
 // A click on the cup throws the dice too.
-$('piste').addEventListener('click', e => { if (!view.dice && !e.target.closest('.die') && once('cup')) rollDice(); });
+$('piste').addEventListener('click', e => { if (!view.dice && !e.target.closest('.die') && once('cup', e)) rollDice(); });
 $('undoBtn').onclick = () => { if (once('undo')) doUndo(); };
 $('hintBtn').onclick = showHint;
 $('helpBtn').onclick = () => Kit.openHelp();

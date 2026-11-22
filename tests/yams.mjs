@@ -77,11 +77,14 @@ await page.screenshot({ path: `${OUT}/yams-after-computer.png` });
 await click(page.locator('#rollBtn'));
 await click(box(0, 12));
 ok(/déjà remplie/.test(await msg()), 'a full box is refused, with the reason');
-const before = await g(() => JSON.stringify(G));
+// The game without his stream of numbers, which an undo draws again.
+const state = () => g(() => JSON.stringify({ ...G, rng: G.rng[1] }));
+const before = await state(), hisRng = await g(() => G.rng[0]);
 await click(box(0, 11));
 await myTurn();
 await page.click('#undoBtn');
-ok(await g(b => JSON.stringify(G) === b, before), 'undo takes back his box and the computer\'s turn');
+ok(await state() === before, 'undo takes back his box and the computer\'s turn');
+ok(await g(r => G.rng[0] !== r, hisRng), 'undo draws his next throws again');
 // A double-click on undo takes back one box only.
 await click(box(0, 11));
 await myTurn();
@@ -163,6 +166,14 @@ await g(() => { const v = GG.load('yams'); v.undo = ['broken', ...v.undo]; local
 await page.reload();
 await wait(300);
 ok(await g(() => undo.length === 0 && document.getElementById('undoBtn').disabled), 'a broken undo step is dropped');
+
+// A new game during the computer's turn starts clean: he can throw at once.
+await click(box(0, 7));
+ok(await g(() => showing), "the computer's turn is being shown");
+await page.click('#newBtn');
+await page.getByRole('button', { name: 'Facile', exact: true }).click();
+await click(page.locator('#cup'));
+ok(await g(() => !showing && G.rolls === 1), "a new game during the computer's turn can be played at once");
 
 // 9. The sizes: dice and rows large enough on his laptop and at 125 %, nothing outside the window.
 await page.click('#newBtn');

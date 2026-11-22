@@ -156,14 +156,11 @@
     // The Yams is rare: late in the game, there are few turns left to make one.
     const cost = box === 11 ? Math.min(COST[11], 2.5 * (open(sheet).length - 1)) : COST[box];
     let v = p - (careful ? cost : cost * .5);
+    // A top box changes the chance of the bonus: reaching it, giving it up, or points above or under
+    // three dice of the face. That change is worth its share of the 35 points.
     if (careful && box < 6 && bonusOpen(sheet)) {
       const after = sheet.slice(); after[box] = p;
-      // Reaching the bonus gains what it was not yet sure to bring.
-      if (totals(after).top >= BONUS_AT) v += BONUS * (1 - bonusChance(sheet));
-      // A box that makes the bonus impossible gives up what it was likely to bring.
-      else if (!bonusOpen(after)) v -= BONUS * bonusChance(sheet);
-      // Otherwise, points above three dice of the face bring the bonus closer, points under it push it away.
-      else v += 2 * (p - 3 * (box + 1));
+      v += BONUS * (bonusChance(after) - bonusChance(sheet));
     }
     return v;
   }
@@ -186,7 +183,7 @@
     if (!left.length) return 0;
     if (left.length === 1) { const k = Math.ceil(missing / (left[0] + 1)); return k > 5 ? 0 : AIM[k]; }
     const par = left.reduce((a, b) => a + 3 * (b + 1), 0);
-    return Math.max(.1, Math.min(.95, .5 + (par - missing) / 20));
+    return Math.max(.05, Math.min(.97, .5 + (par - missing) / 16));
   }
   const open = sheet => sheet.map((v, b) => v === null ? b : -1).filter(b => b >= 0);
   function bestBox(c, sheet, careful) {
@@ -220,13 +217,13 @@
     if (how === 'facile') return easy(G, sheet, c, left, random);
     const careful = how === 'fort';
     // Difficile's last box, with the other sheet full: it plays to win the game, not for points. A win
-    // is worth 1, a tie 0.5; the points only break ties between two equal chances.
+    // is worth 1, a tie 0.5; the points, a billionth each, only break ties between equal chances.
     const other = G.sheets[1 - G.turn], last = open(sheet);
     let worth = h => bestBox(h, sheet, careful)[1];
     if (careful && last.length === 1 && other.every(v => v !== null)) {
       const need = totals(other).total;
       worth = h => { const after = sheet.slice(); after[last[0]] = pointsOf(last[0], h); const t = totals(after).total;
-        return (t > need ? 1 : t === need ? .5 : 0) + t / 1e4; };
+        return (t > need ? 1 : t === need ? .5 : 0) + t * 1e-9; };
     }
     if (left > 0) {
       const [k] = plan(worth, how === 'fort' ? left : 1)[INDEX.get(keyOf(c))];
@@ -278,5 +275,9 @@
     return steps;
   }
 
-  root.Yams = { BOXES, NAMES, BONUS_AT, BONUS, LEVELS, newGame, roll, keep, write, points, totals, bonusOpen, advice, computerTurn, counts };
+  // The points a box can hold: what some hand of five dice scores there.
+  const POSSIBLE = BOXES.map((b, box) => new Set(ALL.map(c => pointsOf(box, c))));
+  const possible = (box, v) => POSSIBLE[box].has(v);
+
+  root.Yams = { BOXES, NAMES, BONUS_AT, BONUS, LEVELS, newGame, roll, keep, write, points, totals, bonusOpen, advice, computerTurn, counts, possible };
 })(typeof self !== 'undefined' ? self : globalThis);

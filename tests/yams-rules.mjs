@@ -30,6 +30,10 @@ ok(Y.totals(sheet([3, 6, 9, 12, 15, 17])).bonus === 0, '62 does not');
 ok(Y.totals([3, 6, 9, 12, 15, 18, 18, 24, 25, 30, 40, 50, 30]).total === 63 + 35 + 217, 'the total adds the top, the bonus and the bottom');
 ok(Y.bonusOpen(sheet([0, 0, 0, null, null, null])) && !Y.bonusOpen(sheet([0, 0, 0, 0, null, null])), 'the bonus is open while the empty top boxes can still reach 63');
 
+// The points a box can hold, used to check a save.
+ok(Y.possible(B.full, 25) && !Y.possible(B.full, 20) && Y.possible(B.chance, 30) && !Y.possible(B.chance, 50) && !Y.possible(B.trois, 4) && Y.possible(B.carre, 0),
+  'the points each box can hold');
+
 // 3. Throws: the same seed throws the same dice, kept dice stay, a turn has three throws.
 let G = Y.newGame('moyen', 42);
 ok(G.dice === null && G.turn === 0 && G.rolls === 0, 'a new game waits for his first throw');
@@ -96,6 +100,8 @@ a = lastBox([4, 6, 5, 5, 3], 1, 246);
 ok(a.kind === 'write' && a.box === B.chance, 'on its last box, Difficile writes dice that win, rather than risk them for more', JSON.stringify(a));
 a = lastBox([4, 4, 4, 4, 4], 2, 245);
 ok(a.kind === 'keep' && a.kept.filter(k => k).length === 4, 'on its last box, Difficile throws again rather than write a sure loss', JSON.stringify(a));
+a = Y.advice({ ...Y.newGame('fort', 1), turn: 1, dice: [1, 1, 1, 1, 5], rolls: 2, sheets: [his(254 - 50), [3, 6, 9, 4, 10, 6, 18, 24, 25, 30, 40, 50, null]] });
+ok(a.kind === 'keep' && a.kept.every(k => !k), 'on its last box, Difficile takes its only chance to win over a sure tie', JSON.stringify(a));
 // Deux and Carré left, 61 in the top: four 6 go in the Carré, a 2 next turn is nearly sure.
 a = Y.advice(at([2, 6, 6, 6, 6], 3, [3, null, 9, 12, 15, 22, 0, null, 0, 0, 0, 0, 0]));
 ok(a.kind === 'write' && a.box === B.carre, 'the hint does not spend a good Carré on a bonus that is nearly sure anyway', JSON.stringify(a));
