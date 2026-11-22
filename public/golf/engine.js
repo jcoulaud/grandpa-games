@@ -301,7 +301,10 @@ export function simulate(h, start, target, record = true) {
   let firstBounce = null,
     sunk = false,
     over = false,
-    step = 0;
+    step = 0,
+    // A ball that a slope holds against a wall shivers in place: it counts as stopped once it moves less
+    // than 3 cm in 2 s.
+    still = point(x, z);
   // The rim adds its pull to the slope, so a ball that stops hanging over the hole still falls in.
   const lip = () => {
     const dx = x - cup.x,
@@ -319,11 +322,12 @@ export function simulate(h, start, target, record = true) {
     vx -= SLOPE * g[0] * dt;
     vz -= SLOPE * g[1] * dt;
     let v = Math.hypot(vx, vz);
-    const fr = h.sands.length && inSand(h, x, z) ? SAND : v > SLOW ? ROLL : REST;
+    const sand = h.sands.length > 0 && inSand(h, x, z),
+      fr = sand ? SAND : v > SLOW ? ROLL : REST;
     if (v <= fr * dt) {
       vx = vz = 0;
       // At rest, unless the slope is steeper than the friction can hold.
-      if (SLOPE * Math.hypot(g[0], g[1]) <= REST) break;
+      if (SLOPE * Math.hypot(g[0], g[1]) <= (sand ? SAND : REST)) break;
       if (record) path.push(point(x, z));
       continue;
     }
@@ -454,6 +458,10 @@ export function simulate(h, start, target, record = true) {
     }
     if (record) path.push(point(x, z));
     if (sunk) break;
+    if (step % 120 === 0) {
+      if (Math.hypot(x - still.x, z - still.z) < 0.03 && Math.hypot(vx, vz) < SLOW) break;
+      still = point(x, z);
+    }
   }
   return { path, end: point(x, z), firstBounce, sunk, steps: step };
 }
@@ -935,8 +943,9 @@ function build(level, type, rnd) {
         h.regions.push({ kind: 'board', pts: [at(spot.k, s - 0.07, side * e), at(spot.k, s + 0.07, side * e), at(spot.k, s + 0.07, tip), at(spot.k, s - 0.07, tip)] });
       }
     } else if (feature === 'hill' || feature === 'dip') {
+      // The whole slope is kept clear, so no sand or post stands on it.
       const R = clamp(r(0.95, 1.25) * (w / 2.3), 0.85, 1.3),
-        spot = place(R * 0.6, r(0.35, 0.65));
+        spot = place(R, r(0.35, 0.65));
       if (!spot) return null;
       const [x, z] = at(spot.k, spot.s, r(-0.2, 0.2) * w);
       h.bumps.push({ x, z, r: R, h: feature === 'hill' ? r(0.3, 0.42) : -r(0.22, 0.3) });

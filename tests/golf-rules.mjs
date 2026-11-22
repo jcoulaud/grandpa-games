@@ -132,6 +132,8 @@ test('wild shots from anywhere never leave the lane', () => {
             d = 1 + rnd() * 18,
             shot = G.simulate(h, p, { x: p.x + Math.cos(a) * d, z: p.z + Math.sin(a) * d });
           for (const q of shot.path) assert.ok(G.free(h, q.x, q.z) || shot.sunk, level + ' ' + seed + ' ' + h.name);
+          // No shot keeps him waiting: a ball held in sand or against a wall on a slope stops.
+          assert.ok(shot.steps < 25 * 60, level + ' ' + seed + ' ' + h.name + ' ran to the time limit');
           if (!shot.sunk) p = shot.end;
         }
       }
