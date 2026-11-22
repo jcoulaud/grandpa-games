@@ -39,7 +39,10 @@
     background: none; box-shadow: none; display: block; perspective: calc(var(--s) * 6); cursor: pointer; }
   .card:hover, .card:active { background: none; box-shadow: none; transform: none; }
   .card:focus-visible { outline: 4px solid #fff; outline-offset: 4px; box-shadow: none; }
-  .flip { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .38s cubic-bezier(.3,.7,.3,1); }
+  /* .lift moves the whole card (a pair, a miss, the deal, the win); .flip turns it. Each motion uses
+     translate, scale or rotate, which compose with the turn in transform. */
+  .lift { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; }
+  .flip { position: absolute; inset: 0; border-radius: inherit; transform-style: preserve-3d; }
   .card.up .flip, .card.found .flip { transform: rotateY(180deg); }
   .side { position: absolute; inset: 0; border-radius: inherit; backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden; }
   /* The back: red vichy in a white frame. */
@@ -52,7 +55,7 @@
       #FFF6F0;
     box-shadow: inset 0 0 0 2px rgba(120,10,20,.35); }
   .card:not(.up):not(.found):hover .back { background: #FFF3C4; box-shadow: 0 0 0 4px var(--gold), 0 10px 20px rgba(0,0,0,.4); }
-  .card:not(.up):not(.found):hover .flip { transform: translateY(-3px); }
+
   /* The face: the picture on cream. */
   .face { transform: rotateY(180deg); border-radius: calc(var(--s) * .1); background: #F6EFE0;
     box-shadow: 0 6px 14px rgba(0,0,0,.35), inset 0 0 0 2px rgba(0,0,0,.08); }
@@ -63,8 +66,6 @@
     border-radius: 50%; background: #3E8E4A url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 70% no-repeat;
     box-shadow: 0 0 0 3px #fff, 0 2px 6px rgba(0,0,0,.35); }
   .card.found { cursor: default; }
-  .card.just .flip { animation: pairPop .5s cubic-bezier(.3,1.6,.5,1) .3s; }
-  @keyframes pairPop { 50% { transform: rotateY(180deg) scale(1.1); } }
   /* Two cards that do not match: a red frame while they show. */
   .card.miss .face { box-shadow: 0 0 0 calc(var(--s) * .035) #C4122F, 0 6px 14px rgba(0,0,0,.35); }
   /* The hint: a yellow frame that glows. */
@@ -90,7 +91,31 @@
   @media (max-width: 700px) {
     #hintBtn, #helpBtn { flex-direction: column; gap: 0; padding: 3px 2px; text-align: center; font-size: 18px; }
   }
-  @media (prefers-reduced-motion: reduce) { .flip { transition: none; } .card.just .flip, .card.hint::before, .card.shake { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .card.hint::before, .card.shake { animation: none; } }
+  /* The timings are set from the script (--up-ms and the others), so the messages follow the cards. A card
+     turns up in 0.52 s, lifting a little half way, and turns back more slowly, in 0.7 s. */
+  @media (prefers-reduced-motion: no-preference) {
+    .flip { transition: transform var(--down-ms) cubic-bezier(.45,0,.45,1); }
+    .card.up .flip, .card.found .flip { transition-duration: var(--up-ms); transition-timing-function: cubic-bezier(.36,0,.24,1); }
+    .card[data-lift].up .flip, .card[data-lift].found .flip { animation: flipLift var(--up-ms) ease-in-out; }
+    .card:not(.up):not(.found):hover .lift { translate: 0 -2px; transition: translate .18s ease-out; }
+    /* A pair: both cards lift together once the picture is readable, and the tick comes in. */
+    .card.just .lift { animation: pairLift var(--pair-ms) cubic-bezier(.4,0,.35,1) var(--up-ms); }
+    .card.just::after { animation: tickIn .22s cubic-bezier(.22,.72,.28,1) var(--up-ms) backwards; }
+    /* A miss: both cards tilt once just before they turn back. */
+    .card.miss .lift { animation: missTilt .4s ease-in-out calc(var(--up-ms) + var(--show-ms) - 400ms); }
+    /* A new game: the cards settle into place, from the top left corner outwards. */
+    #grid[data-board="deal"] .lift { animation: deal .34s cubic-bezier(.22,.68,.32,1) var(--band) backwards; }
+    /* The win: a wave runs across the columns after the last pair. */
+    #grid[data-board="win"] .lift { animation: wave var(--wave-ms) ease-in-out calc(var(--up-ms) + var(--pair-ms) + var(--band)); }
+    #grid[data-board="win"] .card.just .lift { animation: pairLift var(--pair-ms) cubic-bezier(.4,0,.35,1) var(--up-ms), wave var(--wave-ms) ease-in-out calc(var(--up-ms) + var(--pair-ms) + var(--band)); }
+  }
+  @keyframes flipLift { 0%, 100% { translate: 0 0; scale: 1; } 48% { translate: 0 clamp(-5px, calc(var(--s) * -.03), -1px); scale: 1.025; } }
+  @keyframes pairLift { 0%, 100% { translate: 0 0; scale: 1; } 45% { translate: 0 clamp(-8px, calc(var(--s) * -.05), -2px); scale: 1.04; } }
+  @keyframes tickIn { from { opacity: 0; scale: .5; } }
+  @keyframes missTilt { 0%, 100% { rotate: 0deg; } 40% { rotate: -2deg; } 72% { rotate: 1deg; } }
+  @keyframes deal { from { opacity: 0; translate: 0 -10px; } }
+  @keyframes wave { 0%, 100% { translate: 0 0; } 50% { translate: 0 clamp(-10px, calc(var(--s) * -.06), -3px); } }
 </style>
 <script src="../lib/zoom.js"></script>
 </head>
@@ -134,8 +159,14 @@
 const P = Paires;
 const $ = id => document.getElementById(id);
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
-// Two cards that do not match stay up this long, or until his next click.
-const SHOW_MS = 2600;
+// The timings of the motions, shared with the style sheet. A card turns up in UP_MS. Two cards that do
+// not match stay up SHOW_MS once readable, or until his next click, then turn back in DOWN_MS. A pair
+// lifts for PAIR_MS. The deal and the win wave spread over SPREAD_MS from one side to the other.
+const UP_MS = 520, DOWN_MS = 700, SHOW_MS = 2600, PAIR_MS = 440, WAVE_MS = 400, SPREAD_MS = 240;
+const WIN_DIALOG_MS = UP_MS + PAIR_MS + SPREAD_MS + WAVE_MS + 120;
+const motion = ms => REDUCED ? 0 : ms;
+for (const [name, ms] of Object.entries({ up: UP_MS, down: DOWN_MS, show: SHOW_MS, pair: PAIR_MS, wave: WAVE_MS }))
+  document.documentElement.style.setProperty(`--${name}-ms`, ms + 'ms');
 
 /* ---------- State ----------
    G: the game (see engine.js). shown: the two cards of a miss, face up for a moment. just: the pair
@@ -181,14 +212,32 @@ function load() {
 }
 
 /* ---------- His cards ---------- */
-const say = Kit.say;
+// The message line names a card once its picture is readable. A newer message replaces one still waiting.
+let lineTimer = 0, missTimer = 0;
+function say(text) { clearTimeout(lineTimer); Kit.say(text); }
+function sayAfter(text, ms) {
+  clearTimeout(lineTimer);
+  const game = G;
+  const write = () => { if (G === game && saved && !stale) Kit.say(text); };
+  if (ms > 0) lineTimer = setTimeout(write, ms); else write();
+}
 const left = () => P.total(G) - P.pairs(G);
 
 function later(fn, ms) { const t = setTimeout(() => { timers = timers.filter(x => x !== t); fn(); }, ms); timers.push(t); return t; }
-function hideShown() {
-  if (!shown) return;
-  shown = null;
-  timers.forEach(clearTimeout); timers = [];
+function hideShown() { clearTimeout(missTimer); shown = null; }
+function stopAll() { timers.forEach(clearTimeout); timers = []; clearTimeout(lineTimer); hideShown(); }
+
+// The deal settles the cards from the top left corner outwards; the win runs a wave across the columns.
+function boardEffect(kind) {
+  delete gridEl.dataset.board;
+  if (REDUCED) return;
+  const rows = Math.ceil(cards.length / cols), last = kind === 'deal' ? cols + rows - 2 : cols - 1;
+  cards.forEach((e, i) => {
+    const band = kind === 'deal' ? i % cols + Math.floor(i / cols) : i % cols;
+    e.style.setProperty('--band', Math.round(SPREAD_MS * band / Math.max(1, last)) + 'ms');
+  });
+  void gridEl.offsetWidth;
+  gridEl.dataset.board = kind;
 }
 
 // A second click on the same card within half a second is a double-click: it counts as one click.
@@ -199,10 +248,14 @@ function tap(i) {
   lastTap = { i, t };
   if (prev && prev.i === i && t - prev.t < 500) return;
   hideShown();
+  if (gridEl.dataset.board === 'deal') delete gridEl.dataset.board;
   const why = P.refusal(G, i);
   if (why === 'won') return say('Cette partie est gagnée : cliquez sur « Nouvelle partie » pour en commencer une autre.');
   if (why === 'found') { shake(i); render(); return say(`Cette paire de ${pic(i).many} est déjà trouvée : choisissez une carte à l'envers.`); }
   if (why === 'up') { shake(i); render(); return say('Cette carte est déjà retournée : choisissez une deuxième carte.'); }
+  // A card of a miss still showing stays up: it does not turn again.
+  const visible = cards[i].classList.contains('up');
+  if (!visible) cards[i].dataset.lift = '';
   const r = P.flip(G, i);
   G = r.G; hint = null; just = null;
   const firstWin = G.result === 'won' && !wonNow;
@@ -219,30 +272,33 @@ function tap(i) {
   else if (firstWin) { wonNow = false; stats.won--; stats.best = before; record = false; }
   if (r.event === 'miss') {
     shown = { a: r.a, b: r.b };
-    later(() => { shown = null; render(); }, REDUCED ? SHOW_MS : SHOW_MS + 380);
+    missTimer = setTimeout(() => { hideShown(); render(); }, motion(UP_MS) + SHOW_MS);
   }
   if (r.event === 'pair') just = [r.a, r.b];
   render();
   if (G.result) { finish(!stale, record); if (!saved && !stale) say(FULL); return; }
   if (!saved) return;
-  const A = pic(i);
-  if (r.event === 'first') say(`${cap(A.one)}. Où se cache l'autre carte ?`);
-  else if (r.event === 'pair') say(`Bravo, une paire de ${A.many} ! Encore ${plural(left(), 'paire', 'paires')} à trouver.`);
-  else say(`${cap(pic(r.a).one)} et ${A.one} : ce n'est pas une paire. Retenez bien leur place.`);
+  const A = pic(i), wait = visible ? 0 : motion(UP_MS);
+  if (r.event === 'first') sayAfter(`${cap(A.one)}. Où se cache l'autre carte ?`, wait);
+  else if (r.event === 'pair') sayAfter(`Bravo, une paire de ${A.many} ! Encore ${plural(left(), 'paire', 'paires')} à trouver.`, wait);
+  else sayAfter(`${cap(pic(r.a).one)} et ${A.one} : ce n'est pas une paire. Retenez bien leur place.`, wait);
 }
 
 /* ---------- End of the game ---------- */
 function finish(show, record) {
   hint = null; render();
-  const n = P.total(G);
-  say(`Bravo, vous avez trouvé les ${n} paires en ${plural(G.turns, 'coup', 'coups')}.`);
-  if (!show) return;
+  const n = P.total(G), text = `Bravo, vous avez trouvé les ${n} paires en ${plural(G.turns, 'coup', 'coups')}.`;
+  if (!show) { if (saved && !stale) say(text); return; }
+  // The last pair lifts, a wave runs across the board, then the win sheet opens.
+  sayAfter(text, motion(UP_MS));
+  boardEffect('win');
   const best = stats.best[level];
   const lv = Kit.levelNames[level].toLowerCase();
   const extra = !wonNow || record === 'first' ? '' : record === 'better' ? ` C'est votre meilleur score au niveau ${lv}.`
     : ` Votre meilleur score au niveau ${lv} : ${plural(best, 'coup', 'coups')}.`;
-  later(() => Kit.isOpen() || Kit.dialog('Bravo, vous avez gagné !', `Vous avez trouvé les ${n} paires en ${plural(G.turns, 'coup', 'coups')}.${extra}`,
-    [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', home]], true), REDUCED ? 0 : 900);
+  const game = G;
+  later(() => G !== game || stale || Kit.isOpen() || Kit.dialog('Bravo, vous avez gagné !', `Vous avez trouvé les ${n} paires en ${plural(G.turns, 'coup', 'coups')}.${extra}`,
+    [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', home]], true), motion(WIN_DIALOG_MS));
 }
 const home = () => { location.href = $('home').href; };
 
@@ -260,16 +316,18 @@ function showHint() {
   else say("Aucune paire n'est connue pour le moment : retournez la carte encadrée, jamais retournée.");
 }
 
-function askNewGame() { timers.forEach(clearTimeout); timers = []; shown = null; render(); Kit.chooseLevel(level, playing(), newGame); }
+function askNewGame() { stopAll(); render(); Kit.chooseLevel(level, playing(), newGame); }
 function newGame(lv) {
-  timers.forEach(clearTimeout); timers = [];
+  stopAll();
   if (lv) level = lv;
   Kit.showLevel(level);
   G = P.newGame(level, crypto.getRandomValues(new Uint32Array(1))[0]);
   shown = null; just = null; hint = null; wonNow = false;
   // A stale window cannot save, so it does not count a game either.
   if (save()) GG.track('paires', 'start');
+  built = ''; delete gridEl.dataset.board;
   render();
+  boardEffect('deal');
   if (saved) say(`Retrouvez les ${P.total(G)} paires. Cliquez sur une carte pour la retourner.`);
 }
 
@@ -283,7 +341,7 @@ function build() {
   G.cards.forEach((c, i) => {
     const e = document.createElement('button');
     e.className = 'card'; e.dataset.i = i; e.setAttribute('role', 'gridcell');
-    e.innerHTML = `<div class="flip"><div class="side back"></div><div class="side face"><img src="img/${P.PICTURES[c].id}.webp" alt="" draggable="false"></div></div>`;
+    e.innerHTML = `<span class="lift"><span class="flip"><span class="side back"></span><span class="side face"><img src="img/${P.PICTURES[c].id}.webp" alt="" draggable="false"></span></span></span>`;
     e.addEventListener('click', () => tap(i));
     gridEl.appendChild(e); cards.push(e);
   });
@@ -313,6 +371,7 @@ function render() {
   cards.forEach((e, i) => {
     const found = G.found[i] === '1';
     const up = !found && (G.up === i || (shown && (shown.a === i || shown.b === i)));
+    if (!found && !up) delete e.dataset.lift;
     const cls = 'card' + (found ? ' found' : '') + (up ? ' up' : '') + (up && shown && G.up !== i ? ' miss' : '')
       + (just && just.includes(i) ? ' just' : '') + (framed.has(i) ? ' hint' : '');
     if (e.className.replace(' shake', '') !== cls) e.className = cls;
@@ -330,7 +389,7 @@ function shake(i) {
 }
 
 $('hintBtn').onclick = showHint;
-$('helpBtn').onclick = () => { timers.forEach(clearTimeout); timers = []; shown = null; render(); Kit.openHelp(); };
+$('helpBtn').onclick = () => { stopAll(); render(); Kit.openHelp(); };
 // A miss turns back at his next click, wherever it is.
 addEventListener('pointerdown', e => { if (shown && !(e.target.closest && e.target.closest('.card'))) { hideShown(); render(); } }, true);
 $('newBtn').onclick = askNewGame;

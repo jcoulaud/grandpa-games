@@ -14,8 +14,9 @@ const g = (fn, arg) => page.evaluate(fn, arg);
 const wait = ms => page.waitForTimeout(ms);
 const msg = () => g(() => document.getElementById('msg').textContent);
 const card = i => page.locator(`.card[data-i="${i}"]`);
-// A click, then the mouse moves away and waits, so the next click on the same card is not a double-click.
-const click = async i => { await card(i).click(); await page.mouse.move(5, 5); await wait(520); };
+// A click, then the mouse moves away and waits until the card is turned and named, so the next click on
+// the same card is not a double-click.
+const click = async i => { await card(i).click(); await page.mouse.move(5, 5); await wait(700); };
 const cls = i => card(i).getAttribute('class');
 
 // 1. The first visit: the rules open, each page fits without scrolling, then the level.
@@ -29,6 +30,7 @@ for (let n = 0; n < 3; n++) {
 }
 await page.getByRole('button', { name: 'Facile', exact: true }).click();
 ok(await page.locator('.card').count() === 12, 'Facile has 12 cards');
+ok(await g(() => document.getElementById('grid').dataset.board === 'deal'), 'a new game deals the cards in');
 // A fixed seed, so the steps below meet the same deal each time.
 await g(() => { G = Paires.newGame('facile', 4242); save(); render(); });
 const cards = await g(() => G.cards);
@@ -50,7 +52,9 @@ await click(b);
 ok(/miss/.test(await cls(0)) && /miss/.test(await cls(b)) && /ce n'est pas une paire/.test(await msg()), 'two different cards stay up in red and say so');
 await page.screenshot({ path: `${OUT}/paires-miss.png` });
 ok(await g(() => G.turns === 1 && G.up === -1), 'the miss counts one turn');
-await wait(3200);
+await wait(1800);
+ok(/up/.test(await cls(0)), 'they stay up for a moment');
+await wait(1000);
 ok(!/up/.test(await cls(0)) && !/up/.test(await cls(b)), 'they turn back by themselves after a moment');
 
 // 4. A miss turns back at once at the next click.
@@ -88,7 +92,8 @@ for (let k = 0; k < 20 && !(await g(() => G.result)); k++) {
   const h = await g(() => Paires.hint(G).cells[0]);
   await click(h);
 }
-await wait(1200);
+ok(!(await g(() => Kit.isOpen())), 'the win sheet waits for the wave across the board');
+await page.waitForSelector('#over.on', { timeout: 3000 });
 ok(await g(() => G.result === 'won') && /Bravo, vous avez gagné/.test(await g(() => document.getElementById('overTitle').textContent)), 'the last pair wins and shows the win');
 await page.screenshot({ path: `${OUT}/paires-won.png` });
 ok(stats.won === 1 && await g(() => stats.won === 1 && stats.best.facile === G.turns && GG.meta('paires').summary === '1 victoire'), 'the win is counted once, with the best score, and the tile says so');
@@ -108,7 +113,7 @@ await page.getByRole('button', { name: 'Facile', exact: true }).click();
 // A double-click on a card counts as one click: it does not start the next turn.
 await card(0).dblclick(); await page.mouse.move(5, 5);
 ok(await g(() => G.up === 0 && G.turns === 0 && !/déjà/.test(document.getElementById('msg').textContent)), 'a double-click turns one card only, without a refusal');
-await wait(600);
+await wait(1000);
 const diff = await g(() => G.cards.findIndex(c => c !== G.cards[0]));
 await card(diff).dblclick(); await page.mouse.move(5, 5);
 ok(await g(() => G.up === -1 && G.turns === 1), 'a double-click on the second card does not turn a third');
