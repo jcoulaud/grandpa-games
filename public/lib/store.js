@@ -10,7 +10,8 @@
 // fires a "gg-stale" event at each refused save. lib/kit.js then asks to reload.
 //
 // For the admin page, each PC also sends an anonymous visit once a day and its JavaScript errors.
-// It sends only a random id made on the PC, never a save.
+// It sends only a random id made on the PC, never a save. On jeux-papi.fr, PostHog also gets the
+// pages, the clicks, a recording of the session and the games started and won.
 (() => {
   const P = 'gg:';
   const SRC = document.currentScript.src;
@@ -65,6 +66,32 @@
     fetch(API + path, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, ...body }) }).catch(() => {});
   };
+  // PostHog (EU), on the published site only, so tests and local runs send nothing. The PC is known by
+  // its anonymous id. Pages, clicks, session recordings and errors are set in the PostHog project.
+  // Offline, the script does not load and the calls are dropped.
+  const PH = location.hostname === 'jeux-papi.fr';
+  if (PH) {
+    // The PostHog snippet: array.js reads the init call from _i and the queued calls from the array.
+    const q = window.posthog = [];
+    q.__SV = 1;
+    q._i = [['phc_te2NfQa4rJfJW5G3GYCQjZt9bw3LEzTG4USXJeZijxSx', {
+      api_host: 'https://eu.i.posthog.com',
+      defaults: '2025-05-24',
+      person_profiles: 'always',
+      bootstrap: { distinctID: id },
+    }, 'posthog']];
+    const s = document.createElement('script');
+    s.async = true;
+    s.crossOrigin = 'anonymous';
+    s.src = 'https://eu-assets.i.posthog.com/static/array.js';
+    document.head.appendChild(s);
+  }
+  const capture = (event, props) => {
+    if (!PH) return;
+    const ph = window.posthog;
+    ph.__loaded ? ph.capture(event, props) : ph.push(['capture', event, props]);
+  };
+
   const today = new Date().toISOString().slice(0, 10);
   if (get('visit') !== today && set('visit', today)) send('/stats', { kind: 'visit' });
 
@@ -143,7 +170,10 @@
     load,
     meta,
     save, flush,
-    track: (game, kind) => send('/stats', { game, kind }),
+    track: (game, kind) => {
+      send('/stats', { game, kind });
+      capture(kind === 'won' ? 'game won' : 'game started', { game });
+    },
     get, set, // small per-PC flags for the library
   };
 })();
