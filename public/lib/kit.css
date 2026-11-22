@@ -104,8 +104,8 @@ button.primary:disabled, button.primary:disabled:hover { background: transparent
   #quit::before { display: none; }
 }
 /* The nudge (see Kit): the next thing to press breathes with a gold ring until he does something. */
-.nudge:not(:disabled) { animation: nudge 1.4s ease-in-out infinite; }
-@keyframes nudge {
+.nudge:not(:disabled) { animation: kitNudge 1.4s ease-in-out infinite; }
+@keyframes kitNudge {
   0%, 100% { scale: 1; box-shadow: 0 3px 0 #C9951A, 0 0 0 0 rgba(255, 200, 60, .85); }
   50% { scale: 1.06; box-shadow: 0 3px 0 #C9951A, 0 0 0 14px rgba(255, 200, 60, 0); }
 }

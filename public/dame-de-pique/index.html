@@ -85,8 +85,10 @@
   @media (max-width: 700px) {
     #seat2, #seat1, #seat3 { min-width: 0; }
     .seat .where { display: none; }
-    body.phone .seat:not(#seat0) { grid-template-columns: auto minmax(0, 1fr); column-gap: 8px; padding: 6px 8px; border-radius: 14px; }
-    body.phone .seat .ava { width: 34px; height: 34px; font-size: 20px; }
+    /* The face over the name, so a name such as "Colette" fits a third of the width. */
+    body.phone .seat:not(#seat0) { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; row-gap: 2px; padding: 6px 4px; border-radius: 14px; }
+    body.phone .seat:not(#seat0) > * { grid-column: 1; max-width: 100%; }
+    body.phone .seat .ava { width: 32px; height: 32px; font-size: 20px; }
     body.phone .seat b { font-size: 20px; }
     body.phone .seat .backs { display: none; }
     body.phone .seat .now { white-space: normal; font-size: 20px; line-height: 1.05; }

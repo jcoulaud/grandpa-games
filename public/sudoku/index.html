@@ -109,7 +109,7 @@
     box-shadow: inset 0 0 0 4px #9A6A38, inset 0 0 0 5px rgba(40,20,5,.5), 0 6px 16px rgba(0,0,0,.35); font-variant-numeric: tabular-nums; }
   #count b { color: var(--mine); font-weight: 700; }
   #count:empty { visibility: hidden; }
-  #stage.under #count { flex-direction: column; gap: 0; font-size: 20px; }
+  #stage.under #count { flex-direction: column; gap: 0; font-size: 20px; line-height: 1.05; padding-block: 0; min-height: 0; }
 
   /* ---------- The rules guide ----------
      Each page: one picture on the slate felt, made of the same chalk digits, keys and buttons as the game,
@@ -608,9 +608,10 @@ function layout() {
   const s0 = slateOf(slate);
   side = sidePad(s0.gw, s0.c, s0.f);
   // Under the grid: 1 to 5, then 6 to 9 centred under them, then the count and a wide "Effacer".
-  const kh = phone ? 48 : 58, padH = 3 * kh + 2 * 8;
+  // A phone has keys of 44 px, the least for his hand, so the whole pad shows under the grid.
+  const kh = phone ? 44 : 58, padH = 3 * kh + 2 * 8;
   // A phone keeps cells of 33 px or more, even under a long message: the table then scrolls down to the pad.
-  const low = Math.min(W - 16, Math.max(H - pv - 12 - padH, Math.min(W - 16, phone ? 330 : 300)));
+  const low = Math.min(W - 16, Math.max(H - pv - 12 - padH, Math.min(W - 16, phone ? 320 : 300)));
   const under = phone || !side.ok || slate < low;
   stage.classList.toggle('under', under);
   if (under) slate = low;
@@ -837,6 +838,9 @@ addEventListener('keydown', e => {
   }
 });
 addEventListener('resize', () => { clearMove(); render(); });
+// On a phone the message line may take another line after the grid was laid out: lay it out again
+// when the table changes height, so the pad never falls under the window.
+if (window.ResizeObserver) { let lastH = 0; new ResizeObserver(() => { if (table.clientHeight !== lastH) { lastH = table.clientHeight; render(); } }).observe(table); }
 
 /* ---------- The pictures of the rules ----------
    The cell, the key and the button to click get a yellow ring in the style sheet, and a pointing hand here. */
