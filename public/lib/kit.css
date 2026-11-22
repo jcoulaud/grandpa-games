@@ -113,7 +113,7 @@ button.game:active { background: #095A4E; }
 /* Bottom bar, always at the foot of the window: who made the games on the left, the size buttons on the
    right, and nothing else. A count of the game goes on the table, near the board. Kit adds the credit. */
 #rail { grid-row: 4; /* its own row, also while the table is hidden */ display: flex; align-items: center; gap: 10px; padding: 7px clamp(14px, 2vw, 28px); margin-top: clamp(0px, 4vh - 28px, 24px);
-  background: rgba(0,0,0,.18); border-top: 1px solid rgba(255,255,255,.08); }
+  background: #1E2624; border-top: 1px solid rgba(255,255,255,.14); box-shadow: 0 -2px 14px rgba(0,0,0,.22); position: relative; z-index: 10; }
 #rail .zoom { margin-left: auto; }
 .credit { flex: none; min-height: 44px; padding: 4px 18px 4px 4px; display: inline-flex; align-items: center; gap: 10px; border-radius: 999px;
   background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.2); color: rgba(255,255,255,.78);

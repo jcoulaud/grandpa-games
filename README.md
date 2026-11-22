@@ -40,6 +40,15 @@ When a game changes its save format, it must still read the old format. His save
 
 ## Games
 
+- `public/golf/`: nine holes of miniature golf in 3D, new at each game.
+  - `engine.js` builds the course from a seed saved with the game, so a reload or an undo replays the same holes. It has no DOM, so the page and the tests run the same code. `scene.js` draws a hole with Three.js, kept in `lib/three/`.
+  - Each hole joins a lane shape and its obstacles. The shapes are a straight lane, a long lane, a wide green, a dogleg, an L and an S. The obstacles are toadstool bumpers, a hill, a dip, a raised green on a ramp, a bridge over a pond, a tunnel, narrow gates, bank boards and a windmill.
+  - The first hole is gentle and the last one is the showpiece. Two holes in a row never have the same type. Each hole gets a French name from word lists, such as « Le petit moulin ».
+  - The solver plays every hole before it is kept. The par is the worse of two playthroughs with slips of the hand: larger slips in Facile, smaller in Difficile. A hole the solver cannot finish in four strokes is built again from the same seed. A course takes about 50 ms.
+  - Facile has wide lanes, wide gates and a big cup. Moyen adds bank shots, hills, dips and the tunnel. Difficile adds narrow gates, S bends, the windmill and a smaller cup. The preview shows the whole path in Facile, until just after the first bounce in Moyen, and the first 3 m in Difficile, where the dots fade out instead of stopping. Difficile never shows where the ball stops. The last shot stays as a faint trail. A test proves that a fixed aiming error costs more strokes over par at each level.
+  - To shoot, press on the ball, pull back like a slingshot and let go. The « Force » bar in the card shows the strength. Back on the ball, the pull is cancelled. A click on the lane sets a target instead. « − » and « + » change its strength, and « Taper la balle » plays it.
+  - The preview, the hint and the shot use the same fixed-step physics. Each hole takes at most eight strokes. A course at par or better counts as one win.
+
 - `public/solitaire/`: draw-one Klondike.
   - A solver deals only games that it has won. The level is how many steps the solver needed: at most 40 for Facile, 55 to 85 for Moyen, 180 to 2500 for Difficile.
   - Click a card. With one legal place, it goes there at once. With several, click one of the places framed in yellow. Dragging also works.

@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Golf miniature · Jeux de Papi</title>
+<meta name="description" content="Jouez neuf trous de golf miniature en trois dimensions, nouveaux à chaque partie. Visez et tapez la balle à votre rythme.">
+<link rel="canonical" href="https://jeux-papi.fr/golf/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Jeux de Papi">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://jeux-papi.fr/golf/">
+<meta property="og:title" content="Golf miniature · Jeux de Papi">
+<meta property="og:description" content="Jouez neuf trous de golf miniature en trois dimensions, nouveaux à chaque partie. Visez et tapez la balle à votre rythme.">
+<meta property="og:image" content="https://jeux-papi.fr/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../lib/kit.css">
+<script src="../lib/zoom.js"></script>
+<style>
+  /* A green felt around two pieces: the card of the hole on the left, and the hole itself, a small island
+     under a soft sky. A phone puts the card on top and its buttons under the hole. */
+  :root { --felt-top: #3f7d55; --felt: #1d4634; --shade: 20,50,36; --accent: #2E6B45; --paper: #FFFBF0; --ink: #1F4C9A; --green: #1F5A3A; }
+  button.game { --accent: #2E6B45; }
+  button.game:hover { background: #377C51; }
+  button.game:active { background: #255A39; }
+  #table { min-height: 0; margin: 0 clamp(10px, 2vw, 28px); display: grid; grid-template-columns: clamp(250px, 21vw, 320px) minmax(0, 1fr); gap: clamp(12px, 1.4vw, 20px); }
+  #table[hidden] { display: none; }
+
+  /* The card of the hole: like the tag at the tee of a real course. */
+  #card { min-height: 0; align-self: start; max-height: 100%; display: flex; flex-direction: column; gap: 12px; padding: 18px 18px 16px; border-radius: 22px; overflow: hidden;
+    background: var(--paper); color: #1E2A22; box-shadow: 0 1px 0 #E8DDBF, 0 14px 34px rgba(0,0,0,.35); position: relative; }
+  #card::before { content: ""; position: absolute; inset: 0 0 auto; height: 8px; background: repeating-linear-gradient(90deg, var(--green) 0 18px, #2F7A4E 18px 36px); }
+  #holeHead { display: flex; align-items: center; gap: 16px; padding: 8px 0 2px 6px; }
+  #holeNo { flex: none; width: 58px; height: 58px; display: grid; place-items: center; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #FFE08A, var(--gold) 60%, #E9A915); color: #2B2000; font: 800 30px var(--ui);
+    box-shadow: 0 0 0 4px #fff, 0 0 0 6px #E5C979, 0 4px 10px rgba(0,0,0,.25); }
+  #holeOf { display: block; font: 600 20px/1.2 var(--ui); color: #4F5E55; }
+  #courseName { margin: 2px 0 0; font: 700 25px/1.18 var(--ui); color: var(--green); letter-spacing: -.01em; }
+  #stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  #stats > div { padding: 4px 12px 6px; border-radius: 16px; background: #F2ECDA; text-align: center; }
+  #stats span { display: block; font: 600 20px/1.2 var(--ui); color: #4F5E55; }
+  #stats b { display: block; font: 800 32px/1.05 var(--ui); color: #1E2A22; font-variant-numeric: tabular-nums; }
+  #stats #strokes { color: var(--ink); }
+  /* The nine holes in a strip, as on a printed card: the number over the strokes. */
+  #progress { width: 100%; border-collapse: collapse; table-layout: fixed; font: 600 20px/1 var(--ui); text-align: center; }
+  #progress th, #progress td { height: 30px; padding: 0; border: 1px solid #E5DCC2; }
+  #progress th { color: #fff; background: var(--green); font-weight: 600; border-color: #2F6B49; }
+  #progress td { color: var(--ink); font-weight: 700; background: #fff; }
+  #progress .now { background: var(--gold); color: #2B2000; }
+  #progress th.now { border-color: #C9951A; }
+  #total { display: none; margin: 0; font: 500 20px/1.3 var(--ui); color: #4F5E55; text-align: center; white-space: nowrap; }
+  #total b { color: #1E2A22; font-weight: 700; }
+  #actions { margin-top: 4px; display: flex; flex-direction: column; gap: 12px; }
+  #actions { gap: 10px; }
+  #actions button { justify-content: center; min-height: 54px; font-size: 22px; }
+  #shoot:not(:disabled) { font-weight: 700; }
+
+  /* The hole: an island under a soft sky. */
+  #stage { position: relative; min-height: 0; border-radius: 22px; overflow: hidden;
+    background: radial-gradient(120% 90% at 50% 0%, #F4FAF6 0%, #D3EAF1 45%, #A9D3E6 100%);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.5), 0 14px 34px rgba(0,0,0,.35); }
+  #stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; }
+  #stage.idle canvas { cursor: default; }
+  /* The pull: a yellow band from the ball to the hand, and the strength beside the ball. */
+  #band { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  #band line { stroke: #1F1A00; stroke-width: 9; stroke-linecap: round; }
+  #band line + line { stroke: var(--gold); stroke-width: 5; }
+  #band circle { fill: #fff; stroke: #1F1A00; stroke-width: 3; }
+  #band.cancel line + line { stroke: #C9D1CE; }
+  #band[hidden] { display: none; }
+  /* The strength, in the card: filled live during a pull, and set by « − » and « + » after a click. */
+  #force { display: flex; align-items: center; gap: 8px; }
+  #force button { flex: none; width: 48px; min-height: 48px; padding: 0; justify-content: center; font: 700 28px/1 var(--ui); }
+  #force .meter { position: relative; flex: 1; min-width: 0; height: 48px; border-radius: 14px; overflow: hidden; background: #E3DCC6; box-shadow: inset 0 2px 4px rgba(0,0,0,.18); }
+  #force .meter span { position: absolute; inset: 0; display: grid; place-items: center; font: 700 20px var(--ui); color: #1E2A22; }
+  #force b { display: block; height: 100%; width: 0; border-radius: 14px; background: linear-gradient(90deg, #4FB35E, #FFC83D 60%, #F07B2E); transition: width .12s; }
+  #force.live b { transition: none; }
+  /* In the cup: a gold ribbon pops in over the hole and fades. */
+  #ribbon { position: absolute; left: 50%; top: 18%; translate: -50% 0; padding: 8px 34px; border-radius: 16px; pointer-events: none; display: none; white-space: nowrap;
+    background: linear-gradient(#FFD666, #F2B21E); color: #3A2600; font: 800 40px/1.15 var(--ui); box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 -3px 0 rgba(0,0,0,.15); }
+  #ribbon.on { display: block; animation: ribbon 1.9s cubic-bezier(.2,1.3,.4,1) both; }
+  @keyframes ribbon { 0% { scale: .3; opacity: 0; } 15% { scale: 1.08; opacity: 1; } 25% { scale: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { #ribbon.on { display: none; } }
+  @media (max-width: 699px) { #ribbon { font-size: 28px; padding: 6px 22px; } }
+
+  /* The score card: a paper card printed in green, the strokes written in blue ink. */
+  #box:has(.scores) { padding: 26px 30px 26px; width: min(700px, calc(94vw / var(--z, 1))); max-width: none; }
+  #box:has(.scores) h2 { margin-bottom: 6px; }
+  #box:has(.scores) p { margin-bottom: 16px; }
+  #box:has(.scores) #overBtns { flex-direction: row; justify-content: center; width: auto; }
+  #box:has(.scores) #overBtns button { flex: 1 1 0; max-width: 300px; }
+  #box:has(.scores) #overBtns button:not(.choice):nth-child(n+3):last-child { margin-top: 0; }
+  .scores { width: 100%; margin: 4px 0 0; border-collapse: separate; border-spacing: 0; font: 400 20px/1.15 var(--ui); text-align: left; color: #1E2A22;
+    background: var(--paper); border: 2px solid var(--green); border-radius: 14px; overflow: hidden; box-shadow: 0 2px 0 #E8DDBF; }
+  .scores caption { caption-side: top; padding: 0 0 6px; font: 600 20px var(--ui); color: #4F5E55; text-align: left; }
+  .scores caption::before { content: ""; display: inline-block; width: 22px; height: 22px; margin-right: 8px; vertical-align: -4px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 21V3' stroke='%231F5A3A' stroke-width='2.4' stroke-linecap='round'/%3E%3Cpath d='M8 3.5l11 4-11 4z' fill='%23E23B2E'/%3E%3Cellipse cx='9' cy='21' rx='6' ry='1.8' fill='%231F5A3A' opacity='.35'/%3E%3C/svg%3E") center / contain no-repeat; }
+  .scores th, .scores td { padding: 2px 12px; height: 34px; border-bottom: 1px solid #E5DCC2; }
+  .scores td + td, .scores th + td { border-left: 1px solid #E5DCC2; }
+  .scores .n { text-align: center; width: 76px; }
+  .scores thead th { height: 38px; background: var(--green); color: #fff; font-weight: 600; border: 0; }
+  .scores tbody tr:nth-child(even) { background: #F6F1E1; }
+  .scores tbody th { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; width: 100%; }
+  .scores .no { display: inline-block; width: 28px; margin-right: 10px; font-weight: 800; color: var(--green); text-align: right; font-variant-numeric: tabular-nums; }
+  .scores .par { color: #4F5E55; font-weight: 600; }
+  .scores .ink { display: inline-grid; place-items: center; box-sizing: border-box; min-width: 34px; height: 30px; padding: 0 4px; font: 700 23px/1 var(--ui); color: var(--ink); font-variant-numeric: tabular-nums; text-box: trim-both cap alphabetic; vertical-align: middle; }
+  /* Under par is circled, over par is boxed, as golfers mark their cards. */
+  .scores tbody .better .ink { border: 2.5px solid var(--ink); border-radius: 50%; width: 34px; }
+  .scores tbody .worse .ink { border: 2.5px solid var(--ink); border-radius: 4px; }
+  .scores .gap { white-space: nowrap; font-weight: 600; width: 124px; }
+  .scores .better .gap { color: #8A5A00; }
+  .scores .even .gap { color: #1F5A33; }
+  .scores .worse .gap { color: #8A2E14; }
+  .scores tr.now th, .scores tr.now td { background: #FFF0A8; }
+  .scores tr.now .gap { color: #5A4600; }
+  .scores tr.later { color: #6A746E; }
+  .scores tr.later .no { color: #8C968F; }
+  .scores tfoot th, .scores tfoot td { height: 42px; border-bottom: 0; border-top: 2px solid var(--green); background: #EFE7CF; font-size: 22px; font-weight: 700; }
+  .scores tfoot .ink { font-size: 25px; }
+  html.short #box:has(.scores) { padding: 16px 26px 18px; }
+  html.short #box:has(.scores) h2 { font-size: 28px; margin-bottom: 2px; }
+  html.short #box:has(.scores) p { margin-bottom: 8px; font-size: 20px; }
+  html.short .scores caption { display: none; }
+  html.short .scores th, html.short .scores td { height: 29px; padding-block: 0; }
+  html.short .scores thead th { height: 32px; }
+  html.short .scores tfoot th, html.short .scores tfoot td { height: 34px; }
+  html.short .scores .ink { height: 26px; font-size: 21px; }
+  html.short .scores tbody .better .ink { width: 28px; min-width: 28px; }
+  html.short #box:has(.scores) #overBtns button { min-height: 52px; }
+  html.low #box:has(.scores) { padding: 12px 22px 14px; }
+  html.low .scores th, html.low .scores td { height: 27px; }
+
+  /* The rules: small pictures of the lane. */
+  .guide-art svg { width: 230px; height: auto; display: block; }
+  .guide-key .mark { flex: none; display: inline-grid; place-items: center; width: 38px; height: 38px; font: 700 24px var(--ui); color: var(--ink); border: 2.5px solid var(--ink); background: var(--paper); }
+  .guide-key .mark.better { border-radius: 50%; }
+  .guide-key .mark.worse { border-radius: 5px; }
+  html.short .guide-panel { margin: 8px 0; padding-block: 8px; }
+  html.short .guide-art svg { width: 190px; }
+
+  /* A short window: the card closes up. */
+  html.short #card { gap: 10px; padding: 14px 14px 12px; }
+  html.short #holeNo { width: 48px; height: 48px; font-size: 25px; }
+  html.short #courseName { font-size: 22px; }
+  html.short #stats b { font-size: 32px; }
+  html.short #stats > div { padding: 4px 10px 6px; }
+  html.short #actions { gap: 10px; }
+  html.short #actions button { min-height: 52px; font-size: 21px; }
+  html.low #progress { display: none; }
+  html.short #holeOf { display: none; }
+  html.short #holeHead { padding-block: 4px 0; }
+  html.low #stats > div { display: flex; align-items: baseline; justify-content: center; gap: 8px; }
+
+  /* A phone: the card on top in one row, the hole, then the two buttons. */
+  @media (max-width: 699px) {
+    #table { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto auto; gap: 8px; margin: 0 8px 8px; }
+    #force { order: 3; padding: 4px 8px; border-radius: 16px; background: var(--paper); }
+    #force button { width: 44px; min-height: 44px; }
+    #card { display: contents; }
+    #card::before { display: none; }
+    #holeHead, #stats { background: var(--paper); color: #1E2A22; }
+    #top { display: flex; gap: 8px; align-items: stretch; }
+    #holeHead { flex: 1; min-width: 0; padding: 6px 10px; border-radius: 16px; gap: 10px; }
+    #holeNo { width: 40px; height: 40px; font-size: 21px; box-shadow: 0 0 0 3px #fff, 0 0 0 4px #E5C979; }
+    #holeOf { font-size: 14px; }
+    #courseName { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #holeHead > div { min-width: 0; }
+    #stats { flex: none; display: flex; gap: 0; border-radius: 16px; overflow: hidden; }
+    #stats > div { padding: 4px 8px; border-radius: 0; background: none; }
+    #stats span { font-size: 14px; }
+    #stats b { font-size: 24px; }
+    #progress, #total { display: none; }
+    #stage { order: 2; border-radius: 18px; }
+    #actions { order: 4; flex-direction: row; margin: 0; gap: 8px; }
+    #actions button { flex: 1 1 0; min-height: 50px; font-size: 18px; padding: 4px 10px; }
+    .scores { font-size: 15px; }
+    .scores th, .scores td { padding: 2px 6px; height: 36px; }
+    .scores .n { width: 46px; }
+    .scores .gap { width: 86px; white-space: normal; line-height: 1.1; }
+    .scores .no { width: 18px; margin-right: 6px; }
+    .scores tbody th { white-space: normal; line-height: 1.15; }
+    .scores .ink { font-size: 19px; min-width: 28px; height: 28px; }
+    .scores tbody .better .ink { width: 28px; }
+    .scores tfoot th, .scores tfoot td { font-size: 17px; }
+    #box:has(.scores) { padding: 18px 12px; }
+    #box:has(.scores) h2 { font-size: 26px; }
+    #box:has(.scores) p { font-size: 17px; }
+    #box:has(.scores) #overBtns { flex-direction: column; }
+    #box:has(.scores) #overBtns button { max-width: none; }
+    .guide-art svg { width: 120px; }
+    .guide-example { flex-wrap: nowrap; gap: 10px; }
+    .guide-example figcaption { flex: 1 1 auto; font-size: 18px; line-height: 1.25; }
+  }
+</style></head><body>
+<div id="bar"><div id="title">Golf miniature</div>
+  <button id="undoBtn" data-icon="undo" title="Annuler le dernier coup joué"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span><span class="tiny">Annuler</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre un bon coup à jouer maintenant"><span class="long">Que jouer maintenant ?</span><span class="short">Que jouer ?</span><span class="tiny">Idée</span></button>
+<span class="spacer"></span><button id="helpBtn" data-icon="help">Règles</button><button id="newBtn" class="game">Nouvelle partie</button></div>
+<div id="say"><div id="msg" aria-live="polite"></div></div>
+<main id="table">
+  <aside id="card" aria-label="Le trou en cours">
+    <div id="top">
+      <div id="holeHead"><span id="holeNo" aria-hidden="true">1</span><div><span id="holeOf">Trou 1 sur 9</span><h2 id="courseName"></h2></div></div>
+      <div id="stats"><div><span>Par</span><b id="par">2</b></div><div><span>Coups</span><b id="strokes">0</b></div></div>
+    </div>
+    <div id="force"><button id="weaker" title="Moins fort" aria-label="Moins fort">−</button><div class="meter" aria-hidden="true"><b></b><span>Force</span></div><button id="stronger" title="Plus fort" aria-label="Plus fort">+</button></div>
+    <table id="progress" aria-hidden="true"><tr></tr><tr></tr></table>
+    <p id="total"></p>
+    <div id="actions"><button id="shoot" class="primary">Taper la balle</button><button id="score">Carte de score</button></div>
+  </aside>
+  <div id="stage">
+    <canvas aria-label="Le trou de golf. Tirez la balle vers l’arrière, ou cliquez sur le gazon pour viser."></canvas>
+    <svg id="band" hidden aria-hidden="true"><line/><line/><circle r="9"/></svg>
+    <div id="ribbon" aria-hidden="true"></div>
+  </div>
+</main>
+<footer id="rail"><div class="zoom"></div></footer>
+<div id="help" data-title="Golf miniature">
+<section class="page"><h3>Taper la balle</h3><p>Mettez la balle dans le trou en peu de coups.</p><ol><li>Appuyez sur la balle sans lâcher le bouton.</li><li>Tirez en arrière, comme un lance-pierre.</li><li>Lâchez. Plus vous tirez loin, plus la balle va loin.</li></ol>
+<div class="guide-panel"><figure class="guide-example"><div class="guide-art"><svg viewBox="0 0 230 110" aria-hidden="true"><rect x="3" y="3" width="224" height="104" rx="16" fill="#c98d52"/><rect x="11" y="11" width="208" height="88" rx="10" fill="#43a253"/><path d="M90 58 L188 38" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-dasharray="1 11"/><ellipse cx="196" cy="37" rx="11" ry="7" fill="#1b1f1c" stroke="#fff" stroke-width="3"/><path d="M196 37V8" stroke="#fff" stroke-width="3"/><path d="M196 9l20 6-20 6z" fill="#e23b2e"/><path d="M78 61 L30 72" stroke="#1F1A00" stroke-width="9" stroke-linecap="round"/><path d="M78 61 L30 72" stroke="#FFC83D" stroke-width="5" stroke-linecap="round"/><circle cx="30" cy="72" r="8" fill="#fff" stroke="#1F1A00" stroke-width="3"/><circle cx="80" cy="60" r="10" fill="#fff" stroke="#9aa6a1" stroke-width="1.5"/><path d="M42 84l-10-10M42 84h-9M42 84v-9" stroke="#1F1A00" stroke-width="3" stroke-linecap="round"/></svg></div><figcaption>Tirez à gauche, la balle part à droite. Pour annuler, revenez sur la balle avant de lâcher.</figcaption></figure></div></section>
+<section class="page"><h3>Ou bien, cliquer sur le gazon</h3><ol><li>Cliquez là où la balle doit s’arrêter.</li><li>Les points montrent son chemin. « − » et « + » changent la force.</li><li>Cliquez sur « Taper la balle ».</li></ol>
+<div class="guide-panel"><figure class="guide-example"><div class="guide-art"><svg viewBox="0 0 230 110" aria-hidden="true"><rect x="3" y="3" width="224" height="104" rx="16" fill="#c98d52"/><rect x="11" y="11" width="208" height="88" rx="10" fill="#43a253"/><circle cx="34" cy="70" r="10" fill="#fff" stroke="#9aa6a1" stroke-width="1.5"/><path d="M50 66 L150 44" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-dasharray="1 11"/><ellipse cx="156" cy="43" rx="13" ry="9" fill="none" stroke="#fff" stroke-width="4"/><ellipse cx="178" cy="38" rx="15" ry="10" fill="none" stroke="#FFC83D" stroke-width="5"/></svg></div><figcaption>Le cercle jaune est votre cible. Le cercle blanc montre où la balle s’arrêtera.</figcaption></figure></div>
+<p>En Moyen et en Difficile, les points s’effacent en route.</p></section>
+<section class="page"><h3>Le par et la carte de score</h3><p>Le par est le nombre de coups prévu pour un trou. Pour gagner, faites au total le par ou moins.</p><ul class="guide-key"><li><span class="mark better">2</span>Un nombre entouré : moins que le par.</li><li><span class="mark worse">4</span>Un nombre encadré : plus que le par.</li></ul><p>« Que jouer maintenant ? » montre un bon coup. « Annuler le dernier coup » reprend un coup raté.</p><p>Après huit coups, la balle est posée dans le trou. Chaque nouvelle partie a neuf nouveaux trous.</p></section>
+</div><script src="../lib/store.js"></script><script src="../lib/kit.js"></script><script type="module" src="game.js"></script></body></html>
