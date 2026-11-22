@@ -1,0 +1,129 @@
+/* The blog: the list of articles and the article page. Both use the frame of the rules pages (lib/rules.css):
+   the same width, the same coloured header, the contents on the left and the text in cards on the right.
+   This file adds only what a rules page does not have. */
+
+.blog-kicker { margin: 0 0 .5rem; font-size: 20px; font-weight: 600; }
+
+/* The article as a card in the list. The title is the one link, and it covers the whole card. */
+.feature {
+  position: relative;
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  border: 1px solid var(--rule-line);
+  border-radius: 16px;
+  background: var(--card);
+}
+.feature > :last-child { margin-bottom: 0; }
+.feature .blog-kicker { color: var(--guide-ink); }
+.feature h2 { margin-bottom: 1rem; font-size: clamp(1.7rem, 2.8vw, 2.4rem); }
+.feature h2 a { color: #1b2422; text-decoration: none; }
+.feature h2 a::after { content: ""; position: absolute; inset: 0; border-radius: 16px; }
+.feature h2 a:focus-visible { outline: none; }
+.feature:has(h2 a:focus-visible) { outline: 3px solid #1b2422; outline-offset: 4px; }
+.feature:hover { border-color: #1b242266; }
+.feature:hover h2 a { text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: .15em; }
+.feature-games { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin: 1.5rem 0; padding: 0; list-style: none; }
+.feature-games li { display: flex; align-items: center; gap: .6em; margin: 0; font-weight: 600; }
+.feature-games img { flex: none; border-radius: 10px; }
+.feature-read {
+  display: inline-flex;
+  align-items: center;
+  min-height: 56px;
+  padding: .3em 1.4em;
+  border-radius: 12px;
+  background: #ffc83d;
+  font-size: 22px;
+  font-weight: 700;
+}
+.feature-read::after { content: "›"; margin-inline-start: .4em; transition: transform .12s; }
+.feature:hover .feature-read { background: #f4b81c; }
+.feature:hover .feature-read::after { transform: translateX(4px); }
+
+/* The text of an article: a line no longer than a page of a book, and room for subtitles and lists. */
+.blog .rules-article :is(p, ul, ol, h3, .steps, .picks) { max-width: 46rem; }
+.blog .rules-article h3 { margin: 1.75rem 0 .5rem; font-size: 24px; line-height: 1.25; }
+.blog .rules-article h2 + h3 { margin-top: 0; }
+.blog .rules-article strong { font-weight: 700; }
+
+/* The games to try. The icon and the name are one link to the game, a large target. */
+.picks { margin: 0; padding: 0; list-style: none; }
+.picks li { margin: 0; padding-block: 1.25rem; border-top: 1px solid var(--rule-line); }
+.picks li:last-child { padding-bottom: 0; }
+.picks h3 { margin: 0 0 .25rem; }
+.blog .rules-article .picks h3 { margin: 0 0 .25rem; }
+.picks h3 a {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 64px;
+  padding-inline-end: 12px;
+  border-radius: 12px;
+  color: #1b2422;
+  text-decoration: none;
+}
+.picks h3 a::after { content: "›"; color: var(--guide-ink); font-size: 1.15em; transition: transform .12s; }
+.picks h3 a:hover { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: .2em; }
+.picks h3 a:hover::after { transform: translateX(4px); }
+.picks h3 a:focus-visible { outline: 3px solid #1b2422; outline-offset: 4px; }
+.picks h3 img { flex: none; width: 64px; height: 64px; border-radius: 14px; }
+.post-chart {
+  display: block;
+  width: min(100%, 37.5rem);
+  height: auto;
+  margin: .75rem 0 1.25rem;
+}
+.picks p { margin: 0; padding-inline-start: 82px; }
+
+/* The steps: large numbers in the margin, a thin line between them. */
+.steps { margin: 0; padding: 0; list-style: none; counter-reset: step; }
+.steps li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  margin: 0;
+  padding-block: 1rem;
+}
+.steps li:first-child { padding-top: 0; }
+.steps li:last-child { padding-bottom: 0; }
+.steps li + li { border-top: 1px solid var(--rule-line); }
+.steps li::before { content: counter(step); color: var(--guide-ink); font-size: 38px; font-weight: 700; line-height: 1.1; }
+.steps p { margin: 0; }
+.steps + p { margin-top: 1.5rem; }
+
+/* A part set apart, such as the advice for a relative: the light colour of the guide. */
+.rules-article > section.post-note { border-color: transparent; background: var(--guide-light); }
+
+/* The list of articles: the article card first, the rules beside it. */
+.blog-index .rules-contents ul { display: grid; }
+.blog-index .rules-contents ul a { gap: .6em; }
+.blog-index .rules-contents img { flex: none; border-radius: 8px; }
+
+/* On an article, "Blog" in the masthead shows the section he is in. */
+.blog .site-nav-links > a[aria-current="true"] { opacity: 1; font-weight: 700; text-decoration-line: underline; }
+
+@media (max-width: 860px), (max-height: 550px) {
+  .blog-index .rules-layout { display: flex; flex-direction: column; align-items: stretch; }
+  .blog-index .rules-contents { order: 2; margin: 1.25rem 0 0; }
+  .blog-index .rules-contents ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr)); }
+}
+@media (max-width: 560px) {
+  .blog .rules-article h3 { font-size: 21px; }
+  .feature-read { font-size: 21px; }
+  .picks h3 a { gap: 14px; min-height: 56px; }
+  .picks h3 img { width: 52px; height: 52px; border-radius: 12px; }
+  .picks p { padding-inline-start: 0; margin-top: .25rem; }
+  .steps li { grid-template-columns: 44px minmax(0, 1fr); }
+  .steps li::before { font-size: 30px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .picks h3 a::after, .feature-read::after { transition: none; }
+}
+
+.post-levels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  gap: .75rem;
+  margin: 1.25rem 0;
+}
+.post-levels > div { padding: .8rem 1rem; background: var(--guide-light); border-radius: 10px; }
+.post-levels dt { font-weight: 700; color: var(--guide-ink); }
+.post-levels dd { margin: .25rem 0 0; font-size: 18px; }

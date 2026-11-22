@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Règles du jeu de dames sur 100 cases · Jeux de Papi</title>
+  <meta name="description" content="Apprenez les règles du jeu de dames international sur 100 cases. Un exemple montre pourquoi il faut prendre le plus de pièces possible.">
+  <link rel="canonical" href="https://jeux-papi.fr/dames/regles/">
+  <meta property="og:type" content="article">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:site_name" content="Jeux de Papi">
+  <meta property="og:url" content="https://jeux-papi.fr/dames/regles/">
+  <meta property="og:title" content="Règles du jeu de dames sur 100 cases">
+  <meta property="og:description" content="Déplacer un pion, prendre le plus de pièces possible et faire une dame, avec un exemple sur le damier.">
+  <meta property="og:image" content="https://jeux-papi.fr/og/dames.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Règles du jeu de dames. Des piles de pions rouges et ivoire sur un coin de damier en bois.">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="../icon.svg">
+  <link rel="stylesheet" href="../../lib/site-nav.css">
+  <link rel="stylesheet" href="../../lib/rules.css">
+  <script src="../../lib/zoom.js"></script>
+</head>
+<body class="rules dames">
+<a class="skip" href="#contenu">Aller au texte</a>
+<header class="site-nav">
+  <div class="site-nav-inner">
+    <a class="site-nav-brand" href="../../"><img src="../../icons/logo.webp" width="48" height="48" alt="">Jeux de Papi</a>
+    <nav class="site-nav-links" aria-label="Navigation principale">
+      <a href="../../#games">Les jeux</a>
+      <details class="site-menu is-current">
+        <summary>Règles</summary>
+        <div class="site-menu-panel">
+          <p class="site-menu-title">Règles des jeux</p>
+          <a href="../../belote/regles/"><img src="../../belote/icon.svg" width="40" height="40" alt="">Belote</a>
+          <a href="./" aria-current="page"><img src="../../dames/icon.svg" width="40" height="40" alt="">Jeu de dames</a>
+          <a href="../../solitaire/regles/"><img src="../../solitaire/icon.svg" width="40" height="40" alt="">Solitaire</a>
+          <a href="../../demineur/regles/"><img src="../../demineur/icon.svg" width="40" height="40" alt="">Démineur</a>
+          <a href="../../yams/regles/"><img src="../../yams/icon.svg" width="40" height="40" alt="">Yams</a>
+          <a href="../../huit-americain/regles/"><img src="../../huit-americain/icon.svg" width="40" height="40" alt="">Huit américain</a>
+        </div>
+      </details>
+      <a href="../../blog/">Blog</a>
+    </nav>
+  </div>
+</header>
+<main id="contenu">
+  <header class="rules-head">
+    <div class="rules-head-inner">
+      <div>
+        <nav class="crumbs" aria-label="Vous êtes ici">
+          <ol><li><a href="../../">Les jeux</a></li><li><a href="../">Dames</a></li><li aria-current="page">Règles</li></ol>
+        </nav>
+        <h1>Règles du jeu de dames sur 100 cases</h1>
+        <p class="intro">Les blancs commencent. Le but est de prendre toutes les pièces adverses ou de bloquer leurs coups.</p>
+        <a class="play" href="../" aria-label="Jouer aux dames">Jouer</a>
+      </div>
+      <div class="rules-art"><img src="hero-pieces.webp" width="1440" height="584" alt="" fetchpriority="high"></div>
+    </div>
+  </header>
+
+  <div class="rules-layout" id="sommaire">
+    <nav class="rules-contents" aria-labelledby="contents-title">
+      <h2 id="contents-title">Sommaire</h2>
+      <ul>
+        <li><a href="#deplacer">Déplacer un pion</a></li>
+        <li><a href="#prises">Les prises</a></li>
+        <li><a href="#promotion">Devenir dame</a></li>
+        <li><a href="#variantes">Les variantes</a></li>
+        <li><a href="#histoire">L’histoire</a></li>
+      </ul>
+      <a class="play" href="../" aria-label="Jouer aux dames">Jouer</a>
+    </nav>
+    <article class="rules-article">
+      <section id="deplacer">
+        <h2>Comment déplacer un pion ?</h2>
+        <ol>
+          <li>Placez 20 pions par joueur sur les cases foncées des quatre premières rangées de son côté. Laissez les deux rangées du milieu libres.</li>
+          <li>À votre tour, si aucune prise n’est possible, avancez un pion d’une case en diagonale vers une case libre.</li>
+          <li>Pour prendre, sautez par-dessus une pièce adverse vers la case libre juste derrière. Un pion peut prendre en avant ou en arrière.</li>
+          <li>Si la même pièce peut reprendre après un saut, continuez. Retirez les pièces prises à la fin du coup.</li>
+        </ol>
+      </section>
+
+      <section id="prises">
+        <h2>La prise du plus grand nombre est obligatoire</h2>
+        <p>Si plusieurs prises sont possibles, choisissez le trajet qui prend le plus de pièces. Si deux trajets en prennent autant, vous pouvez choisir l’un ou l’autre.</p>
+        <figure>
+<svg class="board" viewBox="-2 -2 104 104" aria-hidden="true">
+            <defs>
+              <marker id="tip-gold" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#ffc83d" stroke="#3a2a00" stroke-width="1.2"/></marker>
+              <marker id="tip-grey" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#4a4540"/></marker>
+            </defs>
+            <rect class="board-frame" x="-2" y="-2" width="104" height="104" rx="2"/>
+            <rect class="board-light" width="100" height="100"/>
+            <g class="board-dark"><rect x="10" y="0" width="10" height="10"/><rect x="30" y="0" width="10" height="10"/><rect x="50" y="0" width="10" height="10"/><rect x="70" y="0" width="10" height="10"/><rect x="90" y="0" width="10" height="10"/><rect x="0" y="10" width="10" height="10"/><rect x="20" y="10" width="10" height="10"/><rect x="40" y="10" width="10" height="10"/><rect x="60" y="10" width="10" height="10"/><rect x="80" y="10" width="10" height="10"/><rect x="10" y="20" width="10" height="10"/><rect x="30" y="20" width="10" height="10"/><rect x="50" y="20" width="10" height="10"/><rect x="70" y="20" width="10" height="10"/><rect x="90" y="20" width="10" height="10"/><rect x="0" y="30" width="10" height="10"/><rect x="20" y="30" width="10" height="10"/><rect x="40" y="30" width="10" height="10"/><rect x="60" y="30" width="10" height="10"/><rect x="80" y="30" width="10" height="10"/><rect x="10" y="40" width="10" height="10"/><rect x="30" y="40" width="10" height="10"/><rect x="50" y="40" width="10" height="10"/><rect x="70" y="40" width="10" height="10"/><rect x="90" y="40" width="10" height="10"/><rect x="0" y="50" width="10" height="10"/><rect x="20" y="50" width="10" height="10"/><rect x="40" y="50" width="10" height="10"/><rect x="60" y="50" width="10" height="10"/><rect x="80" y="50" width="10" height="10"/><rect x="10" y="60" width="10" height="10"/><rect x="30" y="60" width="10" height="10"/><rect x="50" y="60" width="10" height="10"/><rect x="70" y="60" width="10" height="10"/><rect x="90" y="60" width="10" height="10"/><rect x="0" y="70" width="10" height="10"/><rect x="20" y="70" width="10" height="10"/><rect x="40" y="70" width="10" height="10"/><rect x="60" y="70" width="10" height="10"/><rect x="80" y="70" width="10" height="10"/><rect x="10" y="80" width="10" height="10"/><rect x="30" y="80" width="10" height="10"/><rect x="50" y="80" width="10" height="10"/><rect x="70" y="80" width="10" height="10"/><rect x="90" y="80" width="10" height="10"/><rect x="0" y="90" width="10" height="10"/><rect x="20" y="90" width="10" height="10"/><rect x="40" y="90" width="10" height="10"/><rect x="60" y="90" width="10" height="10"/><rect x="80" y="90" width="10" height="10"/></g>
+            <rect class="board-stop" x="20" y="50" width="10" height="10"/>
+            <rect class="board-stop" x="40" y="30" width="10" height="10"/>
+            <rect class="board-stop-no" x="60" y="50" width="10" height="10"/>
+            <circle class="black" cx="15" cy="25" r="3.7"/><circle class="black" cx="85" cy="15" r="3.7"/><circle class="white" cx="75" cy="85" r="3.7"/><circle class="white" cx="25" cy="95" r="3.7"/>
+            <circle class="black taken" cx="35" cy="65" r="3.7"/><circle class="black taken" cx="35" cy="45" r="3.7"/><circle class="black" cx="55" cy="65" r="3.7"/>
+            <circle class="white mover" cx="45" cy="75" r="3.7"/>
+            <circle class="ghost" cx="45" cy="35" r="3.7"/>
+            <path class="route-no" d="M47.5 72.5 62 58" marker-end="url(#tip-grey)"/>
+            <path class="route-under" d="M42.5 72.5 25 55 42 38"/>
+            <path class="route" d="M42.5 72.5 25 55 42 38" marker-end="url(#tip-gold)"/>
+          </svg>
+          <figcaption>C’est aux blancs de jouer. Vers la droite, le pion blanc ne prendrait qu’un pion noir, sur le chemin gris. Vers la gauche, il saute deux pions noirs l’un après l’autre, sur le chemin jaune. Il doit prendre le chemin jaune, car c’est celui qui prend le plus de pions.</figcaption>
+        </figure>
+      </section>
+
+      <section id="promotion">
+        <h2>Quand un pion devient-il une dame ?</h2>
+        <p>Un pion devient dame s’il termine son coup sur la dernière rangée. S’il ne fait qu’y passer pendant une prise, il reste pion.</p>
+        <p>Une dame se déplace en diagonale sur plusieurs cases libres, en avant ou en arrière. Elle peut prendre une pièce adverse éloignée sur sa diagonale, puis se poser sur n’importe quelle case libre derrière elle.</p>
+      </section>
+
+      <section id="variantes">
+        <h2>Les dames sur 100 cases et les dames anglaises</h2>
+        <p>Jeux de Papi suit les règles des dames internationales, jouées en France sur un damier de 10 sur 10.</p>
+        <p>Aux dames anglaises, le damier fait 8 sur 8. La prise reste obligatoire, mais le joueur peut choisir un trajet qui prend moins de pièces.</p>
+        <p><a href="https://www.ffjd.fr/Web/index.php?page=reglesdujeu" target="_blank" rel="noopener">Règles de la Fédération française de jeu de dames<span class="sr">, s’ouvre dans un nouvel onglet</span></a> et <a href="https://wcdf.net/rules/rules_of_checkers_english.pdf" target="_blank" rel="noopener">règles des dames anglaises<span class="sr">, s’ouvre dans un nouvel onglet</span></a>.</p>
+      </section>
+
+      <section id="histoire">
+        <h2>De la « polonaise » au jeu international</h2>
+        <p>Au XIXᵉ siècle, on appelait souvent le jeu à 100 cases « dames à la polonaise » en France. En 1947, quatre fédérations nationales fondent la Fédération mondiale à Paris. Le jeu à 100 cases prend alors une place centrale dans les compétitions internationales.</p>
+        <p><a href="https://www.ffjd.fr/Web/index.php?page=histoiredujeu" target="_blank" rel="noopener">Histoire du jeu, Fédération française de jeu de dames<span class="sr">, s’ouvre dans un nouvel onglet</span></a> et <a href="https://www.fmjd.org/index.php?p=fmjd" target="_blank" rel="noopener">histoire de la Fédération mondiale<span class="sr">, s’ouvre dans un nouvel onglet</span></a>.</p>
+      </section>
+    </article>
+  </div>
+
+  <nav class="rules-more" aria-labelledby="more-title">
+    <h2 id="more-title">Les règles des autres jeux</h2>
+    <ul>
+      <li><a href="../../belote/regles/"><img src="../../belote/icon.svg" width="48" height="48" alt="">Règles de la belote</a></li>
+      <li><a href="../../solitaire/regles/"><img src="../../solitaire/icon.svg" width="48" height="48" alt="">Règles du solitaire</a></li>
+      <li><a href="../../demineur/regles/"><img src="../../demineur/icon.svg" width="48" height="48" alt="">Règles du démineur</a></li>
+      <li><a href="../../yams/regles/"><img src="../../yams/icon.svg" width="48" height="48" alt="">Règles du Yams</a></li>
+      <li><a href="../../huit-americain/regles/"><img src="../../huit-americain/icon.svg" width="48" height="48" alt="">Règles du Huit américain</a></li>
+      <li><a href="../../"><img src="../../icons/logo.webp" width="48" height="48" alt="">Tous les jeux</a></li>
+    </ul>
+  </nav>
+</main>
+<footer class="rules-footer">
+  <div class="rules-footer-inner">
+    <details class="rules-jump">
+      <summary><span class="rules-jump-label">Sommaire</span><span class="rules-jump-now">Choisir une partie</span></summary>
+      <ul class="rules-jump-list">
+        <li><a href="#contenu">Haut de la page</a></li>
+        <li><a href="#deplacer">Déplacer un pion</a></li>
+        <li><a href="#prises">Les prises</a></li>
+        <li><a href="#promotion">Devenir dame</a></li>
+        <li><a href="#variantes">Les variantes</a></li>
+        <li><a href="#histoire">L’histoire</a></li>
+      </ul>
+    </details>
+    <a class="play" href="../" aria-label="Jouer aux dames">Jouer</a>
+  </div>
+</footer>
+<footer class="site-foot"><div class="in">
+  <a class="credit" href="https://x.com/JulienCoulaud" target="_blank" rel="noopener"><img src="../../icons/julien.webp" width="34" height="34" alt=""><span>Par <b>Julien Coulaud</b></span><span class="sr">, s’ouvre dans un nouvel onglet</span></a>
+  <div class="footer-controls"><div class="zoom"></div></div>
+</div></footer>
+<script src="../../lib/site-nav.js" defer></script>
+</body>
+</html>

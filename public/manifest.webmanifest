@@ -1,7 +1,7 @@
 {
   "name": "Jeux",
   "short_name": "Jeux",
-  "description": "Des jeux simples pour les grands-parents. Gratuit, sans publicité, sans compte.",
+  "description": "Des jeux simples pour les grands-parents. Sans publicité ni compte.",
   "lang": "fr",
   "start_url": "./",
   "scope": "./",

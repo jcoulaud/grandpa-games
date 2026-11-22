@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Jeux de Papi · Jeux simples, gratuits et sans publicité</title>
-<meta name="description" content="Des jeux simples pour les grands-parents : cartes, lettres, chiffres et réflexion, en grand et tout en français. Gratuit, sans publicité, sans compte et open source. S'installe sur l'ordinateur et marche sans internet.">
+<title>Jeux de Papi · Jeux simples en grand et sans publicité</title>
+<meta name="description" content="Des jeux simples pour les grands-parents : cartes, lettres, chiffres et réflexion, en grand et tout en français. Sans publicité ni compte. Le code est open source. S'installe sur l'ordinateur et marche sans internet.">
 <link rel="canonical" href="https://jeux-papi.fr/">
 <meta name="theme-color" content="#0F4F47">
 <link rel="manifest" href="manifest.webmanifest">
@@ -15,11 +15,11 @@
 <meta property="og:locale" content="fr_FR">
 <meta property="og:url" content="https://jeux-papi.fr/">
 <meta property="og:title" content="Jeux de Papi · Des jeux simples pour nos grands-parents">
-<meta property="og:description" content="Cartes, lettres, chiffres et réflexion, en grand et tout en français. Gratuit, sans publicité, sans compte et open source.">
+<meta property="og:description" content="Cartes, lettres, chiffres et réflexion, en grand et tout en français. Sans publicité ni compte. Le code est open source.">
 <meta property="og:image" content="https://jeux-papi.fr/og.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Une carte, un domino, des lettres et un dé sur un tapis vert, et le texte : des jeux simples pour nos grands-parents. Gratuit, sans publicité, sans compte, open source.">
+<meta property="og:image:alt" content="Une carte, des pions, une lettre et un dé sur un tapis vert. Des jeux simples pour nos grands-parents, en grand et sans publicité.">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">
 {
@@ -32,7 +32,6 @@
   "applicationCategory": "GameApplication",
   "operatingSystem": "Windows, macOS, Linux, Android, iOS",
   "isAccessibleForFree": true,
-  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
   "image": "https://jeux-papi.fr/og.jpg",
   "sameAs": ["https://github.com/jcoulaud/grandpa-games"]
 }
@@ -49,6 +48,7 @@
     /* The scale of the page. A large screen gets larger tiles, text and buttons instead of empty felt,
        when both rows of games still fit in it. */
     --k: 1;
+    --air: clamp(0px, 6vh - 41px, 16px);
   }
   @media (min-width: 1800px) and (min-height: 1050px) { :root { --k: 1.2; } }
   * { box-sizing: border-box; }
@@ -60,32 +60,33 @@
       radial-gradient(120% 90% at 50% 0%, #1A6A5F, #0F4F47 70%) #0F4F47 fixed;
     color: #fff; font-family: var(--ui); -webkit-font-smoothing: antialiased;
   }
-  main { margin: 0 auto; padding: calc(18px * var(--k)) 40px 16px; display: flex; flex-direction: column; gap: calc(18px * var(--k)); width: 100%; }
+  main { margin: 0 auto; padding: calc(clamp(23px, 9vh - 37px, 77px) * var(--k) + var(--air)) 40px 24px; display: flex; flex-direction: column; gap: calc(18px * var(--k)); width: 100%; }
 
   /* Large suit outlines behind the page */
   #deco { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
   #deco svg { position: absolute; fill: none; stroke: rgb(255 255 255 / .13); stroke-width: 1.4; }
   @media (max-width: 700px) { #deco { display: none; } }
+  /* The masthead sits on the felt and lines up with the games. */
+  .site-nav { --site-width: calc(100% - 80px); }
 
   /* Greeting */
-  header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; margin-bottom: clamp(20px, 3vh + 4px, 44px); }
-  /* The tagline may take two lines, so the clock stays on the right of the name and the games start higher. */
-  #brand { display: flex; align-items: center; gap: calc(22px * var(--k)); flex: 1 1 520px; min-width: 0; }
-  #now { flex: none; }
-  /* The image has a cream background, and the padding shrinks the couple so the circle does not cut the cap. */
-  #logo { flex: none; width: calc(96px * var(--k)); height: calc(96px * var(--k)); padding: calc(6px * var(--k)); box-sizing: border-box; border-radius: 50%; background: #FBF1E1; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
-  h1 { margin: 0; font: 700 calc(50px * var(--k))/1.05 var(--title); letter-spacing: -.01em; }
-  #tagline { margin: 6px 0 0; font: 500 calc(25px * var(--k)) var(--ui); color: rgba(255,255,255,.78); }
-  #now { text-align: right; }
-  #time { font: 600 calc(46px * var(--k))/1 var(--ui); letter-spacing: -.01em; color: rgba(255,255,255,.92); font-variant-numeric: tabular-nums; }
-  #date { margin-top: 6px; font: 500 calc(25px * var(--k)) var(--ui); color: rgba(255,255,255,.78); }
+  /* The name of the site and the menus are in the masthead above (lib/site-nav.css). Here the page
+     says what it holds and what to do, in one heading and one line, lined up with the bar and the games. */
+  .greeting { padding-block: clamp(0px, 5vh - 34px, 10px); margin-bottom: calc(clamp(9px, 7vh - 35px, 49px) + var(--air)); }
+  h1 { margin: 0; font: 700 calc(42px * var(--k))/1.1 var(--title); letter-spacing: -.015em; text-wrap: balance; }
+  #tagline { margin: clamp(4px, 1vh, 12px) 0 0; font: 500 calc(23px * var(--k))/1.35 var(--ui); color: rgba(255,255,255,.8); }
+  /* A laptop: the first row of games stays whole at 1366 by 680, so the heading is smaller. */
+  @media (min-width: 700px) and (max-height: 760px) {
+    h1 { font-size: calc(36px * var(--k)); }
+    #tagline { font-size: calc(21px * var(--k)); }
+  }
 
   /* The games, in families, each under its name. Every tile always shows: a heading costs no click, where a
      filter would hide games and could stay on by mistake. */
-  #games { display: flex; flex-direction: column; gap: calc(48px * var(--k)); }
-  .family h2 { margin: 0 0 calc(12px * var(--k)); display: flex; align-items: center; gap: 14px; font: 700 calc(28px * var(--k)) var(--title); color: #fff; }
+  #games { display: flex; flex-direction: column; gap: calc(56px * var(--k) + var(--air)); }
+  .family h2 { margin: 0 0 calc(clamp(13px, 2vh + 1px, 21px) * var(--k) + var(--air) / 2); display: flex; align-items: center; gap: 14px; font: 700 calc(28px * var(--k)) var(--title); color: #fff; }
   .family h2::after { content: ""; flex: 1; border-top: 2px solid rgba(255,255,255,.22); }
-  .family .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(320px * var(--k))), 1fr)); gap: calc(22px * var(--k)); }
+  .family .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(320px * var(--k))), 1fr)); gap: calc(28px * var(--k) + var(--air) / 2) calc(22px * var(--k)); }
   .tile {
     position: relative; display: flex; flex-direction: column; border-radius: 28px; overflow: hidden;
     background: var(--face); color: var(--text); text-decoration: none;
@@ -108,7 +109,7 @@
   .art .card { transition: none; }
   .art .card.lifted { box-shadow: 0 12px 22px rgba(0,0,0,.45); }
   .art .slot { position: absolute; border-radius: 6px; background: rgb(0 0 0 / .14); border: 2px dashed rgb(255 255 255 / .45); }
-  .body { padding: calc(12px * var(--k)) calc(22px * var(--k)) calc(18px * var(--k)); display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .body { padding: calc(12px * var(--k)) calc(22px * var(--k)) calc(18px * var(--k)); display: flex; flex-direction: column; gap: calc(7px + var(--air) / 4); flex: 1; }
   .body h3 { margin: 0; font: 700 calc(31px * var(--k)) var(--ui); letter-spacing: -.01em; }
   .body p { margin: 0; font: 500 calc(20px * var(--k))/1.35 var(--ui); color: var(--muted); }
   .status { display: flex; align-items: center; gap: 9px; min-height: 30px; font: 600 calc(21px * var(--k)) var(--ui); color: var(--accent); }
@@ -124,12 +125,7 @@
   /* Keep the desktop controls in one row while the library scrolls. */
   body { display: flex; flex-direction: column; min-height: calc(100vh / var(--z, 1)); }
   main { flex: 1; }
-  /* The same bottom bar as in the games (lib/kit.css #rail). */
-  footer { background: #1E2624; border-top: 1px solid rgba(255,255,255,.14); box-shadow: 0 -2px 14px rgba(0,0,0,.22); position: relative; z-index: 1; }
-  footer .in { margin: 0 auto; padding: 14px clamp(12px, 2vw, 40px); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px;
-    font: 500 20px var(--ui); color: rgba(255,255,255,.85); }
-  /* The credit on the left, the install button and the size buttons together on the right. */
-  .footer-controls { display: flex; flex: 1 1 auto; min-width: 0; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; }
+  /* The footer is shared with the rules pages (lib/site-nav.css .site-foot). */
   #installed { font: 500 20px var(--ui); color: rgba(255,255,255,.85); }
   /* Installing the site as an app: a white key that says where it goes. */
   #install { display: none; }
@@ -140,37 +136,54 @@
   #install button:active { background: #D5DCD9; box-shadow: none; transform: translateY(3px); }
   #install button:focus-visible { outline: 4px solid #fff; outline-offset: 3px; }
   #install svg { width: 24px; height: 24px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .credit { flex: none; min-height: 44px; padding: 4px 18px 4px 4px; display: inline-flex; align-items: center; gap: 10px; border-radius: 999px;
-    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.2); color: rgba(255,255,255,.78);
-    font: 500 20px var(--ui); text-decoration: none; white-space: nowrap; transition: background-color .12s; }
-  .credit b { color: #fff; font-weight: 700; }
-    .credit img { width: 34px; height: 34px; flex: none; border-radius: 50%; box-shadow: 0 0 0 2px var(--gold, #FFC83D); }
-  .credit:hover { background: rgba(255,255,255,.16); }
-  .credit:focus-visible { outline: 4px solid #fff; outline-offset: 3px; }
   #installed { display: none; margin: 0; }
   #installed.on { display: block; }
 
   @media (min-width: 700px) {
     body { height: calc(100dvh / var(--z, 1)); min-height: 0; }
     main { min-height: 0; overflow-y: auto; }
-    footer .in { padding-block: 10px; gap: 10px; }
+    .site-foot .in { padding-block: 10px; gap: 10px; }
   }
   @media (max-width: 699px) {
-    main { padding: 24px 16px; }
-    footer .in { padding: 8px 16px; }
-    footer:not(:has(#install.on)) { display: none; }
+    :root { --air: 6px; }
+    main { padding: 38px 16px 30px; }
+    .greeting { padding-block: 6px; }
+    .site-foot .in { padding: 8px 16px; }
+    .site-foot:not(:has(#install.on)) { display: none; }
     .credit { display: none; }
-    h1 { font-size: 42px; } #logo { width: 60px; height: 60px; padding: 3px; }
-    /* The tagline goes under the logo and the title, at full width. */
-    #brand { flex-wrap: wrap; gap: 4px 14px; } #brand > div { display: contents; } #tagline { flex-basis: 100%; } #time { display: none; }
-    header { flex-wrap: wrap; row-gap: 0; } #now { text-align: left; }
+    h1 { font-size: 30px; }
+    #tagline { font-size: 19px; }
   }
   @media (prefers-reduced-motion: reduce) { .tile { transition: none; } a.tile:hover { transform: none; } }
 </style>
 <link rel="stylesheet" href="lib/cards.css">
+<link rel="stylesheet" href="lib/site-nav.css">
 <script src="lib/zoom.js"></script>
+<script src="lib/site-nav.js" defer></script>
 </head>
 <body>
+
+<header class="site-nav">
+  <div class="site-nav-inner">
+    <a class="site-nav-brand" href="./"><img src="icons/logo.webp" width="48" height="48" alt="">Jeux de Papi</a>
+    <nav class="site-nav-links" aria-label="Navigation principale">
+      <a href="#games" aria-current="page">Les jeux</a>
+      <details class="site-menu">
+        <summary>Règles</summary>
+        <div class="site-menu-panel">
+          <p class="site-menu-title">Règles des jeux</p>
+          <a href="belote/regles/"><img src="belote/icon.svg" width="40" height="40" alt="">Belote</a>
+          <a href="dames/regles/"><img src="dames/icon.svg" width="40" height="40" alt="">Jeu de dames</a>
+          <a href="solitaire/regles/"><img src="solitaire/icon.svg" width="40" height="40" alt="">Solitaire</a>
+          <a href="demineur/regles/"><img src="demineur/icon.svg" width="40" height="40" alt="">Démineur</a>
+          <a href="yams/regles/"><img src="yams/icon.svg" width="40" height="40" alt="">Yams</a>
+          <a href="huit-americain/regles/"><img src="huit-americain/icon.svg" width="40" height="40" alt="">Huit américain</a>
+        </div>
+      </details>
+      <a href="blog/">Blog</a>
+    </nav>
+  </div>
+</header>
 
 <div id="deco" aria-hidden="true">
   <svg viewBox="-5 -5 110 110" style="width:520px;left:-150px;bottom:-140px;transform:rotate(-16deg)"><path d="M50 5C62 26 95 40 95 61c0 12-10 20-21 20-8 0-15-4-19-11 1 11 6 20 13 26H32c7-6 12-15 13-26-4 7-11 11-19 11C15 81 5 73 5 61 5 40 38 26 50 5z"/></svg>
@@ -180,25 +193,16 @@
 </div>
 
 <main>
-  <header>
-    <div id="brand">
-      <img id="logo" src="icons/logo.webp" width="96" height="96" alt="">
-      <div>
-      <h1>Jeux de Papi</h1>
-      <p id="tagline">Retrouvez vos jeux de cartes, de dames et de dés, gratuits et sans publicité.</p>
-      </div>
-    </div>
-    <div id="now">
-      <div id="time"></div>
-      <div id="date"></div>
-    </div>
+  <header class="greeting">
+    <h1>Des jeux classiques à votre rythme</h1>
+    <p id="tagline">Simples et sans publicité. Cliquez sur un jeu pour commencer.</p>
   </header>
 
   <div id="games"></div>
 
   <p id="installed">Le jeu est déjà installé. Pour l’ouvrir, cliquez sur la petite icône en haut, à droite de la barre d’adresse.</p>
 </main>
-<footer><div class="in">
+<footer class="site-foot"><div class="in">
   <a class="credit" href="https://x.com/JulienCoulaud" target="_blank" rel="noopener"><img src="icons/julien.webp" width="34" height="34" alt=""><span>Par <b>Julien Coulaud</b></span></a>
   <div class="footer-controls">
     <div id="install"><button type="button" title="Met une icône des jeux sur le bureau : ils s’ouvrent d’un clic, même sans internet"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4M12 7v5M9.5 9.5 12 12l2.5-2.5"/></svg>Installer sur cet ordinateur</button></div>
@@ -673,12 +677,6 @@ document.getElementById('games').addEventListener('click', e => {
 // Safari keeps the page in memory when Papi goes into a game. Coming back, redraw the tiles.
 addEventListener('pageshow', e => { if (e.persisted) render(); });
 
-function clock() {
-  const d = new Date();
-  const date = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-  document.getElementById('date').textContent = date.charAt(0).toUpperCase() + date.slice(1);
-  document.getElementById('time').textContent = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-}
 
 // Chrome and Edge offer to install the site as an app. Show the offer as a plain button.
 let installEvent = null;
@@ -702,7 +700,6 @@ if (!matchMedia('(display-mode: standalone)').matches && navigator.getInstalledR
   }).catch(() => {});
 }
 
-clock(); setInterval(clock, 15000);
 render();
 </script>
 </body>

@@ -10,6 +10,11 @@ const CORE = [
   './', 'lib/store.js', 'lib/kit.js', 'lib/kit.css', 'lib/zoom.js', 'lib/cards.js', 'lib/cards.css', 'lib/solver-worker.js', 'manifest.webmanifest', 'fonts/lexend.woff2',
   'icons/icon.svg', 'icons/logo.webp', 'icons/julien.webp', 'icons/icon-192.png', 'icons/icon-512.png',
   'solitaire/', 'solitaire/solver.js', 'solitaire/icon.svg',
+  'lib/site-nav.css', 'lib/site-nav.js', 'lib/rules.css', 'belote/regles/', 'belote/regles/regles.css', 'dames/regles/', 'solitaire/regles/',
+  'belote/regles/hero-cards.webp', 'dames/regles/hero-pieces.webp', 'solitaire/regles/hero-cards.webp',
+  'demineur/regles/', 'demineur/regles/hero.webp', 'yams/regles/', 'yams/regles/hero.webp',
+  'huit-americain/regles/', 'huit-americain/regles/hero.webp', 'blog/', 'blog/blog.css', 'blog/game-night.webp',
+  'blog/illectronisme-par-age.png', 'blog/jeux-pour-seniors/',
   'freecell/', 'freecell/solver.js', 'freecell/icon.svg',
   'dames/', 'dames/engine.js', 'dames/icon.svg',
   'dame-de-pique/', 'dame-de-pique/engine.js', 'dame-de-pique/icon.svg',
@@ -35,7 +40,11 @@ self.addEventListener('message', e => {
   if (e.data !== 'start') return;
   const home = new URL(self.registration.scope).pathname;
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(all => {
-    if (all.every(c => [home, home + 'admin/'].includes(new URL(c.url).pathname))) return self.skipWaiting();
+    const reading = client => {
+      const path = new URL(client.url).pathname.slice(home.length);
+      return path === '' || path === 'admin/' || path.startsWith('blog/') || /^[^/]+\/regles\/$/.test(path);
+    };
+    if (all.every(reading)) return self.skipWaiting();
   }));
 });
 self.addEventListener('activate', e => e.waitUntil((async () => {
