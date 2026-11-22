@@ -238,7 +238,7 @@ document.documentElement.style.setProperty('--lit-ms', LIT_MS + 'ms');
 /* ---------- State ----------
    G: the game (see engine.js). undo: the grid before each of his moves (Sudoku.snapshot). sel: the chosen
    cell, or -1. notesOn: the "Notes" key is pressed. hint: { rings, house } shown by "Une aide ?" until his
-   next move. plan: { G, h, k } a longer hint told one step at a time, k steps told so far, for that grid
+   next move. plan: { key, h, k } a longer hint told one step at a time, k steps told so far, for that board of digits
    only. stats: { won }. wonNow: this game is counted as won, so a win counts once. winSave: the save of
    the winning move while it is not done: until then no menu opens, so the win sheet is not lost. */
 let G = null, undo = [], level = 'facile', stats = { won: 0 }, wonNow = false;
@@ -387,10 +387,12 @@ async function doUndo() {
 /* ---------- The hint ---------- */
 async function showHint() {
   if (!ready() || G.result || double('hint')) return;
-  if (!plan || plan.G !== G) {
+  // Notes do not change the reasoning, so a longer hint goes on while only notes change.
+  const key = S.board(G).join('');
+  if (!plan || plan.key !== key) {
     const h = S.hint(G);
     if (!h) return;
-    plan = h.kind === 'deep' && h.steps.length > 1 ? { G, h, k: 0 } : null;
+    plan = h.kind === 'deep' && h.steps.length > 1 ? { key, h, k: 0 } : null;
     if (!plan) return placeHint(h);
   }
   const { h, k } = plan, n = h.steps.length + 1;
@@ -398,6 +400,8 @@ async function showHint() {
   // A step of a longer reasoning: its cells in yellow, the cells it rules digits out of ringed.
   const s = h.steps[k], few = s.digits.length > 1 ? 'vont' : 'va';
   plan.k++;
+  // The ring of the chosen cell would read as a second target.
+  sel = -1;
   hint = { rings: s.targets, house: s.cells };
   render();
   Kit.say(`Étape ${k + 1} sur ${n} : ` + (s.subset.length
