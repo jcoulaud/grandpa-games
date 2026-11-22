@@ -200,12 +200,6 @@ export function createScene(canvas) {
   const gold = new T.InstancedMesh(new T.SphereGeometry(0.065, 12, 8), M.gold, 400);
   gold.renderOrder = 10;
   gold.frustumCulled = false;
-  // The last shot stays on the turf as a faint trail, until he aims the next one: then only the new
-  // preview shows, so two dotted lines never mix.
-  const trail = new T.InstancedMesh(new T.SphereGeometry(0.035, 8, 6), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3, depthTest: false }), 400);
-  trail.renderOrder = 9;
-  trail.frustumCulled = false;
-  trail.count = 0;
   const ringGeo = (r, w) => new T.RingGeometry(r - w, r, 48).rotateX(-Math.PI / 2);
   const targetRing = new T.Mesh(ringGeo(0.26, 0.07), M.gold),
     stopRing = new T.Mesh(ringGeo(0.2, 0.06), M.ring);
@@ -633,7 +627,7 @@ export function createScene(canvas) {
   function clear() {
     if (!course) return;
     course.traverse((m) => {
-      if (m !== dots && m !== gold && m !== trail && m !== targetRing && m !== stopRing) m.geometry?.dispose();
+      if (m !== dots && m !== gold && m !== targetRing && m !== stopRing) m.geometry?.dispose();
     });
     trash.forEach((t) => t.dispose());
     trash = [];
@@ -747,8 +741,7 @@ export function createScene(canvas) {
     halo = new T.Mesh(ringGeo(0.36, 0.06), M.halo);
     course.add(halo);
     preview = new T.Group();
-    trail.count = 0;
-    preview.add(trail, dots, gold, targetRing, stopRing);
+    preview.add(dots, gold, targetRing, stopRing);
     course.add(preview);
     trace(null);
     frame();
@@ -926,7 +919,6 @@ export function createScene(canvas) {
   function trace(shot, target, level = 'facile', full = false) {
     dots.count = gold.count = 0;
     targetRing.visible = stopRing.visible = false;
-    trail.visible = !shot;
     if (shot) {
       const n = full ? shot.path.length - 1 : reveal(level, shot),
         whole = n === shot.path.length - 1,
@@ -962,25 +954,6 @@ export function createScene(canvas) {
         stopRing.position.set(shot.end.x, yAt(shot.end.x, shot.end.z) + 0.02, shot.end.z);
         stopRing.visible = true;
       }
-    }
-    wake();
-  }
-  // The faint trail of the last shot, or none.
-  function remember(shot) {
-    trail.count = 0;
-    if (shot) {
-      const mat = new T.Matrix4();
-      let run = 0,
-        prev = shot.path[0];
-      for (const p of shot.path) {
-        run += Math.hypot(p.x - prev.x, p.z - prev.z);
-        prev = p;
-        if (run < 0.18) continue;
-        run = 0;
-        if (trail.count >= 400) break;
-        trail.setMatrixAt(trail.count++, mat.makeTranslation(p.x, yAt(p.x, p.z) + 0.03, p.z));
-      }
-      trail.instanceMatrix.needsUpdate = true;
     }
     wake();
   }
@@ -1104,7 +1077,6 @@ export function createScene(canvas) {
     load,
     pose,
     trace,
-    remember,
     animate,
     wake,
     local,

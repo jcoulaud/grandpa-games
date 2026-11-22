@@ -1,4 +1,4 @@
-import { fresh, current, restore, play, undo, course, hint, simulate, oldLevel, oldFinished } from './engine.js';
+import { fresh, current, restore, play, undo, course, hint, simulate, oldLevel, oldFinished, radius } from './engine.js';
 import { createScene } from './scene.js';
 const $ = (id) => document.getElementById(id);
 const DRAG = 16, // a press that moves less is a click
@@ -321,9 +321,9 @@ async function shoot() {
     return ok;
   });
   const [written] = await Promise.all([saved, view.animate(shot)]);
-  view.remember(shot.sunk ? null : shot);
   const count = game.rounds.at(-1).length,
-    away = Math.hypot(shot.end.x - h.cup.x, shot.end.z - h.cup.z);
+    // What he sees: the gap between the ball and the edge of the hole, not between their centres.
+    away = Math.max(0, Math.hypot(shot.end.x - h.cup.x, shot.end.z - h.cup.z) - h.cup.r - radius);
   if (shot.sunk) {
     const ribbon = $('ribbon');
     ribbon.textContent = count === 1 ? 'Du premier coup !' : count < h.par ? 'Sous le par !' : 'Dans le trou !';
@@ -350,7 +350,6 @@ async function shoot() {
 async function back() {
   if (!game || busy || stale || Kit.isOpen() || !undo(game)) return;
   busy = true;
-  view.remember(null);
   render('Votre dernier coup est annulé.');
   await save();
   busy = false;

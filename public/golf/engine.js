@@ -14,13 +14,24 @@ export const radius = 0.12,
   dt = 1 / 60;
 export const levels = ['facile', 'moyen', 'fort'];
 const ROLL = 1.1, // rolling friction, m/s²
+  // A slow ball meets less friction, as on a real carpet: it rests only on a slope gentler than about 3°,
+  // and a ball that stops on the side of a hill or a ramp rolls back down.
+  SLOW = 0.3, // m/s
+  REST = 0.35, // m/s², the friction under SLOW
   SLOPE = 6, // pull of a slope, m/s² per unit of gradient
   STEP = 0.05, // longest move in one sub-step, well under the ball's radius
   STEPS = 25 / dt,
-  REACH = 16,
+  REACH = 24,
   CELL = 0.5,
   SLIP_A = 0.03, // the solver’s idea of a slip of the hand: 1.7° of aim and 10% of length
-  SLIP_D = 0.1;
+  SLIP_D = 0.1,
+  // The cup. A ball that hangs over the rim tips towards the hole: a pull of up to LIP m/s² towards the
+  // middle, strongest when half the ball is over the edge. A ball whose centre is over the hole falls;
+  // it drops in when it reaches the far wall low enough, so the longer its way across the hole, the
+  // faster it may go. A ball that crosses anyway loses some pace on the far lip.
+  LIP = 5,
+  FALL = Math.sqrt(9.8 / (2 * radius)),
+  LIP_LOSS = 0.8;
 
 export const LEVEL = {
   facile: { slip: [0.07, 0.24], width: [2.7, 3.1], cup: 0.36, catch: 1.15, bend: [18, 30], ramp: 0.18, bridge: 1.3, tunnel: 1.1, gate: 1, mill: 1, bumpers: [1, 2] },
@@ -216,6 +227,11 @@ function prepare(h) {
 }
 
 // ---------- The shot ----------
+// The pace that stops the ball after len metres on flat open ground: ROLL until SLOW, then REST.
+function pace(len) {
+  const tail = (SLOW * SLOW) / (2 * REST);
+  return len <= tail ? Math.sqrt(2 * REST * len) : Math.sqrt(2 * ROLL * (len - tail) + SLOW * SLOW);
+}
 // The fixed-step simulation. With record, path holds the ball's place at each step of dt.
 export function simulate(h, start, target, record = true) {
   const P = prepare(h),
@@ -226,26 +242,40 @@ export function simulate(h, start, target, record = true) {
   let x = start.x,
     z = start.z;
   const len = Math.hypot(target.x - x, target.z - z),
-    speed0 = Math.sqrt(2 * ROLL * Math.min(len, REACH));
+    speed0 = pace(Math.min(len, REACH));
   let vx = len ? ((target.x - x) / len) * speed0 : 0,
     vz = len ? ((target.z - z) / len) * speed0 : 0;
   const path = record ? [point(x, z)] : null;
   let firstBounce = null,
     sunk = false,
+    over = false,
     step = 0;
+  // The rim adds its pull to the slope, so a ball that stops hanging over the hole still falls in.
+  const lip = () => {
+    const dx = x - cup.x,
+      dz = z - cup.z,
+      d = Math.hypot(dx, dz),
+      edge = cup.r + radius / 2;
+    if (d >= edge || d < 1e-6) return;
+    const k = d > cup.r ? (edge - d) / (radius / 2) : 1;
+    g[0] += (dx / d) * (LIP / SLOPE) * k;
+    g[1] += (dz / d) * (LIP / SLOPE) * k;
+  };
   while (++step <= STEPS) {
     slope(h, x, z, g);
+    lip();
     vx -= SLOPE * g[0] * dt;
     vz -= SLOPE * g[1] * dt;
     let v = Math.hypot(vx, vz);
-    if (v <= ROLL * dt) {
+    const fr = v > SLOW ? ROLL : REST;
+    if (v <= fr * dt) {
       vx = vz = 0;
       // At rest, unless the slope is steeper than the friction can hold.
-      if (SLOPE * Math.hypot(g[0], g[1]) <= ROLL) break;
+      if (SLOPE * Math.hypot(g[0], g[1]) <= REST) break;
       if (record) path.push(point(x, z));
       continue;
     }
-    const f = (v - ROLL * dt) / v;
+    const f = (v - fr * dt) / v;
     vx *= f;
     vz *= f;
     v *= f;
@@ -335,12 +365,28 @@ export function simulate(h, start, target, record = true) {
       }
       if (hit && firstBounce === null) firstBounce = step;
       const dx = x - cup.x,
-        dz = z - cup.z;
-      if (dx * dx + dz * dz < cupR2 && vx * vx + vz * vz < h.catch * h.catch) {
-        sunk = true;
-        x = cup.x;
-        z = cup.z;
-        break;
+        dz = z - cup.z,
+        inside = dx * dx + dz * dz < cupR2;
+      if (inside) {
+        // The way across the hole along the ball's line, and the pace that still reaches the far wall
+        // low enough to drop. Never less than the level's catch, so a slow ball always drops.
+        const v2 = vx * vx + vz * vz,
+          v = Math.sqrt(v2),
+          off = v > 1e-9 ? Math.abs(dx * vz - dz * vx) / v : 0,
+          chord = 2 * Math.sqrt(Math.max(0, cupR2 - off * off)),
+          most = Math.max(h.catch, (chord - radius) * FALL);
+        if (v < most) {
+          sunk = true;
+          x = cup.x;
+          z = cup.z;
+          break;
+        }
+        over = true;
+      } else if (over) {
+        // Too fast: it jumps the hole and loses pace on the far lip.
+        over = false;
+        vx *= LIP_LOSS;
+        vz *= LIP_LOSS;
       }
     }
     if (record) path.push(point(x, z));
@@ -648,7 +694,7 @@ function build(level, type, rnd) {
     mill: null,
     parts: [],
     catch: L.catch,
-    // The longest pull sends the ball this far: across the whole hole.
+    // The longest pull: see h.reach below.
     reach: 0,
     palette: Math.floor(rnd() * 4),
     decor: Math.floor(rnd() * 2 ** 32)
@@ -782,7 +828,9 @@ function build(level, type, rnd) {
   }
   const xs = h.outline.map((p) => p[0]),
     zs = h.outline.map((p) => p[1]);
-  h.reach = clamp(Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs)), 6, REACH);
+  // The longest pull: half as far again as the whole hole, so a full pull feels strong and comes back off
+  // the end wall.
+  h.reach = clamp(1.5 * Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs)), 9, REACH);
   return h;
 }
 // The checks a hole must pass before the solver tries it.
