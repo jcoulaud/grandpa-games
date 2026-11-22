@@ -184,10 +184,9 @@
   .gb svg.ghost { opacity: .45; }
   .gb > i.won { background: #D9E1FF; }
   /* "Click here": a yellow ring with a dark edge, as on the board, and a pointing hand. */
-  .gb > i.here, .gbtn.here { box-shadow: 0 0 0 5px var(--gold), 0 0 0 7px #2A1D33; z-index: 2; }
-  .gb > i.here { background: #FFF1C7; }
-  .ghand { position: absolute; z-index: 3; width: 46px; height: 54px; left: 58%; top: 52%; pointer-events: none;
-    filter: drop-shadow(0 3px 3px rgba(0,0,0,.35)); }
+  #help { --guide-edge: #2A1D33; --guide-more: #3F3A4A; }
+  .gb > i.guide-ring { background: #FFF1C7; }
+  .guide-hand { left: 58%; top: 52%; }
   .gb .gline { position: absolute; inset: calc(var(--gg) / 2); width: calc(100% - var(--gg)); height: calc(100% - var(--gg));
     overflow: visible; z-index: 2; filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 2px #fff); }
   .gb .gline path { fill: none; stroke-linecap: round; }
@@ -195,21 +194,11 @@
     border-left: 8px solid var(--blue); box-shadow: 0 4px 14px rgba(var(--shade),.4); font: 700 22px var(--ui); }
   .gcard svg { width: 40px; height: 40px; flex: none; }
   .gcard svg path { fill: none; stroke-linecap: round; }
-  .gbtns { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 6px 0; }
-  .gbtn { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 54px; padding: 6px 20px; border-radius: 15px;
-    font: 600 21px var(--ui); color: var(--text); background: #fff; border: 2px solid #9AA6A1; box-shadow: 0 3px 0 #9AA6A1; }
-  .gbtn.hintb { background: var(--gold); border-color: #B48414; box-shadow: 0 3px 0 #B48414, 0 0 0 5px #fff, 0 0 0 7px #2A1D33; }
-  .gbtn > svg:not(.ghand) { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .gbtn > .ghand { left: 62%; top: 45%; }
-  #helpText .page { text-align: center; }
-  #helpText .page h3 { text-align: left; }
-  #helpText .lead { margin: 0 0 4px; font: 700 24px/1.3 var(--ui); color: var(--text); }
-  #helpText .more { margin: 0; font: 500 21px/1.35 var(--ui); color: #3F3A4A; }
+  .guide-btn > .guide-hand { left: 62%; top: 45%; }
   @media (max-width: 700px) {
     .guide-pic { padding: 12px; gap: 12px; }
     .gb.small { --gc: 60px; }
     .gb.big { --gc: 38px; }
-    #helpText .lead { font-size: 21px; } #helpText .more { font-size: 18px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -263,40 +252,40 @@
       <div class="gb small" data-b="o..|.+.|..."></div>
       <div class="gcard"><svg viewBox="0 0 100 100"><path d="M22 22L78 78M78 22L22 78" stroke="#1F3FBF" stroke-width="15"/></svg>À vous de jouer</div>
     </div>
-    <p class="lead">Cliquez sur une case vide.</p>
-    <p class="more">Votre croix bleue s'y pose, puis l'ordinateur pose son rond rouge.</p>
+    <p class="guide-lead">Cliquez sur une case vide.</p>
+    <p class="guide-more">Votre croix bleue s'y pose, puis l'ordinateur pose son rond rouge.</p>
   </section>
   <section class="page">
     <h3>Gagner au niveau facile</h3>
     <div class="guide-pic" aria-hidden="true">
       <div class="gb small" data-b="X.o|.X.|o.X" data-line="0 0 2 2"></div>
     </div>
-    <p class="lead">Alignez 3 croix pour gagner.</p>
-    <p class="more">En ligne, en colonne ou en diagonale.</p>
+    <p class="guide-lead">Alignez 3 croix pour gagner.</p>
+    <p class="guide-more">En ligne, en colonne ou en diagonale.</p>
   </section>
   <section class="page">
     <h3>Gagner aux niveaux moyen et difficile</h3>
     <div class="guide-pic" aria-hidden="true">
       <div class="gb big" data-b="...o...|.XXXXX.|..o..o." data-line="1 1 5 1"></div>
     </div>
-    <p class="lead">Alignez 5 croix à la suite.</p>
-    <p class="more">La grille est plus grande : 11 cases sur 11.</p>
+    <p class="guide-lead">Alignez 5 croix à la suite.</p>
+    <p class="guide-more">La grille est plus grande : 11 cases sur 11.</p>
   </section>
   <section class="page">
     <h3>Bloquer l'ordinateur</h3>
     <div class="guide-pic" aria-hidden="true">
       <div class="gb big" data-b=".......|.+ooo..|...x.x."></div>
     </div>
-    <p class="lead">Fermez le bout de ses ronds.</p>
-    <p class="more">Le jeu vous prévient quand l'ordinateur en a trois à la suite.</p>
+    <p class="guide-lead">Fermez le bout de ses ronds.</p>
+    <p class="guide-more">Le jeu vous prévient quand l'ordinateur en a trois à la suite.</p>
   </section>
   <section class="page">
     <h3>Demander de l'aide</h3>
     <div class="guide-pic" aria-hidden="true">
-      <div class="gbtns"><span class="gbtn hintb here" data-icon="bulb">Où jouer ?</span><span class="gbtn" data-icon="undo">Annuler le dernier coup</span></div>
+      <div class="guide-btns"><span class="guide-btn primary here" data-icon="bulb">Où jouer ?</span><span class="guide-btn" data-icon="undo">Annuler le dernier coup</span></div>
     </div>
-    <p class="lead">Un doute ? Cliquez sur « Où jouer ? ».</p>
-    <p class="more">Une bonne case s'entoure de jaune. « Annuler » reprend votre croix.</p>
+    <p class="guide-lead">Un doute ? Cliquez sur « Où jouer ? ».</p>
+    <p class="guide-more">Une bonne case s'entoure de jaune. « Annuler » reprend votre croix.</p>
   </section>
 </div>
 
@@ -842,13 +831,12 @@ if (window.ResizeObserver) new ResizeObserver(() => { if (G && !table.hidden) { 
    Each board of the guide is written as rows of letters: x and o are marks, X a cross of the winning
    line, + the square to click (a yellow ring, a pale cross and a hand). data-line gives the first and the
    last square of the line, as column and row. */
-const HAND = '<svg class="ghand" viewBox="0 0 40 48"><path d="M15 27V7a4.5 4.5 0 0 1 9 0v12a4 4 0 0 1 7.5 1.6a4 4 0 0 1 7 2.4V33c0 8-5 13-12 13h-4c-5 0-8-2-11-6L4.5 32a4 4 0 0 1 6.3-4.6z" fill="#fff" stroke="#1B2422" stroke-width="2.6" stroke-linejoin="round"/></svg>';
 for (const b of document.querySelectorAll('#help .gb')) {
   const rows = b.dataset.b.split('|');
   b.style.setProperty('--cols', rows[0].length);
   b.innerHTML = rows.join('').split('').map(ch => {
     if (ch === '.') return '<i></i>';
-    if (ch === '+') return `<i class="here"><svg class="gm x ghost" viewBox="0 0 100 100">${PATH[X]}</svg>${HAND}</i>`;
+    if (ch === '+') return `<i class="guide-ring"><svg class="gm x ghost" viewBox="0 0 100 100">${PATH[X]}</svg>${Kit.icon('hand')}</i>`;
     const v = ch.toLowerCase() === 'x' ? X : O;
     return `<i${ch === 'X' ? ' class="won"' : ''}><svg class="gm ${v === X ? 'x' : 'o'}" viewBox="0 0 100 100">${PATH[v]}</svg></i>`;
   }).join('');
@@ -857,10 +845,6 @@ for (const b of document.querySelectorAll('#help .gb')) {
     const ux = Math.sign(zx - ax) * .3, uy = Math.sign(zy - ay) * .3;
     b.insertAdjacentHTML('beforeend', `<svg class="gline" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><path d="M${ax + .5 - ux} ${ay + .5 - uy}L${zx + .5 + ux} ${zy + .5 + uy}" stroke="#1F3FBF" stroke-width="${b.classList.contains('small') ? .08 : .2}"/></svg>`);
   }
-}
-for (const b of document.querySelectorAll('#help .gbtn')) {
-  b.insertAdjacentHTML('afterbegin', Kit.icon(b.dataset.icon));
-  if (b.classList.contains('here')) b.insertAdjacentHTML('beforeend', HAND);
 }
 
 // The rules open by themselves the first time the game is opened.

@@ -60,7 +60,7 @@ ok(await g(() => { const ps = [...document.querySelectorAll('#helpText .page')];
   return ps.length >= 3 && ps.length <= 5 && ps.every(p => p.querySelectorAll('.bp[aria-hidden="true"]').length === 1 && !p.querySelector('ul, ol, table')
     && [...p.querySelectorAll(':scope > p')].map(e => e.textContent).join(' ').split(/\s+/).filter(w => /\w/.test(w)).length <= 26); }),
   'the guide has 3 to 5 pages, each one picture and a few words');
-ok(await g(() => { const p = document.querySelector('#helpText .page'); return p.textContent.includes('Je prends') && !!p.querySelector('.bp-ring .bp-ptr');}),
+ok(await g(() => { const p = document.querySelector('#helpText .page'); return p.textContent.includes('Je prends') && !!p.querySelector('.bp-ring .guide-hand');}),
   'the first page shows the table and rings the first buttons to click');
 await page.getByRole('button', { name: 'Moyen', exact: true }).click();
 ok(!(await g(() => Kit.isOpen())) && await g(() => level === 'moyen'), 'the level is chosen after the rules');

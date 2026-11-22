@@ -159,10 +159,7 @@
   /* ---------- The rules guide ----------
      Each page: one picture on a piece of the terracotta table, made of the game's dice, piste, buttons and
      pad, then one or two short sentences. The pictures use their own classes, so only the real dice play. */
-  #helpText .page { text-align: center; }
-  #helpText .page h3 { text-align: left; }
-  #helpText .lead { margin: 0 0 4px; font: 700 24px/1.3 var(--ui); color: var(--text); }
-  #helpText .more { margin: 0; font: 500 21px/1.35 var(--ui); color: #3F3A4A; }
+  #help { --guide-edge: #2A1D33; --guide-more: #3F3A4A; }
   .yg-pic { --yd: 72px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 16px 26px; margin: 2px 0 12px; padding: 16px;
     border-radius: 18px; background: radial-gradient(120% 100% at 50% 0%, var(--felt-top), var(--felt) 80%); }
   .yg-col { display: flex; flex-direction: column; align-items: center; gap: 14px; }
@@ -181,14 +178,13 @@
   .yg-tags span { width: var(--yd); flex: none; display: flex; justify-content: center; }
   .yg-piste.small { --yd: 54px; }
   .yg-tags b { display: inline-block; padding: 0 8px; border-radius: 9px; background: var(--gold); color: #2B2000; font: 700 20px/1.4 var(--ui); box-shadow: 0 2px 6px rgba(0,0,0,.35); }
-  /* Copies of the real buttons. "Click here": a yellow ring with a dark edge, and a pointing hand. */
-  .yg-btn { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 54px; padding: 6px 22px; border-radius: 15px;
-    font: 600 22px var(--ui); color: #1F1A00; background: var(--gold); border: 2px solid #C9951A; box-shadow: 0 3px 0 #C9951A; white-space: nowrap; }
-  .yg-btn.plain { background: #fff; color: var(--text); border-color: #9AA6A1; box-shadow: 0 3px 0 #9AA6A1; }
-  .yg-btn > svg:not(.yg-hand) { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .yg-btn.here { box-shadow: 0 3px 0 #C9951A, 0 0 0 4px #fff, 0 0 0 9px var(--gold), 0 0 0 11px #2A1D33; }
-  .yg-btn .yg-hand { left: calc(100% - 16px); top: 34%; }
-  .yg-hand { position: absolute; z-index: 3; width: 46px; height: 54px; left: 62%; top: 48%; pointer-events: none; filter: drop-shadow(0 3px 3px rgba(0,0,0,.35)); }
+  /* Copies of the real roll button, which is larger than the buttons of the bar. "Click here": a yellow
+     ring outside a white one, with a dark edge, and the pointing hand. */
+  .guide-btn { padding-inline: 22px; font-size: 22px; }
+  .guide-btn > svg:not(.guide-hand) { width: 28px; height: 28px; }
+  .guide-btn.primary.here { box-shadow: 0 3px 0 #C9951A, 0 0 0 4px #fff, 0 0 0 9px var(--gold), 0 0 0 11px var(--guide-edge); }
+  .guide-btn .guide-hand { left: calc(100% - 16px); top: 34%; }
+  .guide-hand { left: 62%; top: 48%; }
   /* A piece of the pad: the paper, the rules, his pale yellow column and the boxes he can write. */
   .yg-pad { border-collapse: collapse; background: var(--paper); color: var(--ink); border-radius: 10px; box-shadow: 0 10px 26px rgba(0,0,0,.4); overflow: hidden; }
   .yg-pad th, .yg-pad td { height: 42px; padding: 0 12px; font: 600 21px/1 var(--ui); border-bottom: 1.5px solid var(--rule); white-space: nowrap; }
@@ -204,7 +200,7 @@
   .yg-pad td.zero::before { border-color: #C9CDC9; }
   .yg-pad td.here::before { background: var(--gold); border: 2.5px solid #C9951A; box-shadow: 0 0 0 3px #fff, 0 0 0 7px var(--gold), 0 0 0 9px #2A1D33; }
   .yg-pad td.here b { color: #1F1A00; }
-  .yg-pad td.here .yg-hand { left: 58%; top: 42%; }
+  .yg-pad td.here .guide-hand { left: 58%; top: 42%; }
   /* The bonus and the combinations: the items, with their points under each. */
   .yg-paper { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px 16px; padding: 14px 18px; border-radius: 14px;
     background: var(--paper); color: var(--ink); box-shadow: 0 10px 26px rgba(0,0,0,.4); }
@@ -235,7 +231,6 @@
     .yg-paper { gap: 10px; padding: 10px; }
     .yg-item svg { width: 36px; height: 36px; }
     .yg-item { font-size: 24px; }
-    #helpText .lead { font-size: 22px; } #helpText .more { font-size: 20px; }
   }
 
   /* A low window (his laptop with the text at 125 %): the two players sit side by side above the
@@ -324,22 +319,22 @@
     <div class="yg-pic" aria-hidden="true">
       <div class="yg-col">
         <div class="yg-piste"><div class="yg-dice" data-d="0,0,0,0,0"></div></div>
-        <span class="yg-btn here" data-roll>Lancer les dés</span>
+        <span class="guide-btn primary here" data-roll>Lancer les dés</span>
       </div>
     </div>
-    <p class="lead">Cliquez sur «&nbsp;Lancer les dés&nbsp;».</p>
-    <p class="more">Trois lancers par tour. À la fin, le plus grand total gagne.</p>
+    <p class="guide-lead">Cliquez sur «&nbsp;Lancer les dés&nbsp;».</p>
+    <p class="guide-more">Trois lancers par tour. À la fin, le plus grand total gagne.</p>
   </section>
   <section class="page">
     <h3>Garder des dés</h3>
     <div class="yg-pic" aria-hidden="true">
       <div class="yg-col">
         <div class="yg-piste"><div class="yg-dice" data-d="5,5,2,5,6" data-keep="0,1,3" data-hand="3"></div><div class="yg-tags" data-keep="0,1,3"></div></div>
-        <span class="yg-btn" data-roll>Relancer 2 dés</span>
+        <span class="guide-btn primary" data-roll>Relancer 2 dés</span>
       </div>
     </div>
-    <p class="lead">Cliquez sur les dés à garder.</p>
-    <p class="more">Puis cliquez sur «&nbsp;Relancer 2&nbsp;dés&nbsp;» pour lancer les autres.</p>
+    <p class="guide-lead">Cliquez sur les dés à garder.</p>
+    <p class="guide-more">Puis cliquez sur «&nbsp;Relancer 2&nbsp;dés&nbsp;» pour lancer les autres.</p>
   </section>
   <section class="page">
     <h3>Marquer les points</h3>
@@ -355,8 +350,8 @@
         </tbody>
       </table>
     </div>
-    <p class="lead">Cliquez sur une case pour y marquer les points.</p>
-    <p class="more">Une case par tour. «&nbsp;barrer&nbsp;» y met 0&nbsp;point.</p>
+    <p class="guide-lead">Cliquez sur une case pour y marquer les points.</p>
+    <p class="guide-more">Une case par tour. «&nbsp;barrer&nbsp;» y met 0&nbsp;point.</p>
   </section>
   <section class="page">
     <h3>Le bonus</h3>
@@ -368,8 +363,8 @@
         <span class="yg-bonus">+35<small>Bonus</small></span>
       </div>
     </div>
-    <p class="lead">63 points de l'As au Six : 35 points de bonus.</p>
-    <p class="more">Trois dés de chaque valeur suffisent.</p>
+    <p class="guide-lead">63 points de l'As au Six : 35 points de bonus.</p>
+    <p class="guide-more">Trois dés de chaque valeur suffisent.</p>
   </section>
   <section class="page">
     <h3>Les combinaisons</h3>
@@ -381,8 +376,8 @@
         <div class="yg-combo"><div class="yg-dice" data-d="4,4,4,4,4"></div><span>Yams <b>50 points</b></span></div>
       </div>
     </div>
-    <p class="lead">Ces combinaisons valent des points fixes.</p>
-    <p class="more">Brelan et carré : la somme des dés pareils. Chance : la somme des cinq dés.</p>
+    <p class="guide-lead">Ces combinaisons valent des points fixes.</p>
+    <p class="guide-more">Brelan et carré : la somme des dés pareils. Chance : la somme des cinq dés.</p>
   </section>
 </div>
 
@@ -922,13 +917,12 @@ addEventListener('resize', render);
 /* ---------- The pictures of the rules ----------
    Each row of dice is written as data-d, 0 for an empty slot. data-keep: the kept dice, data-hand: the die
    the hand points at, data-dim: a die that does not count. data-mini: a small die of the pad. */
-const HAND = '<svg class="yg-hand" viewBox="0 0 40 48"><path d="M15 27V7a4.5 4.5 0 0 1 9 0v12a4 4 0 0 1 7.5 1.6a4 4 0 0 1 7 2.4V33c0 8-5 13-12 13h-4c-5 0-8-2-11-6L4.5 32a4 4 0 0 1 6.3-4.6z" fill="#fff" stroke="#1B2422" stroke-width="2.6" stroke-linejoin="round"/></svg>';
 const ROLL_ICON = '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>';
 const list = s => (s || '').split(',').filter(Boolean).map(Number);
 for (const r of document.querySelectorAll('#help .yg-dice')) {
   const keep = list(r.dataset.keep), dim = list(r.dataset.dim), hand = list(r.dataset.hand);
   r.innerHTML = list(r.dataset.d).map((d, i) => !d ? '<i class="yg-die blank"></i>'
-    : `<i class="yg-die${keep.includes(i) ? ' kept' : ''}${dim.includes(i) ? ' dim' : ''}">${dieSvg(d)}${hand.includes(i) ? HAND : ''}</i>`).join('');
+    : `<i class="yg-die${keep.includes(i) ? ' kept' : ''}${dim.includes(i) ? ' dim' : ''}">${dieSvg(d)}${hand.includes(i) ? Kit.icon('hand') : ''}</i>`).join('');
 }
 for (const t of document.querySelectorAll('#help .yg-tags')) {
   const keep = list(t.dataset.keep);
@@ -936,7 +930,7 @@ for (const t of document.querySelectorAll('#help .yg-tags')) {
 }
 for (const e of document.querySelectorAll('#help [data-mini]')) e.insertAdjacentHTML('afterbegin', mini(+e.dataset.mini));
 for (const b of document.querySelectorAll('#help [data-roll]')) b.insertAdjacentHTML('afterbegin', ROLL_ICON);
-for (const e of document.querySelectorAll('#help .here')) e.insertAdjacentHTML('beforeend', HAND);
+for (const e of document.querySelectorAll('#help td.here')) e.insertAdjacentHTML('beforeend', Kit.icon('hand'));
 
 // The rules open by themselves the first time the game is opened.
 if (load()) {

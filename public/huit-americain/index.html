@@ -239,19 +239,20 @@
   #help .hp .card.can { translate: 0 -10px; box-shadow: 0 0 0 3px rgba(255,255,255,.85), 0 0 14px 3px rgba(255,214,236,.55), 0 8px 14px rgba(0,0,0,.35); }
   #help .hp .card.no::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; background: rgba(70,8,40,.42); }
   #help .hp .ring { outline: 5px solid var(--gold); outline-offset: 2px; box-shadow: 0 0 20px 6px rgba(255,200,61,.75); z-index: 2; }
-  .hp-ptr { position: absolute; z-index: 5; right: -30px; bottom: -24px; width: 44px; height: 55px; rotate: -18deg;
-    filter: drop-shadow(0 3px 3px rgba(0,0,0,.45)); pointer-events: none; }
+  .guide-hand { z-index: 5; right: -30px; bottom: -24px; width: 44px; height: 55px; rotate: -18deg; filter: drop-shadow(0 3px 3px rgba(0,0,0,.45)); }
   .hp-btn { position: relative; display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 15px;
     background: var(--gold); color: #1F1A00; font: 700 24px/1.2 var(--ui); box-shadow: 0 3px 0 #C9951A; }
-  .hp-btn svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+  /* The hand points at the button itself, never at the pioche beside it. */
+  .hp-btn .guide-hand { right: 4px; bottom: -34px; }
+  .hp-btn svg:not(.guide-hand) { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
   .hp-on { font: 600 22px var(--ui); color: #FFE4F1; }
   .hp-suits { display: grid; grid-template-columns: repeat(4, auto); gap: 12px; }
   .hp-suits span { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 12px 6px; border-radius: 14px;
     background: #fff; color: var(--text); font: 700 20px/1.2 var(--ui); box-shadow: 0 3px 0 #C9C2B4; }
   .hp-suits svg { width: 40px; height: 40px; }
   .hp-suits .red svg { fill: var(--red); } .hp-suits .black svg { fill: var(--ink); }
-  .hp-table .hp-hand .hp-ptr { right: -34px; bottom: 8px; }
-  .hp-suits .hp-ptr { width: 32px; height: 40px; right: -16px; bottom: -22px; }
+  .hp-table .hp-hand .guide-hand { right: -34px; bottom: 8px; }
+  .hp-suits .guide-hand { width: 32px; height: 40px; right: -16px; bottom: -22px; }
   .hp-cols { flex-direction: row; align-items: flex-start; gap: 22px; }
   .hp-cols figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; width: min(168px, 26cqw); }
   .hp-cols figcaption { font: 700 20px/1.2 var(--ui); color: #fff; text-align: center; }
@@ -269,6 +270,9 @@
   @container (max-width: 520px) {
     .hp-me { display: none; }
     .hp-table { --cw: 15cqw; } .hp-mid { --cw: 13cqw; }
+    /* "Piocher" goes under the cards, so the row fits the width. */
+    .hp-mid:has(.hp-btn) { flex-wrap: wrap; justify-content: center; row-gap: 18px; padding-bottom: 14px; }
+    .hp-mid .hp-btn { order: 1; }
     .hp-cols { flex-wrap: wrap; justify-content: center; row-gap: 16px; }
     .hp-cols { --cw: 17cqw; column-gap: 8px; }
     .hp-cols figure { width: 28cqw; }
@@ -277,8 +281,7 @@
     .hp-ringfig svg { width: 44cqw; }
     .hp-pts figure { width: 36cqw; }
   }
-  #helpText p.hp-key { margin: 0 0 6px; font: 700 24px/1.3 var(--ui); color: var(--text); text-align: center; }
-  #helpText p.hp-more { margin: 0; font: 400 22px/1.3 var(--ui); text-align: center; }
+  #help { --guide-more: #26302D; }
   @media (max-width: 699px) {
     .hp-felt { padding: 12px 14px 16px; }
     .hp-suits { grid-template-columns: repeat(2, auto); }
@@ -340,36 +343,33 @@
   <button id="nextBtn" class="primary" data-nudge></button>
 </div>
 <footer id="rail"><div class="zoom"></div></footer>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-  <symbol id="haPtr" viewBox="0 0 40 50"><path d="M14 7a4 4 0 0 1 8 0v13a3.5 3.5 0 0 1 7 0v1a3 3 0 0 1 6 0v13c0 7-5 12-12 12h-3c-4 0-7-2-9-5l-6-9a3 3 0 0 1 5-3l4 4z" fill="#fff" stroke="#1B2422" stroke-width="2.4" stroke-linejoin="round"/><path d="M22 20v8M29 21v7" fill="none" stroke="#1B2422" stroke-width="2" stroke-linecap="round"/></symbol>
-</defs></svg>
 <div id="help" data-title="Comment jouer">
   <section class="page">
     <h3>Poser une carte</h3>
     <div class="hp" aria-hidden="true"><div class="hp-felt hp-table">
       <div class="hp-row hp-mid"><div data-help-card="dos"></div><div data-help-card="47" class="hp-top"></div><div class="hp-disc"><svg viewBox="0 0 100 100"><use href="#su3"/></svg></div></div>
-      <div class="hp-row hp-hand"><span class="hp-me"><i>V</i>Vous</span><div data-help-card="4" class="no"></div><div data-help-card="16" class="no"></div><div data-help-card="21" class="can"></div><div data-help-card="28" class="no"></div><div data-help-card="42" class="can ring"><svg class="hp-ptr" viewBox="0 0 40 50"><use href="#haPtr"/></svg></div></div>
+      <div class="hp-row hp-hand"><span class="hp-me"><i>V</i>Vous</span><div data-help-card="4" class="no"></div><div data-help-card="16" class="no"></div><div data-help-card="21" class="can"></div><div data-help-card="28" class="no"></div><div data-help-card="42" class="can ring"><svg class="guide-hand" viewBox="0 0 40 48"><use href="#kit-hand"/></svg></div></div>
     </div></div>
-    <p class="hp-key">Cliquez sur une carte levée&nbsp;: même couleur ou même valeur que la carte du milieu.</p>
-    <p class="hp-more">Le premier qui n'a plus de cartes gagne la manche.</p>
+    <p class="guide-lead">Cliquez sur une carte levée&nbsp;: même couleur ou même valeur que la carte du milieu.</p>
+    <p class="guide-more">Le premier qui n'a plus de cartes gagne la manche.</p>
   </section>
   <section class="page">
     <h3>Quand aucune carte ne va</h3>
     <div class="hp" aria-hidden="true"><div class="hp-felt hp-table">
-      <div class="hp-row hp-mid"><span class="hp-btn ring"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="12" height="15" rx="2"/><path d="M8 7V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/></svg>Piocher<svg class="hp-ptr" viewBox="0 0 40 50"><use href="#haPtr"/></svg></span><div data-help-card="dos"></div><div data-help-card="47" class="hp-top"></div><div class="hp-disc"><svg viewBox="0 0 100 100"><use href="#su3"/></svg></div></div>
+      <div class="hp-row hp-mid"><span class="hp-btn ring"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="12" height="15" rx="2"/><path d="M8 7V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/></svg>Piocher<svg class="guide-hand" viewBox="0 0 40 48"><use href="#kit-hand"/></svg></span><div data-help-card="dos"></div><div data-help-card="47" class="hp-top"></div><div class="hp-disc"><svg viewBox="0 0 100 100"><use href="#su3"/></svg></div></div>
       <div class="hp-row hp-hand"><span class="hp-me"><i>V</i>Vous</span><div data-help-card="4" class="no"></div><div data-help-card="16" class="no"></div><div data-help-card="25" class="no"></div><div data-help-card="28" class="no"></div></div>
     </div></div>
-    <p class="hp-key">Aucune carte ne va&nbsp;? Cliquez sur «&nbsp;Piocher&nbsp;».</p>
-    <p class="hp-more">Si la carte piochée va, vous pouvez la poser.</p>
+    <p class="guide-lead">Aucune carte ne va&nbsp;? Cliquez sur «&nbsp;Piocher&nbsp;».</p>
+    <p class="guide-more">Si la carte piochée va, vous pouvez la poser.</p>
   </section>
   <section class="page">
     <h3>Le 8 va partout</h3>
     <div class="hp" aria-hidden="true"><div class="hp-felt hp-eight">
       <div class="hp-row"><div data-help-card="33"></div><span class="hp-on">sur</span><div data-help-card="47"></div></div>
-      <div class="hp-suits"><span class="black"><svg viewBox="0 0 100 100"><use href="#su0"/></svg>Pique</span><span class="red ring"><svg viewBox="0 0 100 100"><use href="#su1"/></svg>Cœur<svg class="hp-ptr" viewBox="0 0 40 50"><use href="#haPtr"/></svg></span><span class="red"><svg viewBox="0 0 100 100"><use href="#su2"/></svg>Carreau</span><span class="black"><svg viewBox="0 0 100 100"><use href="#su3"/></svg>Trèfle</span></div>
+      <div class="hp-suits"><span class="black"><svg viewBox="0 0 100 100"><use href="#su0"/></svg>Pique</span><span class="red ring"><svg viewBox="0 0 100 100"><use href="#su1"/></svg>Cœur<svg class="guide-hand" viewBox="0 0 40 48"><use href="#kit-hand"/></svg></span><span class="red"><svg viewBox="0 0 100 100"><use href="#su2"/></svg>Carreau</span><span class="black"><svg viewBox="0 0 100 100"><use href="#su3"/></svg>Trèfle</span></div>
     </div></div>
-    <p class="hp-key">Le 8 se pose sur toutes les cartes.</p>
-    <p class="hp-more">Puis cliquez sur la couleur que le joueur suivant devra poser.</p>
+    <p class="guide-lead">Le 8 se pose sur toutes les cartes.</p>
+    <p class="guide-more">Puis cliquez sur la couleur que le joueur suivant devra poser.</p>
   </section>
   <section class="page">
     <h3>L'as, le 2 et le valet</h3>
@@ -379,7 +379,7 @@
       <figure><div data-help-card="14"></div><figcaption>Le suivant<br>pioche 2 cartes</figcaption></figure>
       <figure><div data-help-card="49"></div><figcaption>Le suivant<br>passe son tour</figcaption></figure>
     </div></div>
-    <p class="hp-key">Les flèches du milieu montrent qui joue après.</p>
+    <p class="guide-lead">Les flèches du milieu montrent qui joue après.</p>
   </section>
   <section class="page">
     <h3>Compter les points</h3>
@@ -389,7 +389,7 @@
       <figure><div data-help-card="39"></div><figcaption><b>1</b> point</figcaption></figure>
       <figure><div data-help-card="32"></div><figcaption><b>7</b> points</figcaption></figure>
     </div></div>
-    <p class="hp-key">Les cartes gardées en main comptent. À 100 points, le plus petit total gagne.</p>
+    <p class="guide-lead">Les cartes gardées en main comptent. À 100 points, le plus petit total gagne.</p>
   </section>
 </div>
 

@@ -133,10 +133,10 @@
   .ex-bad { color: var(--wrong) !important; background: rgba(214,48,40,.36); }
   .ex-blame { box-shadow: inset 0 0 0 3px var(--wrong); }
   /* "Click here": a yellow ring with a dark edge, and a pointing hand. */
-  .ex-here { z-index: 2; background: rgba(255,200,61,.30); box-shadow: 0 0 0 5px var(--gold), 0 0 0 7px #12161B; }
-  .ex-keys .ex-here { background: #FFF3C4; box-shadow: 0 0 0 5px var(--gold), 0 0 0 7px #12161B; }
-  .ghand { position: absolute; z-index: 3; width: 42px; height: 50px; left: 55%; top: 50%; pointer-events: none;
-    filter: drop-shadow(0 3px 3px rgba(0,0,0,.45)); }
+  #help { --guide-edge: #12161B; --guide-more: #3A4148; }
+  .ex-here { z-index: 2; background: rgba(255,200,61,.30); box-shadow: var(--guide-ring); }
+  .ex-keys .ex-here { background: #FFF3C4; box-shadow: var(--guide-ring); }
+  .guide-hand { width: 42px; height: 50px; left: 55%; top: 50%; filter: drop-shadow(0 3px 3px rgba(0,0,0,.45)); }
   .ex-keys { display: flex; gap: 16px; }
   .ex-keys span { width: var(--ek); height: var(--ek); border-radius: 14px; display: flex; align-items: center; justify-content: center; position: relative;
     font: 700 calc(var(--ek) * .52) var(--ui); background: #FBFAF6; color: #1F2830; border: 2px solid #8C979F; box-shadow: 0 4px 0 #8C979F; }
@@ -145,13 +145,8 @@
   .ex-keys .ex-done { background: #E6EAE7; color: #4B5650; }
   .ex-keys .ex-done::after { content: ""; position: absolute; top: -9px; right: -9px; width: 30px; height: 30px; border-radius: 50%;
     background: #2F8F4E url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 70% no-repeat; box-shadow: 0 0 0 3px #fff; }
-  .gbtn { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 54px; padding: 6px 20px; border-radius: 15px;
-    font: 600 22px var(--ui); color: var(--text); background: #fff; border: 2px solid #9AA6A1; box-shadow: 0 3px 0 #9AA6A1; white-space: nowrap; }
-  .gbtn.hintb { background: var(--gold); color: #1F1A00; border-color: #C9951A; box-shadow: 0 3px 0 #C9951A; }
-  .gbtn.here { box-shadow: 0 3px 0 #C9951A, 0 0 0 5px #fff, 0 0 0 7px #12161B; }
-  .gbtn.erase.here { box-shadow: 0 3px 0 #9AA6A1, 0 0 0 5px var(--gold), 0 0 0 7px #12161B; }
-  .gbtn > svg:not(.ghand) { width: 26px; height: 26px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .gbtn > .ghand { left: auto; right: -20px; top: 40%; }
+  .guide-btn { font-size: 22px; }
+  .guide-btn > .guide-hand { left: auto; right: -20px; top: 40%; }
   /* Two steps, one under the other, joined by an arrow that points down. */
   .guide-pic.steps { flex-direction: column; gap: 6px; }
   .garrow { width: 42px; height: 34px; flex: none; fill: none; stroke: var(--chalk); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
@@ -160,10 +155,6 @@
   #bar.fit-short ~ #help .long { display: none; } #bar.fit-short ~ #help .short { display: inline; }
   #bar.fit-tiny ~ #help .long, #bar.fit-tiny ~ #help .short { display: none; } #bar.fit-tiny ~ #help .tiny { display: inline; }
   @media (max-width: 700px) { #help .long, #help .short { display: none; } #help .tiny { display: inline; } }
-  #helpText .page { text-align: center; }
-  #helpText .page h3 { text-align: left; }
-  #helpText .lead { margin: 0 0 4px; font: 700 24px/1.3 var(--ui); color: var(--text); }
-  #helpText .more { margin: 0; font: 500 21px/1.35 var(--ui); color: #3A4148; }
   /* A low window, such as the laptop at 125 %: smaller cells and keys, so the page still fits. */
   html.low .guide-pic { --ec: 44px; --ef: 28px; --ek: 56px; padding-block: 10px; margin-bottom: 6px; }
   html.low .garrow { height: 26px; }
@@ -172,7 +163,6 @@
     .guide-pic { --ec: 31px; --ef: 24px; --ek: 58px; }
     .ex-line span { height: 44px; }
     .ex-block span { height: 40px; }
-    #helpText .lead { font-size: 22px; } #helpText .more { font-size: 20px; }
     #hintBtn, #helpBtn { flex-direction: column; gap: 0; padding: 3px 2px; text-align: center; font-size: 18px; }
   }
 
@@ -242,8 +232,8 @@
       <svg class="garrow" viewBox="0 0 42 34"><path d="M21 3v26M10 18l11 11 11-11"/></svg>
       <div class="ex-keys"><span>4</span><span class="ex-here">5</span><span>6</span></div>
     </div>
-    <p class="lead">Cliquez sur une case vide, puis sur un chiffre.</p>
-    <p class="more">Votre chiffre s'écrit en jaune. Remplissez toute la grille pour gagner.</p>
+    <p class="guide-lead">Cliquez sur une case vide, puis sur un chiffre.</p>
+    <p class="guide-more">Votre chiffre s'écrit en jaune. Remplissez toute la grille pour gagner.</p>
   </section>
   <section class="page">
     <h3>Une fois chaque chiffre</h3>
@@ -251,36 +241,36 @@
       <div class="ex-line"><div><span>3</span><span>8</span><span class="ex-mine">5</span><span>1</span><span>6</span><span>9</span><span>2</span><span>7</span><span>4</span></div></div>
       <div class="ex-block"><div><span>2</span><span>7</span><span>4</span><span>9</span><span>1</span><span>5</span><span>6</span><span>3</span><span>8</span></div></div>
     </div>
-    <p class="lead">Chaque ligne a une fois chaque chiffre, de 1 à 9.</p>
-    <p class="more">Chaque colonne et chaque carré de 3 sur 3 aussi.</p>
+    <p class="guide-lead">Chaque ligne a une fois chaque chiffre, de 1 à 9.</p>
+    <p class="guide-more">Chaque colonne et chaque carré de 3 sur 3 aussi.</p>
   </section>
   <section class="page">
     <h3>Les chiffres en rouge</h3>
     <div class="guide-pic steps" aria-hidden="true">
       <div class="ex-line"><div><span>3</span><span>8</span><span class="ex-mine ex-bad ex-sel">6</span><span>1</span><span class="ex-blame">6</span><span>9</span><span>2</span><span>7</span><span>4</span></div></div>
       <svg class="garrow" viewBox="0 0 42 34"><path d="M21 3v26M10 18l11 11 11-11"/></svg>
-      <span class="gbtn erase here"><svg viewBox="0 0 24 24"><path d="M8.5 20H20M4.6 14.6l8.8-8.8a2 2 0 0 1 2.8 0l3 3a2 2 0 0 1 0 2.8L12 18.8a2 2 0 0 1-1.4.6H8.2a2 2 0 0 1-1.4-.6l-2.2-2.2a2 2 0 0 1 0-2zM9 10l6 6"/></svg>Effacer</span>
+      <span class="guide-btn erase here"><svg viewBox="0 0 24 24"><path d="M8.5 20H20M4.6 14.6l8.8-8.8a2 2 0 0 1 2.8 0l3 3a2 2 0 0 1 0 2.8L12 18.8a2 2 0 0 1-1.4.6H8.2a2 2 0 0 1-1.4-.6l-2.2-2.2a2 2 0 0 1 0-2zM9 10l6 6"/></svg>Effacer</span>
     </div>
-    <p class="lead">Un chiffre rouge ne respecte pas la règle.</p>
-    <p class="more">Cette ligne a déjà un 6. Cliquez sur «&nbsp;Effacer&nbsp;» pour l'enlever.</p>
+    <p class="guide-lead">Un chiffre rouge ne respecte pas la règle.</p>
+    <p class="guide-more">Cette ligne a déjà un 6. Cliquez sur «&nbsp;Effacer&nbsp;» pour l'enlever.</p>
   </section>
   <section class="page">
     <h3>Demander de l'aide</h3>
     <div class="guide-pic steps" aria-hidden="true">
-      <span class="gbtn hintb here" data-icon="bulb"><span class="long">Une aide ?</span><span class="short">Une aide ?</span><span class="tiny">Aide</span></span>
+      <span class="guide-btn primary here" data-icon="bulb"><span class="long">Une aide ?</span><span class="short">Une aide ?</span><span class="tiny">Aide</span></span>
       <svg class="garrow" viewBox="0 0 42 34"><path d="M21 3v26M10 18l11 11 11-11"/></svg>
       <div class="ex-line"><div><span>3</span><span>8</span><span class="ex-mine ex-sel">5</span><span>1</span><span>6</span><span>9</span><span>2</span><span>7</span><span>4</span></div></div>
     </div>
-    <p class="lead">Bloqué&nbsp;? Cliquez sur «&nbsp;<span class="long">Une aide&nbsp;?</span><span class="short">Une aide&nbsp;?</span><span class="tiny">Aide</span>&nbsp;».</p>
-    <p class="more">Le jeu remplit une case, l'entoure de jaune et dit pourquoi.</p>
+    <p class="guide-lead">Bloqué&nbsp;? Cliquez sur «&nbsp;<span class="long">Une aide&nbsp;?</span><span class="short">Une aide&nbsp;?</span><span class="tiny">Aide</span>&nbsp;».</p>
+    <p class="guide-more">Le jeu remplit une case, l'entoure de jaune et dit pourquoi.</p>
   </section>
   <section class="page">
     <h3>Les chiffres qui restent</h3>
     <div class="guide-pic" aria-hidden="true">
       <div class="ex-keys"><span data-left="3">4</span><span class="ex-done">5</span><span data-left="1">6</span></div>
     </div>
-    <p class="lead">Le rond bleu dit combien il en reste à placer.</p>
-    <p class="more">Ici, encore trois 4. Une coche verte&nbsp;: les neuf 5 sont en place.</p>
+    <p class="guide-lead">Le rond bleu dit combien il en reste à placer.</p>
+    <p class="guide-more">Ici, encore trois 4. Une coche verte&nbsp;: les neuf 5 sont en place.</p>
   </section>
 </div>
 
@@ -843,10 +833,8 @@ addEventListener('resize', () => { clearMove(); render(); });
 if (window.ResizeObserver) { let lastH = 0; new ResizeObserver(() => { if (table.clientHeight !== lastH) { lastH = table.clientHeight; render(); } }).observe(table); }
 
 /* ---------- The pictures of the rules ----------
-   The cell, the key and the button to click get a yellow ring in the style sheet, and a pointing hand here. */
-const HAND = '<svg class="ghand" viewBox="0 0 40 48"><path d="M15 27V7a4.5 4.5 0 0 1 9 0v12a4 4 0 0 1 7.5 1.6a4 4 0 0 1 7 2.4V33c0 8-5 13-12 13h-4c-5 0-8-2-11-6L4.5 32a4 4 0 0 1 6.3-4.6z" fill="#fff" stroke="#1B2422" stroke-width="2.6" stroke-linejoin="round"/></svg>';
-for (const b of document.querySelectorAll('#help [data-icon]')) b.insertAdjacentHTML('afterbegin', Kit.icon(b.dataset.icon));
-for (const b of document.querySelectorAll('#help .ex-here, #help .gbtn.here')) b.insertAdjacentHTML('beforeend', HAND);
+   The cell and the key to click get a yellow ring in the style sheet, and a pointing hand here. */
+for (const b of document.querySelectorAll('#help .ex-here')) b.insertAdjacentHTML('beforeend', Kit.icon('hand'));
 
 // The rules open by themselves the first time the game is opened.
 if (load()) {

@@ -34,7 +34,7 @@ await wait(500);
 ok(await g(() => Kit.isOpen()), 'the rules open on the first visit');
 const pages = await page.locator('#helpText .page').count();
 ok(pages >= 3 && pages <= 5, `the rules have ${pages} pages`);
-ok(await g(() => [...document.querySelectorAll('#help .page')].every(p => p.querySelector('.dg-pic[aria-hidden="true"]') && p.querySelector('.lead'))), 'each rules page is one picture and a short sentence');
+ok(await g(() => [...document.querySelectorAll('#help .page')].every(p => p.querySelector('.dg-pic[aria-hidden="true"]') && p.querySelector('.guide-lead'))), 'each rules page is one picture and a short sentence');
 ok(await g(() => !document.querySelector('#help .pc.must, #help .pc.sel, #help .pc.prey, #help .pc.can')), 'the pieces of the rules use their own classes');
 for (let n = 0; n < pages; n++) {
   ok(await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }), `rules page ${n + 1} fits without scrolling`);

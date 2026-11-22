@@ -120,12 +120,12 @@
   .gw > i.a::before { inset: 3%; background: #FFE08A; box-shadow: 0 0 0 4px var(--gold), 0 0 0 5.5px #5A4300, 0 0 14px 4px rgba(255,200,61,.8); }
   .gw > i.t::before { inset: -2px; border: 5px solid var(--gold); box-shadow: 0 0 0 1.5px #5A4300, inset 0 0 0 1.5px #5A4300; }
   /* "Click here": a yellow ring with a dark edge and a pointing hand. */
-  .gw > i.h::before { inset: 0; background: #FFF1C7; box-shadow: 0 0 0 5px var(--gold), 0 0 0 7px #2A1D33; }
+  #help { --guide-edge: #2A1D33; --guide-more: #4A3A3E; }
+  .gw > i.h::before { inset: 0; background: #FFF1C7; box-shadow: var(--guide-ring); }
   .gw > i.h { z-index: 3; }
   .gband { --h: calc(var(--gc) * .82); position: absolute; z-index: 1; height: var(--h); border-radius: calc(var(--h) / 2);
     transform-origin: calc(var(--h) / 2) 50%; background: rgba(120,200,150,.5); box-shadow: inset 0 0 0 3px #3E9A63; }
-  .ghand { position: absolute; z-index: 4; width: 40px; height: 48px; left: 62%; top: 62%; pointer-events: none;
-    filter: drop-shadow(0 3px 3px rgba(0,0,0,.35)); }
+  .guide-hand { z-index: 4; width: 40px; height: 48px; left: 62%; top: 62%; }
   /* The list of the guide, as on the sheet. */
   .glist { display: flex; flex-direction: column; gap: 6px; text-align: left; }
   .glist b { font: 700 24px/1.1 var(--ui); }
@@ -142,15 +142,8 @@
   .gdir circle { fill: var(--gold); stroke: #5A4300; stroke-width: 2; }
   .garrow { flex: none; width: 54px; height: 40px; fill: none; stroke: #FFFDF6; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round;
     filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); }
-  .gbtn { position: relative; flex: none; display: inline-flex; align-items: center; gap: 10px; min-height: 54px; padding: 6px 48px 6px 22px; border-radius: 15px;
-    font: 600 21px var(--ui); background: var(--gold); color: #1F1A00; border: 2px solid #C9951A;
-    box-shadow: 0 3px 0 #C9951A, 0 0 0 6px #fff, 0 0 0 8px #2A1D33; white-space: nowrap; }
-  .gbtn > svg:not(.ghand) { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .gbtn > .ghand { left: auto; right: -14px; top: 36%; }
-  #helpText .page { text-align: center; }
-  #helpText .page h3 { text-align: left; }
-  #helpText .lead { margin: 0 0 4px; font: 700 24px/1.3 var(--ui); color: var(--text); }
-  #helpText .more { margin: 0; font: 500 21px/1.35 var(--ui); color: #4A3A3E; }
+  .guide-btn { flex: none; padding: 6px 48px 6px 22px; }
+  .guide-btn > .guide-hand { left: auto; right: -14px; top: 36%; }
   html.low .guide-pic { --gc: 31px; padding: 10px; }
   html.low .gpaper { padding: 8px; }
 
@@ -165,7 +158,6 @@
     .guide-pic.with-list { --gc: 29px; flex-wrap: nowrap; gap: 10px; }
     .with-list .gpaper { padding: 7px; }
     .glist b { font-size: 20px; } .glist span { font-size: 20px; gap: 6px; } .glist span::before { width: 12px; height: 12px; }
-    #helpText .lead { font-size: 22px; } #helpText .more { font-size: 20px; }
     #words { grid-auto-flow: row; grid-template-columns: 1fr 1fr; grid-template-rows: none; }
     /* On a phone the list is under the grid: the button comes first, right under the letters. */
     #drop { order: -1; margin: 0 0 12px; }
@@ -234,16 +226,16 @@
     <div class="guide-pic" aria-hidden="true">
       <div class="gpaper"><div class="gw" data-g="RAVIS|PECHE|LUNOT|AMIRE|GOBAC" data-h="5"></div></div>
     </div>
-    <p class="lead">Cliquez sur la première lettre d'un mot.</p>
-    <p class="more">Trouvez tous les mots de la liste pour gagner.</p>
+    <p class="guide-lead">Cliquez sur la première lettre d'un mot.</p>
+    <p class="guide-more">Trouvez tous les mots de la liste pour gagner.</p>
   </section>
   <section class="page">
     <h3>Cliquer sur la dernière lettre</h3>
     <div class="guide-pic" aria-hidden="true">
       <div class="gpaper"><div class="gw" data-g="RAVIS|PECHE|LUNOT|AMIRE|GOBAC" data-a="5" data-l="6 7 8 10 15 20" data-h="9"></div></div>
     </div>
-    <p class="lead">Puis cliquez sur sa dernière lettre.</p>
-    <p class="more">Les points jaunes montrent où le mot peut aller.</p>
+    <p class="guide-lead">Puis cliquez sur sa dernière lettre.</p>
+    <p class="guide-more">Les points jaunes montrent où le mot peut aller.</p>
   </section>
   <section class="page">
     <h3>Le mot est trouvé</h3>
@@ -251,8 +243,8 @@
       <div class="gpaper"><div class="gw" data-g="RAVIS|PECHE|LUNOT|AMIRE|GOBAC" data-band="5 9"></div></div>
       <div class="gpaper glist"><b>Les fruits</b><hr><span class="found">PÊCHE</span><span>PRUNE</span><span>FIGUE</span></div>
     </div>
-    <p class="lead">Le mot s'entoure de couleur et se barre.</p>
-    <p class="more">La grille n'a pas d'accents : PÊCHE s'y écrit PECHE.</p>
+    <p class="guide-lead">Le mot s'entoure de couleur et se barre.</p>
+    <p class="guide-more">La grille n'a pas d'accents : PÊCHE s'y écrit PECHE.</p>
   </section>
   <section class="page">
     <h3>Dans quel sens lire ?</h3>
@@ -261,18 +253,18 @@
       <div class="gpaper gdir" data-dirs="0,1 1,0 1,1 -1,1"><b>Moyen</b></div>
       <div class="gpaper gdir" data-dirs="0,1 1,0 1,1 -1,1 0,-1 -1,0 -1,-1 1,-1"><b>Difficile</b></div>
     </div>
-    <p class="lead">Le niveau choisit les sens de lecture.</p>
-    <p class="more">Au niveau difficile, un mot peut aussi se lire à l'envers.</p>
+    <p class="guide-lead">Le niveau choisit les sens de lecture.</p>
+    <p class="guide-more">Au niveau difficile, un mot peut aussi se lire à l'envers.</p>
   </section>
   <section class="page">
     <h3>Demander de l'aide</h3>
     <div class="guide-pic to-grid" aria-hidden="true">
-      <span class="gbtn here" data-icon="bulb">Où chercher&nbsp;?</span>
+      <span class="guide-btn primary here" data-icon="bulb">Où chercher&nbsp;?</span>
       <svg class="garrow" viewBox="0 0 54 40"><path d="M4 20h44M36 8l12 12-12 12"/></svg>
       <div class="gpaper"><div class="gw" data-g="RAVIS|PECHE|LUNOT|AMIRE|GOBAC" data-t="5"></div></div>
     </div>
-    <p class="lead">Un mot introuvable ? Cliquez sur «&nbsp;Où chercher&nbsp;?&nbsp;».</p>
-    <p class="more">Sa première lettre s'entoure de jaune.</p>
+    <p class="guide-lead">Un mot introuvable ? Cliquez sur «&nbsp;Où chercher&nbsp;?&nbsp;».</p>
+    <p class="guide-more">Sa première lettre s'entoure de jaune.</p>
   </section>
 </div>
 
@@ -718,7 +710,6 @@ $('undoBtn').onclick = undoClick;
    counted from 0 at the top left: h the letter to click (a yellow ring and a hand), a the first letter
    chosen, l the yellow dots of its lines, t the ring of "Où chercher ?", band the first and last letter of
    a word found. Each sheet of data-dirs draws the directions of a level, as row and column steps. */
-const HAND = '<svg class="ghand" viewBox="0 0 40 48"><path d="M15 27V7a4.5 4.5 0 0 1 9 0v12a4 4 0 0 1 7.5 1.6a4 4 0 0 1 7 2.4V33c0 8-5 13-12 13h-4c-5 0-8-2-11-6L4.5 32a4 4 0 0 1 6.3-4.6z" fill="#fff" stroke="#1B2422" stroke-width="2.6" stroke-linejoin="round"/></svg>';
 for (const b of document.querySelectorAll('#help .gw')) {
   const rows = b.dataset.g.split('|'), n = rows[0].length, d = b.dataset;
   const at = key => (d[key] || '').split(' ').filter(Boolean).map(Number);
@@ -726,7 +717,7 @@ for (const b of document.querySelectorAll('#help .gw')) {
   b.style.setProperty('--cols', n);
   b.innerHTML = rows.join('').split('').map((ch, i) => {
     const cls = (lanes.has(i) ? ' l' : '') + (at('a').includes(i) ? ' a' : '') + (at('t').includes(i) ? ' t' : '') + (at('h').includes(i) ? ' h' : '');
-    return `<i${cls ? ` class="${cls.trim()}"` : ''}>${ch}${cls.includes('h') ? HAND : ''}</i>`;
+    return `<i${cls ? ` class="${cls.trim()}"` : ''}>${ch}${cls.includes('h') ? Kit.icon('hand') : ''}</i>`;
   }).join('');
   if (d.band) {
     const [s, e] = at('band'), r0 = Math.floor(s / n), c0 = s % n, r1 = Math.floor(e / n), c1 = e % n;
@@ -745,8 +736,6 @@ for (const b of document.querySelectorAll('#help .gdir')) {
   }).join('');
   b.insertAdjacentHTML('beforeend', `<svg viewBox="${mid(0).toFixed(1)} ${mid(1).toFixed(1)} 100 100">${arrows}<circle cx="50" cy="50" r="8"/></svg>`);
 }
-for (const e of document.querySelectorAll('#help .gbtn')) e.insertAdjacentHTML('afterbegin', Kit.icon(e.dataset.icon));
-for (const e of document.querySelectorAll('#help .gbtn.here')) e.insertAdjacentHTML('beforeend', HAND);
 
 $('hintBtn').onclick = showHint;
 // The rules during the win wave let it end. The win dialog comes once they close.

@@ -37,6 +37,15 @@ The site owner found the old guides too long to read: paragraphs and lists of ru
 
 Use the shared `#help` dialog with one `<section class="page">` and an `<h3>` for each page. Wire the **Règles** button to `Kit.openHelp()` and use `Kit.firstVisit(newGame)` when there is no saved game. Use guide-specific classes for the pictures so the game treats only the real cards, pieces and squares as playable.
 
+Take the shared parts from `lib/kit.css` and `lib/kit.js`. Do not copy them into the game:
+
+- **The sentences.** `<p class="guide-lead">` is the key sentence, 24 px bold and centred, 22 px on a phone. `<p class="guide-more">` is the second line, 21 px, 20 px on a phone. Set its colour with `--guide-more` on `#help`.
+- **The yellow ring.** The class `guide-ring` draws a 5 px yellow ring with a 2 px dark edge. A shadow of the game's own can include it as `var(--guide-ring)`. Set the edge colour with `--guide-edge` on `#help`.
+- **The hand.** `Kit.icon('hand')` gives one white pointing hand, `<svg class="guide-hand">`, 46 by 54 px. The game places it with `left` and `top`, and may change its size. In an SVG picture, use `<use href="#kit-hand" width="40" height="48"/>`.
+- **The buttons.** `<span class="guide-btn" data-icon="undo">` is a white copy of a bar button, and `guide-btn primary` the yellow one. `guide-btns` stacks them. Add `here` to the copy to click: the kit draws its ring and puts the hand on it.
+
+The copies of other buttons, such as the large roll button of the yams or the bids of the belote, and the in-game ring of each game's cards stay in the game, since they copy that game's own look. The petits chevaux keep their own hand too: it is the hand that points at the die during play.
+
 Use the [morpion](../public/morpion/index.html) as the example: a picture with a ring and a hand, a copy of a button, and the two sentences. The [yams](../public/yams/index.html) shows points under the items, and the [belote](../public/belote/index.html) a whole table. Check every page at the window and zoom sizes above. Confirm that **Fermer** works on every page and that **Précédent** and **Suivant** stay in place.
 
 ## Rules guides of the other games

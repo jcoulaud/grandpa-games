@@ -2,7 +2,7 @@
 //
 //   <div id="bar">
 //     <div id="title">Solitaire</div>
-//     <button id="undoBtn" data-icon="undo">Annuler le dernier coup</button>   icons: undo, bulb, help, close
+//     <button id="undoBtn" data-icon="undo">Annuler le dernier coup</button>   icons: undo, bulb, help, close, hand
 //     <span class="spacer"></span>
 //     <button id="newBtn" class="game">Nouvelle partie</button>
 //   </div>
@@ -20,6 +20,7 @@
 //   Kit.closeDialog(), Kit.openHelp(), Kit.closeHelp()
 //   Kit.isOpen()                            true while the rules or a dialog are open
 //   Kit.escape()                            closes the rules or the dialog; false if nothing was open
+//   Kit.icon(name)                          an icon as SVG markup; Kit.icon('hand') is the pointing hand of the rules guide
 (() => {
   'use strict';
   const ICONS = {
@@ -29,7 +30,11 @@
     help: '<circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 2-2.7 2.4-2.7 4.3"/><path d="M12 17.6v.1"/>',
     close: '<path d="M6 6l12 12M18 6L6 18"/>',
   };
-  const icon = name => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
+  // The pointing hand of the rules guide, drawn once in the page: Kit.icon('hand') shows it, and a picture in
+  // SVG can show it with <use href="#kit-hand" width="40" height="48"/>.
+  const HAND = '<path d="M15 27V7a4.5 4.5 0 0 1 9 0v12a4 4 0 0 1 7.5 1.6a4 4 0 0 1 7 2.4V33c0 8-5 13-12 13h-4c-5 0-8-2-11-6L4.5 32a4 4 0 0 1 6.3-4.6z" fill="#fff" stroke="#1B2422" stroke-width="2.6" stroke-linejoin="round"/>';
+  const icon = name => name === 'hand' ? '<svg class="guide-hand" viewBox="0 0 40 48" aria-hidden="true"><use href="#kit-hand"/></svg>'
+    : `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
   const $ = id => document.getElementById(id);
   const libRoot = new URL('../', document.currentScript.src).href;
 
@@ -62,7 +67,10 @@
   }
   if ($('rail') && !$('rail').querySelector('.credit'))
     $('rail').insertAdjacentHTML('afterbegin', `<a class="credit" href="https://x.com/JulienCoulaud" target="_blank" rel="noopener"><img src="${libRoot}icons/julien.webp" width="34" height="34" alt=""><span>Fait par <b>Julien Coulaud</b></span></a>`);
-  document.querySelectorAll('button[data-icon]').forEach(b => b.insertAdjacentHTML('afterbegin', icon(b.dataset.icon)));
+  // The icons of the buttons, and of the copies of buttons in the rules guide: a copy to click (.here) also gets the hand.
+  document.querySelectorAll('button[data-icon], #help [data-icon]').forEach(b => b.insertAdjacentHTML('afterbegin', icon(b.dataset.icon)));
+  document.querySelectorAll('#help .guide-btn.here').forEach(b => b.insertAdjacentHTML('beforeend', icon('hand')));
+  document.body.insertAdjacentHTML('beforeend', `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="kit-hand" viewBox="0 0 40 48">${HAND}</symbol></svg>`);
 
   // Each label stays on one line: the bar takes the long labels if they fit, else the short ones, else one
   // word each, and last, without the name of the game (its felt still tells it). At each step the win count

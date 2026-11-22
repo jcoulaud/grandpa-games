@@ -221,8 +221,7 @@
   .bn-boat { position: relative; z-index: 2; padding: 2px; filter: drop-shadow(0 3px 3px rgba(0,0,0,.35)); }
   .bn-boat svg { width: 100%; height: 100%; display: block; }
   .bn-boat.sunk { filter: grayscale(.7) brightness(.55); }
-  .bn-hand { position: absolute; z-index: 6; width: 44px; height: 52px; left: 52%; top: 50%; pointer-events: none;
-    filter: drop-shadow(0 3px 3px rgba(0,0,0,.4)); }
+  .guide-hand { z-index: 6; width: 44px; height: 52px; left: 52%; top: 50%; filter: drop-shadow(0 3px 3px rgba(0,0,0,.4)); }
   /* Above a sea: its name, and the tag of his turn, as in the game. */
   .bn-cap { display: flex; align-items: center; gap: 12px; height: 40px; font: 700 23px var(--ui); color: #fff; white-space: nowrap; }
   .bn-tag { height: 38px; padding: 0 14px; display: inline-flex; align-items: center; border-radius: 19px; font: 700 20px var(--ui);
@@ -241,18 +240,12 @@
     box-shadow: inset 0 0 0 1.5px rgba(10,40,70,.85); }
   .bn-fleet span { font: 700 21px var(--ui); color: #fff; white-space: nowrap; text-align: left; }
   /* A copy of the button that places his ships again. */
-  .bn-btn { display: inline-flex; align-items: center; gap: 10px; min-height: 54px; padding: 6px 18px; border-radius: 15px;
-    font: 600 21px var(--ui); color: var(--text); background: #fff; border: 2px solid #9AA6A1; box-shadow: 0 3px 0 #9AA6A1; white-space: nowrap; }
-  .bn-btn svg { width: 26px; height: 26px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  #helpText .page { text-align: center; }
-  #helpText .page h3 { text-align: left; }
-  #helpText .lead { margin: 0 0 4px; font: 700 24px/1.3 var(--ui); color: var(--text); }
-  #helpText .more { margin: 0; font: 500 21px/1.35 var(--ui); color: #3F3A4A; }
+  .guide-btn { padding-inline: 18px; }
+  #help { --guide-more: #3F3A4A; }
   @media (max-width: 700px) {
     #help { --gh: 210px; }
     .bn-pic { padding: 12px 8px; gap: 14px; }
-    .bn-btn { font-size: 20px; padding-inline: 12px; white-space: normal; text-align: left; max-width: 100%; }
-    #helpText .lead { font-size: 22px; } #helpText .more { font-size: 20px; }
+    .guide-btn { font-size: 20px; padding-inline: 12px; white-space: normal; text-align: left; max-width: 100%; }
   }
 
   /* The key of the marks, under the computer's ships. */
@@ -328,8 +321,8 @@
         <div class="bn" style="--hd: 48px" data-b=".o....|...+..|o..x.o"></div>
       </div>
     </div>
-    <p class="lead">Cliquez sur une case de la grille «&nbsp;L'ordinateur&nbsp;».</p>
-    <p class="more">Coulez ses cinq bateaux avant qu'il coule les vôtres.</p>
+    <p class="guide-lead">Cliquez sur une case de la grille «&nbsp;L'ordinateur&nbsp;».</p>
+    <p class="guide-more">Coulez ses cinq bateaux avant qu'il coule les vôtres.</p>
   </section>
   <section class="page">
     <h3>Votre flotte</h3>
@@ -338,10 +331,10 @@
         <div class="bn-cap">Votre flotte</div>
         <div class="bn" style="--hd: 48px" data-b="......|......|......" data-ships="1 0 0|4 5 0 down|3 1 2"></div>
       </div>
-      <span class="bn-btn" id="helpMove">Placer mes bateaux autrement</span>
+      <span class="guide-btn" id="helpMove">Placer mes bateaux autrement</span>
     </div>
-    <p class="lead">Vos bateaux sont déjà placés.</p>
-    <p class="more">Avant le premier tir, ce bouton les place autrement.</p>
+    <p class="guide-lead">Vos bateaux sont déjà placés.</p>
+    <p class="guide-more">Avant le premier tir, ce bouton les place autrement.</p>
   </section>
   <section class="page">
     <h3>À l'eau ou touché</h3>
@@ -349,8 +342,8 @@
       <div class="bn-col"><span class="guide-shot bn-big" data-mark="o"></span><span class="bn-name">À l'eau</span></div>
       <div class="bn-col"><span class="guide-shot bn-big burn" data-mark="x"></span><span class="bn-name">Touché</span></div>
     </div>
-    <p class="lead">Une gerbe blanche&nbsp;: à l'eau. Une explosion&nbsp;: touché.</p>
-    <p class="more">Après chaque tir, c'est à l'autre de tirer.</p>
+    <p class="guide-lead">Une gerbe blanche&nbsp;: à l'eau. Une explosion&nbsp;: touché.</p>
+    <p class="guide-more">Après chaque tir, c'est à l'autre de tirer.</p>
   </section>
   <section class="page">
     <h3>Coulé</h3>
@@ -358,16 +351,16 @@
       <div class="bn" data-b="ccccc.|cwwwc.|ccccc." data-ships="2 1 1 sunk"></div>
       <span class="bn-word">Coulé !</span>
     </div>
-    <p class="lead">Toutes ses cases touchées&nbsp;: le bateau est coulé.</p>
-    <p class="more">Les cases pâles autour sont vides&nbsp;: les bateaux ne se touchent jamais.</p>
+    <p class="guide-lead">Toutes ses cases touchées&nbsp;: le bateau est coulé.</p>
+    <p class="guide-more">Les cases pâles autour sont vides&nbsp;: les bateaux ne se touchent jamais.</p>
   </section>
   <section class="page">
     <h3>Les cinq bateaux</h3>
     <div class="bn-pic" aria-hidden="true">
       <div class="bn-fleet" id="helpFleet"></div>
     </div>
-    <p class="lead">Chaque bateau a sa longueur, de 2 à 5 cases.</p>
-    <p class="more">L'ordinateur a les mêmes bateaux que vous.</p>
+    <p class="guide-lead">Chaque bateau a sa longueur, de 2 à 5 cases.</p>
+    <p class="guide-more">L'ordinateur a les mêmes bateaux que vous.</p>
   </section>
 </div>
 
@@ -756,7 +749,6 @@ $('legend').innerHTML = `<li><i>${Ships.splash}</i>À l'eau</li><li><i class="bu
    letters: . water, o a shot in the water, x a hit, w a hit on a sunk ship, c water beside a sunk ship,
    + the square to click (yellow, with the hand). data-ships lists "ship column row", then "down" for a
    ship along a column and "sunk" for a sunk ship. */
-const HAND = '<svg class="bn-hand" viewBox="0 0 40 48"><path d="M15 27V7a4.5 4.5 0 0 1 9 0v12a4 4 0 0 1 7.5 1.6a4 4 0 0 1 7 2.4V33c0 8-5 13-12 13h-4c-5 0-8-2-11-6L4.5 32a4 4 0 0 1 6.3-4.6z" fill="#fff" stroke="#1B2422" stroke-width="2.6" stroke-linejoin="round"/></svg>';
 const MARK = { o: Ships.splash, x: Ships.hit, w: Ships.hit };
 for (const d of document.querySelectorAll('#help .bn')) {
   const rows = d.dataset.b.split('|');
@@ -766,7 +758,7 @@ for (const d of document.querySelectorAll('#help .bn')) {
   rows.forEach((row, r) => {
     html += `<b style="grid-area: ${r + 2} / 1">${r + 1}</b>`;
     html += [...row].map((ch, c) => `<span class="guide-shot${{ x: ' burn', w: ' wreck', c: ' clear', '+': ' here' }[ch] || ''}" style="grid-area: ${r + 2} / ${c + 2}">`
-      + (MARK[ch] || '') + (ch === '+' ? HAND : '') + '</span>').join('');
+      + (MARK[ch] || '') + (ch === '+' ? Kit.icon('hand') : '') + '</span>').join('');
   });
   for (const item of (d.dataset.ships || '').split('|').filter(Boolean)) {
     const [s, c, r, ...how] = item.split(' '), n = B.FLEET[+s].size, down = how.includes('down');

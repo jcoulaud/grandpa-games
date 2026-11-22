@@ -100,26 +100,16 @@
   .sg-here { position: relative; z-index: 2; display: grid; }
   .sg-here > .card { grid-area: 1 / 1; outline: 5px solid var(--gold); outline-offset: 2px;
     box-shadow: 0 0 0 7px rgba(var(--shade),.85), 0 0 22px 8px rgba(255,200,61,.6); }
-  .sg-hand { position: absolute; z-index: 3; width: 44px; height: 52px; left: 58%; top: 58%; pointer-events: none;
-    filter: drop-shadow(0 3px 3px rgba(0,0,0,.4)); }
+  .guide-hand { width: 44px; height: 52px; left: 58%; top: 58%; filter: drop-shadow(0 3px 3px rgba(0,0,0,.4)); }
   .sg-count { grid-area: 1 / 1; place-self: center; z-index: 1; min-width: calc(var(--cw) * .52); padding: 4px 8px; text-align: center;
     border-radius: 99px; background: #fff; color: var(--text); font: 700 20px/1 var(--ui); box-shadow: 0 2px 8px rgba(0,0,0,.45); }
   /* Copies of the two buttons of the top bar. */
-  .sg-btns { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 4px 0; }
-  .sg-btn { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 54px; padding: 6px 20px; border-radius: 15px;
-    box-sizing: border-box; font: 600 21px var(--ui); color: var(--text); background: #fff; border: 2px solid #9AA6A1; box-shadow: 0 3px 0 #9AA6A1; white-space: nowrap; }
-  .sg-btn.hint { background: var(--gold); color: #1F1A00; border-color: #C9951A; box-shadow: 0 3px 0 #C9951A, 0 0 0 6px #fff, 0 0 0 8px var(--text); }
-  .sg-btn > svg:not(.sg-hand) { width: 26px; height: 26px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .sg-btn > .sg-hand { left: calc(100% - 26px); top: 50%; }
-  #helpText .page { text-align: center; }
-  #helpText .page h3 { text-align: left; }
-  #helpText .lead { margin: 0 0 4px; font: 700 24px/1.3 var(--ui); color: var(--text); }
-  #helpText .more { margin: 0; font: 500 21px/1.35 var(--ui); color: #3A4542; }
+  .guide-btns { padding: 4px 0; }
+  .guide-btn > .guide-hand { left: calc(100% - 26px); top: 50%; }
   @container (max-width: 520px) {
     .sg-felt { --cw: min(15cqw, calc((min(720px, 94vh / var(--z, 1)) - 360px) / 2.65)); padding: 12px; }
-    .sg-btn { font-size: 20px; padding-inline: 14px; }
+    .guide-btn { font-size: 20px; padding-inline: 14px; }
   }
-  @media (max-width: 700px) { #helpText .lead { font-size: 21px; } #helpText .more { font-size: 20px; } }
 
   @media (prefers-reduced-motion: reduce) { .mark.hint { animation: none; } }
 </style>
@@ -145,8 +135,8 @@
       <svg class="sg-arrow" viewBox="0 0 40 28"><path d="M3 14H35M24 4l11 10-11 10"/></svg>
       <div class="sg-col"><div data-help-card="dos"></div><div data-help-card="dos"></div><div data-help-card="21"></div><div data-help-card="7"></div><span class="sg-slot sg-go"></span></div>
     </div></div>
-    <p class="lead">Cliquez sur le 7 de cœur : il va sur le 8 de pique.</p>
-    <p class="more">Plusieurs places en jaune ? Cliquez sur celle que vous voulez.</p>
+    <p class="guide-lead">Cliquez sur le 7 de cœur : il va sur le 8 de pique.</p>
+    <p class="guide-more">Plusieurs places en jaune ? Cliquez sur celle que vous voulez.</p>
   </section>
   <section class="page">
     <h3>L'ordre dans les colonnes</h3>
@@ -154,16 +144,16 @@
       <div class="sg-col"><div data-help-card="dos"></div><div data-help-card="12"></div><div data-help-card="24"></div><div data-help-card="49"></div><div data-help-card="35"></div></div>
       <span class="sg-slot">Roi</span>
     </div></div>
-    <p class="lead">Descendez d'une valeur, en alternant rouge et noir.</p>
-    <p class="more">Seul un roi peut aller sur une colonne vide.</p>
+    <p class="guide-lead">Descendez d'une valeur, en alternant rouge et noir.</p>
+    <p class="guide-more">Seul un roi peut aller sur une colonne vide.</p>
   </section>
   <section class="page">
     <h3>Ranger les cartes pour gagner</h3>
     <div class="sg" aria-hidden="true"><div class="sg-felt">
       <div class="sg-pile"><span class="sg-label">Rangement</span><div class="sg-row"><div data-help-card="13"></div><div data-help-card="14"></div><div data-help-card="15"></div><span class="sg-dots">…</span><div data-help-card="25"></div></div></div>
     </div></div>
-    <p class="lead">Rangez chaque symbole en haut à droite, de l'as au roi.</p>
-    <p class="more">Quand les 52 cartes sont rangées, vous avez gagné.</p>
+    <p class="guide-lead">Rangez chaque symbole en haut à droite, de l'as au roi.</p>
+    <p class="guide-more">Quand les 52 cartes sont rangées, vous avez gagné.</p>
   </section>
   <section class="page">
     <h3>Utiliser la pioche</h3>
@@ -172,16 +162,16 @@
       <svg class="sg-arrow" viewBox="0 0 40 28"><path d="M3 14H35M24 4l11 10-11 10"/></svg>
       <div class="sg-pile"><span class="sg-label">Défausse</span><div data-help-card="34"></div></div>
     </div></div>
-    <p class="lead">Cliquez sur la pioche pour retourner une carte.</p>
-    <p class="more">Pioche vide ? Cliquez dessus pour la retourner.</p>
+    <p class="guide-lead">Cliquez sur la pioche pour retourner une carte.</p>
+    <p class="guide-more">Pioche vide ? Cliquez dessus pour la retourner.</p>
   </section>
   <section class="page">
     <h3>Demander de l'aide</h3>
     <div class="sg" aria-hidden="true"><div class="sg-felt">
-      <div class="sg-btns"><span class="sg-btn hint" data-icon="bulb">Que jouer maintenant ?</span><span class="sg-btn" data-icon="undo">Annuler le dernier coup</span></div>
+      <div class="guide-btns"><span class="guide-btn primary here" data-icon="bulb">Que jouer maintenant ?</span><span class="guide-btn" data-icon="undo">Annuler le dernier coup</span></div>
     </div></div>
-    <p class="lead">Un doute ? Cliquez sur « Que jouer maintenant ? ».</p>
-    <p class="more">Un bon coup s'entoure de jaune. « Annuler » reprend votre dernier coup.</p>
+    <p class="guide-lead">Un doute ? Cliquez sur « Que jouer maintenant ? ».</p>
+    <p class="guide-more">Un bon coup s'entoure de jaune. « Annuler » reprend votre dernier coup.</p>
   </section>
 </div>
 
@@ -894,10 +884,8 @@ addEventListener('resize', () => {
 });
 
 /* ---------- The pictures of the rules ----------
-   The cards come from lib/cards.js. Here: the pointing hand on what to click, and the button icons. */
-const HAND = '<svg class="sg-hand" viewBox="0 0 40 48"><path d="M15 27V7a4.5 4.5 0 0 1 9 0v12a4 4 0 0 1 7.5 1.6a4 4 0 0 1 7 2.4V33c0 8-5 13-12 13h-4c-5 0-8-2-11-6L4.5 32a4 4 0 0 1 6.3-4.6z" fill="#fff" stroke="#1B2422" stroke-width="2.6" stroke-linejoin="round"/></svg>';
-for (const b of document.querySelectorAll('#help .sg-btn')) b.insertAdjacentHTML('afterbegin', Kit.icon(b.dataset.icon));
-for (const h of document.querySelectorAll('#help .sg-here, #help .sg-btn.hint')) h.insertAdjacentHTML('beforeend', HAND);
+   The cards come from lib/cards.js. Here: the pointing hand on the card to click. */
+for (const h of document.querySelectorAll('#help .sg-here')) h.insertAdjacentHTML('beforeend', Kit.icon('hand'));
 
 build();
 // The rules open by themselves the first time the game is opened.

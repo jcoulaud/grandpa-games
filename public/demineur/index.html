@@ -44,44 +44,44 @@
     <div class="guide-pic" aria-hidden="true">
       <div class="gfr"><div class="gf" data-f=".....|..+..|....."></div></div>
     </div>
-    <p class="lead">Cliquez sur une case verte.</p>
-    <p class="more">La première n'a jamais de mine. Ouvrez toutes les cases sans mine pour gagner.</p>
+    <p class="guide-lead">Cliquez sur une case verte.</p>
+    <p class="guide-more">La première n'a jamais de mine. Ouvrez toutes les cases sans mine pour gagner.</p>
   </section>
   <section class="page">
     <h3>Lire un chiffre</h3>
     <div class="guide-pic" aria-hidden="true">
       <div class="gfr"><div class="gf" data-f="oo1..|oo111|ooooo" data-around="1 0"></div></div>
     </div>
-    <p class="lead">Ce 1 touche une seule mine.</p>
-    <p class="more">Une seule case verte le touche&nbsp;: la mine est dessous.</p>
+    <p class="guide-lead">Ce 1 touche une seule mine.</p>
+    <p class="guide-more">Une seule case verte le touche&nbsp;: la mine est dessous.</p>
   </section>
   <section class="page">
     <h3>Poser un drapeau</h3>
     <div class="guide-pic" aria-hidden="true">
-      <div class="gbtns"><span class="gbtn flagb here" data-icon="flag"><span class="long">Poser un drapeau</span><span class="short">Drapeau</span><span class="tiny">Drapeau</span></span></div>
+      <div class="guide-btns"><span class="guide-btn flagb here"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 20V4.5l11 4.5-11 4.5"/><path d="M7 21V4M4 21h7"/></svg><span class="long">Poser un drapeau</span><span class="short">Drapeau</span><span class="tiny">Drapeau</span></span></div>
       <svg class="garrow" viewBox="0 0 54 40"><path d="M5 20h40M32 7l13 13-13 13"/></svg>
       <div class="gfr"><div class="gf" data-f="oo1F.|oo111|ooooo"></div></div>
     </div>
-    <p class="lead">Cliquez sur «&nbsp;<span class="long">Poser un drapeau</span><span class="short">Drapeau</span><span class="tiny">Drapeau</span>&nbsp;», puis sur la mine.</p>
-    <p class="more">Un clic droit sur la case pose aussi un drapeau.</p>
+    <p class="guide-lead">Cliquez sur «&nbsp;<span class="long">Poser un drapeau</span><span class="short">Drapeau</span><span class="tiny">Drapeau</span>&nbsp;», puis sur la mine.</p>
+    <p class="guide-more">Un clic droit sur la case pose aussi un drapeau.</p>
   </section>
   <section class="page">
     <h3>Les signes du niveau facile</h3>
     <div class="guide-pic" aria-hidden="true">
       <div class="gfr"><div class="gf" data-f="oo1MS|oo111|ooooo"></div></div>
     </div>
-    <p class="lead">Une coche verte&nbsp;: la case est sûre, cliquez dessus.</p>
-    <p class="more">Un rond rouge cache une mine&nbsp;: un clic y pose le drapeau.</p>
+    <p class="guide-lead">Une coche verte&nbsp;: la case est sûre, cliquez dessus.</p>
+    <p class="guide-more">Un rond rouge cache une mine&nbsp;: un clic y pose le drapeau.</p>
   </section>
   <section class="page">
     <h3>Demander de l'aide</h3>
     <div class="guide-pic" aria-hidden="true">
-      <div class="gbtns"><span class="gbtn hintb here" data-icon="bulb"><span class="long">Que jouer maintenant ?</span><span class="short">Que jouer ?</span><span class="tiny">Idée</span></span><span class="gbtn" data-icon="undo"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span><span class="tiny">Annuler</span></span></div>
+      <div class="guide-btns"><span class="guide-btn primary here" data-icon="bulb"><span class="long">Que jouer maintenant ?</span><span class="short">Que jouer ?</span><span class="tiny">Idée</span></span><span class="guide-btn" data-icon="undo"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span><span class="tiny">Annuler</span></span></div>
       <svg class="garrow" viewBox="0 0 54 40"><path d="M5 20h40M32 7l13 13-13 13"/></svg>
       <div class="gfr"><div class="gf" data-f="oo1.H|oo111|ooooo"></div></div>
     </div>
-    <p class="lead">Un doute&nbsp;? Cliquez sur «&nbsp;<span class="long">Que jouer maintenant&nbsp;?</span><span class="short">Que jouer&nbsp;?</span><span class="tiny">Idée</span>&nbsp;».</p>
-    <p class="more">Une case sûre s'encadre de jaune. «&nbsp;Annuler&nbsp;» reprend un coup.</p>
+    <p class="guide-lead">Un doute&nbsp;? Cliquez sur «&nbsp;<span class="long">Que jouer maintenant&nbsp;?</span><span class="short">Que jouer&nbsp;?</span><span class="tiny">Idée</span>&nbsp;».</p>
+    <p class="guide-more">Une case sûre s'encadre de jaune. «&nbsp;Annuler&nbsp;» reprend un coup.</p>
   </section>
 </div>
 
@@ -314,22 +314,16 @@ async function newGame(lv) {
    F a flag, S the check and M the red "!" of Facile, H a square framed by the hint, + the square to click
    (a yellow ring and a hand).
    data-around gives the corner, as column and row, of the frame around the eight neighbours of a number. */
-const HAND = '<svg class="ghand" viewBox="0 0 40 48"><path d="M15 27V7a4.5 4.5 0 0 1 9 0v12a4 4 0 0 1 7.5 1.6a4 4 0 0 1 7 2.4V33c0 8-5 13-12 13h-4c-5 0-8-2-11-6L4.5 32a4 4 0 0 1 6.3-4.6z" fill="#fff" stroke="#1B2422" stroke-width="2.6" stroke-linejoin="round"/></svg>';
-const FLAG_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 20V4.5l11 4.5-11 4.5"/><path d="M7 21V4M4 21h7"/></svg>';
 const GUIDE_MARK = { F: FLAG, S: CHECK, M: DANGER };
 for (const f of document.querySelectorAll('#help .gf')) {
   const rows = f.dataset.f.split('|');
   f.style.setProperty('--cols', rows[0].length);
   f.innerHTML = rows.join('').split('').map(ch => ch === '.' ? '<i></i>' : ch === 'o' ? '<i class="o"></i>'
-    : ch === '+' ? `<i class="here">${HAND}</i>` : ch === 'H' ? '<i class="hint"></i>' : GUIDE_MARK[ch] ? `<i>${GUIDE_MARK[ch]}</i>` : `<i class="o n${ch}">${ch}</i>`).join('');
+    : ch === '+' ? `<i class="guide-ring">${Kit.icon('hand')}</i>` : ch === 'H' ? '<i class="hint"></i>' : GUIDE_MARK[ch] ? `<i>${GUIDE_MARK[ch]}</i>` : `<i class="o n${ch}">${ch}</i>`).join('');
   if (f.dataset.around) {
     const [x, y] = f.dataset.around.split(' ');
     f.insertAdjacentHTML('beforeend', `<b class="around" style="--x:${x};--y:${y}"></b>`);
   }
-}
-for (const b of document.querySelectorAll('#help .gbtn')) {
-  b.insertAdjacentHTML('afterbegin', b.dataset.icon === 'flag' ? FLAG_ICON : Kit.icon(b.dataset.icon));
-  if (b.classList.contains('here')) b.insertAdjacentHTML('beforeend', HAND);
 }
 
 $('undoBtn').onclick = doUndo;

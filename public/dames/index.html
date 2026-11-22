@@ -190,30 +190,21 @@
     box-shadow: 0 0 0 2.5px #2A1A12, 0 2px 4px rgba(0,0,0,.4); }
   .dg-step.l { right: 100%; margin-right: 6%; }
   .dg-step.r { left: 100%; margin-left: 6%; }
-  .dg-hand { position: absolute; z-index: 9; width: 46px; height: 54px; left: 52%; top: 50%; pointer-events: none;
-    filter: drop-shadow(0 3px 3px rgba(0,0,0,.4)); }
-  .dg-hand.left { left: auto; right: 52%; transform: scaleX(-1); }
+  .guide-hand { z-index: 9; left: 52%; top: 50%; filter: drop-shadow(0 3px 3px rgba(0,0,0,.4)); }
+  .guide-hand.left { left: auto; right: 52%; transform: scaleX(-1); }
   /* A man that reaches the far row becomes a king: a man, an arrow, a king, on two dark squares. */
   .dg-crown { display: flex; align-items: center; gap: 10px; }
   .dg-crown .dg { --rows: 1; --cols: 1; --s: calc(var(--gh) / 4); }
   .dg-crown svg.to { width: 44px; height: 44px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
   /* Copies of the real buttons. */
-  .dg-btns { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 8px 0; }
-  .dg-btn { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 54px; padding: 6px 20px; border-radius: 15px;
-    font: 600 21px var(--ui); color: var(--text); background: #fff; border: 2px solid #9AA6A1; box-shadow: 0 3px 0 #9AA6A1; white-space: nowrap; }
-  .dg-btn.hintb { background: var(--gold); color: #1F1A00; border-color: #C9951A; box-shadow: 0 3px 0 #C9951A, 0 0 0 5px #fff, 0 0 0 7px #2A1A12; }
-  .dg-btn > svg:not(.dg-hand) { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .dg-btn > .dg-hand { left: calc(100% - 26px); top: 50%; }
-  #helpText .page { text-align: center; }
-  #helpText .page h3 { text-align: left; }
-  #helpText .lead { margin: 0 0 4px; font: 700 24px/1.3 var(--ui); color: var(--text); }
-  #helpText .more { margin: 0; font: 500 21px/1.35 var(--ui); color: #3F3A4A; }
+  #help { --guide-edge: #2A1A12; --guide-more: #3F3A4A; }
+  .guide-btns { padding: 8px 0; }
+  .guide-btn > .guide-hand { left: calc(100% - 26px); top: 50%; }
   @media (max-width: 700px) {
     #help { --gh: 196px; }
     .dg-pic { padding: 16px 10px; gap: 20px; }
     .dg-crown .dg { --s: calc(var(--gh) / 6); }
-    #helpText .lead { font-size: 22px; } #helpText .more { font-size: 20px; }
-    .dg-btn { font-size: 20px; padding-inline: 14px; }
+    .guide-btn { font-size: 20px; padding-inline: 14px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -261,24 +252,24 @@
     <div class="dg-pic" aria-hidden="true">
       <div class="dg" data-b=".....b.|.......|.o.o...|..S....|.w....." data-steps="2 3 1 l|3 2 2 r" data-hand="2 3"></div>
     </div>
-    <p class="lead">Cliquez sur votre pion, puis sur une case jaune.</p>
-    <p class="more">Vous avez les blancs. Prenez ou bloquez les pièces noires pour gagner.</p>
+    <p class="guide-lead">Cliquez sur votre pion, puis sur une case jaune.</p>
+    <p class="guide-more">Vous avez les blancs. Prenez ou bloquez les pièces noires pour gagner.</p>
   </section>
   <section class="page">
     <h3>Prendre une pièce</h3>
     <div class="dg-pic" aria-hidden="true">
       <div class="dg" data-b="......|....o.|...p..|..S...|.w.w.." data-path="2 3,4 1" data-hand="4 1"></div>
     </div>
-    <p class="lead">Sautez par-dessus la pièce noire pour la prendre.</p>
-    <p class="more">Prendre est obligatoire. Un pion prend aussi en arrière.</p>
+    <p class="guide-lead">Sautez par-dessus la pièce noire pour la prendre.</p>
+    <p class="guide-more">Prendre est obligatoire. Un pion prend aussi en arrière.</p>
   </section>
   <section class="page">
     <h3>Prendre le plus de pièces</h3>
     <div class="dg-pic" aria-hidden="true">
       <div class="dg" data-b="...o...|....p..|.......|..b.p..|...S...|w......" data-path="3 4,5 2,3 0" data-hand="3 0 left"></div>
     </div>
-    <p class="lead">Prenez toujours le plus de pièces possible.</p>
-    <p class="more">Le jeu trace le chemin jaune&nbsp;: cliquez sur sa dernière case.</p>
+    <p class="guide-lead">Prenez toujours le plus de pièces possible.</p>
+    <p class="guide-more">Le jeu trace le chemin jaune&nbsp;: cliquez sur sa dernière case.</p>
   </section>
   <section class="page">
     <h3>La dame</h3>
@@ -286,16 +277,16 @@
       <div class="dg-crown"><div class="dg" data-b="w"></div><svg class="to" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg><div class="dg" data-b="k"></div></div>
       <div class="dg" data-b=".b...|o...o|.o.o.|..k..|.o.o." data-hand="4 1"></div>
     </div>
-    <p class="lead">Un pion qui finit sur la dernière rangée devient une dame.</p>
-    <p class="more">La dame va loin en diagonale, en avant comme en arrière.</p>
+    <p class="guide-lead">Un pion qui finit sur la dernière rangée devient une dame.</p>
+    <p class="guide-more">La dame va loin en diagonale, en avant comme en arrière.</p>
   </section>
   <section class="page">
     <h3>Demander de l'aide</h3>
     <div class="dg-pic" aria-hidden="true">
-      <div class="dg-btns"><span class="dg-btn hintb" data-icon="bulb">Que jouer maintenant ?</span><span class="dg-btn" data-icon="undo">Annuler le dernier coup</span></div>
+      <div class="guide-btns"><span class="guide-btn primary here" data-icon="bulb">Que jouer maintenant ?</span><span class="guide-btn" data-icon="undo">Annuler le dernier coup</span></div>
     </div>
-    <p class="lead">Un doute&nbsp;? Cliquez sur «&nbsp;Que jouer maintenant&nbsp;?&nbsp;».</p>
-    <p class="more">Le jeu entoure de jaune un bon coup. «&nbsp;Annuler&nbsp;» reprend votre coup.</p>
+    <p class="guide-lead">Un doute&nbsp;? Cliquez sur «&nbsp;Que jouer maintenant&nbsp;?&nbsp;».</p>
+    <p class="guide-more">Le jeu entoure de jaune un bon coup. «&nbsp;Annuler&nbsp;» reprend votre coup.</p>
   </section>
 </div>
 
@@ -317,7 +308,7 @@ const CROWN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 8.5l4.2
    square to go to (dashed yellow frame). data-path is the yellow way of a capture, as "column row"
    points; data-hand the square to click ("left": the hand comes from the left); data-steps the clicks in order,
    as "column row number side", the number on the left (l) or the right (r) of the square. */
-const HAND = '<svg class="dg-hand" viewBox="0 0 40 48"><path d="M15 27V7a4.5 4.5 0 0 1 9 0v12a4 4 0 0 1 7.5 1.6a4 4 0 0 1 7 2.4V33c0 8-5 13-12 13h-4c-5 0-8-2-11-6L4.5 32a4 4 0 0 1 6.3-4.6z" fill="#fff" stroke="#1B2422" stroke-width="2.6" stroke-linejoin="round"/></svg>';
+const HAND = Kit.icon('hand');
 const PIECE = { w: 'pc w', k: 'pc w k', S: 'pc w g-sel', b: 'pc b', p: 'pc b g-prey' };
 for (const d of document.querySelectorAll('#help .dg')) {
   const rows = d.dataset.b.split('|'), one = rows.length === 1 && rows[0].length === 1;
@@ -329,7 +320,7 @@ for (const d of document.querySelectorAll('#help .dg')) {
     const step = steps.find(([x, y]) => x === c && y === r);
     const pc = PIECE[ch] ? `<span class="${PIECE[ch]}"><i>${ch === 'k' ? CROWN : ''}</i><b></b></span>` : '';
     return `<i class="${one || (r + c) % 2 ? 'd' : ''}${ch === 'o' ? ' go' : ''}">${pc}`
-      + (step ? `<span class="dg-step ${step[3]}">${step[2]}</span>` : '') + (hand && hand[0] === c && hand[1] === r ? (left ? HAND.replace('dg-hand', 'dg-hand left') : HAND) : '') + '</i>';
+      + (step ? `<span class="dg-step ${step[3]}">${step[2]}</span>` : '') + (hand && hand[0] === c && hand[1] === r ? (left ? HAND.replace('guide-hand', 'guide-hand left') : HAND) : '') + '</i>';
   }).join('')).join('');
   const path = pts(d.dataset.path);
   if (path.length) {
@@ -338,10 +329,6 @@ for (const d of document.querySelectorAll('#help .dg')) {
       + `<path class="edge" d="${line}"/><path class="line" d="${line}"/>`
       + path.slice(1, -1).map(([c, r]) => `<circle cx="${c + .5}" cy="${r + .5}" r=".17"/>`).join('') + '</svg>');
   }
-}
-for (const b of document.querySelectorAll('#help .dg-btn')) {
-  b.insertAdjacentHTML('afterbegin', Kit.icon(b.dataset.icon));
-  if (b.classList.contains('hintb')) b.insertAdjacentHTML('beforeend', HAND);
 }
 
 // The levels of the computer. Facile searches two plies and sometimes picks a weaker move, but never

@@ -43,7 +43,7 @@ ok(await g(() => Kit.isOpen()), 'the rules open on the first visit');
 const pages = await g(() => [...document.querySelectorAll('#helpText .page')].map(p => ({
   pictures: p.querySelectorAll('.ddp-scene[aria-hidden="true"]').length, lists: p.querySelectorAll('ul, ol').length,
   words: [...p.querySelectorAll(':scope > p')].map(e => e.textContent).join(' ').split(/\s+/).filter(w => /\w/.test(w)).length,
-  key: !!p.querySelector('p.ddp-key') && parseFloat(getComputedStyle(p.querySelector('p.ddp-key')).fontSize) >= 24 })));
+  key: !!p.querySelector('p.guide-lead') && parseFloat(getComputedStyle(p.querySelector('p.guide-lead')).fontSize) >= 24 })));
 ok(pages.length >= 3 && pages.length <= 5, `the guide has ${pages.length} pages`);
 ok(pages.every(p => p.pictures === 1 && !p.lists && p.key && p.words <= 25), 'each page is one picture and one or two short sentences: ' + pages.map(p => p.words).join(', ') + ' words');
 ok(await g(() => document.querySelectorAll('#helpText .page:first-child .ddp-step, #helpText .page:first-child .ddp-btn').length === 3),

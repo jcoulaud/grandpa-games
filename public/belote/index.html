@@ -259,13 +259,10 @@
     background: radial-gradient(80% 75% at 50% 42%, #387C53, var(--baize) 55%, var(--baize-dark));
     box-shadow: inset 0 0 0 7px rgba(14,40,25,.5), inset 0 0 0 9px rgba(var(--print),.55), 0 0 0 5px #3B220E; }
   #help .bp .card { --w: var(--cw); --h: calc(var(--cw) * 1.3); }
-  #helpText .bp-key { margin: 0 0 6px; font: 700 24px/1.3 var(--ui); color: var(--text); text-align: center; }
-  #helpText .bp-more { margin: 0; text-align: center; color: #3A4542; }
   .bp-row { display: flex; flex-direction: row; align-items: center; gap: calc(var(--cw) * .4); }
   .bp-mat > * { flex: none; }
   #help .bp-ring { outline: 5px solid var(--gold); outline-offset: 3px; box-shadow: 0 0 20px 6px rgba(255,200,61,.75); z-index: 2; }
-  .bp-ptr { position: absolute; z-index: 5; left: calc(100% - 22px); top: calc(100% - 16px); width: 40px; height: 50px; rotate: -16deg;
-    filter: drop-shadow(0 3px 3px rgba(0,0,0,.45)); pointer-events: none; }
+  .guide-hand { z-index: 5; left: calc(100% - 22px); top: calc(100% - 16px); width: 40px; height: 50px; rotate: -16deg; filter: drop-shadow(0 3px 3px rgba(0,0,0,.45)); }
   .bp-btn { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 14px; white-space: nowrap;
     background: #fff; color: var(--text); border: 3px solid #26302D; box-shadow: 0 3px 0 #8E9A96; font: 700 min(23px, 4.4cqw)/1.2 var(--ui); }
   .bp-btn .s, .bp-pts b .s { width: 1.1em; height: 1.1em; }
@@ -373,7 +370,6 @@
 <div id="joy" aria-hidden="true"></div>
 <footer id="rail"><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="bpPtr" viewBox="0 0 40 50"><path d="M14 3c-2.2 0-4 1.8-4 4v20l-3.2-3.3c-1.6-1.6-4.1-1.6-5.7 0-1.5 1.5-1.6 3.9-.2 5.5l10 11.6C13.4 43.6 16.6 46 20.6 46h7.4c6.6 0 11-4.9 11-11V22.5c0-2.2-1.8-4-4-4s-4 1.8-4 4v-1.8c0-2.2-1.8-4-4-4s-4 1.8-4 4V20c0-2.2-1.8-4-4-4-.9 0-1.6.3-2 .7V7c0-2.2-1.8-4-4-4z" fill="#fff" stroke="#1B2422" stroke-width="2.6" stroke-linejoin="round"/></symbol></svg>
   <section class="page">
     <h3>La table</h3>
     <div class="bp" aria-hidden="true"><div class="bp-mat bp-table">
@@ -381,28 +377,28 @@
       <span class="bp-seat bp-w"><img src="../lib/avatars/simone.webp" alt="">Simone</span>
       <div class="bp-c"><svg class="bp-ways" viewBox="0 0 240 136"></svg><div data-help-card="23"></div></div>
       <span class="bp-seat bp-e"><img src="../lib/avatars/henri.webp" alt="">Henri</span>
-      <div class="bp-s"><span class="bp-seat mate bp-me"><img src="../lib/avatars/vous.webp" alt="">Vous</span><span class="bp-pair bp-ring"><span class="bp-btn">Je prends <svg class="s red-s" viewBox="0 0 100 100"><use href="#su1"/></svg></span><span class="bp-btn">Je passe</span><svg class="bp-ptr"><use href="#bpPtr"/></svg></span></div>
+      <div class="bp-s"><span class="bp-seat mate bp-me"><img src="../lib/avatars/vous.webp" alt="">Vous</span><span class="bp-pair bp-ring"><span class="bp-btn">Je prends <svg class="s red-s" viewBox="0 0 100 100"><use href="#su1"/></svg></span><span class="bp-btn">Je passe</span><svg class="guide-hand" viewBox="0 0 40 48"><use href="#kit-hand"/></svg></span></div>
     </div></div>
-    <p class="bp-key">Vous jouez avec André, en face, contre Simone et Henri.</p>
-    <p class="bp-more">On joue chacun son tour, vers la droite&nbsp;: suivez les flèches.</p>
+    <p class="guide-lead">Vous jouez avec André, en face, contre Simone et Henri.</p>
+    <p class="guide-more">On joue chacun son tour, vers la droite&nbsp;: suivez les flèches.</p>
   </section>
   <section class="page">
     <h3>Prendre l'atout</h3>
     <div class="bp" aria-hidden="true"><div class="bp-mat bp-row">
       <div class="bp-ret"><div data-help-card="23"></div><span>La retourne</span></div>
-      <div class="bp-ask"><b>Prenez-vous à cœur&nbsp;?</b><span class="bp-btns"><span class="bp-btn bp-ring">Je prends <svg class="s red-s" viewBox="0 0 100 100"><use href="#su1"/></svg><svg class="bp-ptr"><use href="#bpPtr"/></svg></span><span class="bp-btn">Je passe</span></span></div>
+      <div class="bp-ask"><b>Prenez-vous à cœur&nbsp;?</b><span class="bp-btns"><span class="bp-btn bp-ring">Je prends <svg class="s red-s" viewBox="0 0 100 100"><use href="#su1"/></svg><svg class="guide-hand" viewBox="0 0 40 48"><use href="#kit-hand"/></svg></span><span class="bp-btn">Je passe</span></span></div>
     </div></div>
-    <p class="bp-key">Cliquez sur «&nbsp;Je prends&nbsp;»&nbsp;: la couleur de la retourne devient l'atout.</p>
-    <p class="bp-more">Si tout le monde passe, un second tour permet de choisir une autre couleur.</p>
+    <p class="guide-lead">Cliquez sur «&nbsp;Je prends&nbsp;»&nbsp;: la couleur de la retourne devient l'atout.</p>
+    <p class="guide-more">Si tout le monde passe, un second tour permet de choisir une autre couleur.</p>
   </section>
   <section class="page">
     <h3>Jouer une carte</h3>
     <div class="bp" aria-hidden="true"><div class="bp-mat bp-play">
       <div class="bp-row bp-trick"><div data-help-card="48"></div><div class="bp-slot"></div></div>
-      <div class="bp-hand"><div data-help-card="51" class="can bp-ring"><svg class="bp-ptr"><use href="#bpPtr"/></svg></div><div data-help-card="45" class="can"></div><div data-help-card="13" class="no"></div><div data-help-card="34" class="no"></div><div data-help-card="11" class="no"></div></div>
+      <div class="bp-hand"><div data-help-card="51" class="can bp-ring"><svg class="guide-hand" viewBox="0 0 40 48"><use href="#kit-hand"/></svg></div><div data-help-card="45" class="can"></div><div data-help-card="13" class="no"></div><div data-help-card="34" class="no"></div><div data-help-card="11" class="no"></div></div>
     </div></div>
-    <p class="bp-key">Cliquez sur une carte levée&nbsp;: les cartes sombres ne vont pas.</p>
-    <p class="bp-more">Suivez la couleur demandée. Sans elle, coupez avec un atout.</p>
+    <p class="guide-lead">Cliquez sur une carte levée&nbsp;: les cartes sombres ne vont pas.</p>
+    <p class="guide-more">Suivez la couleur demandée. Sans elle, coupez avec un atout.</p>
   </section>
   <section class="page">
     <h3>Les points</h3>
@@ -410,8 +406,8 @@
       <div class="bp-line"><b>Atout <svg class="s red-s" viewBox="0 0 100 100"><use href="#su1"/></svg></b><div class="bp-cards"><figure><div data-help-card="23"></div><figcaption>20</figcaption></figure><figure><div data-help-card="21"></div><figcaption>14</figcaption></figure><figure><div data-help-card="13"></div><figcaption>11</figcaption></figure><figure><div data-help-card="22"></div><figcaption>10</figcaption></figure><figure><div data-help-card="25"></div><figcaption>4</figcaption></figure><figure><div data-help-card="24"></div><figcaption>3</figcaption></figure><figure><div data-help-card="20"></div><figcaption>0</figcaption></figure><figure><div data-help-card="19"></div><figcaption>0</figcaption></figure></div></div>
       <div class="bp-line"><b>Autres</b><div class="bp-cards"><figure><div data-help-card="0"></div><figcaption>11</figcaption></figure><figure><div data-help-card="9"></div><figcaption>10</figcaption></figure><figure><div data-help-card="12"></div><figcaption>4</figcaption></figure><figure><div data-help-card="11"></div><figcaption>3</figcaption></figure><figure><div data-help-card="10"></div><figcaption>2</figcaption></figure><figure><div data-help-card="8"></div><figcaption>0</figcaption></figure><figure><div data-help-card="7"></div><figcaption>0</figcaption></figure><figure><div data-help-card="6"></div><figcaption>0</figcaption></figure></div></div>
     </div></div>
-    <p class="bp-key">Le valet et le 9 d'atout sont les cartes les plus fortes.</p>
-    <p class="bp-more">Le dernier pli vaut 10 points de plus&nbsp;: le dix de der.</p>
+    <p class="guide-lead">Le valet et le 9 d'atout sont les cartes les plus fortes.</p>
+    <p class="guide-more">Le dernier pli vaut 10 points de plus&nbsp;: le dix de der.</p>
   </section>
   <section class="page">
     <h3>Gagner la manche</h3>
@@ -420,8 +416,8 @@
       <figure class="bp-team"><span class="bp-faces"><img src="../lib/avatars/simone.webp" alt=""><img src="../lib/avatars/henri.webp" alt=""></span><div class="bp-pile"><div data-help-card="dos"></div><div data-help-card="dos"></div></div><figcaption>70</figcaption></figure>
       <figure class="bp-team bp-bel"><div class="bp-fan"><div data-help-card="25"></div><div data-help-card="24"></div></div><figcaption>Belote +20</figcaption></figure>
     </div></div>
-    <p class="bp-key">L'équipe qui a pris doit faire plus de points que l'autre.</p>
-    <p class="bp-more">Sinon, elle est dedans. La première équipe à 501 points gagne.</p>
+    <p class="guide-lead">L'équipe qui a pris doit faire plus de points que l'autre.</p>
+    <p class="guide-more">Sinon, elle est dedans. La première équipe à 501 points gagne.</p>
   </section>
 </div>
 

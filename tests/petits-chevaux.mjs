@@ -41,7 +41,7 @@ for (let n = 0; n < 5; n++) {
   await page.click('#helpNext');
 }
 ok(await g(() => /Amenez vos chevaux au centre/.test(document.querySelector('#help .page').textContent)), 'the first rules page says to bring the horses to the centre, for two or four');
-ok(await g(() => [...document.querySelectorAll('#help .page')].every(p => p.querySelector('svg.pc-pic') && p.querySelector('.pc-key') && [...p.querySelectorAll('p')].map(e => e.textContent).join(' ').split(/\s+/).filter(w => /\w/.test(w)).length <= 25)),
+ok(await g(() => [...document.querySelectorAll('#help .page')].every(p => p.querySelector('svg.pc-pic') && p.querySelector('.guide-lead') && [...p.querySelectorAll('p')].map(e => e.textContent).join(' ').split(/\s+/).filter(w => /\w/.test(w)).length <= 25)),
   'each rules page is one picture and at most about 25 words');
 await page.getByRole('button', { name: 'Facile', exact: true }).click();
 ok(await g(() => G.die === null && G.turn === 0 && /chevaux bleus/.test(document.getElementById('msg').textContent)), 'a new game says he plays blue and waits for his throw');

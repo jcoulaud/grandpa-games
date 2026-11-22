@@ -193,11 +193,10 @@
   #side.picking #todo { min-height: 0; }
 
   /* ---------- The rules guide: one large picture and one or two sentences a page ---------- */
-  .pc-page h3 { text-align: center; }
+  #help { --guide-more: #26302D; }
+  #helpText .pc-page h3 { text-align: center; }
   .pc-pic { display: block; width: 100%; height: 230px; margin: 6px 0 10px; overflow: visible; }
   .pc-pic text { font-family: var(--ui); font-weight: 800; }
-  .pc-key { margin: 0 0 6px !important; text-align: center; font: 700 24px/1.25 var(--ui); color: var(--text); }
-  .pc-more { margin: 0 !important; text-align: center; }
   /* A low window (600 px high or less): a smaller picture, so both sentences still show. */
   html.low .pc-pic { height: 175px; margin-block: 2px 6px; }
 
@@ -229,7 +228,6 @@
     #todo svg { width: 36px; height: 36px; }
     #dieBox .six { font-size: 16px; bottom: -14px; }
     .pc-pic { height: 150px; }
-    .pc-key { font-size: 21px; }
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition: none !important; animation: none !important; }
@@ -292,32 +290,32 @@
   <section class="page pc-page">
     <h3>Lancer le dé</h3>
     <div class="guide-art" id="demoRoll" aria-hidden="true"></div>
-    <p class="pc-key">Cliquez sur le dé pour le lancer.</p>
-    <p class="pc-more">Vous jouez les bleus. Amenez vos chevaux au centre avant les autres.</p>
+    <p class="guide-lead">Cliquez sur le dé pour le lancer.</p>
+    <p class="guide-more">Vous jouez les bleus. Amenez vos chevaux au centre avant les autres.</p>
   </section>
   <section class="page pc-page">
     <h3>Sortir de l'écurie</h3>
     <div class="guide-art" id="demoOut" aria-hidden="true"></div>
-    <p class="pc-key">Avec un 6, cliquez sur un cheval qui brille.</p>
-    <p class="pc-more">Il sort sur la case bleue. Après un 6, vous rejouez.</p>
+    <p class="guide-lead">Avec un 6, cliquez sur un cheval qui brille.</p>
+    <p class="guide-more">Il sort sur la case bleue. Après un 6, vous rejouez.</p>
   </section>
   <section class="page pc-page">
     <h3>Avancer</h3>
     <div class="guide-art" id="demoMove" aria-hidden="true"></div>
-    <p class="pc-key">Cliquez sur le cheval qui brille.</p>
-    <p class="pc-more">Il avance du nombre du dé, jusqu'au rond jaune.</p>
+    <p class="guide-lead">Cliquez sur le cheval qui brille.</p>
+    <p class="guide-more">Il avance du nombre du dé, jusqu'au rond jaune.</p>
   </section>
   <section class="page pc-page">
     <h3>Renvoyer un cheval</h3>
     <div class="guide-art" id="demoHit" aria-hidden="true"></div>
-    <p class="pc-key">Tombez sur un autre cheval : il retourne à son écurie.</p>
-    <p class="pc-more">Les autres peuvent aussi renvoyer les vôtres.</p>
+    <p class="guide-lead">Tombez sur un autre cheval : il retourne à son écurie.</p>
+    <p class="guide-more">Les autres peuvent aussi renvoyer les vôtres.</p>
   </section>
   <section class="page pc-page">
     <h3>Monter au centre</h3>
     <div class="guide-art" id="demoLadder" aria-hidden="true"></div>
-    <p class="pc-key">Sur l'échelle, il faut le nombre juste.</p>
-    <p class="pc-more">Un 1 pour la marche 1, un 2 pour la marche 2, et un 6 pour le centre.</p>
+    <p class="guide-lead">Sur l'échelle, il faut le nombre juste.</p>
+    <p class="guide-more">Un 1 pour la marche 1, un 2 pour la marche 2, et un 6 pour le centre.</p>
   </section>
 </div>
 
