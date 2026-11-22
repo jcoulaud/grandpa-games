@@ -420,18 +420,20 @@ function slateArt() {
     </g></g></svg>`;
 }
 
-// The mots mêlés: a folded newspaper page with a grid of letters, a word circled with a felt pen by hand,
-// and a pencil lying on the page.
+// The mots mêlés: a folded newspaper page with a grid of letters, the word VAGUE circled with a felt pen,
+// and a pencil lying on the page, its tip at the grid.
 function wordsArt() {
-  const rows = ['PLAGEC', 'OVAGUE', 'RACRAB', 'TSELIN', 'EMOULE'];
+  const rows = ['PLAGEC', 'IVAGUE', 'RACRAB', 'TSELIN', 'EMOULE'];
   let letters = '';
   rows.forEach((row, r) => [...row].forEach((x, c) => {
-    letters += `<text x="${101 + c * 15}" y="${42 + r * 17}">${x}</text>`;
+    letters += `<text x="${101.75 + c * 14.5}" y="${41 + r * 18}">${x}</text>`;
   }));
   // A line of print: a grey bar.
   const print = (x, y, w) => `<rect x="${x}" y="${y}" width="${w}" height="3" rx="1.5" fill="#B9AE9C"/>`;
   let column = '';
   for (let k = 0; k < 7; k++) column += print(26, 50 + k * 9, k === 6 ? 30 : 52 - (k % 3) * 6);
+  // The pencil, drawn along x with its tip at +52: eraser, metal band, a six-sided yellow body, the wood, the lead.
+  const pencil = `<path d="M-47 -5h79l20 5-20 5h-79a3 3 0 0 1-3-3v-4a3 3 0 0 1 3-3z"/>`;
   return `<svg class="field" viewBox="0 0 210 147" aria-hidden="true">
     <g transform="rotate(-5 105 74)">
       <path d="M18 20h176l-2 110H20z" fill="rgba(0,0,0,.25)" transform="translate(3 6)"/>
@@ -443,14 +445,19 @@ function wordsArt() {
       <path d="M26 41h64" stroke="#2E2522" stroke-width="1.2"/>
       ${column}
       <rect x="26" y="114" width="28" height="9" rx="1.5" fill="#D9CBB0"/>
-      <rect x="92" y="28" width="92" height="88" fill="#FFFDF6" stroke="#2E2522" stroke-width="1.6"/>
+      <rect x="90" y="28" width="96" height="90" fill="#FFFDF6" stroke="#2E2522" stroke-width="1.6"/>
       <g font-family="Segoe UI, Arial, sans-serif" font-weight="700" font-size="13" fill="#211A17" text-anchor="middle">${letters}</g>
-      <path d="M112 49c8-8 60-9 70-4 7 4 4 11-6 12-16 3-50 3-62-1-7-2-7-7-1-9" fill="none" stroke="#1F6FB2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+      <rect x="107.7" y="45.3" width="74.3" height="18.2" rx="7" transform="rotate(-1.5 144.8 54.4)" fill="none" stroke="#1F6FB2" stroke-width="2.6" opacity=".9"/>
     </g>
-    <g transform="translate(150 118) rotate(-28)">
-      <path d="M-58 -5h96v10h-96z" fill="#F4C430"/><path d="M-58 -5h96v3.4h-96z" fill="#FFD95A"/><path d="M-58 1.6h96v3.4h-96z" fill="#D9A520"/>
-      <path d="M38 -5l16 5-16 5z" fill="#F1D2A6"/><path d="M49 -1.6l5 1.6-5 1.6z" fill="#2E2522"/>
-      <rect x="-70" y="-5" width="9" height="10" rx="2" fill="#E88AA0"/><rect x="-61" y="-5.5" width="4" height="11" fill="#B8B8B8"/>
+    <g transform="translate(64 117) rotate(-20)">
+      <g fill="rgba(40,0,10,.28)" transform="translate(2.5 5)">${pencil}</g>
+      <path d="M-47 -5h4v10h-4a3 3 0 0 1-3-3v-4a3 3 0 0 1 3-3z" fill="#E98AA0"/><path d="M-47 -5h4v3h-7a3 3 0 0 1 3-3z" fill="#F4B0C0"/>
+      <rect x="-43" y="-5.4" width="8" height="10.8" fill="#BFC4CA"/><rect x="-43" y="-5.4" width="8" height="3.2" fill="#E2E5E8"/>
+      <path d="M-40.5 -5.4v10.8M-37.5 -5.4v10.8" stroke="#8E959D" stroke-width=".9"/>
+      <rect x="-35" y="-5" width="67" height="3.4" fill="#FFD95A"/><rect x="-35" y="-1.6" width="67" height="3.2" fill="#F4C430"/><rect x="-35" y="1.6" width="67" height="3.4" fill="#D9A520"/>
+      <path d="M-35 -1.6h67M-35 1.6h67" stroke="#C99416" stroke-width=".5" opacity=".6"/>
+      <path d="M32 -5l14 3.3v3.4L32 5z" fill="#F1D2A6"/><path d="M32 1.6l14 0.1v1.6L32 5z" fill="#DDB384"/>
+      <path d="M46 -1.7l6 1.7-6 1.7z" fill="#3A3433"/>
     </g>
   </svg>`;
 }

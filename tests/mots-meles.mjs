@@ -1,4 +1,4 @@
-// Plays the mots mêlés with a real mouse: the rules, a first letter and its cancel, words found from either
+// Plays the mots mêlés with a real mouse: the rules, a first letter and its cancel by a click, the button "Enlever" and Escape, words found from either
 // end and by a drag, refusals with their reasons, the hint, undo, a reload, the win and its count, broken
 // and old saves, the levels, and the layout at every window of docs/design.md.
 import { launch, gameUrl, OUT } from './harness.mjs';
@@ -45,6 +45,25 @@ await click(s0);
 ok(/anchor/.test(await cls(s0)) && await page.locator('.cell.lane').count() > 0 && /dernière lettre/.test(await msg()), 'a click chooses the first letter, rings it and shows its lines');
 await click(s0);
 ok(!/anchor/.test(await cls(s0)) && await page.locator('.cell.lane').count() === 0 && /Lettre annulée/.test(await msg()), 'a second click on it cancels it');
+// 2b. "Enlever le A": shown under the list while a letter is chosen, it cancels it. Its place stays, so nothing moves.
+const drop = page.locator('#drop');
+const shown = () => g(() => getComputedStyle(document.getElementById('drop')).visibility === 'visible');
+const listBox = async () => JSON.stringify(await page.locator('#list').boundingBox()) + JSON.stringify(await page.locator('#board').boundingBox());
+ok(!(await shown()), 'no letter chosen: the button "Enlever" is hidden');
+const still = await listBox();
+await click(s0);
+const letter = await g(i => G.grid[i], s0);
+ok(await shown() && (await drop.textContent()).trim() === `Enlever le ${letter}` && (await drop.boundingBox()).height >= 54, `a letter chosen shows "Enlever le ${letter}", 54 px high`);
+ok(await msg() === `Vous avez choisi le ${letter}. Cliquez sur la dernière lettre du mot, ou encore sur le ${letter} pour l'enlever.`, 'the message says both what to do next and how to take the letter back');
+ok(await listBox() === still, 'the grid and the list do not move when the button shows');
+const db = await drop.boundingBox(), wb = await page.locator('#words').boundingBox();
+ok(db.y >= wb.y + wb.height, 'the button is under the word list');
+await drop.click(); await page.mouse.move(5, 5); await wait(560);
+ok(!/anchor/.test(await cls(s0)) && await page.locator('.cell.lane').count() === 0 && /Lettre annulée/.test(await msg()) && !(await shown()), 'the button cancels the letter and hides');
+ok(await listBox() === still, 'nothing moves when it hides');
+await click(s0);
+await page.keyboard.press('Escape');
+ok(!/anchor/.test(await cls(s0)) && !(await shown()), 'Escape also cancels the letter and hides the button');
 
 // 3. A word found: the band, the list, the message.
 await click(s0); await click(e0);
@@ -260,7 +279,7 @@ await page.click('#newBtn');
 ok(/Attention/.test(await g(() => document.getElementById('overText').textContent)), 'a new game during a game warns first');
 await page.keyboard.press('Escape');
 // The longest message fits in the line.
-await g(() => Kit.say("Presque : FOURCHETTE commence bien ici, mais sa dernière lettre est ailleurs."));
+await g(() => Kit.say("Vous avez choisi le W. Cliquez sur la dernière lettre du mot, ou encore sur le W pour l'enlever."));
 ok(await g(() => { const m = document.getElementById('msg'); return m.scrollHeight <= m.clientHeight + 1 && m.scrollWidth <= m.clientWidth + 1; }), 'the longest message fits in the line');
 await page.close();
 
@@ -292,11 +311,11 @@ for (const [w, h, z] of WINDOWS) {
     await p.waitForTimeout(150);
     // One word found and one letter chosen, so the band and the ring are measured too.
     // A count of grids finished too, so both chips of the bottom bar are measured.
-    await p.evaluate(() => { stats.won = 14; G = MotsMeles.find(G, 0); anchor = MotsMeles.cells(G, 1)[0]; render(); Kit.say("Presque : FOURCHETTE commence bien ici, mais sa dernière lettre est ailleurs."); });
+    await p.evaluate(() => { stats.won = 14; G = MotsMeles.find(G, 0); anchor = MotsMeles.cells(G, 1)[0]; render(); Kit.say("Vous avez choisi le W. Cliquez sur la dernière lettre du mot, ou encore sur le W pour l'enlever."); });
     const r = await p.evaluate(phone => {
       const inside = (e, box) => { const a = e.getBoundingClientRect(), b = box.getBoundingClientRect(); return a.left >= b.left - 1 && a.right <= b.right + 1 && a.top >= b.top - 1 && a.bottom <= b.bottom + 1; };
       const sheet = document.getElementById('sheet'), table = document.getElementById('table');
-      const wide = document.scrollingElement.scrollWidth <= document.scrollingElement.clientWidth + 1 && [...document.querySelectorAll('#bar, #say, #table, #rail, #sheet, #wins, #count, .zoom button')].filter(e => e.getClientRects().length).every(e => e.getBoundingClientRect().right <= innerWidth + 1);
+      const wide = document.scrollingElement.scrollWidth <= document.scrollingElement.clientWidth + 1 && [...document.querySelectorAll('#bar, #say, #table, #rail, #sheet, #wins, #count, #drop, .zoom button')].filter(e => e.getClientRects().length).every(e => e.getBoundingClientRect().right <= innerWidth + 1);
       const fits = phone ? sheet.getBoundingClientRect().right <= table.getBoundingClientRect().right + 1 : inside(sheet, table);
       const listApart = (() => { const a = document.getElementById('board').getBoundingClientRect(), b = document.getElementById('list').getBoundingClientRect(); return a.right <= b.left + 1 || a.bottom <= b.top + 1; })();
       const small = [];
@@ -306,8 +325,8 @@ for (const [w, h, z] of WINDOWS) {
         const f = parseFloat(getComputedStyle(e).fontSize);
         if (f < (phone ? 13 : 20)) small.push(e.tagName + '.' + e.className + ' ' + f);
       }
-      const cut = [...document.querySelectorAll('#theme, #words .w, #bar button, #wins, #count, #title .name *')].filter(e => e.getClientRects().length && e.scrollWidth > e.clientWidth + 1).map(e => e.textContent);
-      const buttons = [...document.querySelectorAll('#bar button, #bar #home, #rail button')].filter(e => e.getClientRects().length).map(e => e.getBoundingClientRect());
+      const cut = [...document.querySelectorAll('#theme, #words .w, #drop, #bar button, #wins, #count, #title .name *')].filter(e => e.getClientRects().length && e.scrollWidth > e.clientWidth + 1).map(e => e.textContent);
+      const buttons = [...document.querySelectorAll('#bar button, #bar #home, #rail button, #drop')].filter(e => e.getClientRects().length).map(e => e.getBoundingClientRect());
       const lowButton = buttons.filter(b => b.height < 44 * (window.Zoom ? Zoom.z() : 1) - 1).length;
       let overlap = 0;
       for (let i = 0; i < buttons.length; i++) for (let j = i + 1; j < buttons.length; j++) {
@@ -315,10 +334,14 @@ for (const [w, h, z] of WINDOWS) {
         if (a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1) overlap++;
       }
       const m = document.getElementById('msg');
-      return { wide, fits, listApart, small, cut, lowButton, overlap, msg: m.scrollHeight <= m.clientHeight + 1,
+      // The button "Enlever" is shown, 54 px high, inside the sheet, and in the window on a phone.
+      const d = document.getElementById('drop'), dr = d.getBoundingClientRect(), z = window.Zoom ? Zoom.z() : 1;
+      const dropOk = getComputedStyle(d).visibility === 'visible' && dr.height >= 54 * z - 1 && inside(d, sheet) && dr.right <= innerWidth + 1
+        && (!phone || dr.top >= document.getElementById('board').getBoundingClientRect().bottom - 1);
+      return { wide, fits, listApart, dropOk, small, cut, lowButton, overlap, msg: m.scrollHeight <= m.clientHeight + 1,
         f: parseFloat(getComputedStyle(document.querySelector('.cell')).fontSize) };
     }, phone);
-    const good = r.wide && r.fits && r.listApart && !r.small.length && !r.cut.length && !r.lowButton && !r.overlap && r.msg && r.f >= 20;
+    const good = r.wide && r.fits && r.dropOk && r.listApart && !r.small.length && !r.cut.length && !r.lowButton && !r.overlap && r.msg && r.f >= 20;
     ok(good, `${tag} ${label}: fits, letters ${r.f} px` + (good ? '' : ' ' + JSON.stringify(r)));
     if (w === 1366) (laptop[label] ??= {})[z] = r.f * z;
     await p.screenshot({ path: `${OUT}/mots-meles-${w}x${h}-${z}-${label.toLowerCase()}.png` });
