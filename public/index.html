@@ -242,6 +242,8 @@ const GAMES = [
     felt: ['#B98AC9', '#6B4580'], scene: notebookArt },
   { id: 'belote', title: 'Belote', text: 'Jouez avec André contre Simone et Henri, en 501 points.',
     felt: ['#C08A2E', '#6B4A12'], scene: beloteArt },
+  { id: 'huit-americain', title: 'Huit américain', text: 'Posez toutes vos cartes le premier, à quatre autour de la table.',
+    felt: ['#A8306E', '#551237'], scene: eightScene },
 ];
 
 // A card as the games draw it, centred on (x, y), w wide, turned by rot degrees.
@@ -584,6 +586,27 @@ function beloteArt() {
     </g>
   </svg>`;
   return scene(cafe + card(COEUR + 12, 102, 82, 60, -8, 'lifted') + card(COEUR + 11, 150, 80, 60, 7, 'lifted'));
+}
+
+// The huit américain: a big 8 de cœur, tilted, inside a wheel of four colours with the four suits
+// orbiting on it, and two curved arrows that show the way of play.
+function eightScene() {
+  const cx = 130, cy = 75, r = 52;
+  const at = (a, rr = r) => [cx + rr * Math.cos(a * Math.PI / 180), cy + rr * Math.sin(a * Math.PI / 180)];
+  const arc = (a0, a1, rr) => { const [x0, y0] = at(a0, rr), [x1, y1] = at(a1, rr); return `M${x0.toFixed(1)} ${y0.toFixed(1)}A${rr} ${rr} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`; };
+  const wheel = ['#FFC83D', '#FF8CC6', '#FFE3F1', '#E25A9E'].map((c, i) => `<path d="${arc(-180 + i * 90 + 2, -90 + i * 90 - 2, r)}" stroke="${c}" stroke-width="14" fill="none"/>`).join('');
+  // The suits sit on the wheel, between its colours: pique, cœur, carreau, trèfle.
+  const suits = [[-135, 0], [-45, 1], [45, 2], [135, 3]].map(([a, s]) => {
+    const [x, y] = at(a);
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="14" fill="#FFFDF6" stroke="#3B0A24" stroke-width="1.5"/>`
+      + `<use href="#su${s}" x="${(x - 9).toFixed(1)}" y="${(y - 9).toFixed(1)}" width="18" height="18" fill="${s === 1 || s === 2 ? '#C4122F' : '#14171A'}"/>`;
+  }).join('');
+  // Two arrows around the wheel, turning the way of the hands of a clock.
+  const arrow = (a0, a1) => { const [x, y] = at(a1, 70), t = (a1 + 90) * Math.PI / 180, n = a1 * Math.PI / 180;
+    const p = (dt, dn) => `${(x + dt * Math.cos(t) + dn * Math.cos(n)).toFixed(1)},${(y + dt * Math.sin(t) + dn * Math.sin(n)).toFixed(1)}`;
+    return `<path d="${arc(a0, a1 - 4, 70)}" stroke="#FFFDF6" stroke-width="5" fill="none" stroke-linecap="round" opacity=".9"/><polygon points="${p(9, 0)} ${p(-5, 8)} ${p(-5, -8)}" fill="#FFFDF6"/>`; };
+  return scene(`<svg width="260" height="150" viewBox="0 0 260 150" style="position: absolute; inset: 0; overflow: visible">
+    ${wheel}${arrow(-40, 30)}${arrow(140, 210)}${suits}</svg>` + card(COEUR + 7, 130, 76, 54, -12, 'lifted'));
 }
 const ICON_TROPHY = '<svg viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v4M8.5 20h7"/></svg>';
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
