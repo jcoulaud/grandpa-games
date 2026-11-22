@@ -64,6 +64,7 @@ function render(message) {
     .join('');
   const shoot = $('shoot');
   shoot.disabled = !done;
+  shoot.classList.toggle('next', done);
   shoot.textContent = finished() ? 'Voir le résultat' : done ? 'Trou suivant' : 'Taper la balle';
   $('undoBtn').disabled = !sum();
   $('hintBtn').disabled = done;
