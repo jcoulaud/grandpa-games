@@ -54,10 +54,14 @@ for (let n = 0; n < pages; n++) {
   await page.screenshot({ path: `${OUT}/belote-rules-${n + 1}.png` });
   await page.click('#helpNext');
 }
-const guide = await g(() => document.getElementById('help').textContent);
-ok(guide.includes('ici le valet de cœur') && guide.includes('Sans elle, si André gagne le pli') && guide.includes("à l'atout plus fort si vous pouvez.")
-  && guide.includes("plus fort qu'un atout posé si possible. Sans atout, jouez ce que vous voulez.") && guide.includes('il vaut 100 points')
-  && guide.includes("En cas d'égalité, on joue une manche de plus."), 'the guide names the card shown, and gives each rule with its condition');
+// The guide standard: 3 to 5 pages, each one picture made of the game's cards and seats, hidden from a
+// screen reader, and at most about 25 words under it. The first page marks what to click first.
+ok(await g(() => { const ps = [...document.querySelectorAll('#helpText .page')];
+  return ps.length >= 3 && ps.length <= 5 && ps.every(p => p.querySelectorAll('.bp[aria-hidden="true"]').length === 1 && !p.querySelector('ul, ol, table')
+    && [...p.querySelectorAll(':scope > p')].map(e => e.textContent).join(' ').split(/\s+/).filter(w => /\w/.test(w)).length <= 26); }),
+  'the guide has 3 to 5 pages, each one picture and a few words');
+ok(await g(() => { const p = document.querySelector('#helpText .page'); return p.textContent.includes('Je prends') && !!p.querySelector('.bp-ring .guide-hand');}),
+  'the first page shows the table and rings the first buttons to click');
 await page.getByRole('button', { name: 'Moyen', exact: true }).click();
 ok(!(await g(() => Kit.isOpen())) && await g(() => level === 'moyen'), 'the level is chosen after the rules');
 ok(await g(() => [1, 2, 3].every(s => document.querySelector(`#seat${s} img.ava`).src.endsWith(`/lib/avatars/${['', 'henri', 'andre', 'simone'][s]}.webp`))), 'Henri, André and Simone show their faces');
@@ -98,19 +102,29 @@ if (flying) {
 ok(await g(() => busy && !document.querySelector('.card.hand.can')), 'his cards cannot be played until they land');
 await wait(560);
 ok(await g(() => G.phase === 'play' && G.taker === 0 && G.hands[0].length === 8 && G.hands[0].includes(G.turnup)), 'he takes: he gets the retourne and has 8 cards');
-ok(await g(() => document.querySelector(`.card.hand[data-c="${G.turnup}"] .got`)?.textContent === 'Retourne'), 'the retourne in his hand has a tag');
+ok(await g(() => { const t = document.getElementById('table').getBoundingClientRect();
+  return [...document.querySelectorAll('.card.hand')].every(e => { const r = e.getBoundingClientRect(); return r.top >= t.top && r.bottom <= t.bottom; }); }), 'his whole hand shows, with nothing over it');
 ok(await g(() => document.getElementById('atoutBox').textContent.includes('Atout ' + Cards.SUIT_NAMES[G.trump]) && document.getElementById('atoutBox').textContent.includes('Vous avez pris')), 'the side column shows the trump, large, and who took');
-ok(await g(() => !!document.querySelector('#mid svg')), 'the trump is drawn on the mat');
+// The way of play: four arrows on the mat, turning counter-clockwise on the screen, so the one by his
+// place points toward Henri on his right.
+ok(await g(() => { const heads = [...document.querySelectorAll('#ways polygon')]; if (heads.length !== 4) return false;
+  // Each head: its tip, and the way it points from the middle of its base.
+  const way = h => { const [t, l, r] = h.getAttribute('points').split(' ').map(p => p.split(',').map(Number)); return [t[0] - (l[0] + r[0]) / 2, t[1] - (l[1] + r[1]) / 2]; };
+  const [a, b, c, d] = heads.map(way);
+  // Bottom right goes up to Henri, top right left to André, top left down to Simone, bottom left right to him.
+  return a[0] > 0 && a[1] < 0 && b[0] < 0 && b[1] < 0 && c[0] < 0 && c[1] > 0 && d[0] > 0 && d[1] > 0; }), 'the mat shows the way of play, to the right, counter-clockwise');
 await wait(1800);
 await page.screenshot({ path: `${OUT}/belote-taken.png` });
 
 // 3. He leads: a card is played with one click; the others answer.
 await myTurn();
-ok(await g(() => document.getElementById('mySlot').classList.contains('on') && document.getElementById('seat0').textContent.includes('À vous de jouer')), 'his turn shows: his place in the trick and his seat');
+ok(await g(() => document.getElementById('mySlot').classList.contains('on') && document.getElementById('seat0').textContent.includes('À vous')), 'his turn shows: his place in the trick and his seat');
+ok(await g(() => { const can = document.querySelector('.card.hand.can'), no = document.querySelector('.card.hand.no');
+  const rise = e => new DOMMatrix(getComputedStyle(e).transform).m42;
+  return rise(can) < -5 && (!no || (rise(no) === 0 && getComputedStyle(no).filter.includes('brightness'))); }), 'on his turn, the cards he may play rise and the others are dimmed');
 const lead = await g(() => G.hands[0][G.hands[0].length - 1]);
 await clickCard(lead);
 ok(await g(c => !G.hands[0].includes(c) && G.log.length === 1, lead), 'a card is played with one click');
-ok(await g(() => !document.querySelector('.card.hand .got')), 'the tag on the retourne goes once he plays');
 ok(await g(() => document.querySelectorAll('.card.trick .first').length === 1), 'the first card of the trick has a "1er" tag');
 await until(() => G.log.length >= 2);
 ok(await g(() => G.log[1][0] === 1), 'Henri, on his right, plays next');

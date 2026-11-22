@@ -36,10 +36,10 @@ const score = () => g(shownScore);
 await page.goto(URL);
 await wait(400);
 ok(await g(() => Kit.isOpen()), 'the rules open on the first visit');
-for (let n = 0; n < 4; n++) {
+for (let n = 0; n < 5; n++) {
   ok(await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }), `rules page ${n + 1} fits without scrolling`);
   await page.screenshot({ path: `${OUT}/morpion-rules-${n + 1}.png` });
-  if (n < 3) await page.click('#helpNext');
+  if (n < 4) await page.click('#helpNext');
 }
 await page.click('#helpClose');
 ok(/Choisissez le niveau/.test(await g(() => document.getElementById('overText').textContent)), '"Fermer" closes the rules and asks for the level');
@@ -128,7 +128,7 @@ ok(sent.won === 1 && await g(() => GG.meta('morpion').summary === '1 victoire'),
 ok(await g(() => document.getElementById('level').textContent === 'Niveau facile1 victoire' && !document.querySelector('#rail #wins')), 'the level line shows the win, the bottom bar does not');
 
 // 9. The next game: the computer starts.
-await page.getByRole('button', { name: 'Partie suivante' }).click();
+await page.locator('#overBtns').getByRole('button', { name: 'Partie suivante' }).click();
 ok(/l'ordinateur commence/.test(await msg()) || await g(() => phase === 'thinking'), 'in the next game the computer starts');
 await ready();
 ok(await g(() => G.first === Morpion.O && G.moves.length === 1), 'the computer has put its first ring');
@@ -387,7 +387,7 @@ const centre = async i => { const b = await cell(i).boundingBox(); return [b.x +
   const c = await ctx.newPage();
   await c.goto(URL);
   await c.waitForTimeout(400);
-  await b.getByRole('button', { name: 'Partie suivante' }).click();
+  await b.locator('#overBtns').getByRole('button', { name: 'Partie suivante' }).click();
   ok(await b.evaluate(() => document.getElementById('overTitle').textContent !== 'Le jeu a changé ailleurs' && !G.result), 'a finished game opened in another window lets the first go on');
   await c.close();
   await ctx.close();
@@ -429,10 +429,10 @@ for (const [w, h, z] of WINDOWS) {
   const label = `${w}x${h}${z !== 1 ? ' at ' + z * 100 + ' %' : ''}`;
   if (h / z >= 620 || z === 1) {
     let fit = true;
-    for (let n = 0; n < 4; n++) {
+    for (let n = 0; n < 5; n++) {
       if (h >= 620 && !(await p.evaluate(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }))) fit = false;
       await check(p, `${label} rules page ${n + 1}`);
-      if (n < 3) await p.click('#helpNext');
+      if (n < 4) await p.click('#helpNext');
     }
     if (h >= 620) ok(fit, `${label}: every rules page fits without scrolling`);
   }

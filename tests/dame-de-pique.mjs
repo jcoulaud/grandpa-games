@@ -35,11 +35,21 @@ const setHand = (hands, extra = {}) => g(([hands, extra]) => {
 const SU = 'SHDC', RK = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 const card = n => SU.indexOf(n.slice(-1)) * 13 + RK.indexOf(n.slice(0, -1));
 
-// 1. The first visit: the rules open, and each page fits without scrolling.
+// 1. The first visit: the rules open, and each page fits without scrolling. Each page is one picture
+// and at most two short sentences, the first in large type.
 await page.goto(URL);
 await wait(400);
 ok(await g(() => Kit.isOpen()), 'the rules open on the first visit');
-for (let n = 0; n < 5; n++) {
+const pages = await g(() => [...document.querySelectorAll('#helpText .page')].map(p => ({
+  pictures: p.querySelectorAll('.ddp-scene[aria-hidden="true"]').length, lists: p.querySelectorAll('ul, ol').length,
+  words: [...p.querySelectorAll(':scope > p')].map(e => e.textContent).join(' ').split(/\s+/).filter(w => /\w/.test(w)).length,
+  key: !!p.querySelector('p.guide-lead') && parseFloat(getComputedStyle(p.querySelector('p.guide-lead')).fontSize) >= 24 })));
+ok(pages.length >= 3 && pages.length <= 5, `the guide has ${pages.length} pages`);
+ok(pages.every(p => p.pictures === 1 && !p.lists && p.key && p.words <= 25), 'each page is one picture and one or two short sentences: ' + pages.map(p => p.words).join(', ') + ' words');
+ok(await g(() => document.querySelectorAll('#helpText .page:first-child .ddp-step, #helpText .page:first-child .ddp-btn').length === 3),
+  'the first page shows what to click first, marked in yellow');
+ok(await g(() => document.querySelectorAll('#helpText .ddp-ring path.head').length === 4), 'the guide shows the way of play with four arrows');
+for (let n = 0; n < pages.length; n++) {
   ok(await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }), `rules page ${n + 1} fits without scrolling`);
   await page.screenshot({ path: `${OUT}/ddp-rules-${n + 1}.png` });
   await page.click('#helpNext');
@@ -67,7 +77,7 @@ ok(lay.n === 13 && lay.corners, 'the rank and suit of all 13 cards are in view')
 ok(lay.seats && lay.apart, 'the three players and the scores fit, clear of the trick');
 
 // 3. The pass: three cards, to the left on the first hand.
-ok((await g(() => document.getElementById('passTitle').textContent)) === 'Donnez 3 cartes à Jeanne, à votre gauche', 'the first pass goes to Jeanne, on the left');
+ok((await g(() => document.getElementById('passTitle').textContent)) === 'Donnez 3 cartes à Jeanne', 'the first pass goes to Jeanne, on the left');
 ok(await g(() => document.getElementById('passBtn').disabled), 'the pass button waits for 3 cards');
 const hand0 = await g(() => G.hands[0].slice());
 const first = hand0[0];
@@ -113,6 +123,13 @@ if (bad !== undefined) {
   ok(!(await g(() => document.getElementById('bubble').classList.contains('on'))), 'the bubble goes after 3 seconds');
 }
 ok(await g(() => document.querySelectorAll('.card.hand.no').length === G.hands[0].filter(c => DDP.refusal(G, c)).length), 'the cards that cannot be played are darker');
+ok(await g(() => [...document.querySelectorAll('.card.hand')].every(e => e.classList.contains('up') === !DDP.refusal(G, +e.dataset.c)
+  && (getComputedStyle(e).transform !== 'none') === e.classList.contains('up'))), 'the cards he may play stand up out of his hand');
+// The way of play: four arrows around the trick, the one that leads to him lit.
+ok(await g(() => { const r = document.getElementById('ring'), lit = r.querySelectorAll('path.head.on');
+  if (getComputedStyle(r).display === 'none' || r.querySelectorAll('path.head').length !== 4 || lit.length !== 1) return false;
+  const m = lit[0].getAttribute('transform').match(/translate\(([-\d.]+) ([-\d.]+)\)/);
+  return +m[1] > L.cx && +m[2] > L.cy; }), 'four arrows turn around the trick, the one to his place lit');
 const before = await g(() => G.log.length);
 const good = await g(() => DDP.legal(G)[0]);
 await clickCard(good);
@@ -163,7 +180,7 @@ await page.evaluate(() => GG.flush());
 await page.reload(); await wait(300);
 ok(await g(() => document.getElementById('scoreSheet').classList.contains('on')), 'the score sheet comes back after a reload');
 await page.click('#nextBtn'); await wait(200);
-ok((await g(() => document.getElementById('passTitle').textContent)) === 'Donnez 3 cartes à Louise, à votre droite', 'the second hand passes to Louise, on the right');
+ok((await g(() => document.getElementById('passTitle').textContent)) === 'Donnez 3 cartes à Louise', 'the second hand passes to Louise, on the right');
 ok(await g(() => G.handNo === 1 && G.scores.join() === '15,30,37,44' && !undo.length), 'the scores carry on to the next hand');
 // Two quick clicks 12 px apart, on each side of the edge between two cards, choose both.
 const h2 = await g(() => G.hands[0].slice(0, 2));
@@ -175,7 +192,9 @@ ok(JSON.stringify(await g(() => picks)) === JSON.stringify(h2), 'two quick click
 // A short window keeps the pass button inside the table.
 await page.setViewportSize({ width: 1366, height: 420 }); await wait(200);
 const onTop = id => g(id => { const r = document.getElementById(id).getBoundingClientRect(); return r.bottom <= innerHeight && document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('button')?.id === id; }, id);
-ok(await onTop('passBtn'), 'a short window keeps the pass button in view');
+// With 2 cards chosen, the line "Encore 1 carte" stands where the button will come.
+ok(await g(() => { const e = document.getElementById('passText'), r = e.getBoundingClientRect(); return r.height > 0 && r.bottom <= innerHeight && e.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)); }),
+  'a short window keeps the line of the pass sheet in view');
 ok(await g(() => [...document.querySelectorAll('.card.hand')].every(e => { const r = e.getBoundingClientRect(); return e.contains(document.elementFromPoint(r.left + 6, r.top + 10)); })),
   'a short window keeps the corner of every card clear of the pass sheet');
 await page.setViewportSize({ width: 1366, height: 680 }); await wait(200);
@@ -247,6 +266,30 @@ ok(await g(() => { const r = id => document.getElementById(id).getBoundingClient
   const hand = document.querySelector('.card.hand')?.getBoundingClientRect();
   return a.left >= 0 && b.right <= innerWidth && (!hand || v.bottom <= hand.top) && v.top >= a.bottom - 1; }), 'a narrow window keeps the players inside, his own above his hand');
 await page.screenshot({ path: `${OUT}/ddp-1024.png` });
+// A low window: the three players in one row on top. No seat covers another seat, the trick, his place in
+// it or the pass sheet, on his turn with three cards down and during the pass.
+const clear = () => g(() => {
+  const shows = e => getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden';
+  const boxes = [...['seat0', 'seat1', 'seat2', 'seat3', 'mySlot', 'passSheet'].map(id => document.getElementById(id)), ...document.querySelectorAll('.card.trick')]
+    .filter(shows).map(e => [e.id || 'trick', e.getBoundingClientRect()]);
+  const hits = [];
+  for (const [a, r] of boxes) for (const [b, q] of boxes) if (a < b && (a.startsWith('seat') || b.startsWith('seat'))
+    && Math.min(r.right, q.right) > Math.max(r.left, q.left) && Math.min(r.bottom, q.bottom) > Math.max(r.top, q.top)) hits.push(a + '/' + b);
+  return hits;
+});
+for (const [W, H] of [[1093, 530], [1280, 620]]) {
+  await page.setViewportSize({ width: W, height: H }); await wait(300);
+  await setHand(['2C 3D 4D 5D', '3C 6D 7D 8D', '4C 9D 10D JD', '5C QD KD AD'], { leader: 1, turn: 1 });
+  await myTurn(); await wait(600);
+  const turn = await clear();
+  ok(await g(() => L.row && G.trick.length === 3) && !turn.length, `at ${W}x${H} the players sit in one row, clear of each other and of the trick ${turn.join(' ')}`);
+  ok(await g(() => L.w) >= 66, `cards are ${await g(() => L.w)} px wide at ${W}x${H}`);
+  await page.screenshot({ path: `${OUT}/ddp-${W}-turn.png` });
+  await g(() => { newGame(); setCast(['jeanne', 'paul', 'louise']); render(); });
+  const pass = await clear();
+  ok(await g(() => G.phase === 'pass') && !pass.length, `at ${W}x${H} the pass sheet sits between the players and his hand ${pass.join(' ')}`);
+  await page.screenshot({ path: `${OUT}/ddp-${W}-pass.png` });
+}
 await page.setViewportSize({ width: 1920, height: 1000 }); await wait(300);
 ok(await g(() => L.w) >= 150, `cards are ${await g(() => L.w)} px wide at 1920x1000`);
 await page.screenshot({ path: `${OUT}/ddp-1920.png` });

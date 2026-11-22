@@ -9,7 +9,8 @@ const page = await browser.newPage({ viewport: { width: 1366, height: 680 } });
 page.on('pageerror', e => errors.push(e.message));
 const g = fn => page.evaluate(fn);
 await page.goto(URL); await page.waitForTimeout(2200);
-for (let n = 0; n < 3; n++) {
+const pages = await g(() => document.querySelectorAll('#helpText .page').length);
+for (let n = 0; n < pages; n++) {
   const fit = await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; });
   ok(fit, `rules page ${n + 1} fits without scrolling`);
   await page.screenshot({ path: `${OUT}/a-rules-${n + 1}.png` });

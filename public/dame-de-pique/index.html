@@ -31,8 +31,12 @@
   .card.hand { transition: left .3s cubic-bezier(.2,.7,.3,1), top .3s cubic-bezier(.2,.7,.3,1), transform .15s; }
   .card.hand.can { cursor: pointer; }
   .card.hand.can:hover { transform: translateY(calc(var(--h) * -.1)); outline: 3px solid #fff; }
-  /* A card he may not play now: a little darker, still readable and still clickable for the reason. */
-  .card.hand.no { cursor: pointer; filter: brightness(.72) saturate(.8); }
+  /* On his turn, the cards he may play stand up out of the hand, and rise a little more under the mouse. */
+  .card.hand.can.up { transform: translateY(calc(var(--h) * -.1)); }
+  .card.hand.can.up:hover { transform: translateY(calc(var(--h) * -.14)); }
+  /* A card he may not play now: under a plum veil, still readable and still clickable for the reason. */
+  .card.hand.no { cursor: pointer; }
+  .card.hand.no::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; background: rgba(30,14,44,.5); pointer-events: none; }
   .card.hand.picked, .card.hand.picked:hover { transform: translateY(calc(var(--h) * -.2)); outline: 5px solid var(--gold); }
   .card.hand.hint, .card.hand.hint:hover { transform: translateY(calc(var(--h) * -.14)); outline: 5px solid var(--gold);
     box-shadow: 0 0 0 2px rgba(var(--shade),.8), 0 0 26px 8px rgba(255,200,61,.7); animation: glow 1.4s ease-in-out infinite; }
@@ -81,8 +85,10 @@
   @media (max-width: 700px) {
     #seat2, #seat1, #seat3 { min-width: 0; }
     .seat .where { display: none; }
-    body.phone .seat:not(#seat0) { grid-template-columns: auto minmax(0, 1fr); column-gap: 8px; padding: 6px 8px; border-radius: 14px; }
-    body.phone .seat .ava { width: 34px; height: 34px; font-size: 20px; }
+    /* The face over the name, so a name such as "Colette" fits a third of the width. */
+    body.phone .seat:not(#seat0) { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; row-gap: 2px; padding: 6px 4px; border-radius: 14px; }
+    body.phone .seat:not(#seat0) > * { grid-column: 1; max-width: 100%; }
+    body.phone .seat .ava { width: 32px; height: 32px; font-size: 20px; }
     body.phone .seat b { font-size: 20px; }
     body.phone .seat .backs { display: none; }
     body.phone .seat .now { white-space: normal; font-size: 20px; line-height: 1.05; }
@@ -91,6 +97,20 @@
     /* The cards received: a white dot instead of the word, which would cover the next card. */
     body.phone .card.hand .got { font-size: 0; width: 16px; height: 16px; padding: 0; border-radius: 50%; }
   }
+  /* A low window: the three players in one row on top, each a face, a name and the points. His own strip
+     sits left of the trick, with one fact per line. */
+  #table.row .seat .where, #table.row .seat .backs { display: none; }
+  #table.row .seat:not(#seat0) { grid-template-columns: auto minmax(0, 1fr); min-width: 0; column-gap: 10px; padding: 6px 10px 6px 8px; }
+  #table.row .seat .ava { width: 44px; height: 44px; font-size: 22px; }
+  #table.row .seat b { line-height: 1.1; }
+  #table.row .seat .pts { margin-top: 0; }
+  /* "À vous" at the bottom of his place, below Paul's card, on two lines if the card is narrow. */
+  #table.row #mySlot { place-items: end center; padding-bottom: 8px; line-height: 1.1; }
+  #table.row .seat .pts, #table.row .seat .now { white-space: normal; }
+  #table.row #seat0 { padding: 6px 16px 6px 6px; }
+  #table.row #seat0 .txt { display: grid; justify-items: start; min-width: 8.6em; font-size: 20px; }
+  #table.row .seat .tot { margin-left: 6px; font: 600 20px var(--ui); color: #5A6461; white-space: nowrap; }
+  #table.row #seat0 b { display: block; }
   /* His own seat: a strip above the left end of his hand. Lilac, like the others, when it is his turn. */
   #seat0 { display: flex; align-items: center; gap: 12px; padding: 6px 18px 6px 6px; border-radius: 16px; z-index: 25; }
   #seat0 .ava { width: 40px; height: 40px; font-size: 20px; }
@@ -125,6 +145,13 @@
     box-shadow: inset 0 0 0 2px var(--back), inset 0 0 0 3px rgba(255,255,255,.7); }
 
   /* The middle of the table: where the trick is played, and the sheets for the pass and the score. */
+  /* The way of play: four arrows around the trick, turning to the left, clockwise. The one that leads
+     to the player who must play is bright. */
+  #ring { position: absolute; left: 0; top: 0; z-index: 6; pointer-events: none; overflow: visible; }
+  #ring path { fill: none; stroke: rgba(255,255,255,.3); stroke-width: 5; stroke-linecap: round; }
+  #ring path.head { fill: rgba(255,255,255,.5); stroke: none; }
+  #ring path.on { stroke: rgba(255,255,255,.95); }
+  #ring path.head.on { fill: #fff; stroke: none; }
   #mid { position: absolute; z-index: 5; border-radius: 50%; background: radial-gradient(closest-side, rgba(255,255,255,.07), transparent); pointer-events: none; }
   .sheet {
     position: absolute; z-index: 300; transform-origin: 50% 0; display: none; flex-direction: column; align-items: center; gap: 14px; text-align: center;
@@ -132,9 +159,44 @@
   }
   .sheet.on { display: flex; }
   .sheet h2 { margin: 0; font: 700 28px/1.2 var(--ui); letter-spacing: -.01em; }
-  #passSheet { padding: 20px 24px 22px; gap: 10px; }
+  #passSheet { padding: 14px 22px 16px; gap: 8px; max-width: calc(100% - 16px); }
   #passSheet .head { display: flex; align-items: center; gap: 16px; text-align: left; }
   #passSheet .arrow { flex: none; width: 56px; height: 56px; }
+  #passSheet h2 { white-space: nowrap; font-size: 25px; }
+  #passSheet .where { display: flex; align-items: center; gap: 8px; margin-top: -6px; }
+  #passSheet .where .arrow { width: 34px; height: 34px; }
+  #passSheet .where .arrow svg { width: 24px; height: 24px; }
+  html.low #passSheet .where { display: none; }
+  @media (max-width: 700px) { #passSheet h2 { white-space: normal; } }
+  /* Under the row of players, the pass sheet is wide and short: what to do on the left, the three places
+     and the line or the button on the right. */
+  #table.row #passSheet.on { display: grid; grid-template-areas: "t s" "w p"; column-gap: 32px; align-items: center; justify-items: center; }
+  html.low #table.row #passSheet.on { grid-template-areas: "t p"; }
+  #table.row #passTitle { grid-area: t; justify-self: start; } #table.row #passSheet .where { grid-area: w; justify-self: start; margin: 0; }
+  #table.row #passSlots { grid-area: s; } #table.row #passText, #table.row #passBtn { grid-area: p; }
+  /* In a low window the score sheet takes two columns, the words on the left and the points on the right,
+     so it fits without shrinking its text. */
+  #table.row #scoreSheet.on { display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto 1fr; gap: 10px 26px; align-items: center; text-align: left; }
+  #table.row #scoreSheet h2 { grid-area: 1 / 1; }
+  #table.row #scoreSheet .note { grid-area: 2 / 1; max-width: 340px; }
+  #table.row #scoreSheet button { grid-area: 3 / 1; justify-self: start; align-self: start; }
+  #table.row #scoreSheet table { grid-area: 1 / 2 / 4 / 3; }
+  #table.row #scoreSheet td { padding-block: 6px; }
+  /* A low window: the line or the button alone, without the three places. */
+  html.low #passSlots { display: none; }
+  #passWhere { font: 600 21px var(--ui); color: #6A3F8C; }
+  /* The pass, as three empty places that fill with the cards he picks: he sees at once how many are left. */
+  #passSlots { display: flex; gap: 12px; }
+  #passSlots i { width: 46px; height: 60px; border-radius: 8px; border: 3px dashed #B98AE0; background: #F6F0FB; display: grid; place-items: center;
+    font: 700 22px/1 var(--ui); font-style: normal; color: var(--ink); }
+  #passSlots i.on { border: 3px solid #C9951A; background: #FFF4D6; box-shadow: 0 3px 0 #C9951A; }
+  #passSlots i.red { color: var(--red); }
+  #passSlots i svg { width: 20px; height: 20px; fill: currentColor; display: block; margin: 2px auto 0; }
+  /* Until the three are chosen, the line says where to click; then the yellow button takes its place. */
+  #passText { font-weight: 600; color: #4B2E69; min-height: 58px; display: flex; align-items: center; }
+  #passText::after { content: " ↓"; font-size: 30px; margin-left: 8px; }
+  #passBtn:disabled { display: none; }
+  #passSheet:has(#passBtn:not(:disabled)) #passText { display: none; }
   .sheet p { margin: 0; font: 400 22px/1.4 var(--ui); color: #3A4542; }
   .sheet button { min-height: 58px; padding: 8px 28px; justify-content: center; }
   .sheet .arrow { width: 64px; height: 64px; border-radius: 50%; background: #F1E9F8; display: grid; place-items: center; }
@@ -180,10 +242,49 @@
   .mini .face { width: 34px; height: 34px; line-height: 34px; }
   #lastText { margin: 10px 0 0; font: 600 20px/1.3 var(--ui); color: #3A4542; }
 
-  .guide-suit { width: 62px; min-height: 46px; flex: none; display: inline-flex; align-items: center;
-    justify-content: center; gap: 4px; border: 1px solid #9AA6A1; border-radius: 8px; background: var(--face); font-weight: 700; }
-  .guide-suit.red { color: var(--red); }
-  .guide-suit svg { width: 24px; height: 24px; fill: currentColor; }
+  /* The rules guide: each page is a picture of the table on the plum felt. The picture keeps a fixed shape,
+     as tall as the guide allows, and everything in it is sized in hundredths of its width (cqw). */
+  .ddp-scene { position: relative; container-type: inline-size; aspect-ratio: 2.4; margin: 6px auto 12px; overflow: hidden;
+    width: min(100%, 2.4 * clamp(130px, min(560px, 94vh / var(--z, 1)) - 324px, 240px));
+    border-radius: 18px; background: radial-gradient(ellipse at 50% 30%, var(--felt-top), var(--felt)); }
+  .ddp-scene > * { position: absolute; left: calc(var(--x, 0) * 1cqw); top: calc(var(--y, 0) * 1cqw); margin: 0; }
+  #help .ddp-scene .card { --w: 9cqw; --h: 11.7cqw; position: absolute; }
+  #help .ddp-scene .card.ddp-sm { --w: 8cqw; --h: 10.4cqw; }
+  #help .ddp-scene .card.ddp-lg { --w: 10cqw; --h: 13cqw; }
+  #help .ddp-scene .card.ddp-xl { --w: 14cqw; --h: 18.2cqw; }
+  .ddp-scene .ddp-picked { translate: 0 -3.5cqw; outline: .8cqw solid var(--gold); }
+  .ddp-scene .ddp-up { translate: 0 -2.4cqw; }
+  .ddp-scene .ddp-no::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; background: rgba(30,14,44,.5); }
+  .ddp-scene .ddp-ring-me { outline: .8cqw solid var(--gold); box-shadow: 0 0 0 .3cqw rgba(var(--shade),.8), 0 0 2cqw .3cqw rgba(255,200,61,.7); }
+  .ddp-scene .ddp-won { outline: .8cqw solid #B98AE0; }
+  .ddp-scene .card .first { top: calc(var(--h) * -.2); font-size: 2.3cqw; padding: 0 1cqw; border-radius: 1.2cqw; }
+  .ddp-draw { width: 100cqw; height: 41.67cqw; overflow: visible; }
+  .ddp-way { fill: none; stroke: #fff; stroke-width: .8; stroke-dasharray: 1.6 1.2; stroke-linecap: round; }
+  .ddp-tip { fill: #fff; }
+  .ddp-seat { display: flex; align-items: center; gap: 1.2cqw; padding: .7cqw 1.8cqw .7cqw .7cqw; border-radius: 2.4cqw;
+    background: #FFFDF6; color: var(--text); font: 600 2.8cqw/1.15 var(--ui); white-space: nowrap; box-shadow: 0 .5cqw 1.6cqw rgba(0,0,0,.3); }
+  .ddp-seat img { width: 5cqw; height: 5cqw; border-radius: 50%; }
+  .ddp-seat span { display: flex; flex-direction: column; color: #5A6461; }
+  .ddp-seat b { color: var(--text); font-size: 3cqw; }
+  .ddp-sheet { width: 50cqw; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 1.2cqw;
+    padding: 1.4cqw 1.6cqw 1.8cqw; white-space: nowrap; border-radius: 2.6cqw; background: #FFFDF6; color: var(--text); font: 700 3cqw/1.2 var(--ui); box-shadow: 0 1cqw 3cqw rgba(0,0,0,.4); }
+  .ddp-to { width: 5.4cqw; height: 5.4cqw; border-radius: 50%; background: #F1E9F8; display: grid; place-items: center; }
+  .ddp-to svg { width: 3.6cqw; height: 3.6cqw; fill: none; stroke: #4B2E69; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+  .ddp-btn { width: 100%; padding: 1.4cqw 0; border-radius: 2cqw; text-align: center; background: var(--gold); color: #1F1A00;
+    border: .3cqw solid #C9951A; box-shadow: 0 0 0 1cqw rgba(255,200,61,.45); }
+  /* The order of the clicks: 1, then 2, in yellow discs. */
+  .ddp-step { width: 6cqw; height: 6cqw; border-radius: 50%; display: grid; place-items: center; background: var(--gold); color: #1F1A00;
+    font: 700 3.8cqw/1 var(--ui); border: .3cqw solid #1F1A00; z-index: 200; }
+  .ddp-slot { width: 8cqw; height: 10.4cqw; border-radius: .72cqw; border: .5cqw dashed #B98AE0; background: rgba(185,138,224,.16);
+    display: grid; place-items: end center; padding-bottom: 1.4cqw; color: #fff; font: 700 2.4cqw/1.1 var(--ui); white-space: nowrap; }
+  .ddp-tag { padding: .6cqw 1.8cqw; border-radius: 2cqw; background: #B98AE0; color: #1E0E2C; font: 700 2.8cqw/1.2 var(--ui); white-space: nowrap; }
+  .ddp-pts { width: 14cqw; text-align: center; color: #fff; font: 700 3.2cqw/1.2 var(--ui); }
+  .ddp-pts.ddp-big { width: 20cqw; color: var(--gold); font-size: 4.4cqw; white-space: nowrap; }
+  /* The ring of arrows in the guide, as on the table. */
+  .ddp-ring path { fill: none; stroke: rgba(255,255,255,.4); stroke-width: .7; stroke-linecap: round; }
+  .ddp-ring path.head { fill: rgba(255,255,255,.55); stroke: none; }
+  .ddp-ring .on { stroke: #fff; } .ddp-ring path.head.on { fill: #fff; }
+  #help { --guide-more: #26302D; }
 
   @media (prefers-reduced-motion: reduce) {
     .card.hand, .card.trick { transition: none; }
@@ -204,6 +305,7 @@
 <div id="say"><div id="msg" aria-live="polite"></div></div>
 <div id="table">
   <div id="mid"></div>
+  <svg id="ring" aria-hidden="true"></svg>
   <div id="mySlot">À vous</div>
   <div id="bubble" role="status"></div>
   <div class="seat" id="seat0"></div>
@@ -211,15 +313,17 @@
   <div class="seat" id="seat2"></div>
   <div class="seat" id="seat3"></div>
   <div class="sheet" id="passSheet" role="group" aria-labelledby="passTitle">
-    <div class="head"><div class="arrow" id="passArrow"></div><h2 id="passTitle"></h2></div>
+    <h2 id="passTitle"></h2>
+    <div class="where"><span class="arrow" id="passArrow"></span><span id="passWhere"></span></div>
+    <div class="slots" id="passSlots" aria-hidden="true"></div>
     <p id="passText"></p>
-    <button id="passBtn" class="primary"></button>
+    <button id="passBtn" class="primary" data-nudge></button>
   </div>
   <div class="sheet" id="scoreSheet" role="group" aria-labelledby="scoreTitle">
     <h2 id="scoreTitle"></h2>
     <p class="note" id="scoreNote"></p>
     <table id="scoreTable"></table>
-    <button id="nextBtn" class="primary"></button>
+    <button id="nextBtn" class="primary" data-nudge></button>
   </div>
   <aside id="side">
     <div class="box" id="scores"><h3>Les points</h3><table id="scoreSide"></table><p id="state"></p><p class="goal">La partie s'arrête quand un joueur atteint 100 points. Le moins de points gagne.</p></div>
@@ -228,54 +332,71 @@
 </div>
 <footer id="rail"><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
+  <!-- Each page: one picture of the table, made of the game's own cards, then one or two sentences.
+       Yellow marks what to click, as in the game. The pictures use the scene's width as their unit. -->
   <section class="page">
-    <h3>Donner trois cartes</h3>
-    <ol>
-      <li>Cliquez sur trois cartes de votre main. Elles se soulèvent.</li>
-      <li>Cliquez sur le bouton « Donner » qui indique le nom du joueur.</li>
-    </ol>
-    <p>Si vous changez d'avis, cliquez de nouveau sur la carte soulevée. Les cartes que vous recevez portent l'étiquette « Reçue ».</p>
-    <p>Le jeu indique à qui donner les cartes. Toutes les quatre manches, vous gardez votre main.</p>
+    <h3>Donner 3 cartes</h3>
+    <div class="ddp-scene" aria-hidden="true">
+      <div class="ddp-seat" style="--x:3;--y:5"><img src="../lib/avatars/jeanne.webp" alt=""><span><b>Jeanne</b>à gauche</span></div>
+      <svg class="ddp-draw" viewBox="0 0 100 41.67"><path class="ddp-way" d="M27.5 28.5 C 20 28.5, 14 25, 12.5 19.5"/><path class="ddp-tip" d="M10.3 20.4 L12.2 16.1 L14.9 20 Z"/></svg>
+      <div class="ddp-sheet" style="--x:38;--y:3"><span class="ddp-to"><svg viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></span><b>Donnez 3 cartes à Jeanne</b>
+        <span class="ddp-btn">Donner ces 3 cartes</span></div>
+      <span class="ddp-step" style="--x:84.5;--y:9.5">2</span>
+      <div data-help-card="4" style="--x:22;--y:30"></div><div data-help-card="12" class="ddp-picked" style="--x:28.5;--y:30"></div>
+      <div data-help-card="14" style="--x:35;--y:30"></div><div data-help-card="24" class="ddp-picked" style="--x:41.5;--y:30"></div>
+      <div data-help-card="29" style="--x:48;--y:30"></div><div data-help-card="33" class="ddp-picked" style="--x:54.5;--y:30"></div>
+      <div data-help-card="41" style="--x:61;--y:30"></div><div data-help-card="47" style="--x:67.5;--y:30"></div>
+      <span class="ddp-step" style="--x:13.5;--y:31">1</span>
+    </div>
+    <p class="guide-lead">Cliquez sur 3 cartes, puis sur le bouton jaune.</p>
+    <p class="guide-more">Le jeu dit à qui les donner&nbsp;: ici, Jeanne.</p>
   </section>
   <section class="page">
-    <h3>Jouer un pli</h3>
-    <p>Chacun joue une carte par pli. Le 2 de trèfle ouvre le premier pli.</p>
-    <div class="guide-panel">
-      <figure class="guide-example">
-        <div class="guide-art" aria-hidden="true"><div data-help-card="42"><span class="first">1er</span></div><div data-help-card="49"></div></div>
-        <figcaption>Si le 4 de trèfle ouvre le pli, jouez un trèfle si vous en avez. Le valet bat le 4.</figcaption>
-      </figure>
+    <h3>Jouer chacun son tour</h3>
+    <div class="ddp-scene" aria-hidden="true">
+      <svg class="ddp-draw" viewBox="0 0 100 41.67"><g class="ddp-ring" data-turn="0"></g></svg>
+      <div class="ddp-seat" style="--x:39;--y:.8"><img src="../lib/avatars/paul.webp" alt=""><b>Paul</b></div>
+      <div class="ddp-seat" style="--x:18;--y:13.6"><img src="../lib/avatars/jeanne.webp" alt=""><b>Jeanne</b></div>
+      <div class="ddp-seat" style="--x:67;--y:13.6"><img src="../lib/avatars/louise.webp" alt=""><b>Louise</b></div>
+      <div data-help-card="34" class="ddp-sm" style="--x:46;--y:8.6"><span class="first">1er</span></div>
+      <div data-help-card="27" class="ddp-sm" style="--x:54.96;--y:11.8"></div>
+      <div class="ddp-slot" style="--x:46;--y:15"><span>À vous</span></div>
+      <div data-help-card="4" class="ddp-sm ddp-no" style="--x:24;--y:33"></div><div data-help-card="8" class="ddp-sm ddp-no" style="--x:30.5;--y:33"></div>
+      <div data-help-card="14" class="ddp-sm ddp-no" style="--x:37;--y:33"></div><div data-help-card="19" class="ddp-sm ddp-no" style="--x:43.5;--y:33"></div>
+      <div data-help-card="29" class="ddp-sm ddp-up" style="--x:50;--y:33"></div><div data-help-card="33" class="ddp-sm ddp-up ddp-ring-me" style="--x:56.5;--y:33"></div>
+      <div data-help-card="36" class="ddp-sm ddp-up" style="--x:63;--y:33"></div><div data-help-card="41" class="ddp-sm ddp-no" style="--x:69.5;--y:33"></div>
     </div>
-    <p>Cliquez sur la carte à jouer. Le jeu assombrit les cartes interdites.</p>
-    <p>La plus forte carte du symbole demandé gagne le pli. L'as bat toutes les autres cartes de ce symbole.</p>
+    <p class="guide-lead">Cliquez sur une carte levée&nbsp;: elle va au milieu.</p>
+    <p class="guide-more">On joue chacun son tour, vers la gauche, comme les flèches.</p>
+  </section>
+  <section class="page">
+    <h3>Prendre le pli</h3>
+    <div class="ddp-scene" aria-hidden="true">
+      <div class="ddp-seat" style="--x:36;--y:1.5"><img src="../lib/avatars/paul.webp" alt=""><b>Paul</b></div>
+      <div class="ddp-seat" style="--x:12;--y:19.7"><img src="../lib/avatars/jeanne.webp" alt=""><b>Jeanne</b></div>
+      <div class="ddp-seat" style="--x:70;--y:19.7"><img src="../lib/avatars/louise.webp" alt=""><b>Louise</b></div>
+      <div class="ddp-seat" style="--x:31;--y:34.5"><img src="../lib/avatars/vous.webp" alt=""><b>Vous</b></div>
+      <div data-help-card="34" class="ddp-lg" style="--x:45;--y:9"><span class="first">1er</span></div>
+      <div data-help-card="19" class="ddp-lg" style="--x:33.8;--y:16.4"></div>
+      <div data-help-card="27" class="ddp-lg" style="--x:56.2;--y:16.4"></div>
+      <div data-help-card="36" class="ddp-lg ddp-won" style="--x:45;--y:20"></div>
+      <span class="ddp-tag" style="--x:57;--y:35.2">Vous prenez le pli</span>
+    </div>
+    <p class="guide-lead">La plus forte carte de la couleur demandée prend le pli.</p>
+    <p class="guide-more">La couleur demandée est celle de la carte «&nbsp;1er&nbsp;».</p>
   </section>
   <section class="page">
     <h3>Éviter les points</h3>
-    <div class="guide-panel">
-      <ul class="guide-key">
-        <li><span class="guide-suit red" aria-hidden="true"><svg viewBox="0 0 100 100"><use href="#su1"/></svg></span><span><strong>1 point</strong> par carte de cœur ramassée</span></li>
-        <li><span class="guide-suit" aria-hidden="true">D<svg viewBox="0 0 100 100"><use href="#su0"/></svg></span><span><strong>13 points</strong> pour la dame de pique</span></li>
-      </ul>
+    <div class="ddp-scene" aria-hidden="true">
+      <div data-help-card="14" class="ddp-xl" style="--x:8;--y:7.5"></div>
+      <div data-help-card="19" class="ddp-xl" style="--x:24;--y:7.5"></div>
+      <div data-help-card="25" class="ddp-xl" style="--x:40;--y:7.5"></div>
+      <div data-help-card="11" class="ddp-xl" style="--x:68;--y:7.5"></div>
+      <span class="ddp-pts" style="--x:8;--y:28.5">1 point</span><span class="ddp-pts" style="--x:24;--y:28.5">1 point</span>
+      <span class="ddp-pts" style="--x:40;--y:28.5">1 point</span><span class="ddp-pts ddp-big" style="--x:65;--y:27.9">13 points</span>
     </div>
-    <p>La partie s'arrête dès qu'un joueur a 100 points ou plus. Le plus petit total gagne. En cas d'égalité, la victoire est partagée.</p>
-    <p><strong>Grand chelem.</strong> Si vous prenez les 13 cœurs et la dame de pique, vous marquez 0. Les autres marquent 26 points chacun.</p>
-  </section>
-  <section class="page">
-    <h3>Quand jouer un cœur</h3>
-    <ul>
-      <li>Si vous n'avez pas le symbole demandé, jouez une autre carte.</li>
-      <li>Au premier pli, si vous pouvez jouer une carte sans point, vous devez le faire.</li>
-      <li>Pour ouvrir un pli avec un cœur, attendez qu'un cœur ait déjà été joué. Si votre main ne contient que des cœurs, vous pouvez ouvrir avec un cœur.</li>
-    </ul>
-    <p>Le joueur qui prend le pli ouvre le suivant.</p>
-  </section>
-  <section class="page">
-    <h3>Trouver de l'aide pendant la partie</h3>
-    <ul>
-      <li>« Quelle carte jouer ? » montre une carte à jouer.</li>
-      <li>« Annuler le dernier coup » reprend votre dernière carte et les cartes jouées après elle.</li>
-      <li>Le panneau des points affiche aussi le dernier pli.</li>
-    </ul>
+    <p class="guide-lead">Chaque cœur vaut 1 point, la dame de pique 13.</p>
+    <p class="guide-more">À 100 points, la partie s'arrête&nbsp;: le moins de points gagne.</p>
   </section>
 </div>
 
@@ -342,9 +463,11 @@ addEventListener('gg-stale', () => { stale = true; cancelAll(); render(); });
 const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
 const ptsText = n => n === 0 ? 'aucun point' : plural(n, 'point', 'points');
 // The points of a seat in this hand, and its total when the score column is hidden. A phone has room
-// for the points of the hand only: the totals are on the score sheet at the end of each hand.
+// for the points of the hand only: the totals are on the score sheet at the end of each hand. A low
+// window puts the total by the name, so the seats stay narrow: see seatTotal().
 const seatPts = s => L.narrow ? String(G.pts[s])
-  : `${ptsText(G.pts[s])} pris${L.sideW ? '' : ` · total ${G.scores[s]}`}`;
+  : `${ptsText(G.pts[s])} pris${L.sideW || L.row ? '' : ` · total ${G.scores[s]}`}`;
+const seatTotal = s => L.row && !L.sideW ? `<span class="tot">· total ${G.scores[s]}</span>` : '';
 // "Paul", "Paul et Louise", "Vous et Paul": the players named, he first.
 const names = seats => {
   const n = seats.map(s => PLAYERS[s].name);
@@ -623,6 +746,22 @@ async function newGame(lv) {
 }
 
 /* ---------- Drawing ---------- */
+// The way of play, as four arrows on an ellipse around the trick: from his place to Jeanne's, to Paul's,
+// to Louise's and back to his, clockwise on the screen. The arrow that leads to seat `on` is bright.
+function ringHtml(cx, cy, rx, ry, on, head) {
+  const r = n => Math.round(n * 100) / 100, gap = 14 * Math.PI / 180;
+  let out = '';
+  for (let s = 0; s < 4; s++) {
+    const end = (90 + 90 * s) * Math.PI / 180, a0 = end - Math.PI / 2 + gap, a1 = end - gap;
+    const x0 = r(cx + rx * Math.cos(a0)), y0 = r(cy + ry * Math.sin(a0)), x1 = r(cx + rx * Math.cos(a1)), y1 = r(cy + ry * Math.sin(a1));
+    const turn = r(Math.atan2(ry * Math.cos(a1), -rx * Math.sin(a1)) * 180 / Math.PI), lit = s === on ? ' on' : '';
+    out += `<path class="arc${lit}" d="M${x0} ${y0}A${r(rx)} ${r(ry)} 0 0 1 ${x1} ${y1}"/>`
+      + `<path class="head${lit}" transform="translate(${x1} ${y1}) rotate(${turn}) scale(${head})" d="M-1 -1.15L1.3 0L-1 1.15L-.45 0Z"/>`;
+  }
+  return out;
+}
+document.querySelector('.ddp-ring').innerHTML = ringHtml(50, 17, 14.4, 9.8, 0, 1.3);
+
 const table = $('table');
 const els = new Map();   // card -> its element
 let L = null;            // the layout: sizes and places
@@ -639,27 +778,44 @@ function cardEl(c) {
   return e;
 }
 
+// The frame of the table: a phone, a low window, and the score column on the right when there is room.
+// A phone and a low window seat the three players in one row on top.
+function frame() {
+  const W = table.clientWidth, H = table.clientHeight, narrow = W < 700;
+  return { W, H, narrow, row: !narrow && H < 450, sideW: W >= 1180 ? 300 : 0, pad: narrow ? 8 : 18 };
+}
 // The sizes come from the window: his hand along the bottom, the trick in the middle, the three
-// players around it, and the scores on the right when there is room.
-function layout() {
-  const W = table.clientWidth, H = table.clientHeight;
-  // A phone: the three players sit in one row on top, each in a third of the width.
-  const narrow = W < 700;
-  const sideW = W >= 1180 ? 300 : 0, pad = narrow ? 8 : 18;
+// players around it, and the scores on the right when there is room. In a low window the three players
+// sit in one row on top: the seats must hold their text before this runs, since their sizes set the rest.
+function layout({ W, H, narrow, row, sideW, pad }) {
   const PW = W - 2 * pad - (sideW ? sideW + 22 : 0);
+  const cx = pad + PW / 2;
   // Paul's seat on top, the trick (1.62 card heights), room for a card to rise, then his hand, whose
   // cards show their top 80%: the corner with the rank and the suit is always in view.
-  const topH = narrow ? 104 : 92;
+  let topH = narrow ? 104 : 92, byS0 = Infinity;
+  if (row) {
+    // Jeanne, Paul and Louise in one row, as they sit. The trick comes under them.
+    const ss = [1, 2, 3].map(s => $('seat' + s)), sw = Math.floor(Math.min(340, (PW - 32) / 3));
+    ss.forEach(e => { e.style.width = sw + 'px'; e.style.top = '8px'; });
+    topH = 8 + Math.max(...ss.map(e => e.offsetHeight));
+    // His strip sits left of the trick and its arrows: the cards are no wider than leaves it room.
+    byS0 = (PW / 2 - 18 - $('seat0').offsetWidth) / 1.77;
+  }
   const byW = (PW - 10) / 7.4, byH = (H - topH - 26) / (1.3 * (1.62 + .14 + .8));
-  const w = Math.floor(Math.max(56, Math.min(byW, byH, 170)));
+  const w = Math.floor(Math.max(56, Math.min(byW, byH, byS0, 170)));
   const h = Math.round(w * 1.3);
   document.documentElement.style.setProperty('--w', w + 'px');
   document.documentElement.style.setProperty('--h', h + 'px');
   const handTop = Math.round(H - h * .8);
-  const cx = pad + PW / 2;
   const bandTop = topH + 14, bandBot = handTop - Math.round(h * .14);
   const cy = Math.round((bandTop + bandBot) / 2);
-  return { W, H, w, h, pad, PW, sideW, handTop, cx, cy, topH, narrow };
+  if (row) {
+    const [s1, s2, s3] = [1, 2, 3].map(s => $('seat' + s)), sw = s2.offsetWidth, off = Math.max(sw + 16, 3.3 * w);
+    s2.style.left = Math.round(cx - sw / 2) + 'px';
+    s1.style.left = Math.round(Math.max(pad, cx - off - sw / 2)) + 'px';
+    s3.style.left = Math.round(Math.min(pad + PW - sw, cx + off - sw / 2)) + 'px';
+  }
+  return { W, H, w, h, pad, PW, sideW, handTop, cx, cy, topH, narrow, row };
 }
 // Where each seat's card lies in the trick: his below the middle, Jeanne's left, Paul's above, Louise's right.
 function trickXY(seat) {
@@ -678,8 +834,8 @@ function seatXY(seat) {
 
 function render() {
   if (!G) return;
-  L = layout();
-  const { w, h, pad, PW, handTop, cx, cy } = L;
+  // The seats are filled first: in a low window their sizes set the rest.
+  L = frame();
   const playing = G.phase === 'play' && G.turn === 0 && !busy && !stale;
   const ok = new Set(playing ? legal(G) : []);
 
@@ -689,18 +845,28 @@ function render() {
     const e = $('seat' + s), p = PLAYERS[s], n = G.hands[s].length;
     const backs = Array.from({ length: n }, (_, i) => `<i style="left:${i * 7}px"></i>`).join('');
     e.innerHTML = `${face(s, 'ava')}
-      <div><b>${p.name}${G.qsTo === s ? QS_CHIP : ''}</b>${s === 2 ? '' : `<span class="where">${cap(p.where)}</span>`}
+      <div><b>${p.name}${G.qsTo === s ? QS_CHIP : ''}${seatTotal(s)}</b>${s === 2 ? '' : `<span class="where">${cap(p.where)}</span>`}
       <span class="pts">${HEART}${seatPts(s)}</span>
       <span class="now"><span class="dots"><i></i><i></i><i></i></span>${p.name} joue</span></div>
       <div class="backs" style="width:${n ? 26 + (n - 1) * 7 : 0}px">${backs}</div>`;
     e.classList.toggle('turn', turnSeat === s || (busy && !shown && G.phase === 'play' && G.turn === s));
   }
-  const s1 = $('seat1'), s2 = $('seat2'), s3 = $('seat3');
+  // His own seat: his points, his total when the score column is hidden, and "À vous de jouer" on his
+  // turn. In a low window, one fact per line.
+  const s0 = $('seat0');
+  const own = `<b>Vous${G.qsTo === 0 ? QS_CHIP : ''}${seatTotal(0)}</b><span class="pts">${HEART}${seatPts(0)}</span><span class="now">À vous de jouer</span>`;
+  s0.innerHTML = `${face(0, 'ava')}${L.row ? `<div class="txt">${own}</div>` : own}`;
+  s0.classList.toggle('turn', playing);
+  s0.classList.toggle('narrow', !L.sideW);
   document.body.classList.toggle('phone', L.narrow);
+  table.classList.toggle('row', L.row);
+  L = layout(L);
+  const { w, h, pad, PW, handTop, cx, cy } = L;
+  const s1 = $('seat1'), s2 = $('seat2'), s3 = $('seat3');
   if (L.narrow) {
     const sw = Math.floor((PW - 16) / 3);
     [s1, s2, s3].forEach((e, i) => { e.style.width = sw + 'px'; e.style.left = pad + i * (sw + 8) + 'px'; e.style.top = '8px'; });
-  } else {
+  } else if (!L.row) {
   [s1, s2, s3].forEach(e => { e.style.width = ''; });
   // Paul sits just above the trick, as across a real table; on a low window, at the top.
   s2.style.left = Math.round(Math.max(pad, cx - s2.offsetWidth / 2)) + 'px';
@@ -710,15 +876,15 @@ function render() {
   s1.style.left = Math.round(Math.max(pad, cx - near - s1.offsetWidth)) + 'px'; s1.style.top = Math.round(cy - s1.offsetHeight / 2) + 'px';
   s3.style.left = Math.round(Math.min(pad + PW - s3.offsetWidth, cx + near)) + 'px'; s3.style.top = Math.round(cy - s3.offsetHeight / 2) + 'px';
   }
-  // His own seat, above the left end of his hand: his points, his total when the score column is
-  // hidden, and "À vous de jouer" on his turn.
-  const s0 = $('seat0');
-  s0.innerHTML = `${face(0, 'ava')}<b>Vous${G.qsTo === 0 ? QS_CHIP : ''}</b>
-    <span class="pts">${HEART}${seatPts(0)}</span><span class="now">À vous de jouer</span>`;
-  s0.classList.toggle('turn', playing);
-  s0.classList.toggle('narrow', !L.sideW);
   const mid = $('mid'), md = Math.round(w * 3.6);
   mid.style.left = cx - md / 2 + 'px'; mid.style.top = cy - md / 2 + 'px'; mid.style.width = mid.style.height = md + 'px';
+  // The arrows of the way of play, while the cards are played.
+  const ring = $('ring'), around = G.phase === 'play' || !!shown, gap = Math.max(24, w * .3) / 2;
+  ring.style.display = around ? '' : 'none';
+  if (around) {
+    ring.setAttribute('width', L.W); ring.setAttribute('height', L.H); ring.setAttribute('viewBox', `0 0 ${L.W} ${L.H}`);
+    ring.innerHTML = ringHtml(cx, cy, w * 1.62 + gap, h * .81 + gap, shown ? -1 : G.turn, Math.max(9, w * .1));
+  }
 
   // The cards: his hand, then the trick (the one on the table, or a full one about to go).
   const live = new Set();
@@ -727,12 +893,14 @@ function render() {
   const stepX = n > 1 ? Math.min(w * .64, (PW - w) / (n - 1)) : 0;
   const x0 = cx - (w + stepX * (n - 1)) / 2;
   L.stepX = stepX;
-  s0.style.left = Math.round(Math.max(pad, n ? x0 : cx - s0.offsetWidth / 2)) + 'px';
+  // His seat above the left end of his hand; in a low window, also left of the trick and its arrows.
+  const s0x = n ? x0 : cx - s0.offsetWidth / 2;
+  s0.style.left = Math.round(Math.max(pad, L.row ? Math.min(s0x, cx - w * 1.62 - Math.max(24, w * .3) / 2 - 6 - s0.offsetWidth) : s0x)) + 'px';
   // Above the "Reçue" tags of the cards just received, while they show.
-  const tags = got.some(c => hand.includes(c)) ? h * .17 + 4 : 10;
+  const tags = got.some(c => hand.includes(c)) ? h * .17 + 4 : playing ? h * .1 + 6 : 10;
   s0.style.top = Math.round(handTop - s0.offsetHeight - tags) + 'px';
   // Jeanne and Louise stay clear of his seat, in a low window.
-  if (!L.narrow) for (const e of [s1, s3]) e.style.top = Math.round(Math.max(pad, Math.min(parseFloat(e.style.top), s0.offsetTop - e.offsetHeight - 8))) + 'px';
+  if (!L.narrow && !L.row) for (const e of [s1, s3]) e.style.top = Math.round(Math.max(pad, Math.min(parseFloat(e.style.top), s0.offsetTop - e.offsetHeight - 8))) + 'px';
   // His place in the trick waits for his card.
   const slot = $('mySlot'), [sx, sy] = trickXY(0);
   slot.classList.toggle('on', playing);
@@ -741,7 +909,7 @@ function render() {
     const e = cardEl(c); live.add(c);
     e.className = 'card hand ' + (rd(c) ? 'red' : 'black');
     if (G.phase === 'pass' && !stale && !busy) e.classList.add(picks.includes(c) ? 'picked' : 'can');
-    else if (playing) e.classList.add(ok.has(c) ? 'can' : 'no');
+    else if (playing) e.classList.add(...ok.has(c) ? ['can', 'up'] : ['no']);
     if (hint.includes(c) && !(G.phase === 'pass' && !picks.includes(c))) e.classList.add('hint');
     e.style.left = x0 + i * stepX + 'px'; e.style.top = handTop + 'px'; e.style.zIndex = 100 + i;
     e.tabIndex = playing || G.phase === 'pass' ? 0 : -1;
@@ -777,17 +945,25 @@ function render() {
   const ps = $('passSheet');
   const passing = G.phase === 'pass';
   ps.classList.toggle('on', passing);
+  $('seat0').style.visibility = passing ? 'hidden' : '';
   if (passing) {
     const to = passTarget(G, 0);
     $('passArrow').innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${ARROWS[{ 1: 1, 2: 2, 3: 3 }[to]]}</svg>`;
-    $('passTitle').textContent = `Donnez 3 cartes ${TO[to]}`;
-    $('passText').textContent = picks.length === 3 ? 'Les 3 cartes entourées de jaune partiront.' : `Cliquez sur ${plural(3 - picks.length, 'carte', 'cartes')} de votre jeu.`;
+    $('passTitle').textContent = `Donnez 3 cartes à ${PLAYERS[to].name}`;
+    $('passWhere').textContent = WHERE[to] === 'en face' ? 'en face de vous' : WHERE[to];
+    $('passSlots').innerHTML = [0, 1, 2].map(k => {
+      const c = picks[k];
+      return c === undefined ? '<i></i>' : `<i class="on ${Cards.rd(c) ? 'red' : ''}">${Cards.RANKS[Cards.rk(c)]}${Cards.suitHtml(Cards.st(c))}</i>`;
+    }).join('');
+    $('passText').textContent = picks.length ? `Encore ${plural(3 - picks.length, 'carte', 'cartes')} : cliquez dans votre jeu` : 'Cliquez sur 3 cartes de votre jeu';
     const b = $('passBtn');
     b.textContent = picks.length === 3 ? `Donner ces 3 cartes à ${PLAYERS[to].name}` : `Encore ${plural(3 - picks.length, 'carte', 'cartes')} à choisir`;
     b.disabled = picks.length !== 3 || stale;
-    ps.style.width = Math.round(Math.max(w * 3.3, 380)) + 'px';
-    const top = $('seat2').offsetTop + $('seat2').offsetHeight + 12, bottom = handTop - h * .24 - 8;
-    place(ps, cx, Math.max(top + ps.offsetHeight / 2, Math.min(cy, bottom - ps.offsetHeight / 2)), bottom);
+    ps.style.width = '';
+    // Between the seat across and his hand, so it covers no other player. His own strip says nothing
+    // useful during the pass, so the sheet takes its place.
+    const top = (L.row ? L.topH : $('seat2').offsetTop + $('seat2').offsetHeight) + 12, bottom = handTop - h * .24 - 8;
+    place(ps, cx, Math.max(top + ps.offsetHeight / 2, Math.min(cy, bottom - ps.offsetHeight / 2)), bottom, L.row ? top : 8);
   }
 
   // The score sheet at the end of a hand, and at the end of the game.
@@ -805,7 +981,9 @@ function render() {
     $('scoreTable').innerHTML = '<tr><th><span class="sr">Joueur</span></th><th>Cette manche</th><th>Total</th></tr>' + [0, 1, 2, 3].map(s =>
       `<tr class="${s === 0 ? 'me' : ''} ${G.scores[s] === low ? 'best' : ''}"><td><span class="who">${face(s)}${PLAYERS[s].name}</span></td><td class="n">+${G.handPts[s]}</td><td class="n"><b>${G.scores[s]}</b></td></tr>`).join('');
     $('nextBtn').textContent = over ? 'Nouvelle partie' : 'Manche suivante';
-    place(ss, cx, cy);
+    // In a low window, under the row of players when it fits, else as low as it can go.
+    if (L.row) { const top = Math.max(8, Math.min(L.topH + 8, L.H - 8 - ss.offsetHeight)); place(ss, cx, (top + L.H - 8) / 2, L.H - 8, top); }
+    else place(ss, cx, cy);
   }
 
   // The side column.
@@ -840,11 +1018,11 @@ function render() {
 }
 // A sheet stays inside the table, above `bottom`, so its button is always in view: in a short window
 // it is made smaller. The pass sheet stays above his raised cards, so it never hides one.
-function place(el, x, y, bottom = L.H - 8) {
-  const fit = Math.min(1, (bottom - 8) / el.offsetHeight), h = el.offsetHeight * fit;
+function place(el, x, y, bottom = L.H - 8, top = 8) {
+  const fit = Math.min(1, (bottom - top) / el.offsetHeight), h = el.offsetHeight * fit;
   el.style.transform = fit < 1 ? `scale(${fit})` : '';
   el.style.left = Math.round(x - el.offsetWidth / 2) + 'px';
-  el.style.top = Math.round(Math.max(8, Math.min(y - h / 2, bottom - h))) + 'px';
+  el.style.top = Math.round(Math.max(top, Math.min(y - h / 2, bottom - h))) + 'px';
 }
 function shake(c) {
   const e = els.get(c);

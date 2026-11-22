@@ -64,7 +64,7 @@
   .face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
   /* A pair found: a green frame and a tick. */
   .card.found .face { box-shadow: 0 0 0 calc(var(--s) * .035) #3E8E4A, 0 4px 10px rgba(0,0,0,.3); }
-  .card.found::after, .pair-example:not(.different) span::after { content: ""; position: absolute; right: -6px; top: -6px; width: calc(var(--s) * .26); height: calc(var(--s) * .26); min-width: 26px; min-height: 26px; z-index: 2;
+  .card.found::after, .gk.ok::after { content: ""; position: absolute; right: -6px; top: -6px; width: calc(var(--s) * .26); height: calc(var(--s) * .26); min-width: 26px; min-height: 26px; z-index: 2;
     border-radius: 50%; background: #3E8E4A url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 70% no-repeat;
     box-shadow: 0 0 0 3px #fff, 0 2px 6px rgba(0,0,0,.35); }
   .card.found { cursor: default; }
@@ -89,13 +89,42 @@
   #stage.top #score span { flex-direction: row; align-items: baseline; gap: 8px; }
   #stage.top #score b { font-size: 24px; }
 
-  .pair-example { --s: 86px; gap: 16px; }
-  .pair-example span { width: var(--s); height: var(--s); position: relative; border-radius: 9px; box-shadow: 0 0 0 3px #3E8E4A; }
-  .pair-example.different span { box-shadow: 0 0 0 3px #C4122F; }
-  .pair-example img { display: block; width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
+  /* ---------- The rules guide ----------
+     Each page: one picture on the green felt, made of the same cards as the game, then one or two short
+     sentences. The cards of the guide are .gk, not .card, so only the real cards play. */
+  .guide-pic { --k: 138px; position: relative; display: flex; align-items: center; justify-content: center; gap: 18px;
+    margin: 2px 0 12px; padding: 20px; border-radius: 18px; background: radial-gradient(120% 100% at 50% 0%, var(--felt-top), var(--felt) 80%); }
+  .gk { position: relative; flex: none; width: var(--k); height: var(--k); border-radius: calc(var(--k) * .1); }
+  .gk.back { background: #FFFDF6; box-shadow: 0 6px 14px rgba(0,0,0,.35), 0 2px 0 #C9BFA6; }
+  .gk.back::before { content: ""; position: absolute; inset: calc(var(--k) * .07); border-radius: calc(var(--k) * .05);
+    background:
+      linear-gradient(90deg, rgba(200,30,40,.55) 50%, transparent 50%) 0 0 / calc(var(--k) * .18) 100%,
+      linear-gradient(rgba(200,30,40,.55) 50%, transparent 50%) 0 0 / 100% calc(var(--k) * .18),
+      #FFF6F0;
+    box-shadow: inset 0 0 0 2px rgba(120,10,20,.35); }
+  .gk > img { display: block; width: 100%; height: 100%; border-radius: inherit; object-fit: cover; background: #F6EFE0;
+    box-shadow: 0 6px 14px rgba(0,0,0,.35); }
+  .gk.ok > img { box-shadow: 0 0 0 4px #3E8E4A, 0 4px 10px rgba(0,0,0,.3); }
+  .gk.no > img { box-shadow: 0 0 0 4px #C4122F, 0 6px 14px rgba(0,0,0,.35); }
+  .gk.ok::after { --s: var(--k); }
+  /* "Click here": a yellow ring with a dark edge and a pointing hand. */
+  #help { --guide-edge: #2A1D33; --guide-more: #3F4520; }
+  .gk.here { box-shadow: var(--guide-ring), 0 6px 14px rgba(0,0,0,.35); }
+  .gk.here.back { background: #FFF3C4; }
+  /* The card framed by "Aide", as on the table. */
+  .gk.hint::after { content: ""; position: absolute; inset: -9px; border: 5px solid var(--gold); border-radius: calc(var(--k) * .14);
+    box-shadow: 0 0 0 1.5px rgba(var(--shade),.8), inset 0 0 0 1.5px rgba(var(--shade),.8), 0 0 22px 6px rgba(255,200,61,.6); }
+  .guide-hand { width: 48px; height: 56px; left: 58%; top: 55%; }
+  .garrow { flex: none; width: 54px; height: 40px; fill: none; stroke: #FFFDF6; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); }
+  .guide-btn { flex: none; padding: 6px 48px 6px 22px; }
+  .guide-btn > .guide-hand { left: auto; right: -14px; top: 36%; }
+  html.low .guide-pic { --k: 104px; padding: 16px; }
 
   @media (max-width: 700px) {
     #hintBtn, #helpBtn { flex-direction: column; gap: 0; padding: 3px 2px; text-align: center; font-size: 18px; }
+    .guide-pic, html.low .guide-pic { --k: 60px; gap: 10px; padding: 16px 10px; }
+    .garrow { width: 34px; }
   }
   @media (prefers-reduced-motion: reduce) { .card.hint::before, .card.shake { animation: none; } }
   /* The timings are set from the script (--up-ms and the others), so the messages follow the cards. A card
@@ -143,33 +172,40 @@
 <footer id="rail"><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
   <section class="page">
-    <h3>Retourner deux cartes</h3>
-    <p>Cliquez sur une carte, puis sur une autre. Pour gagner, retrouvez toutes les paires.</p>
-    <div class="guide-panel">
-      <figure class="guide-example">
-        <div class="guide-art pair-example" aria-hidden="true">
-          <span><img src="img/coq.webp" alt=""></span><span><img src="img/coq.webp" alt=""></span>
-        </div>
-        <figcaption><strong>Deux coqs forment une paire.</strong> Les cartes restent visibles, avec une coche verte.</figcaption>
-      </figure>
+    <h3>Retourner une carte</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <span class="gk back"></span><span class="gk back here"></span><span class="gk back"></span><span class="gk back"></span>
     </div>
+    <p class="guide-lead">Cliquez sur une carte pour la retourner.</p>
+    <p class="guide-more">Son image apparaît. Puis cliquez sur une autre carte.</p>
   </section>
   <section class="page">
-    <h3>Retenir la place des images</h3>
-    <div class="guide-panel">
-      <figure class="guide-example">
-        <div class="guide-art pair-example different" aria-hidden="true">
-          <span><img src="img/coq.webp" alt=""></span><span><img src="img/vache.webp" alt=""></span>
-        </div>
-        <figcaption><strong>Un coq et une vache sont différents.</strong> Les cartes se cachent après quelques secondes ou dès le clic suivant.</figcaption>
-      </figure>
+    <h3>Trouver une paire</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <span class="gk ok"><img src="img/coq.webp" alt=""></span><span class="gk back"></span><span class="gk ok"><img src="img/coq.webp" alt=""></span>
     </div>
-    <p>Retenez leur place. Si vous trouvez un autre coq plus tard, retournez aussi le premier coq.</p>
+    <p class="guide-lead">Deux images pareilles font une paire.</p>
+    <p class="guide-more">Elles restent visibles. Trouvez toutes les paires pour gagner.</p>
   </section>
   <section class="page">
-    <h3>Demander un indice</h3>
-    <p>Cliquez sur « Aide » pour encadrer une carte à retourner. Si vous avez déjà vu les deux cartes d'une paire, l'aide vous les montre.</p>
-    <p>Pour choisir entre 6, 10 et 15 paires, cliquez sur « Nouvelle partie ».</p>
+    <h3>Deux images différentes</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <span class="gk no"><img src="img/coq.webp" alt=""></span><span class="gk no"><img src="img/vache.webp" alt=""></span>
+      <svg class="garrow" viewBox="0 0 54 40"><path d="M4 20h44M36 8l12 12-12 12"/></svg>
+      <span class="gk back"></span><span class="gk back"></span>
+    </div>
+    <p class="guide-lead">Les deux cartes se retournent.</p>
+    <p class="guide-more">Retenez bien leur place pour plus tard.</p>
+  </section>
+  <section class="page">
+    <h3>Demander de l'aide</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <span class="guide-btn primary here" data-icon="bulb">Aide</span>
+      <svg class="garrow" viewBox="0 0 54 40"><path d="M4 20h44M36 8l12 12-12 12"/></svg>
+      <span class="gk back hint"></span>
+    </div>
+    <p class="guide-lead">Un oubli ? Cliquez sur «&nbsp;Aide&nbsp;».</p>
+    <p class="guide-more">Une bonne carte à retourner s'entoure de jaune.</p>
   </section>
 </div>
 
@@ -441,6 +477,10 @@ function shake(i) {
   if (!e) return;
   e.classList.remove('shake'); void e.offsetWidth; e.classList.add('shake');
 }
+
+/* ---------- The pictures of the rules ----------
+   A pointing hand on the card to click. */
+for (const e of document.querySelectorAll('#help .gk.here')) e.insertAdjacentHTML('beforeend', Kit.icon('hand'));
 
 $('hintBtn').onclick = showHint;
 $('helpBtn').onclick = () => { stopAll(); render(); Kit.openHelp(); };

@@ -68,8 +68,10 @@
   @media (max-width: 700px) { #deco { display: none; } }
 
   /* Greeting */
-  header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; margin-bottom: clamp(24px, 5vh, 56px); }
-  #brand { display: flex; align-items: center; gap: calc(22px * var(--k)); }
+  header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; margin-bottom: clamp(8px, 3vh - 8px, 32px); }
+  /* The tagline may take two lines, so the clock stays on the right of the name and the games start higher. */
+  #brand { display: flex; align-items: center; gap: calc(22px * var(--k)); flex: 1 1 520px; min-width: 0; }
+  #now { flex: none; }
   /* The image has a cream background, and the padding shrinks the couple so the circle does not cut the cap. */
   #logo { flex: none; width: calc(96px * var(--k)); height: calc(96px * var(--k)); padding: calc(6px * var(--k)); box-sizing: border-box; border-radius: 50%; background: #FBF1E1; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
   h1 { margin: 0; font: 700 calc(50px * var(--k))/1.05 var(--title); letter-spacing: -.01em; }
@@ -78,8 +80,12 @@
   #time { font: 600 calc(46px * var(--k))/1 var(--ui); letter-spacing: -.01em; color: rgba(255,255,255,.92); font-variant-numeric: tabular-nums; }
   #date { margin-top: 6px; font: 500 calc(25px * var(--k)) var(--ui); color: rgba(255,255,255,.78); }
 
-  /* Game tiles */
-  #games { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(320px * var(--k))), 1fr)); gap: calc(22px * var(--k)); }
+  /* The games, in families, each under its name. Every tile always shows: a heading costs no click, where a
+     filter would hide games and could stay on by mistake. */
+  #games { display: flex; flex-direction: column; gap: calc(30px * var(--k)); }
+  .family h2 { margin: 0 0 calc(12px * var(--k)); display: flex; align-items: center; gap: 14px; font: 700 calc(28px * var(--k)) var(--title); color: #fff; }
+  .family h2::after { content: ""; flex: 1; border-top: 2px solid rgba(255,255,255,.22); }
+  .family .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(320px * var(--k))), 1fr)); gap: calc(22px * var(--k)); }
   .tile {
     position: relative; display: flex; flex-direction: column; border-radius: 28px; overflow: hidden;
     background: var(--face); color: var(--text); text-decoration: none;
@@ -98,14 +104,12 @@
      what a tile crops on the sides is only felt. */
   .art svg.field { position: absolute; left: 50%; top: 50%; width: calc(210px * var(--k)); height: calc(147px * var(--k)); translate: -50% -50%;
     filter: drop-shadow(0 10px 12px rgba(0,0,0,.4)); }
-  /* The morpion: the corner of a notebook page, 260 by 150, filling the tile. */
-  .art svg.notebook { position: absolute; inset: 0; width: 100%; height: 100%; }
   .art .scene { position: absolute; left: 50%; top: 0; width: 260px; height: 150px; margin-left: -130px; transform: scale(var(--k)); transform-origin: 50% 0; }
   .art .card { transition: none; }
   .art .card.lifted { box-shadow: 0 12px 22px rgba(0,0,0,.45); }
   .art .slot { position: absolute; border-radius: 6px; background: rgb(0 0 0 / .14); border: 2px dashed rgb(255 255 255 / .45); }
   .body { padding: calc(12px * var(--k)) calc(22px * var(--k)) calc(18px * var(--k)); display: flex; flex-direction: column; gap: 6px; flex: 1; }
-  .body h2 { margin: 0; font: 700 calc(31px * var(--k)) var(--ui); letter-spacing: -.01em; }
+  .body h3 { margin: 0; font: 700 calc(31px * var(--k)) var(--ui); letter-spacing: -.01em; }
   .body p { margin: 0; font: 500 calc(20px * var(--k))/1.35 var(--ui); color: var(--muted); }
   .status { display: flex; align-items: center; gap: 9px; min-height: 30px; font: 600 calc(21px * var(--k)) var(--ui); color: var(--accent); }
   .status svg { width: 26px; height: 26px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -120,7 +124,8 @@
   /* Keep the desktop controls in one row while the library scrolls. */
   body { display: flex; flex-direction: column; min-height: calc(100vh / var(--z, 1)); }
   main { flex: 1; }
-  footer { background: rgba(0,0,0,.18); border-top: 1px solid rgba(255,255,255,.08); }
+  /* The same bottom bar as in the games (lib/kit.css #rail). */
+  footer { background: #1E2624; border-top: 1px solid rgba(255,255,255,.14); box-shadow: 0 -2px 14px rgba(0,0,0,.22); position: relative; z-index: 1; }
   footer .in { margin: 0 auto; padding: 14px clamp(12px, 2vw, 40px); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px;
     font: 500 20px var(--ui); color: rgba(255,255,255,.85); }
   /* The credit on the left, the install button and the size buttons together on the right. */
@@ -139,7 +144,7 @@
     background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.2); color: rgba(255,255,255,.78);
     font: 500 20px var(--ui); text-decoration: none; white-space: nowrap; transition: background-color .12s; }
   .credit b { color: #fff; font-weight: 700; }
-  .credit img { width: 34px; height: 34px; flex: none; border-radius: 50%; box-shadow: 0 0 0 2px var(--gold, #FFC83D); }
+    .credit img { width: 34px; height: 34px; flex: none; border-radius: 50%; box-shadow: 0 0 0 2px var(--gold, #FFC83D); }
   .credit:hover { background: rgba(255,255,255,.16); }
   .credit:focus-visible { outline: 4px solid #fff; outline-offset: 3px; }
   #installed { display: none; margin: 0; }
@@ -189,7 +194,7 @@
     </div>
   </header>
 
-  <section id="games" aria-label="Vos jeux"></section>
+  <div id="games"></div>
 
   <p id="installed">Le jeu est déjà installé. Pour l’ouvrir, cliquez sur la petite icône en haut, à droite de la barre d’adresse.</p>
 </main>
@@ -209,36 +214,45 @@
 // Each game has its own look: the felt of its table, and a scene drawn in its own way (see the scenes below).
 // The dames show a corner of the board with its pieces.
 const GAMES = [
-  { id: 'solitaire', title: 'Solitaire', text: 'Rangez toutes les cartes, de l’as jusqu’au roi.',
+  { id: 'solitaire', family: 'cartes', title: 'Solitaire', text: 'Rangez toutes les cartes, de l’as jusqu’au roi.',
     felt: ['#1F7A6C', '#12594F'], scene: solitaireScene },
-  { id: 'freecell', title: 'FreeCell', text: 'Rangez les cartes avec l’aide de quatre cases libres.',
+  { id: 'freecell', family: 'cartes', title: 'FreeCell', text: 'Rangez les cartes avec l’aide de quatre cases libres.',
     felt: ['#2E66A0', '#173F6B'], scene: freecellScene },
-  { id: 'dames', title: 'Dames', text: 'Le jeu de dames sur 100 cases, contre l’ordinateur.',
+  { id: 'dames', family: 'plateau', title: 'Dames', text: 'Le jeu de dames sur 100 cases, contre l’ordinateur.',
     felt: ['#8A3440', '#4C161E'], scene: boardArt },
-  { id: 'dame-de-pique', title: 'Dame de pique', text: 'Évitez les cœurs et la dame de pique, à quatre.',
+  { id: 'dame-de-pique', family: 'cartes', title: 'Dame de pique', text: 'Évitez les cœurs et la dame de pique, à quatre.',
     felt: ['#6A4488', '#2C1840'], scene: piqueScene },
-  { id: 'demineur', title: 'Démineur', text: 'Trouvez les mines cachées, sans jamais deviner.',
+  { id: 'demineur', family: 'tete', title: 'Démineur', text: 'Trouvez les mines cachées, sans jamais deviner.',
     felt: ['#8A6234', '#4A3217'], scene: mineArt },
-  { id: 'yams', title: 'Yams', text: 'Lancez cinq dés et remplissez votre feuille, contre l’ordinateur.',
+  { id: 'yams', family: 'plateau', title: 'Yams', text: 'Lancez cinq dés et remplissez votre feuille, contre l’ordinateur.',
     felt: ['#B5532A', '#6A2A12'], scene: diceArt },
-  { id: 'bataille-navale', title: 'Bataille navale', text: 'Coulez les bateaux de l’ordinateur avant les vôtres.',
+  { id: 'bataille-navale', family: 'plateau', title: 'Bataille navale', text: 'Coulez les bateaux de l’ordinateur avant les vôtres.',
     felt: ['#1C7896', '#0A3142'], scene: seaArt },
-  { id: 'golf', title: 'Golf miniature', text: 'Neuf nouveaux trous à chaque partie : visez le drapeau à votre rythme.',
+  { id: 'golf', family: 'adresse', title: 'Golf miniature', text: 'Neuf nouveaux trous à chaque partie : visez le drapeau à votre rythme.',
     felt: ['#3f7d55', '#1d4634'], scene: () => '<img src="golf/icon.svg" alt="" style="width:100%;height:100%">' },
-  { id: 'paires', title: 'Jeu des paires', text: 'Retournez les cartes deux par deux et retrouvez les paires.',
+  { id: 'paires', family: 'tete', title: 'Jeu des paires', text: 'Retournez les cartes deux par deux et retrouvez les paires.',
     felt: ['#7A8A30', '#3A4414'], scene: pairsArt },
-  { id: 'sudoku', title: 'Sudoku', text: 'Remplissez la grille de chiffres, avec une aide qui explique.',
+  { id: 'sudoku', family: 'tete', title: 'Sudoku', text: 'Remplissez la grille de chiffres, avec une aide qui explique.',
     felt: ['#4A5560', '#232A31'], scene: slateArt },
-  { id: 'mots-meles', title: 'Mots mêlés', text: 'Retrouvez les mots cachés dans une grille de lettres.',
+  { id: 'mots-meles', family: 'tete', title: 'Mots mêlés', text: 'Retrouvez les mots cachés dans une grille de lettres.',
     felt: ['#C8576B', '#6E2234'], scene: wordsArt },
-  { id: 'petits-chevaux', title: 'Petits chevaux', text: 'Sortez vos chevaux avec un 6 et menez-les au centre, contre l’ordinateur.',
+  { id: 'petits-chevaux', family: 'plateau', title: 'Petits chevaux', text: 'Sortez vos chevaux avec un 6 et menez-les au centre, contre l’ordinateur.',
     felt: ['#2BA3A8', '#0F5A60'], scene: horsesArt },
-  { id: 'morpion', title: 'Morpion', text: 'Alignez vos croix avant l’ordinateur, sur une feuille de cahier.',
-    felt: ['#B98AC9', '#6B4580'], scene: notebookArt },
-  { id: 'belote', title: 'Belote', text: 'Jouez avec André contre Simone et Henri, en 501 points.',
+  { id: 'morpion', family: 'plateau', title: 'Morpion', text: 'Alignez vos croix avant l’ordinateur, sur une grille de neuf cases.',
+    felt: ['#B98AC9', '#6B4580'], scene: morpionArt },
+  { id: 'belote', family: 'cartes', title: 'Belote', text: 'Jouez avec André contre Simone et Henri, en 501 points.',
     felt: ['#C08A2E', '#6B4A12'], scene: beloteArt },
-  { id: 'huit-americain', title: 'Huit américain', text: 'Posez toutes vos cartes le premier, à quatre autour de la table.',
+  { id: 'huit-americain', family: 'cartes', title: 'Huit américain', text: 'Posez toutes vos cartes le premier, à quatre autour de la table.',
     felt: ['#A8306E', '#551237'], scene: eightScene },
+];
+
+// The families of games, in the order of the page. A new game joins one of them, such as the billard or
+// the bowling in "Jeux d'adresse". A family with no game yet is not shown.
+const FAMILIES = [
+  ['cartes', 'Jeux de cartes'],
+  ['plateau', 'Jeux de plateau et de dés'],
+  ['tete', 'Lettres, chiffres et mémoire'],
+  ['adresse', 'Jeux d’adresse'],
 ];
 
 // A card as the games draw it, centred on (x, y), w wide, turned by rot degrees.
@@ -512,34 +526,30 @@ function horsesArt() {
   return `<svg class="field" viewBox="0 0 210 147" aria-hidden="true">${out}</svg>`;
 }
 
-// The morpion: the corner of a page of a school notebook (Seyès lines and a red margin), crosses in blue
-// ballpoint ink and rings in red, three crosses in a row struck through, and the pen lying on the page.
-function notebookArt() {
-  let lines = '';
-  for (let y = 4; y < 190; y += 4) lines += `<path d="M0 ${y}H260" stroke="${y % 16 ? '#E6DFF3' : '#9A8BCF'}" stroke-width="${y % 16 ? .8 : 1.2}"/>`;
-  for (let x = 36; x < 260; x += 16) lines += `<path d="M${x} 0V190" stroke="#9A8BCF" stroke-width="1.2"/>`;
-  const cross = (c, r) => { const x = 36 + c * 16 + 8, y = r * 16 + 8; return `<path d="M${x - 5} ${y - 5}l10 10M${x + 5} ${y - 5}l-10 10"/>`; };
-  const ring = (c, r) => `<circle cx="${36 + c * 16 + 8}" cy="${r * 16 + 8}" r="5.4"/>`;
-  return `<svg class="notebook" viewBox="0 0 260 150" preserveAspectRatio="xMidYMid meet" overflow="visible" aria-hidden="true">
-    <g transform="translate(34 30) rotate(-6)">
-      <rect x="3" y="7" width="260" height="190" rx="3" fill="rgba(40,20,52,.35)"/>
-      <rect width="260" height="190" rx="3" fill="#FFFEF8"/>
-      ${lines}
-      <path d="M30 0V190" stroke="#E0525E" stroke-width="1.8"/>
-      <g fill="none" stroke="#1F3FBF" stroke-width="2.4" stroke-linecap="round">${cross(1, 2) + cross(2, 2) + cross(3, 2) + cross(2, 4) + cross(5, 1)}</g>
-      <g fill="none" stroke="#C8102E" stroke-width="2.2">${ring(2, 3) + ring(3, 3) + ring(4, 1) + ring(1, 4)}</g>
-      <path d="M49 40.5H103" stroke="#1F3FBF" stroke-width="2.2" stroke-linecap="round"/>
-    </g>
-    <g transform="translate(176 108) rotate(-24)">
-      <rect x="-60" y="6" width="118" height="9" rx="4.5" fill="rgba(40,20,52,.22)"/>
-      <path d="M-62 -5.5H48a5.5 5.5 0 0 1 0 11H-62z" fill="#F2F5FA" stroke="#9AA6BD" stroke-width="1"/>
-      <path d="M-56 0H40" stroke="#1F3FBF" stroke-width="2.4" stroke-linecap="round" opacity=".75"/>
-      <path d="M24 -6H50a6 6 0 0 1 0 12H24z" fill="#1F3FBF"/>
-      <path d="M30 -6v-4h20v4" fill="none" stroke="#1F3FBF" stroke-width="3" stroke-linejoin="round"/>
-      <path d="M-62 -5.5L-76 -1.6V1.6L-62 5.5z" fill="#DDE3EC" stroke="#9AA6BD" stroke-width="1"/>
-      <path d="M-76 -1.6L-82 0L-76 1.6z" fill="#7B8494"/>
-      <path d="M-58 -3.2H36" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".9"/>
-    </g></svg>`;
+// The morpion: the board of the game, a dark tray of white tiles seen at a slant. Three blue crosses
+// on a diagonal are struck through, and the squares of the line are pale blue, as when he wins.
+function morpionArt() {
+  const S = 34, G = 4, x0 = 6, y0 = 6;
+  const at = (c, r) => [x0 + c * (S + G) + S / 2, y0 + r * (S + G) + S / 2];
+  const win = ['0,2', '1,1', '2,0'];
+  let tiles = '';
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+    const [x, y] = at(c, r);
+    tiles += `<rect x="${x - S / 2}" y="${y - S / 2}" width="${S}" height="${S}" rx="5" fill="${win.includes(c + ',' + r) ? '#DCE6FF' : '#FFFFFF'}"/>`;
+  }
+  const cross = (c, r) => { const [x, y] = at(c, r); return `<path d="M${x - 10} ${y - 10}l20 20M${x + 10} ${y - 10}l-20 20"/>`; };
+  const ring = (c, r) => { const [x, y] = at(c, r); return `<circle cx="${x}" cy="${y}" r="11"/>`; };
+  const [ax, ay] = at(0, 2), [bx, by] = at(2, 0);
+  const size = 3 * S + 2 * G + 12;
+  return `<svg class="field" viewBox="0 0 210 147" aria-hidden="true"><g transform="translate(105 76) rotate(-8) translate(${-size / 2} ${-size / 2})">
+    <rect x="3" y="7" width="${size}" height="${size}" rx="10" fill="rgba(30,12,40,.4)"/>
+    <rect width="${size}" height="${size}" rx="10" fill="#3B2748"/>
+    ${tiles}
+    <g fill="none" stroke="#1F3FBF" stroke-width="5" stroke-linecap="round">${cross(0, 2) + cross(1, 1) + cross(2, 0) + cross(0, 0)}</g>
+    <g fill="none" stroke="#C8102E" stroke-width="4.5">${ring(1, 0) + ring(2, 1) + ring(1, 2)}</g>
+    <path d="M${ax - 8} ${ay + 8}L${bx + 8} ${by - 8}" stroke="#fff" stroke-width="10" stroke-linecap="round"/>
+    <path d="M${ax - 8} ${ay + 8}L${bx + 8} ${by - 8}" stroke="#1F3FBF" stroke-width="5" stroke-linecap="round"/>
+  </g></svg>`;
 }
 
 // The belote: a café table seen from above. The roi and the dame de cœur lie side by side (belote,
@@ -610,7 +620,7 @@ const ICON_TROPHY = '<svg viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0z
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 function render() {
-  const tiles = GAMES.map(g => {
+  const tile = g => {
     const meta = GG.meta(g.id);
     const parts = typeof meta?.summary === 'string' ? meta.summary.split(' · ') : [];
     const playing = parts.some(p => /en cours/i.test(p));
@@ -620,13 +630,17 @@ function render() {
     return `<a class="tile" href="${g.id}/" data-id="${g.id}">
       <div class="art" style="background: radial-gradient(90% 120% at 50% 0%, ${g.felt[0]}, ${g.felt[1]})">${g.scene()}</div>
       <div class="body">
-        <h2>${esc(g.title)}</h2>
+        <h3>${esc(g.title)}</h3>
         <p>${esc(g.text)}</p>
         <div class="status">${wins ? ICON_TROPHY + esc(wins) : ''}</div>
         <div class="play">${playing ? 'Reprendre la partie' : 'Jouer'}</div>
       </div></a>`;
-  });
-  document.getElementById('games').innerHTML = tiles.join('');
+  };
+  document.getElementById('games').innerHTML = FAMILIES.map(([id, name]) => {
+    const games = GAMES.filter(g => g.family === id);
+    return games.length ? `<section class="family" aria-labelledby="family-${id}"><h2 id="family-${id}">${esc(name)}</h2>
+      <div class="grid">${games.map(tile).join('')}</div></section>` : '';
+  }).join('');
 }
 document.getElementById('games').addEventListener('click', e => {
   const t = e.target.closest('a.tile');

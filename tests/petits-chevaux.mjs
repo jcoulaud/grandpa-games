@@ -1,5 +1,5 @@
 // Plays the petits chevaux with a real mouse: the first visit and the rules, a throw, the horses
-// framed, refusals, leaving the stable, a capture, the computer players, double-clicks, the hint,
+// framed with their landing rings, refusals, leaving the stable, a capture, the computer players, double-clicks, the hint,
 // undo with the same die, saves across a reload (also during the computer players' turns), the win
 // and the loss, broken and old saves, and the layout at every window size of docs/design.md.
 import { launch, gameUrl, OUT } from './harness.mjs';
@@ -40,10 +40,16 @@ for (let n = 0; n < 5; n++) {
   await page.screenshot({ path: `${OUT}/petits-chevaux-rules-${n + 1}.png` });
   await page.click('#helpNext');
 }
-ok(await g(() => /amenez tous vos chevaux au centre/.test(document.querySelector('#help .page').textContent)), 'the first rules page says to bring all the horses to the centre, for two or four');
+ok(await g(() => /Amenez vos chevaux au centre/.test(document.querySelector('#help .page').textContent)), 'the first rules page says to bring the horses to the centre, for two or four');
+ok(await g(() => [...document.querySelectorAll('#help .page')].every(p => p.querySelector('svg.pc-pic') && p.querySelector('.guide-lead') && [...p.querySelectorAll('p')].map(e => e.textContent).join(' ').split(/\s+/).filter(w => /\w/.test(w)).length <= 25)),
+  'each rules page is one picture and at most about 25 words');
 await page.getByRole('button', { name: 'Facile', exact: true }).click();
 ok(await g(() => G.die === null && G.turn === 0 && /chevaux bleus/.test(document.getElementById('msg').textContent)), 'a new game says he plays blue and waits for his throw');
 ok(await shown() === 8 && await page.locator('.horse.can').count() === 0, 'two horses each in their stables, none framed before the throw');
+ok(await g(() => document.getElementById('die').classList.contains('ready') && !document.getElementById('die').disabled && document.querySelector('#dieBox .hand').getBoundingClientRect().width > 0
+  && !document.getElementById('rollBtn').hidden && document.getElementById('rollBtn').hasAttribute('data-nudge') && document.getElementById('todo').hidden),
+  'before his throw, the die glows with a hand on it, and the throw button shows and is the one to nudge');
+ok(await g(() => document.querySelectorAll('#art text').length === 4 + 6), 'only his own ladder is numbered: four names and six numbers on the board');
 
 // 2. Before the throw: a horse is refused; the button throws the die.
 await click(horse(0, 0));
@@ -69,6 +75,9 @@ ok(!/Un seul/.test(await msg()) && /pour le sortir/.test(await msg()), 'the firs
 await page.click('#hintBtn');
 ok(!/Un seul/.test(await msg()), 'the hint on the first 6 does not say only one horse can move: ' + await msg());
 ok(await page.locator('#dieBox .six.on').count() === 1, 'the die says a 6 plays again');
+ok(await g(() => document.getElementById('rollBtn').hidden && /Cliquez sur un cheval bleu/.test(document.getElementById('todo').textContent) && !document.getElementById('die').classList.contains('ready')),
+  'after his throw, the button gives way to the words « Cliquez sur un cheval bleu »');
+ok(await page.locator('#marks .land').count() === 1, 'the start square shows where a horse from the stable lands');
 await click(horse(0, 1));
 ok(await g(() => G.horses[0][1] === 0 && G.turn === 0 && G.die === null), 'one click brings the horse out to the start square');
 ok(/sort de l'écurie/.test(await msg()) && /relancez/.test(await msg()), 'the message says so, and to throw again');
@@ -121,6 +130,7 @@ ok(await g(() => { showing = true; view = { ...G, turn: 0 }; refuseBusy(); showi
 // 6. A capture by a click: the red horse goes home; undo brings everything back with the same die.
 const red = await relTo(1, 0, 13);
 await setGame([[10, 30], [red, -1], S, S], 3);
+ok(await page.locator('#marks .land').count() === 2 && await page.locator('#marks .dot').count() === 4, 'each horse that can move shows its landing ring, and dots on the squares it passes');
 const before = await g(() => JSON.stringify({ ...G, rng: G.rng.slice(1) }));
 await horse(0, 0).click();
 ok(await page.waitForFunction(() => /renvoie le cheval rouge à l'écurie !/.test(document.getElementById('msg').textContent), null, { timeout: 2000 }).then(() => true, () => false),
@@ -131,6 +141,11 @@ await myTurn();
 await page.click('#undoBtn');
 ok(await g(b => JSON.stringify({ ...G, rng: G.rng.slice(1) }) === b, before), 'undo takes back his move and the computer turns, with the same die');
 ok(await page.locator('.horse.can').count() === 2 && /toujours 3/.test(await msg()), 'after undo, the same horses are framed and the message names the die');
+// A click on a landing ring moves the horse that lands there.
+await click(page.locator('#marks .land[data-h="1"]'));
+ok(await g(() => G.horses[0][1] === 33 && G.horses[0][0] === 10), 'a click on the ring where a horse lands moves that horse');
+await myTurn();
+await page.click('#undoBtn');
 // A double-click on a horse moves it once.
 await horse(0, 1).dblclick();
 await page.mouse.move(5, 5); await wait(520);
@@ -152,6 +167,7 @@ ok(await g(s => JSON.stringify(G) === s, saved), 'a reload brings back the same 
 await setGame([[10, -1], [5, -1], [8, -1], [3, -1]], 2);
 await click(horse(0, 0));
 ok(await g(() => showing && G.turn === 1), 'the computer players are playing');
+ok(await g(() => new RegExp(`${NAMES[view.turn]} joue`).test(document.getElementById('todo').textContent) && view.turn !== 0 && document.getElementById('rollBtn').hidden && document.getElementById('die').disabled), 'while a computer player plays, the panel says who plays, with no button');
 const end = await g(() => { const s = PetitsChevaux.computerTurn(G); return JSON.stringify(s[s.length - 1].G); });
 await page.reload();
 await myTurn();
@@ -352,7 +368,7 @@ ok(await live.evaluate(() => G.die === 2 && document.querySelectorAll('#die .pip
 // His own throw: the button says the die rolls, not « Vous joue ».
 await live.evaluate(() => { calm(); G = view = { ...PetitsChevaux.newGame('facile', 3), horses: [[10, -1], [-1, -1], [-1, -1], [-1, -1]] }; render(); });
 await live.click('#rollBtn');
-ok(await live.evaluate(() => rolling && document.getElementById('rollBtn').textContent === 'Le dé roule'), 'during his throw the button says « Le dé roule »');
+ok(await live.evaluate(() => rolling && document.getElementById('todo').textContent === 'Le dé roule…' && document.getElementById('rollBtn').hidden), 'during his throw the panel says « Le dé roule »');
 // Full computer turns with motion on, from a new game at seed 3: his opening throw passes, then the
 // computer players bring out and move their horses. Each hop ends on the horse's own place.
 await live.evaluate(() => {
@@ -435,7 +451,7 @@ for (const [w, h, z] of sizes) {
     const box = e => e.getBoundingClientRect();
     const seen = e => { const s = getComputedStyle(e); const b = box(e); return s.visibility !== 'hidden' && s.display !== 'none' && b.width > 0 && b.height > 0; };
     const z = Zoom.z();
-    for (const id of ['bar', 'msg', 'frame', 'seats', 'side', 'rail']) {
+    for (const id of ['bar', 'msg', 'frame', 'side', 'rail']) {
       const e = document.getElementById(id);
       if (!e || !seen(e)) continue;
       const b = box(e);
@@ -447,17 +463,15 @@ for (const [w, h, z] of sizes) {
       if (!seen(b) || b.closest('#help, #over') || b.classList.contains('horse')) continue;
       if (box(b).height / z < (phone ? 44 : 44) - .5) bad.push(`button "${b.textContent.trim()}" is ${Math.round(box(b).height / z)} px high`);
     }
-    for (const e of document.querySelectorAll('#bar *, #msg, #seats *, #side *, #rail *')) {
+    for (const e of document.querySelectorAll('#bar *, #msg, #side *, #rail *')) {
       if (!seen(e) || ![...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) continue;
       const fs = parseFloat(getComputedStyle(e).fontSize);
       if (fs < (phone ? 13 : 20) - .1) bad.push(`"${e.textContent.trim().slice(0, 30)}" is ${fs} px`);
       if (e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflow !== 'visible') bad.push(`"${e.textContent.trim().slice(0, 30)}" is cut`);
     }
-    // The text of a seat stays inside its card.
-    for (const s of document.querySelectorAll('.seat')) {
-      const c = box(s);
-      for (const t of s.querySelectorAll('b, .now')) { const b = box(t); if (b.right > c.right + 1 || b.bottom > c.bottom + 1) bad.push(`"${t.textContent}" goes past its card`); }
-    }
+    // The words of the panel stay inside the window.
+    const todo = document.getElementById('todo');
+    if (seen(todo) && (box(todo).right > W + 1 || box(todo).left < -1)) bad.push('the words of the panel go past the window');
     // The names in the stables are 20 px or more on a computer.
     const label = box(document.querySelector('#art text')).height / z;
     if (!phone && label < 20) bad.push(`the stable names are ${label.toFixed(1)} px`);

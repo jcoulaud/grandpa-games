@@ -23,7 +23,9 @@ const cls = i => cellAt(i).getAttribute('class');
 await page.goto(URL);
 await wait(400);
 ok(await g(() => Kit.isOpen()), 'the rules open on the first visit');
-for (let n = 0; n < 3; n++) {
+const pages = await page.locator('#helpText .page').count();
+ok(pages >= 3 && pages <= 5, `the rules have ${pages} pages`);
+for (let n = 0; n < pages; n++) {
   ok(await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }), `rules page ${n + 1} fits without scrolling`);
   await page.screenshot({ path: `${OUT}/mots-meles-rules-${n + 1}.png` });
   await page.click('#helpNext');
@@ -299,7 +301,8 @@ for (const [w, h, z] of WINDOWS) {
   const tag = `${w}x${h}${z !== 1 ? ' at ' + z * 100 + ' %' : ''}`;
   if (h / z >= 620) {
     let fit = true;
-    for (let k = 0; k < 3; k++) {
+    const pages = await p.locator('#helpText .page').count();
+    for (let k = 0; k < pages; k++) {
       fit = fit && await p.evaluate(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; });
       await p.click('#helpNext');
     }

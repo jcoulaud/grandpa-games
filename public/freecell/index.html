@@ -55,6 +55,51 @@
   .card.auto, .card.auto:hover { outline: 5px solid var(--gold); outline-offset: 0; box-shadow: 0 0 24px 6px rgba(255,200,61,.55); }
   .card.slow { transition-duration: .8s; transition-timing-function: ease-in-out; }
 
+  /* ---------- The rules guide ----------
+     Each page: one picture on a piece of the felt, made of the game's own cards and places, then one or
+     two short sentences. The pictures use their own classes (sg-...), so only the real cards play.
+     A free cell keeps its light border, as on the table.
+     The sizes follow the width (cqw) and the height of the guide, so a phone or a low window shows the
+     same pictures, smaller. */
+  .sg { container-type: inline-size; display: flex; justify-content: center; margin: 2px 0 12px; }
+  /* The tallest picture, a column, is 2.65 cards high: the card size takes what the guide leaves it. */
+  .sg-felt { --cw: min(80px, 13cqw, calc((min(560px, 94vh / var(--z, 1)) - 330px) / 2.65)); --ch: calc(var(--cw) * 1.3);
+    display: flex; align-items: flex-start; justify-content: center; gap: calc(var(--cw) * .45); padding: 16px 30px; border-radius: 18px;
+    background: radial-gradient(120% 100% at 50% 0%, var(--felt-top), var(--felt) 80%); color: #fff; }
+  #help .sg .card { --w: var(--cw); --h: var(--ch); }
+  .sg-col { display: flex; flex-direction: column; align-items: center; }
+  .sg-col > .sg-label, .sg-pile > .sg-label { margin-bottom: 6px; }
+  .sg-col > .card + *, .sg-col > .sg-here + * { margin-top: calc(var(--ch) * -.7); }
+  .sg-col > .card.down + * { margin-top: calc(var(--ch) * -.86); }
+  .sg-row { display: flex; align-items: center; gap: calc(var(--cw) * .2); }
+  .sg-pile { display: flex; flex-direction: column; align-items: center; }
+  .sg-label { font: 600 20px/1.2 var(--ui); color: rgba(255,255,255,.9); white-space: nowrap; }
+  .sg-arrow { align-self: center; width: calc(var(--cw) * .7); height: calc(var(--cw) * .5); flex: none; fill: none; stroke: #fff; stroke-width: 3;
+    stroke-linecap: round; stroke-linejoin: round; }
+  .sg-dots { align-self: center; font: 700 30px/1 var(--ui); color: #fff; }
+  /* An empty place, as on the table, and the dashed yellow frame where a card can go. */
+  .sg-slot { flex: none; width: var(--cw); height: var(--ch); border-radius: calc(var(--cw) * .09); box-sizing: border-box;
+    display: grid; place-items: center; background: rgba(255,255,255,.09); color: rgba(255,255,255,.85); font: 600 20px/1 var(--ui); }
+  .sg-go { position: relative; border: 5px dashed var(--gold); background: rgba(255,200,61,.26);
+    box-shadow: inset 0 0 0 1.5px rgba(var(--shade),.6), 0 0 0 1.5px rgba(var(--shade),.6); }
+  .sg-slot.cell { background: rgba(255,255,255,.13); box-shadow: inset 0 0 0 2px rgba(255,255,255,.22); }
+  .sg-slot.cell.sg-go { background: rgba(255,200,61,.26); }
+  /* "Click here": the yellow ring of the game and a pointing hand. */
+  .sg-here { position: relative; z-index: 2; display: grid; }
+  .sg-here > .card { grid-area: 1 / 1; outline: 5px solid var(--gold); outline-offset: 2px;
+    box-shadow: 0 0 0 7px rgba(var(--shade),.85), 0 0 22px 8px rgba(255,200,61,.6); }
+  .guide-hand { width: 44px; height: 52px; left: 58%; top: 58%; filter: drop-shadow(0 3px 3px rgba(0,0,0,.4)); }
+  .sg-count { grid-area: 1 / 1; place-self: center; z-index: 1; min-width: calc(var(--cw) * .52); padding: 4px 8px; text-align: center;
+    border-radius: 99px; background: #fff; color: var(--text); font: 700 20px/1 var(--ui); box-shadow: 0 2px 8px rgba(0,0,0,.45); }
+  /* Copies of the two buttons of the top bar. */
+  .guide-btns { padding: 4px 0; }
+  .guide-btn > .guide-hand { left: calc(100% - 26px); top: 50%; }
+  @container (max-width: 520px) {
+    .sg-felt { --cw: min(15cqw, calc((min(720px, 94vh / var(--z, 1)) - 360px) / 2.65)); padding: 12px; }
+    .guide-btn { font-size: 20px; padding-inline: 14px; }
+    .sg-felt.sg-cells { --cw: 11cqw; }
+  }
+
   @media (prefers-reduced-motion: reduce) { .mark.hint { animation: none; } }
 </style>
 <script src="../lib/zoom.js"></script>
@@ -74,47 +119,48 @@
 <div id="help" data-title="Comment jouer">
   <section class="page">
     <h3>Déplacer une carte</h3>
-    <p>Cliquez sur une carte. Si elle a une seule place possible, elle y va toute seule. Sinon, cliquez sur la place encadrée en jaune que vous voulez.</p>
-    <div class="guide-panel">
-      <figure class="guide-example">
-        <div class="guide-art" aria-hidden="true"><div data-help-card="19"></div><span class="guide-arrow">→</span><div data-help-card="7"></div></div>
-        <figcaption><strong>Posez le 7 de cœur sur le 8 de pique.</strong> Dans les colonnes, descendez d'une valeur et alternez rouge et noir.</figcaption>
-      </figure>
-    </div>
-    <p>Vous pouvez poser n'importe quelle carte sur une colonne vide.</p>
+    <div class="sg" aria-hidden="true"><div class="sg-felt">
+      <div class="sg-col"><div data-help-card="43"></div><div data-help-card="2"></div><span class="sg-here"><div data-help-card="19"></div></span></div>
+      <svg class="sg-arrow" viewBox="0 0 40 28"><path d="M3 14H35M24 4l11 10-11 10"/></svg>
+      <div class="sg-col"><div data-help-card="48"></div><div data-help-card="21"></div><div data-help-card="7"></div><span class="sg-slot sg-go"></span></div>
+    </div></div>
+    <p class="guide-lead">Cliquez sur le 7 de cœur, puis sur sa place en jaune.</p>
+    <p class="guide-more">Une carte qui n'a qu'une place y va toute seule.</p>
+  </section>
+  <section class="page">
+    <h3>L'ordre dans les colonnes</h3>
+    <div class="sg" aria-hidden="true"><div class="sg-felt">
+      <div class="sg-col"><div data-help-card="12"></div><div data-help-card="24"></div><div data-help-card="49"></div><div data-help-card="35"></div></div>
+      <span class="sg-slot"></span>
+    </div></div>
+    <p class="guide-lead">Descendez d'une valeur, en alternant rouge et noir.</p>
+    <p class="guide-more">Une colonne vide prend n'importe quelle carte.</p>
   </section>
   <section class="page">
     <h3>Mettre une carte de côté</h3>
-    <p>Les quatre « Cases libres », en haut à gauche, gardent chacune une carte.</p>
-    <div class="guide-panel">
-      <figure class="guide-example">
-        <div class="guide-art" aria-hidden="true"><div data-help-card="19"></div><span class="guide-arrow">→</span><div class="guide-card-slot">Libre</div></div>
-        <figcaption>Placez par exemple le 7 de cœur dans une case libre pour dégager la carte sous lui.</figcaption>
-      </figure>
-    </div>
-    <p>Vous pouvez ensuite jouer ce 7 sur une colonne ou au rangement.</p>
-  </section>
-  <section class="page">
-    <h3>Déplacer une suite</h3>
-    <div class="guide-panel">
-      <figure class="guide-example">
-        <div class="guide-card-stack" aria-hidden="true"><div data-help-card="7"></div><div data-help-card="19"></div></div>
-        <figcaption>Cliquez sur le 8 de pique pour déplacer le <strong>8 et le 7 ensemble</strong>. Il vous faut de la place pour les déplacer.</figcaption>
-      </figure>
-    </div>
-    <p>Sans colonne vide, deux cases libres permettent de déplacer trois cartes.</p>
-    <p>Chaque case libre vide ajoute une carte. Chaque colonne vide double la limite, sauf la colonne où vous posez la suite.</p>
+    <div class="sg" aria-hidden="true"><div class="sg-felt sg-cells">
+      <div class="sg-col"><div data-help-card="30"></div><span class="sg-here"><div data-help-card="19"></div></span></div>
+      <svg class="sg-arrow" viewBox="0 0 40 28"><path d="M3 14H35M24 4l11 10-11 10"/></svg>
+      <div class="sg-pile"><span class="sg-label">Cases libres</span><div class="sg-row"><span class="sg-slot cell sg-go"></span><span class="sg-slot cell"></span><span class="sg-slot cell"></span><span class="sg-slot cell"></span></div></div>
+    </div></div>
+    <p class="guide-lead">Une case libre garde une carte de côté.</p>
+    <p class="guide-more">Rejouez-la ensuite sur une colonne ou au rangement.</p>
   </section>
   <section class="page">
     <h3>Ranger les cartes pour gagner</h3>
-    <p>Rangez toutes les cartes sur les quatre piles « Rangement », en haut à droite.</p>
-    <div class="guide-panel">
-      <figure class="guide-example">
-        <div class="guide-art" aria-hidden="true"><div data-help-card="13"></div><span class="guide-arrow">→</span><div data-help-card="14"></div><span class="guide-arrow">→</span><div data-help-card="15"></div></div>
-        <figcaption>Commencez par l'as. Posez le 2, puis le 3, jusqu'au roi. Gardez le même symbole sur chaque pile.</figcaption>
-      </figure>
-    </div>
-    <p>Si vous hésitez, cliquez sur « Que jouer maintenant ? ». Pour reprendre un coup, cliquez sur « Annuler le dernier coup ».</p>
+    <div class="sg" aria-hidden="true"><div class="sg-felt">
+      <div class="sg-pile"><span class="sg-label">Rangement</span><div class="sg-row"><div data-help-card="13"></div><div data-help-card="14"></div><div data-help-card="15"></div><span class="sg-dots">…</span><div data-help-card="25"></div></div></div>
+    </div></div>
+    <p class="guide-lead">Rangez chaque symbole en haut à droite, de l'as au roi.</p>
+    <p class="guide-more">Quand les 52 cartes sont rangées, vous avez gagné.</p>
+  </section>
+  <section class="page">
+    <h3>Demander de l'aide</h3>
+    <div class="sg" aria-hidden="true"><div class="sg-felt">
+      <div class="guide-btns"><span class="guide-btn primary here" data-icon="bulb">Que jouer maintenant ?</span><span class="guide-btn" data-icon="undo">Annuler le dernier coup</span></div>
+    </div></div>
+    <p class="guide-lead">Un doute ? Cliquez sur « Que jouer maintenant ? ».</p>
+    <p class="guide-more">Un bon coup s'entoure de jaune. « Annuler » reprend votre dernier coup.</p>
   </section>
 </div>
 
@@ -781,6 +827,10 @@ addEventListener('resize', () => {
   drag = null;
   render({ instant: true });
 });
+
+/* ---------- The pictures of the rules ----------
+   The cards come from lib/cards.js. Here: the pointing hand on the card to click. */
+for (const h of document.querySelectorAll('#help .sg-here')) h.insertAdjacentHTML('beforeend', Kit.icon('hand'));
 
 build();
 // The rules open by themselves the first time the game is opened.

@@ -22,7 +22,7 @@
 #board.turned { grid-auto-flow: column; grid-template-columns: none; grid-template-rows: repeat(var(--cols), var(--s)); grid-auto-columns: var(--s); }
 
 /* A closed square: a raised tile of turf. */
-.c, .guide-cell {
+.c, .gf > i {
   position: relative; display: grid; place-items: center; cursor: pointer;
   background: linear-gradient(155deg, #8CCB63, #6AAE45 55%, #5B9C3A);
   box-shadow: inset 0 2px 0 rgba(255,255,255,.35), inset 0 -3px 0 rgba(0,0,0,.22), inset 0 0 0 1px rgba(30,60,15,.55);
@@ -30,20 +30,20 @@
 }
 .c:hover { background: linear-gradient(155deg, #A2DA7C, #7FC058 55%, #6AAE45); }
 /* An open square: flat sand, with its number in a strong colour. */
-.c.o, .guide-cell.o { cursor: default; background: #F1E4C3; box-shadow: inset 0 0 0 1px rgba(120,90,40,.35); }
+.c.o, .gf > i.o { cursor: default; background: #F1E4C3; box-shadow: inset 0 0 0 1px rgba(120,90,40,.35); }
 .c.o.n { cursor: pointer; }
 .c.o:hover { background: #F1E4C3; }
-.c.n1, .guide-cell.n1 { color: #1F4FB8; } .c.n2 { color: #1C7128; } .c.n3 { color: #C4122F; } .c.n4 { color: #182F7A; }
+.c.n1, .gf > i.n1 { color: #1F4FB8; } .c.n2 { color: #1C7128; } .c.n3 { color: #C4122F; } .c.n4 { color: #182F7A; }
 .c.n5 { color: #7A1C1C; } .c.n6 { color: #0B6B6B; } .c.n7 { color: #1B1B1B; } .c.n8 { color: #5A5A5A; }
-.c svg, .guide-cell svg { width: 72%; height: 72%; pointer-events: none; }
+.c svg, .gf > i > svg:not(.guide-hand) { width: 72%; height: 72%; pointer-events: none; }
 /* The mine that went off: red, with the mine drawn on it. */
 .c.boom { background: #E0322F; box-shadow: inset 0 0 0 3px #7A0D0B; }
 /* The hint: the squares it is about are framed in yellow, the numbers it uses get a yellow ring. */
-.c.hint::after {
+.c.hint::after, .gf > i.hint::after {
   content: ""; position: absolute; inset: 2px; border: 5px solid var(--gold); border-radius: 6px; z-index: 2;
   box-shadow: inset 0 0 0 1.5px rgba(var(--shade),.8), 0 0 0 1.5px rgba(var(--shade),.8); animation: pulse 1.4s ease-in-out infinite;
 }
-.c.ring::after, .guide-cell.ring::after {
+.c.ring::after {
   content: ""; position: absolute; inset: 3px; border: 4px solid var(--gold); border-radius: 50%; z-index: 2;
   box-shadow: 0 0 0 1.5px rgba(var(--shade),.8), inset 0 0 0 1.5px rgba(var(--shade),.8);
 }
@@ -68,11 +68,42 @@
 #flags.under b { font-size: 24px; }
 #flags:empty { display: none; }
 
-.guide-mine-grid { --s: 50px; display: grid; grid-template-columns: repeat(3, var(--s)); }
-.guide-cell { --s: 50px; width: var(--s); height: var(--s); flex: none; cursor: inherit; }
-.guide-key .guide-cell { border-radius: 6px; }
+/* ---------- The rules guide ----------
+   Each page: one picture on the brown earth, made of the same turf, sand, numbers and marks as the game,
+   then one or two short sentences. The fields of the guide use their own classes, so only the real
+   squares play (board.js listens to .c). */
+.guide-pic { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px 22px; margin: 2px 0 10px;
+  padding: 16px; border-radius: 18px; background: radial-gradient(120% 100% at 50% 0%, var(--felt-top), var(--felt) 80%); }
+.gfr { padding: 8px; border-radius: 12px; background: linear-gradient(160deg, rgba(255,255,255,.12), transparent 40%, rgba(0,0,0,.25)), #5A3D1E;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), inset 0 0 0 1px rgba(0,0,0,.4), 0 10px 24px rgba(0,0,0,.4); }
+.gf { --s: 56px; position: relative; display: grid; grid-template-columns: repeat(var(--cols), var(--s)); grid-auto-rows: var(--s);
+  background: #3B5E2A; box-shadow: 0 0 0 2px #2A1A0B; }
+.gf > i { font-style: normal; cursor: inherit; }
+/* "Click here": the yellow ring of lib/kit.css with a dark edge, and the pointing hand. */
+#help { --guide-edge: #2A1A0B; --guide-more: #3F3A2E; }
+.gf > i.guide-ring { background: linear-gradient(155deg, #FFE08A, #F2C14A); }
+.guide-hand { left: 55%; top: 50%; }
+/* The eight squares around a number: a white frame with a dark edge. */
+.gf .around { position: absolute; z-index: 2; left: calc(var(--x) * var(--s) - 3px); top: calc(var(--y) * var(--s) - 3px);
+  width: calc(3 * var(--s) + 6px); height: calc(3 * var(--s) + 6px); border: 5px solid #fff; border-radius: 8px;
+  box-shadow: 0 0 0 2px #2A1A0B, inset 0 0 0 2px #2A1A0B; pointer-events: none; }
+.guide-btn.flagb > svg:not(.guide-hand) path:first-child { fill: #C4122F; stroke: #7A0D0B; }
+.guide-btn > .guide-hand { left: auto; right: -20px; top: 40%; }
+.garrow { width: 54px; height: 40px; flex: none; fill: none; stroke: #FFF4DC; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+/* The guide names a button as the bar shows it now: the long, short or tiny label. */
+#help .short, #help .tiny { display: none; }
+#bar.fit-short ~ #help .long { display: none; } #bar.fit-short ~ #help .short { display: inline; }
+#bar.fit-tiny ~ #help .long, #bar.fit-tiny ~ #help .short { display: none; } #bar.fit-tiny ~ #help .tiny { display: inline; }
+@media (max-width: 700px) { #help .long, #help .short { display: none; } #help .tiny { display: inline; } }
+/* A low window, such as the laptop at 125 %: a smaller field, so the page still fits. */
+html.low .guide-pic { padding-block: 10px; margin-bottom: 6px; }
+html.low .gf { --s: 46px; }
 
 @media (max-width: 700px) {
+  .guide-pic { padding: 12px; gap: 12px; }
+  .gf { --s: 50px; }
+  .garrow { display: none; }
+  .guide-btns { flex-direction: row; gap: 12px; }
   #flagBtn { order: 1; flex: 1 1 0; min-width: 0; padding: 4px 8px; gap: 6px; justify-content: center;
     font-size: 20px; line-height: 1.05; white-space: normal; text-align: left; }
   #flagBtn svg { width: 22px; height: 22px; }

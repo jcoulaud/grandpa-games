@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Morpion · Jeux de Papi</title>
-<meta name="description" content="Le morpion en grand, pour les grands-parents : le petit morpion de 3 cases sur 3 et le grand morpion à 5 croix alignées sur une feuille de cahier, contre l'ordinateur. Gratuit, sans publicité, sans compte.">
+<meta name="description" content="Le morpion en grand, pour les grands-parents : le petit morpion de 3 cases sur 3 et le grand morpion à 5 croix alignées sur une grille de 11 cases sur 11, contre l'ordinateur. Gratuit, sans publicité, sans compte.">
 <link rel="canonical" href="https://jeux-papi.fr/morpion/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Jeux de Papi">
 <meta property="og:locale" content="fr_FR">
 <meta property="og:url" content="https://jeux-papi.fr/morpion/">
 <meta property="og:title" content="Morpion · Jeux de Papi">
-<meta property="og:description" content="Le morpion en grand, sur une feuille de cahier, contre l'ordinateur. Gratuit, sans publicité, sans compte.">
+<meta property="og:description" content="Le morpion en grand, avec de grandes cases, contre l'ordinateur. Gratuit, sans publicité, sans compte.">
 <meta property="og:image" content="https://jeux-papi.fr/og.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -19,14 +19,13 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../lib/kit.css">
 <style>
-  /* The morpion plays on a pastel lilac felt, under a sheet of French squared school paper (Seyès):
-     a thick line every square, three fine lines across it, and a red margin on the left. His crosses
-     are in blue ballpoint ink, the computer's rings in red ink. */
+  /* The morpion plays on a pastel lilac felt. The board is a dark tray of white square tiles, so each
+     square reads as a square. His crosses are blue, the computer's rings red. */
   :root {
     --felt-top: #B98AC9; --felt: #6B4580; --shade: 40,20,52; --accent: #6B4580;
-    --paper: #FFFEF8; --thick: #8F7FC8; --fine: #E6DFF3; --margin-red: #E0525E;
-    --blue: #1F3FBF; --red-ink: #C8102E; --pencil: #2E2A5A;
-    --c: 34px; --n: 11; --g: 34px; --m: 40px; --pen: 11;
+    --tray: #3B2748; --tile: #FFFFFF; --tile-hover: #EFE5F6; --edge-hover: #8E6AA8;
+    --blue: #1F3FBF; --red-ink: #C8102E; --muted: #5A5466;
+    --c: 34px; --n: 11; --gap: 3px; --r: 5px; --pen: 13;
   }
   #title svg { width: 32px; height: 32px; }
   button.game { --accent: #6B4580; }
@@ -35,142 +34,124 @@
 
   #table { display: flex; align-items: center; justify-content: center; gap: 28px; padding: 0 20px 6px; overflow: hidden; }
   #table[hidden] { display: none; }
-  #table.below { flex-direction: column; gap: 12px; }
+  #table.below { flex-direction: column; gap: 10px; }
   #board { flex: none; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 
-  /* ---------- The score of the series ----------
-     On the players' cards, the draws on the goal card. When the cards are under the sheet or away, on a
-     strip of the same paper above the sheet. When the cards on the right cannot hold it, on a card of
-     paper on the left of the sheet. */
-  #strip { display: none; align-items: center; gap: 18px; height: 40px; padding: 0 16px; border-radius: 4px;
-    background: var(--paper); color: var(--pencil); font: 600 20px var(--ui); white-space: nowrap;
-    box-shadow: 0 1px 0 rgba(0,0,0,.08), 0 6px 16px rgba(var(--shade),.4); }
-  #table.strip #strip, #table.left #strip { display: flex; }
-  #table.left #board { flex-direction: row; gap: 16px; }
-  #table.left #strip { flex-direction: column; align-items: flex-start; width: 200px; height: auto; padding: 12px 16px; gap: 10px; }
+  /* ---------- The score strip ----------
+     When the cards are under the board or away, the score goes on a white strip above the board. */
+  #strip { display: none; align-items: center; gap: 18px; height: 40px; padding: 0 16px; border-radius: 12px;
+    background: #fff; color: var(--text); font: 600 20px var(--ui); white-space: nowrap;
+    box-shadow: 0 6px 16px rgba(var(--shade),.4); }
+  #table.below #strip, #table.alone #strip { display: flex; }
   #strip span { display: inline-flex; align-items: center; gap: 6px; }
-  #strip svg { width: 22px; height: 22px; flex: none; overflow: visible; }
-  #strip svg path { fill: none; stroke-width: 12; stroke-linecap: round; }
-  #strip b, .tally strong, #draws strong { font-weight: 700; }
+  #strip svg { width: 22px; height: 22px; flex: none; }
+  #strip b { font-weight: 800; }
   #strip .x b { color: var(--blue); } #strip .o b { color: var(--red-ink); }
-  /* On the cards, the score takes the place of the line under the name, which comes back when the
-     score goes on the left. */
-  .seat .head .sub { display: none; }
-  #table.left .seat .head .sub { display: block; }
-  #you .tally strong { color: var(--blue); } #cpu .tally strong { color: var(--red-ink); }
-  #table.left .seat .head .tally, #table.left #goal { display: none; }
-  /* A low window keeps only the draws on the goal card. */
-  #side.tight #goal > :not(#draws) { display: none; }
-  #side.tight #draws { margin-top: 0; }
 
-  /* ---------- The sheet ---------- */
-  #sheet {
-    position: relative; border-radius: 4px;
-    background:
-      linear-gradient(var(--thick) 0 2px, transparent 2px) 0 0 / 100% var(--g),
-      linear-gradient(var(--fine) 0 1px, transparent 1px) 0 0 / 100% calc(var(--g) / 4),
-      linear-gradient(90deg, var(--thick) 0 2px, transparent 2px) var(--m) 0 / var(--g) 100%,
-      var(--paper);
-    box-shadow: 0 1px 0 rgba(0,0,0,.08), 0 18px 40px rgba(var(--shade),.45), 0 4px 10px rgba(var(--shade),.25);
-  }
-  /* Big board: the squares of the paper are the squares of the game, from the margin to the edge. */
-  #sheet.big { padding: 0 2px 2px var(--m); }
-  /* While the side measures itself, both players show their line of state. */
-  #side.measure .seat .now { display: flex; }
-  /* Little board: the grid stands one paper square inside the sheet, drawn by hand in ink. */
-  #sheet.small { padding: var(--g) var(--g) var(--g) calc(var(--m) + var(--g)); }
-  /* The margin: paper with the rows only, and the red line. */
-  #margin {
-    position: absolute; left: 0; top: 0; bottom: 0; width: var(--m); border-radius: 4px 0 0 4px;
-    background:
-      linear-gradient(var(--thick) 0 2px, transparent 2px) 0 0 / 100% var(--g),
-      linear-gradient(var(--fine) 0 1px, transparent 1px) 0 0 / 100% calc(var(--g) / 4),
-      var(--paper);
-    border-right: 2.5px solid var(--margin-red);
-  }
-  #grid { position: relative; display: grid; grid-template-columns: repeat(var(--n), var(--c)); grid-auto-rows: var(--c); touch-action: none; }
-  #hash { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
-  #hash path { fill: none; stroke: var(--pencil); stroke-width: .045; stroke-linecap: round; }
-  .cell { position: relative; }
-  /* His turn: a free square shows a pale cross under the mouse, so he sees where it will go. */
+  /* ---------- The board ----------
+     A dark tray; the squares are white tiles with a gap of tray between them. */
+  #sheet { position: relative; border-radius: calc(var(--r) + var(--gap));
+    box-shadow: 0 18px 40px rgba(var(--shade),.45), 0 4px 10px rgba(var(--shade),.3); }
+  #grid { position: relative; display: grid; grid-template-columns: repeat(var(--n), var(--c)); grid-auto-rows: var(--c);
+    gap: var(--gap); padding: var(--gap); background: var(--tray); border-radius: inherit; touch-action: none; }
+  .cell { position: relative; background: var(--tile); border-radius: var(--r); }
+  /* His turn: a free square turns lilac under the mouse and shows a pale cross, so he sees where it will go. */
   #grid.yours .cell.free { cursor: pointer; }
-  #grid.yours .cell.free:hover { background: rgba(107,69,128,.11); }
+  #grid.yours .cell.free:hover { background: var(--tile-hover); box-shadow: inset 0 0 0 max(2px, calc(var(--gap) * .8)) var(--edge-hover); }
   #grid.yours .cell.free:hover::after, .cell.hint::after {
-    content: ""; position: absolute; inset: 10%; opacity: .3;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='%231F3FBF' stroke-width='11' stroke-linecap='round'%3E%3Cpath d='M26 24C40 40 58 60 76 78M75 25C60 42 42 58 24 77'/%3E%3C/svg%3E") center / contain no-repeat;
+    content: ""; position: absolute; inset: 16%; opacity: .3;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='%231F3FBF' stroke-width='14' stroke-linecap='round'%3E%3Cpath d='M22 22L78 78M78 22L22 78'/%3E%3C/svg%3E") center / contain no-repeat;
   }
   /* The hint: a yellow frame with a dark edge. */
+  .cell.hint { background: #FFF1C7; }
   .cell.hint::before {
-    content: ""; position: absolute; inset: -3px; z-index: 3; pointer-events: none; border: 5px solid var(--gold); border-radius: 8px;
-    background: rgba(255,200,61,.3); box-shadow: 0 0 0 1.5px rgba(var(--shade),.8), inset 0 0 0 1.5px rgba(var(--shade),.6);
+    content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; border: 5px solid var(--gold); border-radius: var(--r);
+    box-shadow: 0 0 0 1.5px rgba(var(--shade),.9), inset 0 0 0 1.5px rgba(var(--shade),.7);
   }
-  #sheet.small .cell.hint::before { inset: 6px; border-width: 7px; border-radius: 14px; }
-  /* The computer's last ring: a soft red ground, until he plays. */
-  .cell.last { background: rgba(200,16,46,.09); box-shadow: inset 0 0 0 2px rgba(200,16,46,.35); }
-  #sheet.small .cell.last { box-shadow: none; border-radius: 18px; background: rgba(200,16,46,.07); }
+  #sheet.small .cell.hint::before { inset: 5px; border-width: 8px; }
+  /* The computer's last ring: a soft red tile, until he plays. */
+  .cell.last { background: #FCE8EC; }
   /* The squares of the line that won. */
-  .cell.won { background: rgba(255,200,61,.34); }
-  .cell.won.o { background: rgba(200,16,46,.13); }
+  .cell.won { background: #D9E1FF; }
+  .cell.won.o { background: #FAD4DC; }
 
-  /* The marks, drawn in ink. */
-  .mark { position: absolute; inset: 7%; width: 86%; height: 86%; overflow: visible; pointer-events: none; }
-  #sheet.small .mark { inset: 13%; width: 74%; height: 74%; }
-  .mark path { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: var(--pen); }
+  /* The marks: a thick cross, a round ring. */
+  .mark { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  #sheet.big .mark { left: -14%; top: -14%; width: 128%; height: 128%; }
+  .mark path { fill: none; stroke-linecap: round; stroke-width: var(--pen); }
   .mark.x path { stroke: var(--blue); }
   .mark.o path { stroke: var(--red-ink); }
-  #strike { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 4; }
+  /* The winning line and the star stand over the squares, half a gap inside the tray, so a square's
+     centre is at (column + 0.5) / n of their size. */
+  #strike, #fx { position: absolute; inset: calc(var(--gap) / 2); pointer-events: none; }
+  #strike { width: calc(100% - var(--gap)); height: calc(100% - var(--gap)); overflow: visible; z-index: 4;
+    filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 2px #fff); }
   #strike path { fill: none; stroke-linecap: round; }
-  #fx { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+  #fx { z-index: 5; }
 
-  /* ---------- The two players and the goal ---------- */
-  #side { flex: none; width: 300px; display: flex; flex-direction: column; gap: 14px; }
+  /* ---------- Whose turn, the score, the goal ---------- */
+  #side { flex: none; width: 372px; display: flex; flex-direction: column; gap: 14px; }
   #table.below #side { width: auto; flex-direction: row; }
-  #table.alone #side, #table.below #goal, #side.short #whoStarts { display: none; }
-  .seat, #goal { background: #FFFDF8; color: var(--text); border-radius: 22px; padding: 12px 16px; box-shadow: 0 4px 18px rgba(var(--shade),.4); border: 3px solid transparent; transition: border-color .2s, box-shadow .2s; }
-  .seat .head { display: flex; align-items: center; gap: 14px; }
-  .seat svg { width: 46px; height: 46px; flex: none; overflow: visible; }
-  .seat svg path { fill: none; stroke-width: 11; stroke-linecap: round; }
-  .seat b { display: block; font: 700 24px/1.15 var(--ui); }
-  .seat .head span { display: block; font: 500 20px/1.25 var(--ui); color: #5A5466; }
-  .seat .now { display: none; align-items: center; gap: 10px; margin-top: 8px; padding: 5px 12px; border-radius: 12px; background: #FFF4D6; font: 600 20px var(--ui); }
-  .seat.turn .now { display: flex; }
-  #you.turn { border-color: var(--gold); box-shadow: 0 0 0 4px rgba(255,200,61,.3), 0 4px 18px rgba(var(--shade),.4); }
-  #cpu.turn { border-color: var(--accent); }
-  #cpu .now { background: #F1E9F6; }
-  .dots { display: inline-flex; gap: 5px; }
-  .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: dot 1.2s infinite; }
-  .dots i:nth-child(2) { animation-delay: .2s; } .dots i:nth-child(3) { animation-delay: .4s; }
+  #table.alone #side, #table.below #score, #table.below #goal, #side.short #goal { display: none; }
+  .card { background: #fff; color: var(--text); border-radius: 20px; padding: 14px 18px; box-shadow: 0 4px 18px rgba(var(--shade),.4); }
+  .card svg { flex: none; }
+  .card svg path { fill: none; stroke-linecap: round; }
+  /* Whose turn: said big, with the mark of the player and a stripe of his colour. */
+  #turn { border-left: 10px solid var(--blue); }
+  #turn[data-who="cpu"] { border-left-color: var(--red-ink); }
+  #turn[data-who="over"] { border-left-color: var(--accent); }
+  #turn .top { display: flex; align-items: center; gap: 12px; }
+  #turnPic { width: 38px; height: 38px; }
+  #turn b { font: 700 28px/1.15 var(--ui); white-space: nowrap; }
+  #turnSub { display: block; margin-top: 4px; font: 500 20px/1.3 var(--ui); color: var(--muted); }
+  #turn .dots { display: inline-flex; gap: 5px; margin-left: 8px; vertical-align: middle; }
+  #turn .dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--red-ink); animation: dot 1.2s infinite; }
+  #turn .dots i:nth-child(2) { animation-delay: .2s; } #turn .dots i:nth-child(3) { animation-delay: .4s; }
   @keyframes dot { 50% { opacity: .2; } }
-  #goal { font: 500 20px/1.35 var(--ui); color: #3F3A4A; }
-  #goal b { display: block; margin-bottom: 4px; font: 700 21px var(--ui); color: var(--accent); }
-  #goal p { margin: 0; }
-  #goal p + p { margin-top: 6px; }
-  #table.below .seat { padding: 10px 14px; border-radius: 18px; }
-  #table.below .seat svg { width: 34px; height: 34px; }
-  #table.below .seat .head span { display: none; }
-  #table.below .seat .now { margin-top: 6px; padding: 4px 10px; }
-  @media (max-width: 699px) { #table { padding: 0 8px 6px; } .seat b { font-size: 20px; } .seat .now { font-size: 16px; }
+  #nextBtn { width: 100%; margin-top: 10px; justify-content: center; }
+  #nextBtn[hidden] { display: none; }
+  /* The score: one row per player, the number big. */
+  #score h4, #goal h4 { margin: 0 0 4px; font: 700 20px var(--ui); color: var(--accent); }
+  #score .row { display: flex; align-items: center; gap: 12px; padding: 6px 0; font: 600 22px var(--ui); }
+  #score .row + .row { border-top: 1px solid #E6E0EC; }
+  #score .row svg { width: 30px; height: 30px; }
+  #score .row .eq { width: 30px; text-align: center; font-weight: 800; color: var(--muted); }
+  #score .row strong { margin-left: auto; font: 800 30px/1 var(--ui); }
+  #youTally { color: var(--blue); } #cpuTally { color: var(--red-ink); } #draws { color: var(--muted); }
+  /* The goal: one line and a small picture of the marks in a row. */
+  #goal p { margin: 0 0 8px; font: 600 22px var(--ui); }
+  #goalPic { display: block; height: 30px; width: auto; max-width: 100%; }
+  /* A low window: smaller cards. */
+  #side.tight { gap: 10px; }
+  #side.tight .card { padding: 8px 16px; }
+  #side.tight #turnSub { display: none; }
+  #side.tight #score .row { padding: 2px 0; }
+  #table.below .card { padding: 8px 14px; border-radius: 16px; }
+  #table.below #turnPic { width: 30px; height: 30px; }
+  #table.below #turn b { font-size: 24px; }
+  #table.below #turnSub { display: none; }
+  @media (max-width: 699px) { #table { padding: 0 8px 6px; }
     #strip { gap: 12px; padding: 0 12px; font-size: 17px; } #strip svg { width: 18px; height: 18px; } }
 
-  /* The ink touches down, follows the pen, then settles into the paper. */
+  /* The mark lands with a short pen stroke. */
   .mark.ink { animation: land .56s ease-out; }
   @keyframes land {
-    from { transform: translateY(-7%) scale(1.06); opacity: .55; }
-    72% { transform: translateY(1%) scale(.98); opacity: 1; }
+    from { transform: scale(1.12); opacity: .55; }
+    72% { transform: scale(.97); opacity: 1; }
   }
   .mark.ink path { stroke-dasharray: 1; animation: pen .23s ease-in-out both; }
   .mark.ink path + path { animation-delay: .26s; }
   .mark.o.ink path { animation-duration: .51s; }
   @keyframes pen { from { stroke-dashoffset: 1; opacity: 0; } 6% { opacity: 1; } to { stroke-dashoffset: 0; } }
   .cell:has(> .o.ink)::before {
-    content: ""; position: absolute; inset: 8%; border: 2px solid var(--red-ink);
+    content: ""; position: absolute; inset: 10%; border: 3px solid var(--red-ink);
     border-radius: 50%; pointer-events: none; animation: locate .56s ease-out both;
   }
   @keyframes locate { from { transform: scale(.72); opacity: .55; } to { transform: scale(1); opacity: 0; } }
   #strike path.draw { stroke-dasharray: 1; animation: pen .7s .56s ease-in-out both; }
   .cell.hop .mark { animation: hop .48s ease-in-out var(--d) both; }
   @keyframes hop { 45% { transform: translateY(-9%) rotate(-3deg); } }
-  /* A gold star stamped on the middle mark, like a teacher's mark in a notebook. */
+  /* A gold star stamped on the middle mark. */
   .star { position: absolute; width: var(--s); height: var(--s); margin: calc(var(--s) / -2);
     animation: stamp 1.28s ease-out both; }
   @keyframes stamp {
@@ -180,23 +161,45 @@
     to { opacity: 0; transform: translateY(-7%) rotate(-8deg); }
   }
   .mark.erased { animation: erase .34s ease-out var(--d) both; }
-  @keyframes erase { to { opacity: 0; transform: translateY(-5%) scale(.94); } }
+  @keyframes erase { to { opacity: 0; transform: scale(.9); } }
   .cell.hint::before { animation: pulse 2.4s ease-in-out infinite; }
   @keyframes pulse { 50% { opacity: .75; } }
   .cell.shake { animation: nudge .36s ease-in-out; }
   @keyframes nudge { 28% { transform: translateX(-3px); } 68% { transform: translateX(2px); } }
 
-  /* ---------- The rules guide ---------- */
-  .guide-sheet { flex: none; display: block; border-radius: 4px; background: #FFFEF8; box-shadow: 0 0 0 1px #D5CDE6, 0 3px 8px rgba(40,20,52,.18); }
-  .guide-sheet .rule { stroke: #A99BD6; stroke-width: 1; }
-  .guide-sheet .fine { stroke: #E4DDF3; stroke-width: 1; }
-  .guide-sheet .red { stroke: #E0525E; stroke-width: 2; }
-  .guide-sheet .x { fill: none; stroke: #1F3FBF; stroke-width: 3.4; stroke-linecap: round; }
-  .guide-sheet .o { fill: none; stroke: #C8102E; stroke-width: 3.4; stroke-linecap: round; }
-  .guide-sheet .pencil { fill: none; stroke: #2E2A5A; stroke-width: 2.4; stroke-linecap: round; }
-  .guide-sheet .strike { fill: none; stroke: #1F3FBF; stroke-width: 3; stroke-linecap: round; opacity: .85; }
-
-  @media (max-width: 700px) { .guide-sheet { width: 112px; height: auto; } }
+  /* ---------- The rules guide ----------
+     Each page: one picture on the lilac felt, made of the same tiles and marks as the game, then one or
+     two short sentences. The boards of the guide use their own classes, so only the real squares play. */
+  .guide-pic { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px 22px; margin: 2px 0 10px;
+    padding: 14px; border-radius: 18px; background: radial-gradient(120% 100% at 50% 0%, var(--felt-top), var(--felt) 80%); }
+  .gb { position: relative; display: grid; grid-template-columns: repeat(var(--cols), var(--gc)); grid-auto-rows: var(--gc);
+    gap: var(--gg); padding: var(--gg); background: var(--tray); border-radius: calc(var(--gr) + var(--gg));
+    box-shadow: 0 8px 20px rgba(var(--shade),.45); }
+  .gb.small { --gc: 64px; --gg: 5px; --gr: 10px; }
+  .gb.big { --gc: 48px; --gg: 3px; --gr: 6px; }
+  .gb > i { position: relative; background: var(--tile); border-radius: var(--gr); }
+  .gb > i > .gm { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .gb > i > .gm path { fill: none; stroke-linecap: round; stroke-width: var(--gpen, 13); }
+  .gb .x path { stroke: var(--blue); } .gb .o path { stroke: var(--red-ink); }
+  .gb svg.ghost { opacity: .45; }
+  .gb > i.won { background: #D9E1FF; }
+  /* "Click here": a yellow ring with a dark edge, as on the board, and a pointing hand. */
+  #help { --guide-edge: #2A1D33; --guide-more: #3F3A4A; }
+  .gb > i.guide-ring { background: #FFF1C7; }
+  .guide-hand { left: 58%; top: 52%; }
+  .gb .gline { position: absolute; inset: calc(var(--gg) / 2); width: calc(100% - var(--gg)); height: calc(100% - var(--gg));
+    overflow: visible; z-index: 2; filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 2px #fff); }
+  .gb .gline path { fill: none; stroke-linecap: round; }
+  .gcard { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 16px; background: #fff; color: var(--text);
+    border-left: 8px solid var(--blue); box-shadow: 0 4px 14px rgba(var(--shade),.4); font: 700 22px var(--ui); }
+  .gcard svg { width: 40px; height: 40px; flex: none; }
+  .gcard svg path { fill: none; stroke-linecap: round; }
+  .guide-btn > .guide-hand { left: 62%; top: 45%; }
+  @media (max-width: 700px) {
+    .guide-pic { padding: 12px; gap: 12px; }
+    .gb.small { --gc: 60px; }
+    .gb.big { --gc: 38px; }
+  }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -217,87 +220,72 @@
 <div id="say"><div id="msg" aria-live="polite"></div></div>
 <div id="table">
   <div id="board">
-    <div id="strip" aria-hidden="true"><span class="x"><svg viewBox="0 0 100 100"><path d="M26 24C40 40 58 60 76 78M75 25C60 42 42 58 24 77" stroke="#1F3FBF"/></svg>Vous <b id="stripYou">0</b></span><span class="o"><svg viewBox="0 0 100 100"><path d="M54 21C35 18 20 33 21 51C22 69 36 80 52 79C69 78 80 65 79 48C78 33 67 22 50 22" stroke="#C8102E"/></svg>Ordinateur <b id="stripCpu">0</b></span><span>Nuls <b id="stripDraws">0</b></span></div>
+    <div id="strip" aria-hidden="true"><span class="x"><svg viewBox="0 0 100 100"><path d="M22 22L78 78M78 22L22 78" stroke="#1F3FBF" stroke-width="16" stroke-linecap="round"/></svg>Vous <b id="stripYou">0</b></span><span class="o"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="30" fill="none" stroke="#C8102E" stroke-width="15"/></svg>Ordinateur <b id="stripCpu">0</b></span><span>Nuls <b id="stripDraws">0</b></span></div>
     <div id="sheet">
-      <div id="margin"></div>
       <div id="grid" role="grid" aria-label="Grille du morpion"></div>
     </div>
   </div>
   <div id="side">
-    <div class="seat" id="you">
-      <div class="head"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M26 24C40 40 58 60 76 78M75 25C60 42 42 58 24 77" stroke="#1F3FBF"/></svg><div><b>Vous</b><span class="tally" id="youTally"></span><span class="sub">Les croix bleues</span></div></div>
-      <div class="now">À vous de jouer</div>
+    <div class="card" id="turn" aria-live="polite">
+      <div class="top"><svg id="turnPic" viewBox="0 0 100 100" aria-hidden="true"></svg><b id="turnText">À vous de jouer</b></div>
+      <span id="turnSub">Vous avez les croix bleues</span>
+      <button id="nextBtn" class="primary" data-nudge hidden>Partie suivante</button>
     </div>
-    <div class="seat" id="cpu">
-      <div class="head"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M54 21C35 18 20 33 21 51C22 69 36 80 52 79C69 78 80 65 79 48C78 33 67 22 50 22" stroke="#C8102E"/></svg><div><b>L'ordinateur</b><span class="tally" id="cpuTally"></span><span class="sub" id="cpuLevel">Les ronds rouges</span></div></div>
-      <div class="now"><span class="dots"><i></i><i></i><i></i></span>Il réfléchit</div>
+    <div class="card" id="score">
+      <h4>Score</h4>
+      <div class="row"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M22 22L78 78M78 22L22 78" stroke="#1F3FBF" stroke-width="15"/></svg>Vous<strong id="youTally">0</strong></div>
+      <div class="row"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 20a30 30 0 1 1 0 60a30 30 0 1 1 0-60" stroke="#C8102E" stroke-width="14"/></svg>Ordinateur<strong id="cpuTally">0</strong></div>
+      <div class="row"><span class="eq" aria-hidden="true">=</span>Matchs nuls<strong id="draws">0</strong></div>
     </div>
-    <div id="goal"><b>Pour gagner</b><p id="goalText"></p><p id="whoStarts"></p><p id="draws"></p></div>
+    <div class="card" id="goal">
+      <h4>Pour gagner</h4>
+      <p id="goalText">Alignez 3 croix</p>
+      <svg id="goalPic" aria-hidden="true"></svg>
+    </div>
   </div>
 </div>
 <footer id="rail"><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
   <section class="page">
     <h3>Poser une croix</h3>
-    <p>Vous jouez les croix bleues. L'ordinateur joue les ronds rouges.</p>
-    <div class="guide-panel">
-      <figure class="guide-example">
-        <svg class="guide-sheet" width="150" height="150" viewBox="0 0 150 150" aria-hidden="true">
-          <path class="fine" d="M0 7.5H150M0 22.5H150M0 37.5H150M0 52.5H150M0 67.5H150M0 82.5H150M0 97.5H150M0 112.5H150M0 127.5H150M0 142.5H150"/>
-          <path class="rule" d="M0 30H150M0 60H150M0 90H150M0 120H150M30 0V150M60 0V150M90 0V150M120 0V150"/>
-          <path class="pencil" d="M60 18V132M90 18V132M18 60H132M18 90H132"/>
-          <path class="o" d="M77 67C68 66 64 72 64 76C64 82 70 85 75 85C81 85 86 80 85 75C85 70 81 67 75 67"/>
-          <path class="x" d="M37 67L53 83M53 67L37 83"/>
-        </svg>
-        <figcaption>Cliquez sur une case vide : votre croix s'y dessine. Puis l'ordinateur pose son rond.</figcaption>
-      </figure>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="gb small" data-b="o..|.+.|..."></div>
+      <div class="gcard"><svg viewBox="0 0 100 100"><path d="M22 22L78 78M78 22L22 78" stroke="#1F3FBF" stroke-width="15"/></svg>À vous de jouer</div>
     </div>
-    <p>Chacun joue à son tour. Vous commencez la première partie, puis l'ordinateur commence la suivante, et ainsi de suite.</p>
+    <p class="guide-lead">Cliquez sur une case vide.</p>
+    <p class="guide-more">Votre croix bleue s'y pose, puis l'ordinateur pose son rond rouge.</p>
   </section>
   <section class="page">
-    <h3>Le petit morpion : niveau facile</h3>
-    <p>La grille a 3 cases sur 3. Alignez 3 croix pour gagner : en ligne, en colonne ou en diagonale.</p>
-    <div class="guide-panel">
-      <figure class="guide-example">
-        <svg class="guide-sheet" width="150" height="150" viewBox="0 0 150 150" aria-hidden="true">
-          <path class="fine" d="M0 7.5H150M0 22.5H150M0 37.5H150M0 52.5H150M0 67.5H150M0 82.5H150M0 97.5H150M0 112.5H150M0 127.5H150M0 142.5H150"/>
-          <path class="rule" d="M0 30H150M0 60H150M0 90H150M0 120H150M30 0V150M60 0V150M90 0V150M120 0V150"/>
-          <path class="pencil" d="M60 18V132M90 18V132M18 60H132M18 90H132"/>
-          <path class="x" d="M28 28L50 50M50 28L28 50M64 64L86 86M86 64L64 86M100 100L122 122M122 100L100 122"/>
-          <path class="o" d="M112 28C104 27 99 33 99 39C99 46 105 50 111 50C118 50 123 45 122 38C122 32 117 28 110 28M40 99C32 98 28 104 28 110C28 117 34 121 40 121C47 121 51 116 51 109C51 103 46 99 39 99"/>
-          <path class="strike" d="M21 21L129 129"/>
-        </svg>
-        <figcaption>Trois croix en diagonale : la partie est gagnée, et la ligne est barrée.</figcaption>
-      </figure>
+    <h3>Gagner au niveau facile</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="gb small" data-b="X.o|.X.|o.X" data-line="0 0 2 2"></div>
     </div>
-    <p>Si la grille est pleine sans alignement, c'est un match nul.</p>
+    <p class="guide-lead">Alignez 3 croix pour gagner.</p>
+    <p class="guide-more">En ligne, en colonne ou en diagonale.</p>
   </section>
   <section class="page">
-    <h3>Le grand morpion : niveaux moyen et difficile</h3>
-    <p>La feuille a 11 cases sur 11. Alignez 5 croix à la suite pour gagner. Six croix ou plus gagnent aussi.</p>
-    <div class="guide-panel">
-      <figure class="guide-example">
-        <svg class="guide-sheet" width="224" height="96" viewBox="0 0 224 96" aria-hidden="true">
-          <path class="fine" d="M0 8H224M0 16H224M0 24H224M0 40H224M0 48H224M0 56H224M0 72H224M0 80H224M0 88H224"/>
-          <path class="rule" d="M0 32H224M0 64H224M28 0V96M60 0V96M92 0V96M124 0V96M156 0V96M188 0V96M220 0V96"/>
-          <path class="red" d="M22 0V96"/>
-          <path class="x" d="M34 38L54 58M54 38L34 58M66 38L86 58M86 38L66 58M98 38L118 58M118 38L98 58M130 38L150 58M150 38L130 58M162 38L182 58M182 38L162 58"/>
-          <path class="o" d="M205 38C198 37 194 42 194 48C194 54 199 58 204 58C210 58 214 54 214 48C214 42 210 38 204 38M141 6C134 5 130 10 130 16C130 22 135 26 140 26C146 26 150 22 150 16C150 10 146 6 140 6"/>
-          <path class="strike" d="M33 48H183"/>
-        </svg>
-        <figcaption>Cinq croix à la suite : en ligne, en colonne ou en diagonale.</figcaption>
-      </figure>
+    <h3>Gagner aux niveaux moyen et difficile</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="gb big" data-b="...o...|.XXXXX.|..o..o." data-line="1 1 5 1"></div>
     </div>
-    <p>Bloquez les ronds avant qu'ils soient cinq. Le jeu vous prévient quand l'ordinateur en a trois ou quatre alignés.</p>
+    <p class="guide-lead">Alignez 5 croix à la suite.</p>
+    <p class="guide-more">La grille est plus grande : 11 cases sur 11.</p>
   </section>
   <section class="page">
-    <h3>Trouver de l'aide pendant la partie</h3>
-    <ul>
-      <li>« Où jouer ? » encadre une bonne case en jaune et dit pourquoi.</li>
-      <li>« Annuler le dernier coup » reprend votre croix et la réponse de l'ordinateur. Vous pouvez annuler autant de fois que vous voulez.</li>
-      <li>Près de la feuille, le score de la série : les parties gagnées par chacun et les matchs nuls. Il repart à zéro quand vous changez de niveau.</li>
-    </ul>
-    <p>La partie est enregistrée après chaque coup.</p>
+    <h3>Bloquer l'ordinateur</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="gb big" data-b=".......|.+ooo..|...x.x."></div>
+    </div>
+    <p class="guide-lead">Fermez le bout de ses ronds.</p>
+    <p class="guide-more">Le jeu vous prévient quand l'ordinateur en a trois à la suite.</p>
+  </section>
+  <section class="page">
+    <h3>Demander de l'aide</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="guide-btns"><span class="guide-btn primary here" data-icon="bulb">Où jouer ?</span><span class="guide-btn" data-icon="undo">Annuler le dernier coup</span></div>
+    </div>
+    <p class="guide-lead">Un doute ? Cliquez sur « Où jouer ? ».</p>
+    <p class="guide-more">Une bonne case s'entoure de jaune. « Annuler » reprend votre croix.</p>
   </section>
 </div>
 
@@ -326,6 +314,7 @@ addEventListener('gg-stale', () => { stale = true; });
 const freshSeries = lv => ({ level: lv, you: 0, cpu: 0, draws: 0, games: 0 });
 const say = Kit.say;
 const big = () => G.n > 3;
+const shown = e => !e.hidden && e.offsetParent !== null;
 const crosses = n => `${n} croix`;
 const scoreLine = () => `Vous ${series.you} · Ordinateur ${series.cpu} · Nuls ${series.draws}`;
 // Adds d to the score of the winner w (X, O, or 0 for a draw), never below 0.
@@ -393,7 +382,7 @@ function tap(i) {
   if (phase === 'thinking' || phase === 'anim') return say("Attendez un instant : l'ordinateur joue."), false;
   if (phase === 'hint') return say('Attendez un instant : je cherche une bonne case.'), false;
   const why = Morpion.refusal(G, i);
-  if (why === 'over') return say('Cette partie est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.'), false;
+  if (why === 'over') return say(`Cette partie est finie : cliquez sur « ${shown($('nextBtn')) ? 'Partie suivante' : 'Nouvelle partie'} » pour en commencer une autre.`), false;
   if (why) {
     shake(i);
     say(why === 'mine' ? 'Cette case a déjà votre croix : choisissez une case vide.'
@@ -482,7 +471,7 @@ function resultText() {
   const r = G.result, k = r.line ? r.line.length : G.k;
   if (r.winner === X) return `Vous avez aligné ${crosses(k)}.`;
   if (r.winner === O) return `Il a aligné ${k} ronds.`;
-  return big() ? 'La feuille est pleine, sans 5 croix ni 5 ronds à la suite.' : "La grille est pleine et personne n'a aligné 3 marques.";
+  return big() ? 'La grille est pleine, sans 5 croix ni 5 ronds à la suite.' : "La grille est pleine et personne n'a aligné 3 marques.";
 }
 // show: open the end sheet. move: the last mark, drawn now; -1 after a reload, without the cheer.
 function finish(show, move = -1) {
@@ -497,7 +486,7 @@ function finish(show, move = -1) {
   render(move);
   const title = r.winner === X ? 'Bravo, vous avez gagné !' : r.winner === O ? "L'ordinateur a gagné" : 'Match nul';
   say(r.winner === X ? `Bravo, vous avez gagné : vous avez aligné ${crosses(k)}.`
-    : r.winner === O ? `L'ordinateur a gagné : il a aligné ${k} ronds.` : `Match nul : ${big() ? 'la feuille' : 'la grille'} est pleine.`);
+    : r.winner === O ? `L'ordinateur a gagné : il a aligné ${k} ronds.` : 'Match nul : la grille est pleine.');
   const my = gen;
   // A result counts once, and only when it is saved: a stale window cannot count it a second time.
   // A result already counted is not saved again, so opening it in another window changes nothing.
@@ -619,8 +608,8 @@ async function newGame(lv) {
 /* ---------- Drawing ---------- */
 const table = $('table'), sheet = $('sheet'), grid = $('grid');
 const PATH = {
-  [X]: '<path pathLength="1" d="M26 24C40 40 58 60 76 78"/><path pathLength="1" d="M75 25C60 42 42 58 24 77"/>',
-  [O]: '<path pathLength="1" d="M54 21C35 18 20 33 21 51C22 69 36 80 52 79C69 78 80 65 79 48C78 33 67 22 50 22"/>',
+  [X]: '<path pathLength="1" d="M27 27L73 73"/><path pathLength="1" d="M73 27L27 73"/>',
+  [O]: '<path pathLength="1" d="M50 24a26 26 0 1 1 0 52a26 26 0 1 1 0-52"/>',
 };
 let cells = [], builtFor = 0;
 function build() {
@@ -634,52 +623,44 @@ function build() {
     e.className = 'cell'; e.dataset.i = i; e.setAttribute('role', 'gridcell');
     grid.appendChild(e); cells.push(e);
   }
-  // The little grid is drawn by hand in ink; the big one is the paper itself.
-  if (n === 3) grid.insertAdjacentHTML('beforeend', '<svg id="hash" viewBox="0 0 3 3" aria-hidden="true"><path d="M1.01 .1Q.97 1.5 1.02 2.9M2 .12Q2.04 1.5 1.98 2.88M.1 .99Q1.5 1.04 2.9 .98M.12 2.01Q1.5 1.96 2.88 2.02"/></svg>');
   grid.insertAdjacentHTML('beforeend', '<svg id="strike" aria-hidden="true"></svg><div id="fx"></div>');
   sheet.classList.toggle('big', n > 3); sheet.classList.toggle('small', n === 3);
 }
 
-// The squares fill the height of the table: 34 px or more on his laptop for the big sheet. The players
-// and the goal stand on the right; on a narrow window, the players go under the sheet, or away.
+// The squares fill the height of the table: 34 px or more on his laptop for the big board. The cards
+// stand on the right; on a narrow window, the turn card goes under the board and the score on a strip
+// above it, or the cards go away.
 function layout() {
   const n = G.n, W = table.clientWidth, H = table.clientHeight;
   const bigBoard = n > 3;
-  // The sheet in squares: the margin, the grid, and one paper square around the little grid.
-  const mU = bigBoard ? 1 : 0.5, padW = bigBoard ? 0 : 0.5, padH = bigBoard ? 0 : 0.5;
-  const cap = bigBoard ? 60 : 160;
-  const fit = (w, h) => Math.min(w / (n + mU + padW), h / (n + padH), cap);
-  // A low window: who started goes, then the goal card keeps only the draws, then the score goes on a
-  // card on the left of the sheet, so the players always fit beside the sheet. The side is measured in
-  // its place on the right; its height does not depend on the sheet.
+  // The gap between the squares, as a share of a square, and the size of the whole board in squares.
+  const r = bigBoard ? 0.07 : 0.05, units = n + (n + 1) * r;
+  const cap = bigBoard ? 60 : 170;
+  const fit = (w, h) => Math.min(w / units, h / units, cap);
+  // A low window: the goal goes, then the cards get smaller.
   const sideEl = $('side');
-  table.classList.remove('below', 'alone', 'strip', 'left');
+  table.classList.remove('below', 'alone');
   sideEl.classList.remove('tight', 'short');
-  sideEl.classList.add('measure');
   if (sideEl.scrollHeight > H) sideEl.classList.add('short');
   if (sideEl.scrollHeight > H) sideEl.classList.add('tight');
-  if (sideEl.scrollHeight > H) table.classList.add('left');
-  sideEl.classList.remove('measure');
-  // The strip above the sheet takes 40 px and a gap of 8; the card on the left 200 px and a gap of 16.
-  const S = 48, left = table.classList.contains('left') ? 216 : 0;
-  const side = 300, gap = 28;
-  let mode = 'side', c = fit(W - 40 - side - gap - left, H - 14);
+  // The strip above the board takes 40 px and a gap of 8; the turn card under it about 76 and a gap of 10,
+  // and 64 more with the button "Partie suivante".
+  const S = 48, side = 372, gap = 28;
+  let mode = 'side', c = fit(W - 40 - side - gap, H - 14);
   const full = fit(W - 24, H - 14 - S);
-  if (W < 700 || c < full * 0.8) {
-    const below = fit(W - 24, H - 14 - 112 - S);
+  if (W < 700 || c < full * 0.8 || sideEl.scrollHeight > H) {
+    const below = fit(W - 24, H - 14 - (G.result ? 150 : 86) - S);
     if (below >= Math.min(full, bigBoard ? 26 : 90)) { mode = 'below'; c = below; } else { mode = 'alone'; c = full; }
   }
-  c = bigBoard ? Math.floor(c) : Math.floor(c / 4) * 4;
-  const g = bigBoard ? c : c / 4;
+  const g = Math.max(2, Math.round(c * r));
+  c = Math.floor(c * units / n - g * (n + 1) / n);
   const root = document.documentElement.style;
-  root.setProperty('--c', c + 'px'); root.setProperty('--g', g + 'px'); root.setProperty('--n', n);
-  root.setProperty('--m', c * mU + 'px');
-  root.setProperty('--pen', bigBoard ? 13 : 9);
+  root.setProperty('--c', c + 'px'); root.setProperty('--gap', g + 'px'); root.setProperty('--n', n);
+  root.setProperty('--r', Math.max(3, Math.round(c * (bigBoard ? .12 : .1))) + 'px');
+  root.setProperty('--pen', bigBoard ? 14 : 12);
   table.classList.toggle('below', mode === 'below'); table.classList.toggle('alone', mode === 'alone');
-  table.classList.toggle('strip', mode !== 'side');
-  if (mode !== 'side') { sideEl.classList.remove('tight', 'short'); table.classList.remove('left'); }
+  if (mode !== 'side') sideEl.classList.remove('tight', 'short');
 }
-
 
 // animate: the square whose mark is drawn now with the pen.
 function render(animate = -1) {
@@ -709,17 +690,46 @@ function renderGrid(animate = -1) {
     if (animate >= 0 || !$('strike').firstChild) strikeLine(G.result.line, G.result.winner, animate >= 0);
   } else $('strike').innerHTML = '';
 }
+const ICON = {
+  [X]: '<path d="M22 22L78 78M78 22L22 78" stroke="#1F3FBF" stroke-width="15"/>',
+  [O]: '<path d="M50 20a30 30 0 1 1 0 60a30 30 0 1 1 0-60" stroke="#C8102E" stroke-width="14"/>',
+  star: '<path d="M50 8l12 26 28 4-20 20 5 29-25-14-25 14 5-29-20-20 28-4z" style="fill:#FFC83D" stroke="#3B2748" stroke-width="5" stroke-linejoin="round"/>',
+  draw: '<path d="M24 40H76M24 60H76" stroke="#5A5466" stroke-width="12"/>',
+};
+// The goal: k small squares with a cross each, and the line through them.
+function goalPicture(k) {
+  const s = 30, w = k * s + (k - 1) * 4;
+  let d = '';
+  for (let i = 0; i < k; i++) {
+    const x = i * (s + 4);
+    d += `<rect x="${x}" y="0" width="${s}" height="${s}" rx="5" fill="#fff" stroke="#3B2748" stroke-width="2"/><path d="M${x + 8} 8l14 14M${x + 22} 8l-14 14" stroke="#1F3FBF" stroke-width="4" stroke-linecap="round"/>`;
+  }
+  d += `<path d="M6 15H${w - 6}" stroke="#1F3FBF" stroke-width="3" stroke-linecap="round" opacity=".55"/>`;
+  const pic = $('goalPic');
+  pic.setAttribute('viewBox', `-1 -1 ${w + 2} ${s + 2}`);
+  pic.innerHTML = d;
+}
+let shownTurn = '';
 function renderSide() {
-  const lv = Kit.levelNames[level].toLowerCase();
-  $('cpuLevel').textContent = 'Niveau ' + lv;
-  $('you').classList.toggle('turn', (phase === 'player' || phase === 'hint') && !G.result);
-  $('cpu').classList.toggle('turn', phase === 'thinking' || (phase === 'anim' && lastCpu >= 0));
-  $('goalText').textContent = `Alignez ${crosses(G.k)} à la suite, en ligne, en colonne ou en diagonale.`;
-  $('whoStarts').textContent = G.first === X ? 'Cette partie, vous avez commencé.' : "Cette partie, l'ordinateur a commencé.";
+  const r = G.result, cpu = phase === 'thinking' || (phase === 'anim' && lastCpu >= 0);
+  const who = r ? 'over' : cpu ? 'cpu' : 'you';
+  const pic = r ? (r.winner === X ? 'star' : r.winner === O ? O : 'draw') : cpu ? O : X;
+  const text = r ? (r.winner === X ? 'Vous avez gagné' : r.winner === O ? "L'ordinateur gagne" : 'Match nul')
+    : cpu ? "L'ordinateur joue" : 'À vous de jouer';
+  const sub = r ? 'La partie est finie.' : cpu ? 'Il réfléchit' : 'Vous avez les croix bleues.';
+  const key = who + pic + text;
+  if (key !== shownTurn) {
+    shownTurn = key;
+    $('turn').dataset.who = who;
+    $('turnPic').innerHTML = ICON[pic];
+    $('turnText').textContent = text;
+    $('turnSub').innerHTML = sub + (cpu && !r ? '<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>' : '');
+    $('nextBtn').hidden = !r;
+  }
+  $('goalText').textContent = `Alignez ${crosses(G.k)} à la suite`;
+  if ($('goalPic').dataset.k !== String(G.k)) { $('goalPic').dataset.k = G.k; goalPicture(G.k); }
   const s = series || freshSeries(level);
-  const won = n => `<strong>${n}</strong> ${n > 1 ? 'parties gagnées' : 'partie gagnée'}`;
-  $('youTally').innerHTML = won(s.you); $('cpuTally').innerHTML = won(s.cpu);
-  $('draws').innerHTML = `<strong>${s.draws}</strong> ${s.draws > 1 ? 'matchs nuls' : 'match nul'}`;
+  $('youTally').textContent = s.you; $('cpuTally').textContent = s.cpu; $('draws').textContent = s.draws;
   $('stripYou').textContent = s.you; $('stripCpu').textContent = s.cpu; $('stripDraws').textContent = s.draws;
   Kit.showWins(total.won);
   $('undoBtn').disabled = !G.moves.some((c, i) => Morpion.mover(G, i) === X);
@@ -732,12 +742,12 @@ function renderSide() {
 function strikeLine(line, winner, animate) {
   const n = G.n, a = line[0], z = line[line.length - 1];
   const ax = a % n + .5, ay = Math.floor(a / n) + .5, zx = z % n + .5, zy = Math.floor(z / n) + .5;
-  const len = Math.hypot(zx - ax, zy - ay), ux = (zx - ax) / len, uy = (zy - ay) / len, over = n > 3 ? .42 : .36;
+  const len = Math.hypot(zx - ax, zy - ay), ux = (zx - ax) / len, uy = (zy - ay) / len, over = n > 3 ? .38 : .3;
   const d = `M${(ax - ux * over).toFixed(3)} ${(ay - uy * over).toFixed(3)}L${(zx + ux * over).toFixed(3)} ${(zy + uy * over).toFixed(3)}`;
   const svg = $('strike');
   svg.setAttribute('viewBox', `0 0 ${n} ${n}`);
   const colour = winner === X ? 'var(--blue)' : 'var(--red-ink)';
-  svg.innerHTML = `<path pathLength="1" d="${d}" stroke="${colour}" stroke-width="${n > 3 ? .14 : .075}"${animate && !REDUCED ? ' class="draw"' : ''}/>`;
+  svg.innerHTML = `<path pathLength="1" d="${d}" stroke="${colour}" stroke-width="${n > 3 ? .2 : .08}"${animate && !REDUCED ? ' class="draw"' : ''}/>`;
 }
 // The wave runs from the first cross to the last, even on a line longer than five.
 function celebrate(line) {
@@ -749,8 +759,8 @@ function celebrate(line) {
   const mid = line[Math.floor(line.length / 2)];
   const x = (mid % G.n + .5) * 100 / G.n, y = (Math.floor(mid / G.n) + .5) * 100 / G.n;
   $('fx').innerHTML = `<svg class="star" aria-hidden="true" viewBox="0 0 64 64" style="left:${x}%;top:${y}%;--s:calc(var(--c) * .85)">
-    <path d="M32 4l8 17 19 3-14 14 3 20-16-9-17 9 3-20L4 24l20-3z" fill="#FFC83D" stroke="#6B4580" stroke-width="3" stroke-linejoin="round"/>
-    <path d="m22 32 7 7 14-15" fill="none" stroke="#493352" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    <path d="M32 4l8 17 19 3-14 14 3 20-16-9-17 9 3-20L4 24l20-3z" fill="#FFC83D" stroke="#3B2748" stroke-width="3" stroke-linejoin="round"/>
+    <path d="m22 32 7 7 14-15" fill="none" stroke="#3B2748" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   later(() => $('fx').replaceChildren(), 1280);
 }
 function shake(i) {
@@ -808,6 +818,7 @@ $('undoBtn').onclick = doUndo;
 $('hintBtn').onclick = showHint;
 $('helpBtn').onclick = () => Kit.openHelp();
 $('newBtn').onclick = askNewGame;
+$('nextBtn').onclick = nextGame;
 addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (!Kit.isOpen()) doUndo(); }
   else if (e.key === 'Escape') Kit.escape();
@@ -815,6 +826,26 @@ addEventListener('keydown', e => {
 addEventListener('resize', () => render());
 // The message line may take two lines on a phone: the table changes height, so the sheet fits again.
 if (window.ResizeObserver) new ResizeObserver(() => { if (G && !table.hidden) { layout(); } }).observe(table);
+
+/* ---------- The pictures of the rules ----------
+   Each board of the guide is written as rows of letters: x and o are marks, X a cross of the winning
+   line, + the square to click (a yellow ring, a pale cross and a hand). data-line gives the first and the
+   last square of the line, as column and row. */
+for (const b of document.querySelectorAll('#help .gb')) {
+  const rows = b.dataset.b.split('|');
+  b.style.setProperty('--cols', rows[0].length);
+  b.innerHTML = rows.join('').split('').map(ch => {
+    if (ch === '.') return '<i></i>';
+    if (ch === '+') return `<i class="guide-ring"><svg class="gm x ghost" viewBox="0 0 100 100">${PATH[X]}</svg>${Kit.icon('hand')}</i>`;
+    const v = ch.toLowerCase() === 'x' ? X : O;
+    return `<i${ch === 'X' ? ' class="won"' : ''}><svg class="gm ${v === X ? 'x' : 'o'}" viewBox="0 0 100 100">${PATH[v]}</svg></i>`;
+  }).join('');
+  if (b.dataset.line) {
+    const [ax, ay, zx, zy] = b.dataset.line.split(' ').map(Number), w = rows[0].length, h = rows.length;
+    const ux = Math.sign(zx - ax) * .3, uy = Math.sign(zy - ay) * .3;
+    b.insertAdjacentHTML('beforeend', `<svg class="gline" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><path d="M${ax + .5 - ux} ${ay + .5 - uy}L${zx + .5 + ux} ${zy + .5 + uy}" stroke="#1F3FBF" stroke-width="${b.classList.contains('small') ? .08 : .2}"/></svg>`);
+  }
+}
 
 // The rules open by themselves the first time the game is opened.
 if (load()) {

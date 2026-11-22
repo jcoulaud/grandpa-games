@@ -20,9 +20,14 @@
 <link rel="stylesheet" href="../lib/kit.css">
 <link rel="stylesheet" href="../lib/cards.css">
 <style>
-  /* The belote plays on an ochre gold felt, a café table, with cards of a burgundy back. */
-  :root { --felt-top: #C08A2E; --felt: #6B4A12; --shade: 45,28,5; --accent: #7A5212; --back: #7B2D1E;
-    --turn: #1F6F8B; --cream: #FFF4D6; }
+  /* The belote plays at a café table: warm oak planks, a bottle-green baize mat in the middle, and cards
+     with a burgundy back. */
+  :root { --felt-top: #B4773A; --felt: #6A3F1A; --shade: 45,24,6; --accent: #7A5212; --back: #7B2D1E;
+    --turn: #1F6F8B; --cream: #FFF4D6; --baize: #2F6B47; --baize-dark: #1B4430; --print: 240,214,140; }
+  body { background:
+    repeating-linear-gradient(180deg, transparent 0 148px, rgba(48,22,4,.34) 148px 150px, rgba(255,222,170,.08) 150px 152px),
+    repeating-linear-gradient(180deg, rgba(70,36,8,.10) 0 1px, transparent 1px 6px, rgba(255,226,180,.05) 6px 8px, transparent 8px 19px),
+    radial-gradient(120% 90% at 45% 25%, #B97C3E, #85521F 55%, #5E3717) #6A3F1A; }
   button.game { --accent: #7A5212; }
   button.game:hover { background: #8C5F16; }
   button.game:active { background: #664410; }
@@ -30,18 +35,15 @@
 
   #table { position: relative; overflow: clip; }
   .card { z-index: 10; transition: none; }
-  .card.hand { transition: transform .18s ease-out; }
-  .card.hand.can { cursor: pointer; }
-  .card.hand.can:hover { transform: translateY(calc(var(--h) * -.1)); outline: 3px solid #fff; }
-  /* A card he may not play now: darker, still readable and still clickable for the reason. */
-  .card.hand.no { cursor: pointer; filter: brightness(.7) saturate(.8); }
-  .card.hand.hint, .card.hand.hint:hover { transform: translateY(calc(var(--h) * -.14)); outline: 5px solid var(--gold);
+  .card.hand { transition: transform .18s ease-out, filter .18s; }
+  /* His turn: the cards he may play rise a little, the others are dimmed. */
+  .card.hand.can { cursor: pointer; transform: translateY(calc(var(--h) * -.1));
+    box-shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 16px rgba(0,0,0,.38); }
+  .card.hand.can:hover { transform: translateY(calc(var(--h) * -.13)); outline: 4px solid #fff; }
+  /* A card he may not play now: dimmed, still readable and still clickable for the reason. */
+  .card.hand.no { cursor: pointer; filter: brightness(.52) saturate(.55); }
+  .card.hand.hint, .card.hand.hint:hover { transform: translateY(calc(var(--h) * -.13)); outline: 5px solid var(--gold);
     box-shadow: 0 0 0 2px rgba(var(--shade),.8), 0 0 26px 8px rgba(255,200,61,.7); }
-
-  /* The retourne in his hand, when he took: a small white tag until he plays his first card. */
-  .card.hand .got { position: absolute; left: 50%; top: calc(var(--h) * -.17); translate: -50% 0; z-index: 3;
-    padding: 2px 10px; border-radius: 10px; background: #fff; color: var(--text); font: 700 20px/1.25 var(--ui);
-    box-shadow: 0 2px 6px rgba(0,0,0,.3); white-space: nowrap; }
   .card.trick.won { outline: 5px solid var(--turn); }
   .card.away { opacity: 0; pointer-events: none; }
   .card.hand.shake { animation: refused .42s ease-in-out; }
@@ -49,13 +51,13 @@
 
   /* The three players of the computer, each by its place on the table. */
   .seat {
-    position: absolute; z-index: 20; display: grid; grid-template-columns: auto auto; align-items: center; column-gap: 14px; row-gap: 8px; padding: 10px 18px 10px 10px;
-    background: #FFFDF6; color: var(--text); border-radius: 20px; border: 3px solid transparent;
-    box-shadow: 0 4px 18px rgba(0,0,0,.32); transition: border-color .2s;
+    position: absolute; z-index: 20; display: grid; grid-template-columns: auto auto; align-items: center; column-gap: 12px; row-gap: 6px; padding: 8px 16px 8px 8px;
+    background: #FFFDF6; color: var(--text); border-radius: 20px; border: 3px solid #E4D3AE;
+    box-shadow: 0 8px 18px rgba(30,12,0,.45); transition: border-color .2s;
   }
   /* His partner shares his team: the same warm cream as his own seat. */
   .seat.mate { background: var(--cream); }
-  .seat.turn { border-color: var(--turn); box-shadow: 0 0 0 4px rgba(31,111,139,.35), 0 4px 18px rgba(0,0,0,.32); }
+  .seat.turn { border-color: var(--turn); box-shadow: 0 0 0 5px rgba(31,111,139,.45), 0 8px 18px rgba(30,12,0,.45); }
   .seat.took { animation: took .6s ease-out; }
   @keyframes took { 40% { transform: scale(1.06); } }
   .ava { width: 52px; height: 52px; border-radius: 50%; flex: none; object-fit: cover; box-shadow: 0 0 0 2px #fff, 0 1px 4px rgba(0,0,0,.25); }
@@ -74,42 +76,32 @@
   .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--turn); animation: dot 1.2s infinite; }
   .dots i:nth-child(2) { animation-delay: .2s; } .dots i:nth-child(3) { animation-delay: .4s; }
   @keyframes dot { 50% { opacity: .2; } }
-  .backs { position: relative; height: 36px; }
-  .backs i { position: absolute; top: 0; width: 26px; height: 36px; border-radius: 4px; border: 1px solid #3A120A;
-    background: repeating-linear-gradient(45deg, rgba(255,210,74,.35) 0 1px, transparent 1px 6px), repeating-linear-gradient(-45deg, rgba(255,210,74,.35) 0 1px, transparent 1px 6px), var(--back);
-    box-shadow: inset 0 0 0 2px var(--back), inset 0 0 0 3px rgba(255,255,255,.7); }
-  #seat1 .backs, #seat3 .backs { grid-column: 1 / -1; justify-self: center; }
-  #seat2 { grid-template-columns: auto auto auto; min-width: 360px; }
-  #seat1, #seat3 { min-width: 240px; }
+  #seat1, #seat3 { min-width: 220px; }
   /* A low table: the seats keep the name and what the player does, so they stay clear of each other. */
-  #table.low .seat .backs, #table.low .seat .where { display: none; }
   #table.low .seat:not(#seat0) { padding: 6px 14px 6px 8px; }
   #table.low .seat .ava { width: 44px; height: 44px; }
-  #table.low #seat2 { min-width: 280px; }
-  #table.low #seat1, #table.low #seat3 { min-width: 200px; }
-  /* His own seat: a strip above the left end of his hand. */
-  #seat0 { display: flex; align-items: center; gap: 12px; padding: 6px 16px 6px 6px; border-radius: 16px; z-index: 25; background: var(--cream); }
-  #seat0 .ava { width: 40px; height: 40px; }
-  #seat0 b { font-size: 22px; }
+  #table.low #seat2 { min-width: 200px; }
+  #table.low #seat1, #table.low #seat3 { min-width: 180px; }
+  /* His own seat: a small plate on the table edge, left of his hand. */
+  #seat0 { padding: 6px 14px 6px 6px; border-radius: 18px; z-index: 25; background: var(--cream); }
+  #seat0 .ava { width: 44px; height: 44px; }
   #seat0 .now { min-height: 0; }
-  /* A low table: his seat stands beside the left end of his hand, so it does not cover the trick. */
-  #seat0.beside { flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 14px; }
   /* A phone: the three seats in one row on top, each a face over a name and what the player does. */
   body.phone .seat:not(#seat0) { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border-radius: 14px; min-width: 0; text-align: center; }
   body.phone .seat:not(#seat0) .ava { width: 30px; height: 30px; }
   body.phone .seat:not(#seat0) b { font-size: 18px; justify-content: center; }
-  body.phone .seat .where, body.phone .seat .backs, body.phone .seat:not(#seat0) .tag { display: none; }
+  body.phone .seat .where, body.phone .seat:not(#seat0) .tag { display: none; }
   body.phone .seat .now { white-space: normal; font-size: 16px; line-height: 1.1; min-height: 18px; justify-content: center; }
   body.phone .seat .now .dots { display: none; }
   body.phone .seat > div { min-width: 0; }
   /* His own seat would cover the trick: the message line and "À vous" in the trick say his turn. */
   body.phone #seat0 { display: none; }
 
-  /* His place in the trick, while he has to play: a dashed cream card with "À vous". */
-  #mySlot { position: absolute; z-index: 8; display: none; place-items: center; width: var(--w); height: var(--h);
-    border-radius: calc(var(--w) * .09); border: 4px dashed var(--cream); background: rgba(45,28,5,.42);
-    color: #fff; font: 700 22px/1.2 var(--ui); text-align: center; }
-  #mySlot.on { display: grid; }
+  /* His place in the trick, while he has to play: the shape of a card, softly lit on the mat. */
+  #mySlot { position: absolute; z-index: 8; display: none; width: var(--w); height: var(--h);
+    border-radius: calc(var(--w) * .09); border: 3px solid rgba(255,244,214,.8); background: rgba(255,244,214,.1);
+    box-shadow: 0 0 22px 4px rgba(255,244,214,.28); }
+  #mySlot.on { display: block; }
   /* Why a card is refused, just above the card. */
   #bubble { position: absolute; z-index: 400; max-width: 380px; padding: 12px 18px; border-radius: 16px; display: none;
     background: #fff; color: var(--text); border: 3px solid var(--turn); font: 600 21px/1.3 var(--ui); box-shadow: 0 8px 24px rgba(0,0,0,.4); pointer-events: none; }
@@ -125,11 +117,15 @@
   .card .first { position: absolute; right: calc(var(--w) * .06); top: calc(var(--h) * -.13); z-index: 3; padding: 1px 9px; border-radius: 9px;
     background: #5A3A10; color: #fff; font: 700 20px/1.25 var(--ui); box-shadow: 0 2px 6px rgba(0,0,0,.3); }
 
-  /* The mat in the middle of the café table, with the trump suit drawn large on it. */
-  #mid { position: absolute; z-index: 5; border-radius: 50%; pointer-events: none;
-    background: radial-gradient(closest-side, rgba(70,44,6,.30), rgba(70,44,6,.18) 78%, transparent 100%);
-    box-shadow: inset 0 0 0 2px rgba(255,244,214,.26); display: grid; place-items: center; }
-  #mid svg { width: 46%; height: 46%; fill: rgba(255,244,214,.16); }
+  /* The baize mat of the café table, with a printed gold line, a dark leather rim and a soft shadow. */
+  #mid { position: absolute; z-index: 4; pointer-events: none; border-radius: 120px;
+    background: radial-gradient(80% 75% at 50% 42%, #387C53, var(--baize) 55%, var(--baize-dark));
+    box-shadow: inset 0 0 0 11px rgba(14,40,25,.5), inset 0 0 0 14px rgba(var(--print),.55), inset 0 12px 40px rgba(0,0,0,.32),
+      0 0 0 6px #3B220E, 0 0 0 8px rgba(255,214,160,.18), 0 14px 30px rgba(30,12,0,.55); }
+  /* The way of play, printed on the mat: four arrows that turn to the right, counter-clockwise. */
+  #ways { position: absolute; z-index: 6; pointer-events: none; overflow: visible; }
+  #ways path { fill: none; stroke: rgba(var(--print),.72); stroke-linecap: round; }
+  #ways polygon { fill: rgba(var(--print),.72); }
   .sheet {
     position: absolute; z-index: 300; transform-origin: 50% 0; display: none; flex-direction: column; align-items: center; gap: 14px; text-align: center;
     background: #FFFDF6; color: var(--text); border-radius: 24px; padding: 22px 30px 24px; box-shadow: 0 18px 50px rgba(0,0,0,.45);
@@ -143,22 +139,30 @@
   #retLabel { position: absolute; z-index: 30; display: none; padding: 2px 14px; border-radius: 12px; background: rgba(45,28,5,.62);
     color: #fff; font: 700 20px/1.3 var(--ui); white-space: nowrap; }
   #retLabel.on { display: block; }
-  /* His answer: a bar just above his hand, the question and one big button per answer. */
-  #bidBar { position: absolute; z-index: 300; display: none; align-items: center; gap: 14px; padding: 10px 12px 10px 18px;
-    background: #FFFDF6; color: var(--text); border-radius: 20px; border: 3px solid var(--turn);
-    box-shadow: 0 0 0 4px rgba(31,111,139,.3), 0 10px 30px rgba(0,0,0,.4); }
+  /* His answer: a sheet on the mat beside the retourne, the question over one big button per answer.
+     placeTurnup() picks the first shape that fits: buttons in a row, two by two, or in a column. */
+  #bidBar { position: absolute; z-index: 300; display: none; align-items: center; gap: 16px; padding: 12px;
+    background: #FFFDF6; color: var(--text); border-radius: 22px; border: 3px solid var(--turn);
+    box-shadow: 0 0 0 5px rgba(31,111,139,.4), 0 16px 36px rgba(20,8,0,.5); }
   #bidBar.on { display: flex; }
-  #bidBar h2 { margin: 0; font: 700 24px/1.2 var(--ui); white-space: nowrap; }
+  /* The place of the retourne, which lies over it while he answers. */
+  #bidSlot { flex: none; width: var(--w); height: var(--h); }
+  #bidBar.nocard #bidSlot { display: none; }
+  #bidBar .ask { display: flex; flex-direction: column; gap: 10px; }
+  #bidBar h2 { margin: 0; padding: 0 4px; font: 700 26px/1.2 var(--ui); text-align: center; white-space: nowrap; }
   #bidBar.bare h2 { display: none; }
-  #bidBtns { display: flex; gap: 10px; }
-  #bidBtns button { min-height: 58px; padding: 6px 18px; font-size: 22px; justify-content: center; white-space: nowrap; }
-  #bidBtns button svg { width: 30px; height: 30px; stroke: none; }
-  #bidBtns button.hint { background: var(--gold); border-color: #C9951A; box-shadow: 0 3px 0 #C9951A, 0 0 0 4px rgba(255,200,61,.45); }
-  /* A phone: the buttons two by two, under the question. */
-  body.phone #bidBar { flex-direction: column; align-items: stretch; padding: 8px; gap: 8px; }
-  body.phone #bidBar h2 { font-size: 20px; text-align: center; white-space: normal; }
-  body.phone #bidBtns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  body.phone #bidBtns button { font-size: 20px; padding: 4px 8px; }
+  #bidBtns { display: flex; gap: 12px; }
+  #bidBar.col #bidBtns { flex-direction: column; }
+  #bidBar.grid #bidBtns { display: grid; grid-template-columns: 1fr 1fr; }
+  #bidBtns button { flex: 1; min-height: 66px; padding: 6px 22px; font: 700 26px var(--ui); justify-content: center; white-space: nowrap;
+    border: 3px solid #26302D; }
+  #bidBtns button svg { width: 32px; height: 32px; stroke: none; }
+  #bidBtns button.hint { background: var(--gold); border-color: #8A5F00; box-shadow: 0 3px 0 #8A5F00, 0 0 0 5px rgba(255,200,61,.5); }
+  #table.low #bidBtns button { min-height: 58px; padding-inline: 16px; font-size: 24px; }
+  body.phone #bidBar { padding: 8px; gap: 10px; }
+  body.phone #bidBar h2 { font-size: 20px; white-space: normal; width: 0; min-width: 100%; }
+  body.phone #bidBtns { gap: 8px; }
+  body.phone #bidBtns button { font-size: 20px; padding: 4px 10px; min-height: 54px; }
   #scoreSheet table { border-collapse: collapse; font: 600 22px/1.2 var(--ui); }
   #scoreSheet th { font: 600 20px var(--ui); color: #5A6461; padding: 0 16px 8px; }
   #scoreSheet td { padding: 8px 16px; border-top: 1px solid #E6E0D2; }
@@ -181,9 +185,13 @@
   #overText { white-space: pre-line; }
   body:has(#over.on) #scoreSheet { visibility: hidden; }
 
-  /* The side column: the trump, the scores, then the last trick. */
-  #side { position: absolute; z-index: 20; display: flex; flex-direction: column; gap: 12px; }
-  .box { background: #FFFDF6; color: var(--text); border-radius: 22px; padding: 14px 18px 16px; box-shadow: 0 4px 18px rgba(0,0,0,.32); }
+  /* The side column: a score pad along the right edge of the table, the whole height, with the trump,
+     the scores, then the last trick. */
+  #side { position: absolute; z-index: 20; top: 0; bottom: 0; display: flex; flex-direction: column; overflow: hidden;
+    background: linear-gradient(90deg, #F6EBD0, #FFF9EA 14px) #FFF9EA; color: var(--text);
+    border-left: 6px solid #3B220E; box-shadow: -10px 0 26px rgba(30,12,0,.4); }
+  .box { flex: none; padding: 14px 18px 14px 20px; }
+  .box + .box { border-top: 2px dashed #DCC69A; }
   .box h3 { margin: 0 0 8px; font: 700 23px var(--ui); color: #5A3A10; }
   #atoutBox { display: flex; align-items: center; gap: 16px; }
   #atoutBox .big { flex: none; width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; background: #fff; border: 3px solid #E0C58C; }
@@ -200,6 +208,10 @@
   #scoreSide .who { display: flex; align-items: center; gap: 4px; }
   #scoreSide .who img { margin-right: -10px; box-shadow: 0 0 0 2px #FFFDF6; }
   #scoreSide .who span { margin-left: 14px; }
+  /* A narrow column: the names of the teams without the faces, so the totals fit. */
+  #side.slim #scoreSide .who img { display: none; }
+  #side.slim #scoreSide .who span { margin-left: 0; }
+  #side.slim .box { padding-inline: 16px 14px; }
   #state { margin: 8px 0 0; font: 500 20px/1.3 var(--ui); color: #4E5A57; }
   #state:empty { display: none; }
   #lastCards { display: flex; gap: 8px; }
@@ -214,7 +226,10 @@
   #lastText { margin: 8px 0 0; font: 600 20px/1.3 var(--ui); color: #3A4542; }
   /* A low window drops the least useful parts first, so the last trick stays: see renderSide(). */
   #side.no-goal .goal, #side.no-lasttext #lastText, #side.no-h3 #scores h3, #side.no-faces .mini .face,
-  #side.no-atout #atoutBox, #side.no-last #lastBox { display: none; }
+  #side.small-atout #atoutBox .txt span, #side.no-last #lastBox { display: none; }
+  #side.small-atout #atoutBox { padding-block: 8px; }
+  #side.small-atout #atoutBox .big { width: 52px; height: 52px; }
+  #side.small-atout #atoutBox .big svg { width: 34px; height: 34px; }
   #scores .goal { margin: 8px 0 0; font: 500 20px/1.3 var(--ui); color: #55605C; }
   /* A phone: a strip under the seats with the trump and the totals. */
   #strip { position: absolute; z-index: 20; display: none; align-items: center; justify-content: center; gap: 12px; padding: 4px 12px; border-radius: 14px;
@@ -235,18 +250,80 @@
     to { transform: translate(var(--x), calc(100vh / var(--z, 1) + 60px)) rotate(var(--r)); opacity: 0; }
   }
 
-  .guide-suit { min-width: 54px; min-height: 46px; flex: none; display: inline-flex; align-items: center;
-    justify-content: center; gap: 4px; padding: 0 6px; border: 1px solid #9AA6A1; border-radius: 8px; background: var(--face); font-weight: 700; }
-  .guide-suit.red { color: var(--red); }
-  .guide-suit svg { width: 24px; height: 24px; fill: currentColor; }
-  .guide-pts { width: 100%; border-collapse: collapse; text-align: center; font-variant-numeric: tabular-nums; }
-  .guide-pts th, .guide-pts td { padding: 3px 4px; }
-  .guide-pts th { text-align: left; white-space: nowrap; }
-  .guide-pts tr + tr td, .guide-pts tr + tr th { border-top: 1px solid #D5DCD9; }
-  .guide-pts thead td { font-weight: 700; }
-  @media (max-width: 700px) {
-    .guide-pts { font-size: 17px; }
-    .guide-pts th, .guide-pts td { padding: 2px 1px; }
+  /* The rules: one picture per page, made of the real cards and seats on a piece of the mat, and one or
+     two short sentences under it. A yellow ring and the pointing hand mark what to click, as in the game.
+     The sizes follow the width of the guide (cqw), so a phone shows the same pictures, smaller. */
+  .bp { container-type: inline-size; display: flex; justify-content: center; margin: 2px 0 12px; }
+  .bp-mat { --cw: min(74px, 12cqw); position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px;
+    padding: 14px 24px; border-radius: 28px; color: #fff;
+    background: radial-gradient(80% 75% at 50% 42%, #387C53, var(--baize) 55%, var(--baize-dark));
+    box-shadow: inset 0 0 0 7px rgba(14,40,25,.5), inset 0 0 0 9px rgba(var(--print),.55), 0 0 0 5px #3B220E; }
+  #help .bp .card { --w: var(--cw); --h: calc(var(--cw) * 1.3); }
+  .bp-row { display: flex; flex-direction: row; align-items: center; gap: calc(var(--cw) * .4); }
+  .bp-mat > * { flex: none; }
+  #help .bp-ring { outline: 5px solid var(--gold); outline-offset: 3px; box-shadow: 0 0 20px 6px rgba(255,200,61,.75); z-index: 2; }
+  .guide-hand { z-index: 5; left: calc(100% - 22px); top: calc(100% - 16px); width: 40px; height: 50px; rotate: -16deg; filter: drop-shadow(0 3px 3px rgba(0,0,0,.45)); }
+  .bp-btn { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 14px; white-space: nowrap;
+    background: #fff; color: var(--text); border: 3px solid #26302D; box-shadow: 0 3px 0 #8E9A96; font: 700 min(23px, 4.4cqw)/1.2 var(--ui); }
+  .bp-btn .s, .bp-pts b .s { width: 1.1em; height: 1.1em; }
+  .bp-seat { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; border-radius: 14px; white-space: nowrap;
+    background: #FFFDF6; color: var(--text); border: 2px solid #E4D3AE; box-shadow: 0 4px 10px rgba(30,12,0,.4); font: 700 min(21px, 4.2cqw)/1.2 var(--ui); }
+  .bp-seat.mate { background: var(--cream); }
+  .bp-seat img, .bp-faces img { width: min(36px, 7cqw); height: min(36px, 7cqw); border-radius: 50%; }
+  .bp-seat img { background: #E8EEF3; }
+  /* Page 1: the table from his chair, André across, Simone on the left, Henri on the right, and the way of play. */
+  .bp-table { --cw: min(64px, 11cqw); padding-block: 10px; display: grid; grid-template-columns: auto auto auto; grid-template-areas: ". n ." "w c e" "s s s"; align-items: center; justify-items: center; gap: 6px 14px; }
+  .bp-n { grid-area: n; } .bp-w { grid-area: w; } .bp-e { grid-area: e; }
+  .bp-c { grid-area: c; position: relative; display: grid; place-items: center; width: calc(var(--cw) * 3.1); height: calc(var(--cw) * 1.6); }
+  .bp-c .bp-ways { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .bp-ways path { fill: none; stroke: rgba(var(--print),.85); stroke-linecap: round; }
+  .bp-ways polygon { fill: rgba(var(--print),.85); }
+  .bp-c .card { --w: calc(var(--cw) * .8) !important; --h: calc(var(--cw) * 1.04) !important; }
+  .bp-s { grid-area: s; display: flex; align-items: center; gap: 18px; }
+  .bp-pair { position: relative; display: flex; gap: 10px; border-radius: 16px; }
+  /* Page 2: the retourne and his answer, as in the game. */
+  .bp-ret { display: flex; flex-direction: column; align-items: center; gap: 6px; font: 700 min(20px, 4cqw) var(--ui); }
+  .bp-ask { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px; border-radius: 18px;
+    background: #FFFDF6; color: var(--text); border: 3px solid var(--turn); box-shadow: 0 0 0 4px rgba(31,111,139,.4); }
+  .bp-ask b { font: 700 min(24px, 4.6cqw)/1.2 var(--ui); }
+  .bp-btns { display: flex; gap: 10px; }
+  /* Page 3: the trick, his lit place, and his hand: the cards he may play rise, the others are dimmed. */
+  .bp-slot { width: var(--cw); height: calc(var(--cw) * 1.3); border-radius: calc(var(--cw) * .09);
+    border: 3px solid rgba(255,244,214,.8); background: rgba(255,244,214,.1); box-shadow: 0 0 18px 3px rgba(255,244,214,.28); }
+  .bp-play { --cw: min(66px, 12cqw); gap: 8px; padding-block: 10px; }
+  .bp-hand { display: flex; padding-top: 16px; }
+  .bp-hand .card + .card { margin-left: calc(var(--cw) * -.3); }
+  #help .bp-hand .card.can { translate: 0 -12px; }
+  #help .bp-hand .card.no { filter: brightness(.52) saturate(.55); }
+  /* Page 4: the cards in order, their points under each one. */
+  .bp-pts { gap: 10px; padding-block: 12px; --cw: min(54px, 7.4cqw); }
+  .bp-line { display: flex; align-items: center; gap: 14px; }
+  .bp-line > b { display: inline-flex; align-items: center; gap: 4px; width: 104px; padding: 4px 10px; border-radius: 12px; background: #FFFDF6;
+    color: var(--text); font: 700 20px/1.2 var(--ui); }
+  .bp-cards { display: flex; gap: 8px; }
+  .bp-cards figure, .bp-team { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .bp-cards figcaption { font: 700 20px/1.2 var(--ui); color: #FFF4D6; }
+  /* Page 5: the points of each team, and the belote. */
+  .bp-end { align-items: flex-end; gap: 30px; --cw: min(62px, 11cqw); }
+  .bp-faces { display: flex; } .bp-faces img + img { margin-left: -8px; box-shadow: 0 0 0 2px var(--baize); }
+  .bp-pile { display: grid; } .bp-pile .card { grid-area: 1 / 1; } .bp-pile .card:nth-child(2) { translate: 5px -5px; } .bp-pile .card:nth-child(3) { translate: 10px -10px; }
+  .bp-team figcaption { min-width: 70px; padding: 2px 12px; border-radius: 12px; background: #FFFDF6; color: var(--text); text-align: center; font: 700 26px/1.2 var(--ui); }
+  .bp-team figcaption.bp-win { background: var(--cream); box-shadow: 0 0 0 4px #5FBF7A; }
+  .bp-bel figcaption { font-size: 20px; }
+  .bp-fan { display: flex; } .bp-fan .card + .card { margin-left: calc(var(--cw) * -.45); rotate: 8deg; }
+  /* A narrow guide, on a phone: the seats in smaller type, the points in two overlapping rows. */
+  @container (max-width: 520px) {
+    .bp-mat { padding: 12px; --cw: 15cqw; }
+    .bp-table { --cw: 10cqw; gap: 6px; } .bp-me { display: none; }
+    .bp-seat { padding-right: 8px; gap: 4px; }
+    .bp-row { flex-wrap: wrap; justify-content: center; }
+    .bp-pts { --cw: 15cqw; }
+    .bp-line { flex-direction: column; gap: 4px; }
+    .bp-cards { gap: 0; }
+    .bp-cards figure { width: 9.4cqw; align-items: flex-start; }
+    .bp-cards figure:last-child { width: auto; }
+    .bp-cards figcaption { width: 9.4cqw; text-align: center; font-size: 4.4cqw; }
+    .bp-end { gap: 14px; --cw: 13cqw; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -268,7 +345,8 @@
 <div id="say"><div id="msg" aria-live="polite"></div></div>
 <div id="table">
   <div id="mid"></div>
-  <div id="mySlot">À vous</div>
+  <svg id="ways" aria-hidden="true"></svg>
+  <div id="mySlot"></div>
   <div id="bubble" role="status"></div>
   <div class="seat" id="seat0"></div>
   <div class="seat" id="seat1"></div>
@@ -276,12 +354,12 @@
   <div class="seat" id="seat3"></div>
   <div id="strip"></div>
   <div id="retLabel">La retourne</div>
-  <div id="bidBar" role="group" aria-labelledby="bidTitle"><h2 id="bidTitle"></h2><div id="bidBtns"></div></div>
+  <div id="bidBar" role="group" aria-labelledby="bidTitle"><div id="bidSlot"></div><div class="ask"><h2 id="bidTitle"></h2><div id="bidBtns"></div></div></div>
   <div class="sheet" id="scoreSheet" role="group" aria-labelledby="scoreTitle">
     <h2 id="scoreTitle"></h2>
     <p class="note" id="scoreNote"></p>
     <table id="scoreTable"></table>
-    <button id="nextBtn" class="primary"></button>
+    <button id="nextBtn" class="primary" data-nudge></button>
   </div>
   <aside id="side">
     <div class="box" id="atoutBox"></div>
@@ -293,68 +371,53 @@
 <footer id="rail"><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
   <section class="page">
-    <h3>Jouer avec André</h3>
-    <p>Vous jouez avec André, assis en face de vous, contre Simone et Henri.</p>
-    <p>À chaque manche, une équipe prend : elle choisit l'atout, et doit faire plus de points que l'autre équipe.</p>
-    <p>La première équipe qui atteint <strong>501 points</strong> gagne la partie. En cas d'égalité, on joue une manche de plus.</p>
-    <p>On joue chacun son tour, vers la droite. Les autres joueurs posent leurs cartes tout seuls.</p>
+    <h3>La table</h3>
+    <div class="bp" aria-hidden="true"><div class="bp-mat bp-table">
+      <span class="bp-seat mate bp-n"><img src="../lib/avatars/andre.webp" alt="">André</span>
+      <span class="bp-seat bp-w"><img src="../lib/avatars/simone.webp" alt="">Simone</span>
+      <div class="bp-c"><svg class="bp-ways" viewBox="0 0 240 136"></svg><div data-help-card="23"></div></div>
+      <span class="bp-seat bp-e"><img src="../lib/avatars/henri.webp" alt="">Henri</span>
+      <div class="bp-s"><span class="bp-seat mate bp-me"><img src="../lib/avatars/vous.webp" alt="">Vous</span><span class="bp-pair bp-ring"><span class="bp-btn">Je prends <svg class="s red-s" viewBox="0 0 100 100"><use href="#su1"/></svg></span><span class="bp-btn">Je passe</span><svg class="guide-hand" viewBox="0 0 40 48"><use href="#kit-hand"/></svg></span></div>
+    </div></div>
+    <p class="guide-lead">Vous jouez avec André, en face, contre Simone et Henri.</p>
+    <p class="guide-more">On joue chacun son tour, vers la droite&nbsp;: suivez les flèches.</p>
   </section>
   <section class="page">
-    <h3>Prendre ou passer</h3>
-    <ol>
-      <li>Chacun reçoit 5 cartes. Une carte est posée face visible : la retourne.</li>
-      <li>Premier tour : cliquez sur « Je prends » pour faire de sa couleur l'atout, ou sur « Je passe ».</li>
-      <li>Si tout le monde passe, deuxième tour : chacun peut choisir une autre couleur.</li>
-      <li>Celui qui prend reçoit la retourne et 2 cartes. Les autres reçoivent 3 cartes.</li>
-    </ol>
-    <p>Si personne ne prend, le joueur suivant distribue de nouveau.</p>
+    <h3>Prendre l'atout</h3>
+    <div class="bp" aria-hidden="true"><div class="bp-mat bp-row">
+      <div class="bp-ret"><div data-help-card="23"></div><span>La retourne</span></div>
+      <div class="bp-ask"><b>Prenez-vous à cœur&nbsp;?</b><span class="bp-btns"><span class="bp-btn bp-ring">Je prends <svg class="s red-s" viewBox="0 0 100 100"><use href="#su1"/></svg><svg class="guide-hand" viewBox="0 0 40 48"><use href="#kit-hand"/></svg></span><span class="bp-btn">Je passe</span></span></div>
+    </div></div>
+    <p class="guide-lead">Cliquez sur «&nbsp;Je prends&nbsp;»&nbsp;: la couleur de la retourne devient l'atout.</p>
+    <p class="guide-more">Si tout le monde passe, un second tour permet de choisir une autre couleur.</p>
   </section>
   <section class="page">
     <h3>Jouer une carte</h3>
-    <div class="guide-panel">
-      <figure class="guide-example">
-        <div class="guide-art" aria-hidden="true"><div data-help-card="48"></div><div data-help-card="23"></div></div>
-        <figcaption>Le 10 de trèfle est demandé. Sans trèfle, coupez avec un atout : ici le valet de cœur.</figcaption>
-      </figure>
-    </div>
-    <ul>
-      <li>Jouez la couleur demandée, à l'atout plus fort si vous pouvez.</li>
-      <li>Sans elle, si André gagne le pli, jouez ce que vous voulez.</li>
-      <li>Sinon, coupez, plus fort qu'un atout posé si possible. Sans atout, jouez ce que vous voulez.</li>
-    </ul>
+    <div class="bp" aria-hidden="true"><div class="bp-mat bp-play">
+      <div class="bp-row bp-trick"><div data-help-card="48"></div><div class="bp-slot"></div></div>
+      <div class="bp-hand"><div data-help-card="51" class="can bp-ring"><svg class="guide-hand" viewBox="0 0 40 48"><use href="#kit-hand"/></svg></div><div data-help-card="45" class="can"></div><div data-help-card="13" class="no"></div><div data-help-card="34" class="no"></div><div data-help-card="11" class="no"></div></div>
+    </div></div>
+    <p class="guide-lead">Cliquez sur une carte levée&nbsp;: les cartes sombres ne vont pas.</p>
+    <p class="guide-more">Suivez la couleur demandée. Sans elle, coupez avec un atout.</p>
   </section>
   <section class="page">
-    <h3>Compter les points</h3>
-    <div class="guide-panel">
-      <table class="guide-pts" aria-label="Points des cartes">
-        <thead><tr><th>Atout</th><td>V</td><td>9</td><td>A</td><td>10</td><td>R</td><td>D</td><td>8</td><td>7</td></tr></thead>
-        <tbody><tr><th>Points</th><td>20</td><td>14</td><td>11</td><td>10</td><td>4</td><td>3</td><td>0</td><td>0</td></tr></tbody>
-      </table>
-    </div>
-    <div class="guide-panel">
-      <table class="guide-pts" aria-label="Points des autres couleurs">
-        <thead><tr><th>Autres</th><td>A</td><td>10</td><td>R</td><td>D</td><td>V</td><td>9</td><td>8</td><td>7</td></tr></thead>
-        <tbody><tr><th>Points</th><td>11</td><td>10</td><td>4</td><td>3</td><td>2</td><td>0</td><td>0</td><td>0</td></tr></tbody>
-      </table>
-    </div>
-    <p>Les cartes sont rangées de la plus forte à la plus faible. Le dernier pli vaut 10 points de plus : le dix de der. Si une équipe fait tous les plis, il vaut 100 points.</p>
+    <h3>Les points</h3>
+    <div class="bp" aria-hidden="true"><div class="bp-mat bp-pts">
+      <div class="bp-line"><b>Atout <svg class="s red-s" viewBox="0 0 100 100"><use href="#su1"/></svg></b><div class="bp-cards"><figure><div data-help-card="23"></div><figcaption>20</figcaption></figure><figure><div data-help-card="21"></div><figcaption>14</figcaption></figure><figure><div data-help-card="13"></div><figcaption>11</figcaption></figure><figure><div data-help-card="22"></div><figcaption>10</figcaption></figure><figure><div data-help-card="25"></div><figcaption>4</figcaption></figure><figure><div data-help-card="24"></div><figcaption>3</figcaption></figure><figure><div data-help-card="20"></div><figcaption>0</figcaption></figure><figure><div data-help-card="19"></div><figcaption>0</figcaption></figure></div></div>
+      <div class="bp-line"><b>Autres</b><div class="bp-cards"><figure><div data-help-card="0"></div><figcaption>11</figcaption></figure><figure><div data-help-card="9"></div><figcaption>10</figcaption></figure><figure><div data-help-card="12"></div><figcaption>4</figcaption></figure><figure><div data-help-card="11"></div><figcaption>3</figcaption></figure><figure><div data-help-card="10"></div><figcaption>2</figcaption></figure><figure><div data-help-card="8"></div><figcaption>0</figcaption></figure><figure><div data-help-card="7"></div><figcaption>0</figcaption></figure><figure><div data-help-card="6"></div><figcaption>0</figcaption></figure></div></div>
+    </div></div>
+    <p class="guide-lead">Le valet et le 9 d'atout sont les cartes les plus fortes.</p>
+    <p class="guide-more">Le dernier pli vaut 10 points de plus&nbsp;: le dix de der.</p>
   </section>
   <section class="page">
     <h3>Gagner la manche</h3>
-    <ul>
-      <li>Une manche vaut 162 points. L'équipe qui prend doit en faire plus que l'autre. Sinon, elle est « dedans » et l'autre équipe marque 162.</li>
-      <li><strong>Belote, rebelote :</strong> le roi et la dame d'atout dans la même main valent 20 points.</li>
-      <li><strong>Capot :</strong> une équipe qui fait tous les plis marque 252 points : 162, et 90 de plus au dix de der.</li>
-    </ul>
-    <p>Il n'y a pas d'autre annonce : ni tierce, ni carré.</p>
-  </section>
-  <section class="page">
-    <h3>Trouver de l'aide</h3>
-    <ul>
-      <li>« Quelle carte jouer ? » montre une bonne carte. Pendant les annonces, il conseille de prendre ou de passer.</li>
-      <li>« Annuler le dernier coup » reprend votre dernier choix et ce qui a été joué après.</li>
-      <li>Le panneau de droite montre l'atout, les points et le dernier pli.</li>
-    </ul>
+    <div class="bp" aria-hidden="true"><div class="bp-mat bp-row bp-end">
+      <figure class="bp-team"><span class="bp-faces"><img src="../lib/avatars/vous.webp" alt=""><img src="../lib/avatars/andre.webp" alt=""></span><div class="bp-pile"><div data-help-card="dos"></div><div data-help-card="dos"></div><div data-help-card="dos"></div></div><figcaption class="bp-win">92</figcaption></figure>
+      <figure class="bp-team"><span class="bp-faces"><img src="../lib/avatars/simone.webp" alt=""><img src="../lib/avatars/henri.webp" alt=""></span><div class="bp-pile"><div data-help-card="dos"></div><div data-help-card="dos"></div></div><figcaption>70</figcaption></figure>
+      <figure class="bp-team bp-bel"><div class="bp-fan"><div data-help-card="25"></div><div data-help-card="24"></div></div><figcaption>Belote +20</figcaption></figure>
+    </div></div>
+    <p class="guide-lead">L'équipe qui a pris doit faire plus de points que l'autre.</p>
+    <p class="guide-more">Sinon, elle est dedans. La première équipe à 501 points gagne.</p>
   </section>
 </div>
 
@@ -378,9 +441,9 @@ const DEAL_MS = 90;        // between two cards of a deal
 // The four players. Seat 1 is on his right, 2 across (his partner), 3 on his left.
 const PLAYERS = [
   { name: 'Vous', id: 'vous', where: '', color: '#C9951A' },
-  { name: 'Henri', id: 'henri', where: 'À votre droite', color: '#F0C6D0' },
-  { name: 'André', id: 'andre', where: 'En face, avec vous', color: '#CDE6B8' },
-  { name: 'Simone', id: 'simone', where: 'À votre gauche', color: '#B9D7F0' },
+  { name: 'Henri', id: 'henri', where: 'À votre droite', short: 'À droite', color: '#F0C6D0' },
+  { name: 'André', id: 'andre', where: 'En face, avec vous', short: 'Avec vous', color: '#CDE6B8' },
+  { name: 'Simone', id: 'simone', where: 'À votre gauche', short: 'À gauche', color: '#B9D7F0' },
 ];
 const US = 'Vous et André', THEM = 'Simone et Henri';
 const face = (s, cls = 'face') => `<img class="${cls}" src="../lib/avatars/${PLAYERS[s].id}.webp" alt="" style="background:${PLAYERS[s].color}">`;
@@ -787,25 +850,95 @@ function cardEl(c) {
   return e;
 }
 
-// The sizes come from the window: his hand along the bottom, the trick in the middle, the three
-// players around it, and the side column on the right when there is room.
+// The sizes come from the window. The score pad takes the right edge. André sits on top, his hand lies
+// whole along the bottom, and the trick fills the band between, with room for his cards to rise.
+// Simone and Henri sit by the trick when there is room, else in one row with André. The seats must hold
+// their text before this runs, since their sizes set the rest.
 function layout() {
   const W = table.clientWidth, H = table.clientHeight;
-  const narrow = W < 700;
+  const narrow = W < 700, low = !narrow && H < 430;
   const sideW = narrow ? 0 : W >= 1300 ? 300 : 272, pad = narrow ? 8 : 18;
-  const PW = W - 2 * pad - (sideW ? sideW + 20 : 0);
-  const topH = narrow ? 150 : 96;
-  const byW = narrow ? (PW - 10) / 5.2 : Math.min((PW - 10) / 5.9, (PW - 2 * 240 - 40) / 3.4);
-  const byH = (H - topH - 26) / (1.3 * (1.62 + .14 + .8));
-  const w = Math.floor(Math.max(56, Math.min(byW, byH, 160)));
-  const h = Math.round(w * 1.3);
+  const PW = W - 2 * pad - sideW, cx = Math.round(pad + PW / 2);
+  const s0 = $('seat0'), s1 = $('seat1'), s2 = $('seat2'), s3 = $('seat3');
+  const bottom = e => e.offsetTop + e.offsetHeight;
+  // The card width that fits under a band starting at top: the trick (1.62 h), the rise (.1 h), the hand.
+  const size = top => Math.floor(Math.max(56, Math.min((PW - 10) / (narrow ? 5.2 : 5.9), (H - top - 20) / 2.72 / 1.3, 160)));
+  let bandTop, row = true;
+  if (narrow) {
+    // A phone: Simone, André and Henri in one row on top, as they sit, and the strip under them.
+    const sw = Math.floor((PW - 16) / 3);
+    [s3, s2, s1].forEach((e, i) => { e.style.width = sw + 'px'; e.style.left = pad + i * (sw + 8) + 'px'; e.style.top = '8px'; });
+    const strip = $('strip'), top = Math.max(...[s1, s2, s3].map(bottom)) + 8;
+    strip.style.left = pad + 'px'; strip.style.width = PW + 'px'; strip.style.top = top + 'px';
+    bandTop = top + strip.offsetHeight + 10;
+  } else {
+    [s1, s2, s3].forEach(e => { e.style.width = ''; });
+    s2.style.left = Math.round(cx - s2.offsetWidth / 2) + 'px'; s2.style.top = '8px';
+    bandTop = bottom(s2) + 10;
+    const w = size(bandTop), sideSeat = Math.max(s1.offsetWidth, s3.offsetWidth);
+    row = low || cx - Math.max(1.62 * w + 30, 240) - sideSeat < pad;
+    if (row) {
+      // One row on top: Simone and Henri at the corners of the mat, clear of André.
+      const off = Math.max(s2.offsetWidth / 2 + 16 + sideSeat / 2, 3.3 * w);
+      s3.style.left = Math.round(Math.max(pad, cx - off - s3.offsetWidth / 2)) + 'px';
+      s1.style.left = Math.round(Math.min(pad + PW - s1.offsetWidth, cx + off - s1.offsetWidth / 2)) + 'px';
+      s1.style.top = s3.style.top = '8px';
+      bandTop = Math.max(bottom(s1), bottom(s2), bottom(s3)) + 10;
+    }
+  }
+  const w = size(bandTop), h = Math.round(w * 1.3);
   document.documentElement.style.setProperty('--w', w + 'px');
   document.documentElement.style.setProperty('--h', h + 'px');
-  const handTop = Math.round(H - h * .8);
-  const cx = pad + PW / 2;
-  const bandTop = topH + 14, bandBot = handTop - Math.round(h * .14);
+  const handTop = H - 8 - h, bandBot = handTop - Math.round(h * .1) - 12;
   const cy = Math.round((bandTop + bandBot) / 2);
-  return { W, H, w, h, pad, PW, sideW, handTop, cx, cy, topH, narrow, low: !narrow && H < 430 };
+  // The free width between Simone and Henri, for the bids.
+  let gapW = PW;
+  if (!row) {
+    // Simone and Henri beside the trick, above the rise of his cards, and below André if they meet him.
+    const D = Math.max(1.62 * w + 30, 240), under = D < s2.offsetWidth / 2 + 8 ? bottom(s2) + 8 : 8;
+    for (const e of [s1, s3]) e.style.top = Math.round(Math.max(under, Math.min(cy - e.offsetHeight / 2, handTop - h * .13 - 8 - e.offsetHeight))) + 'px';
+    s3.style.left = Math.round(cx - D - s3.offsetWidth) + 'px';
+    s1.style.left = Math.round(cx + D) + 'px';
+    gapW = 2 * D - 24;
+  }
+  // His own plate, left of a full hand, if there is room.
+  s0.style.display = '';
+  const s0x = cx - 2.95 * w - 14 - s0.offsetWidth;
+  if (narrow || s0x < pad) s0.style.display = 'none';
+  else { s0.style.left = Math.round(s0x) + 'px'; s0.style.top = Math.round(H - 8 - s0.offsetHeight) + 'px'; }
+  // The mat: from André's plate down under his hand, and from Simone's plate to Henri's.
+  const mid = $('mid');
+  const mt = narrow ? bandTop - 6 : s2.offsetTop + Math.round(s2.offsetHeight / 2), mb = handTop + Math.round(h * .55);
+  const ml = narrow ? pad : Math.max(pad, Math.min(s3.offsetLeft + s3.offsetWidth / 2, cx - 3.3 * w));
+  const mr = narrow ? pad + PW : Math.min(pad + PW, Math.max(s1.offsetLeft + s1.offsetWidth / 2, cx + 3.3 * w));
+  Object.assign(mid.style, { left: ml + 'px', top: mt + 'px', width: mr - ml + 'px', height: mb - mt + 'px',
+    borderRadius: Math.round(Math.min(150, (mb - mt) * .42, (mr - ml) * .3)) + 'px' });
+  const L = { W, H, w, h, pad, PW, sideW, handTop, cx, cy, bandTop, bandBot, gapW, narrow, low, row };
+  drawWays(L);
+  return L;
+}
+// The way of play printed on the mat, around the trick: four arrows that turn counter-clockwise, from
+// him to Henri on his right, to André, to Simone, and back to him.
+function drawWays({ w, h, cx, cy }) {
+  const rx = 1.85 * w, ry = 1.02 * h, m = 30, sw = Math.max(4, w * .05), hs = Math.max(16, w * .18);
+  const svg = $('ways'), ox = rx + m, oy = ry + m;
+  Object.assign(svg.style, { left: cx - ox + 'px', top: cy - oy + 'px' });
+  svg.setAttribute('width', 2 * ox); svg.setAttribute('height', 2 * oy);
+  svg.innerHTML = waysHtml(ox, oy, rx, ry, sw, hs);
+}
+// The four arrows around (ox, oy), on an ellipse of radii rx and ry, with lines sw wide and heads hs long.
+function waysHtml(ox, oy, rx, ry, sw, hs) {
+  const at = t => [ox + rx * Math.cos(t), oy - ry * Math.sin(t)], f = n => n.toFixed(1);
+  return [-90, 0, 90, 180].map(q => {
+    const a = (q + 20) * Math.PI / 180, b = (q + 62) * Math.PI / 180;
+    const [x1, y1] = at(a), [x2, y2] = at(b);
+    // The head points along the arc, the way the angle grows.
+    const tx = -rx * Math.sin(b), ty = -ry * Math.cos(b), n = Math.hypot(tx, ty), ux = tx / n, uy = ty / n;
+    const tip = [x2 + ux * hs * .7, y2 + uy * hs * .7];
+    const l = [x2 - uy * hs * .55 - ux * hs * .3, y2 + ux * hs * .55 - uy * hs * .3], r = [x2 + uy * hs * .55 - ux * hs * .3, y2 - ux * hs * .55 - uy * hs * .3];
+    return `<path d="M${f(x1)} ${f(y1)}A${f(rx)} ${f(ry)} 0 0 0 ${f(x2)} ${f(y2)}" stroke-width="${f(sw)}"/>`
+      + `<polygon points="${[tip, l, r].map(p => p.map(f).join(',')).join(' ')}"/>`;
+  }).join('');
 }
 // Where each seat's card lies in the trick: his below the middle, Henri's right, André's above, Simone's left.
 function trickXY(seat) {
@@ -826,7 +959,7 @@ const bidding = () => G.phase === 'bid1' || G.phase === 'bid2';
 function seatNow(s, turnSeat) {
   const name = s === 0 ? '' : PLAYERS[s].name;
   if (turnSeat === s) {
-    if (s === 0) return bidding() ? 'À vous de parler' : 'À vous de jouer';
+    if (s === 0) return 'À vous';
     return `<span class="dots"><i></i><i></i><i></i></span>${name} ${bidding() ? 'parle' : 'joue'}`;
   }
   if (bidding()) {
@@ -839,48 +972,31 @@ function seatNow(s, turnSeat) {
 
 function render() {
   if (!G) return;
-  L = layout();
-  const { w, h, pad, PW, handTop, cx, cy } = L;
   const playing = G.phase === 'play' && G.turn === 0 && !busy && !stale;
   const ok = new Set(playing ? legal(G) : []);
   const inPlay = !bidding();
-  table.classList.toggle('low', L.low);
-  document.body.classList.toggle('phone', L.narrow);
+  const narrow = table.clientWidth < 700;
+  table.classList.toggle('low', !narrow && table.clientHeight < 430);
+  document.body.classList.toggle('phone', narrow);
 
   // The seats: name, where, the dealer and the taker, what they say.
   const turnSeat = !busy && !stale && (bidding() || G.phase === 'play') ? G.turn : -1;
   const tags = s => (G.dealer === s && bidding() ? '<span class="tag deal">Donne</span>' : '')
     + (inPlay && G.taker === s ? `<span class="tag tk" title="A pris">Prend ${suitSvg(G.trump)}</span>` : '');
   for (const s of [1, 2, 3]) {
-    const e = $('seat' + s), p = PLAYERS[s], n = G.hands[s].length;
-    const backs = Array.from({ length: n }, (_, i) => `<i style="left:${i * 9}px"></i>`).join('');
-    e.innerHTML = `${face(s, 'ava')}
-      <div><b>${p.name}${tags(s)}</b><span class="where">${p.where}</span>
-      <span class="now">${seatNow(s, turnSeat)}</span></div>
-      <div class="backs" style="width:${n ? 26 + (n - 1) * 9 : 0}px">${backs}</div>`;
+    // Two lines: the name and the tags, then what the player does now, else where the player sits.
+    const e = $('seat' + s), p = PLAYERS[s], now = seatNow(s, turnSeat);
+    e.innerHTML = `${face(s, 'ava')}<div><b>${p.name}${tags(s)}</b>${now || narrow ? `<span class="now">${now}</span>` : `<span class="where">${table.classList.contains('low') ? p.short : p.where}</span>`}</div>`;
     e.classList.toggle('turn', turnSeat === s || (busy && !shown && G.turn === s));
   }
-  const s1 = $('seat1'), s2 = $('seat2'), s3 = $('seat3');
-  if (L.narrow) {
-    // A phone: Simone, André and Henri in one row on top, as they sit.
-    const sw = Math.floor((PW - 16) / 3);
-    [s3, s2, s1].forEach((e, i) => { e.style.width = sw + 'px'; e.style.left = pad + i * (sw + 8) + 'px'; e.style.top = '8px'; });
-  } else {
-    [s1, s2, s3].forEach(e => { e.style.width = ''; });
-    s2.style.left = Math.round(Math.max(pad, cx - s2.offsetWidth / 2)) + 'px';
-    s2.style.top = Math.round(Math.max(10, cy - h * .81 - Math.max(24, w * .3) - s2.offsetHeight)) + 'px';
-    const near = w * 1.62 + Math.max(24, w * .3);
-    s3.style.left = Math.round(Math.max(pad, cx - near - s3.offsetWidth)) + 'px'; s3.style.top = Math.round(cy - s3.offsetHeight / 2) + 'px';
-    s1.style.left = Math.round(Math.min(pad + PW - s1.offsetWidth, cx + near)) + 'px'; s1.style.top = Math.round(cy - s1.offsetHeight / 2) + 'px';
-  }
-  // His own seat, above the left end of his hand.
+  // His own plate: his face, his name, and his turn or the tags of the dealer and the taker.
   const s0 = $('seat0');
-  s0.innerHTML = `${face(0, 'ava')}<b>Vous${tags(0)}</b><span class="now">${seatNow(0, turnSeat)}</span>`;
+  const own = seatNow(0, turnSeat);
+  s0.innerHTML = `${face(0, 'ava')}<div><b>Vous${tags(0)}</b>${own ? `<span class="now">${own}</span>` : ''}</div>`;
   s0.classList.toggle('turn', turnSeat === 0);
-  // The mat in the middle, with the trump drawn on it.
-  const mid = $('mid'), md = Math.round(w * 3.5);
-  mid.style.left = cx - md / 2 + 'px'; mid.style.top = cy - md / 2 + 'px'; mid.style.width = mid.style.height = md + 'px';
-  mid.innerHTML = inPlay ? suitSvg(G.trump).replace(/class="[^"]*"/, '') : '';
+  renderStrip();
+  L = layout();
+  const { w, h, PW, handTop, cx } = L;
 
   // His hand.
   const live = new Set();
@@ -889,34 +1005,7 @@ function render() {
   const stepX = n > 1 ? Math.min(w * .7, (PW - w) / (n - 1)) : 0;
   const x0 = cx - (w + stepX * (n - 1)) / 2;
   L.stepX = stepX;
-  s0.style.left = Math.round(Math.max(pad, n ? x0 : cx - s0.offsetWidth / 2)) + 'px';
   const fresh = dealing; dealing = null;
-  const mine = G.taker === 0 && inPlay && !G.log.some(x => x[0] === 0) && hand.includes(G.turnup);
-  s0.classList.remove('beside');
-  s0.style.top = Math.round(handTop - s0.offsetHeight - (mine ? h * .17 + 4 : 10)) + 'px';
-  // Over the trick in a low window: beside his hand instead, if there is room.
-  const tl = cx - w * 1.62 - 8, tright = cx + w * 1.62 + 8, tb = cy + h * .81 + 8;
-  if (!L.narrow && s0.offsetTop < tb && s0.offsetLeft < tright && s0.offsetLeft + s0.offsetWidth > tl) {
-    s0.classList.add('beside');
-    if (s0.offsetWidth <= x0 - pad - 8) { s0.style.left = pad + 'px'; s0.style.top = Math.round(L.H - s0.offsetHeight - 6) + 'px'; }
-    else s0.classList.remove('beside');
-  }
-  if (!L.narrow) for (const e of [s1, s3]) e.style.top = Math.round(Math.max(pad, Math.min(parseFloat(e.style.top), s0.offsetTop - e.offsetHeight - 8))) + 'px';
-  if (fresh && !motion.matches && !L.low && !L.narrow) {
-    const [dx, dy] = seatXY(fresh.from);
-    const board = table.getBoundingClientRect(), zoom = Zoom.z();
-    for (const seat of [s1, s2, s3]) {
-      const backs = [...seat.querySelectorAll('.backs i')];
-      const dealt = bidding() ? backs : backs.slice(5);
-      dealt.forEach((back, i) => {
-        const rect = back.getBoundingClientRect();
-        const x = dx + w / 2 - (rect.left + rect.width / 2 - board.left) / zoom;
-        const y = dy + h / 2 - (rect.top + rect.height / 2 - board.top) / zoom;
-        back.animate([{ transform: `translate(${x}px, ${y}px)` }, { transform: 'none' }],
-          { duration: 500, delay: i * DEAL_MS, easing: 'ease-out', fill: 'backwards' });
-      });
-    }
-  }
   const slot = $('mySlot'), [sx, sy] = trickXY(0);
   slot.classList.toggle('on', playing);
   slot.style.left = sx + 'px'; slot.style.top = sy + 'px';
@@ -934,9 +1023,6 @@ function render() {
     e.style.zIndex = 100 + i;
     e.tabIndex = playing ? 0 : -1;
     e.setAttribute('role', 'button'); e.setAttribute('aria-label', cardName(c) + (suit(c) === G.trump && inPlay ? ', atout' : ''));
-    const tag = e.querySelector('.got');
-    if (mine && c === G.turnup && !tag) e.insertAdjacentHTML('beforeend', '<span class="got">Retourne</span>');
-    else if (!(mine && c === G.turnup) && tag) tag.remove();
   });
   // The trick: the one on the table, or a full one about to go.
   const tr = shown || { leader: G.leader, cards: G.phase === 'play' ? G.trick : [] };
@@ -944,7 +1030,6 @@ function render() {
     const seat = (tr.leader + i) % 4;
     const isNew = !els.has(c);
     const e = cardEl(c); live.add(c);
-    e.querySelector('.got')?.remove();
     let origin = isNew ? seatXY(seat) : null;
     if (e.classList.contains('hand') && !motion.matches) {
       const rect = e.getBoundingClientRect(), board = table.getBoundingClientRect();
@@ -981,48 +1066,59 @@ function render() {
   $('hintBtn').disabled = stale || busy || G.turn !== 0 || !(bidding() || G.phase === 'play');
 }
 
-// The bids: the retourne on the mat, and his answer in a bar above his hand, one big button per answer.
+// The bids: the retourne on the mat. On his turn, his answer beside it: the question and one big
+// button per answer.
 function renderBids(fresh) {
   const mineNow = bidding() && G.turn === 0 && !busy && !stale;
   const bar = $('bidBar');
   bar.classList.toggle('on', mineNow);
-  $('seat0').style.visibility = mineNow ? 'hidden' : '';
-  if (!mineNow) return placeTurnup(fresh);
-  const s = suit(G.turnup);
-  $('bidTitle').textContent = G.phase === 'bid1' ? `Prenez-vous ${SUIT_DE(s)} ?` : "Choisissez l'atout :";
-  const opts = bidOptions(G);
-  const key = G.phase + ':' + s + ':' + (hint && hint.bid !== undefined ? hint.bid : '');
-  const box = $('bidBtns');
-  if (box.dataset.key !== key) {
-    box.dataset.key = key;
-    box.innerHTML = opts.map(o => {
-      const label = o === 'pass' ? 'Je passe' : o === 'take' ? `Je prends ${suitSvg(s)}` : `${suitSvg(o)}${cap(sname(o))}`;
-      return `<button type="button" data-bid="${o}" class="${hint && hint.bid === o ? 'hint' : ''}">${label}</button>`;
-    }).join('');
+  if (mineNow) {
+    const s = suit(G.turnup);
+    $('bidTitle').textContent = G.phase === 'bid1' ? `Prenez-vous ${SUIT_DE(s)} ?` : "Choisissez l'atout :";
+    const key = G.phase + ':' + s + ':' + (hint && hint.bid !== undefined ? hint.bid : '');
+    const box = $('bidBtns');
+    if (box.dataset.key !== key) {
+      box.dataset.key = key;
+      box.innerHTML = bidOptions(G).map(o => {
+        const label = o === 'pass' ? 'Je passe' : o === 'take' ? `Je prends ${suitSvg(s)}` : `${suitSvg(o)}${cap(sname(o))}`;
+        return `<button type="button" data-bid="${o}" class="${hint && hint.bid === o ? 'hint' : ''}">${label}</button>`;
+      }).join('');
+    }
   }
-  // The widest that fits: the question and the buttons, else the buttons alone.
-  bar.classList.remove('bare');
-  bar.style.width = L.narrow ? L.PW + 'px' : '';
-  if (L.narrow || bar.offsetWidth > L.PW) bar.classList.add('bare');
-  const x = Math.max(L.pad, Math.min(L.cx - bar.offsetWidth / 2, L.pad + L.PW - bar.offsetWidth));
-  bar.style.left = Math.round(x) + 'px';
-  bar.style.top = Math.round(L.handTop - bar.offsetHeight - 12) + 'px';
   placeTurnup(fresh);
 }
-// The retourne on the mat, above his bid bar when it shows, with its name under it.
+// The retourne on the mat, with its name under it. On his turn, it moves left and his answer stands on
+// its right: the first shape of the answer that fits between Simone and Henri, above his hand.
 function placeTurnup(fresh) {
-  const on = bidding(), lab = $('retLabel');
+  const on = bidding(), lab = $('retLabel'), bar = $('bidBar');
   lab.classList.toggle('on', on);
   if (!on) return;
-  const e = cardEl(G.turnup), bar = $('bidBar');
+  const e = cardEl(G.turnup);
   e.className = 'card turnup ' + (rd(G.turnup) ? 'red' : 'black');
-  e.querySelector('.got')?.remove(); e.querySelector('.first')?.remove();
+  e.querySelector('.first')?.remove();
   e.removeAttribute('role'); e.tabIndex = -1;
-  const barTop = bar.classList.contains('on') ? bar.offsetTop : Infinity;
-  const y = Math.max(L.narrow ? L.topH : 8, Math.min(L.cy - L.h / 2 - 14, barTop - L.h - 40));
-  moveCard(e, L.cx - L.w / 2, y, fresh ? seatXY(fresh.from) : null);
-  e.style.zIndex = 30;
-  lab.style.left = Math.round(L.cx - lab.offsetWidth / 2) + 'px'; lab.style.top = Math.round(y + L.h + 6) + 'px';
+  const { w, h, cx, bandTop } = L, bandBot = L.handTop - 12, labH = lab.offsetHeight + 6;
+  let cardX = cx - w / 2, cardY = Math.round(Math.min((bandTop + bandBot) / 2, bandBot - labH - h / 2) - h / 2), z = 30;
+  if (bar.classList.contains('on')) {
+    // The retourne lies in his answer, on the left. Without room, it hides under the answer.
+    const shapes = bidOptions(G).length > 2
+      ? ['', 'grid', 'col', 'nocard', 'nocard grid', 'bare', 'bare grid', 'nocard bare', 'nocard bare grid', 'nocard bare col']
+      : ['', 'col', 'bare', 'bare col', 'nocard', 'nocard col', 'nocard bare col'];
+    let pick = shapes[shapes.length - 1];
+    for (const shape of shapes) {
+      bar.className = 'on ' + shape;
+      if (bar.offsetWidth <= L.gapW && bar.offsetHeight <= bandBot - bandTop) { pick = shape; break; }
+    }
+    bar.className = 'on ' + pick;
+    const left = Math.round(Math.max(L.pad, cx - bar.offsetWidth / 2)), top = Math.round(Math.max(bandTop, (bandTop + bandBot - bar.offsetHeight) / 2));
+    bar.style.left = left + 'px'; bar.style.top = top + 'px';
+    const slot = $('bidSlot');
+    if (slot.offsetWidth) { cardX = left + slot.offsetLeft + 3; cardY = top + slot.offsetTop + 3; z = 310; lab.classList.remove('on'); }
+    else { cardX = left + (bar.offsetWidth - w) / 2; cardY = top + (bar.offsetHeight - h) / 2; z = 29; lab.classList.remove('on'); }
+  }
+  moveCard(e, cardX, cardY, fresh ? seatXY(fresh.from) : null);
+  e.style.zIndex = z;
+  lab.style.left = Math.round(cardX + w / 2 - lab.offsetWidth / 2) + 'px'; lab.style.top = Math.round(cardY + h + 6) + 'px';
 }
 
 // The score sheet at the end of a hand: the points of the tricks, the belote, what each team marks.
@@ -1048,20 +1144,22 @@ function renderScoreSheet() {
   place(ss, L.cx, L.cy);
 }
 
-// The side column: the trump, the scores and the last trick. A phone has a strip instead.
-function renderSide() {
-  const side = $('side'), strip = $('strip'), inPlay = !bidding();
+// A phone: a strip under the seats with the trump and the totals. layout() places it.
+function renderStrip() {
+  const strip = $('strip'), narrow = table.clientWidth < 700, inPlay = !bidding();
+  strip.classList.toggle('on', narrow);
+  if (!narrow) return;
   const trumpLine = inPlay ? `${suitSvg(G.trump)}Atout ${sname(G.trump)}` : 'Atout : pas encore choisi';
-  strip.classList.toggle('on', L.narrow);
-  if (L.narrow) {
-    const by = inPlay ? `, ${G.taker === 0 ? 'vous' : PLAYERS[G.taker].name}` : '';
-    strip.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px">${trumpLine}${by}</span><span>Nous ${G.scores[0]} · Eux ${G.scores[1]}</span>`;
-    const top = Math.max(...[1, 2, 3].map(s => { const e = $('seat' + s); return e.offsetTop + e.offsetHeight; })) + 8;
-    strip.style.left = L.pad + 'px'; strip.style.width = L.PW + 'px'; strip.style.top = top + 'px';
-  }
+  const by = inPlay ? `, ${G.taker === 0 ? 'vous' : PLAYERS[G.taker].name}` : '';
+  strip.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px">${trumpLine}${by}</span><span>Nous ${G.scores[0]} · Eux ${G.scores[1]}</span>`;
+}
+// The side column: the trump, the scores and the last trick.
+function renderSide() {
+  const side = $('side'), inPlay = !bidding();
   side.style.display = L.sideW ? 'flex' : 'none';
   if (!L.sideW) return;
-  side.style.left = L.W - L.pad - L.sideW + 'px'; side.style.width = L.sideW + 'px'; side.style.top = '10px';
+  side.style.left = L.W - L.sideW + 'px'; side.style.width = L.sideW + 'px';
+  side.classList.toggle('slim', L.sideW < 300);
   side.classList.remove(...SIDE_DROPS);
   $('atoutBox').innerHTML = inPlay
     ? `<div class="big">${suitSvg(G.trump)}</div><div class="txt"><b>Atout ${sname(G.trump)}</b><span>${G.taker === 0 ? 'Vous avez pris' : PLAYERS[G.taker].name + ' a pris'}</span></div>`
@@ -1082,10 +1180,10 @@ function renderSide() {
     }).join('');
     $('lastText').textContent = (last.winner === 0 ? "Vous l'avez ramassé" : `${PLAYERS[last.winner].name} l'a ramassé`) + ` : ${ptsText(last.pts)}.`;
   }
-  // Too high for the window: drop parts in this order until it fits. The trump also shows on the mat, and the taker's seat says "Prend".
-  for (const drop of SIDE_DROPS) { if (side.offsetHeight <= L.H - 14) break; side.classList.add(drop); }
+  // Too high for the window: drop parts in this order until it fits. The taker's seat says "Prend" with the trump.
+  for (const drop of SIDE_DROPS) { if (side.scrollHeight <= side.clientHeight) break; side.classList.add(drop); }
 }
-const SIDE_DROPS = ['no-goal', 'no-lasttext', 'no-h3', 'no-atout', 'no-faces', 'no-last'];
+const SIDE_DROPS = ['no-goal', 'no-lasttext', 'no-h3', 'no-faces', 'small-atout', 'no-last'];
 
 // A sheet stays inside the table, between top and bottom, so its buttons are always in view: in a short
 // window it is made smaller.
@@ -1141,9 +1239,10 @@ function callout(seat, word) {
   e.className = 'callout';
   e.textContent = word;
   table.appendChild(e);
-  const s = $('seat' + seat);
-  const x = s.offsetLeft + s.offsetWidth / 2 - e.offsetWidth / 2;
-  const y = seat === 0 ? s.offsetTop - e.offsetHeight - 6 : s.offsetTop + s.offsetHeight + 6;
+  const s = $('seat' + seat), hidden = !s.offsetWidth;
+  // His plate may be hidden: then over the middle of his hand.
+  const x = hidden ? L.cx - e.offsetWidth / 2 : s.offsetLeft + s.offsetWidth / 2 - e.offsetWidth / 2;
+  const y = hidden ? L.handTop - L.h * .1 - e.offsetHeight - 8 : seat === 0 ? s.offsetTop - e.offsetHeight - 6 : s.offsetTop + s.offsetHeight + 6;
   e.style.left = Math.round(Math.max(8, Math.min(x, L.W - e.offsetWidth - 8))) + 'px';
   e.style.top = Math.round(Math.max(8, y)) + 'px';
   later(() => e.remove(), motion.matches ? 1600 : 2300);
@@ -1225,6 +1324,8 @@ addEventListener('keydown', e => {
 });
 addEventListener('resize', () => render());
 
+// The way of play in the rules guide, drawn as on the mat.
+document.querySelectorAll('#help .bp-ways').forEach(svg => { svg.innerHTML = waysHtml(120, 68, 104, 54, 5, 20); });
 // The rules open by themselves the first time the game is opened.
 const found = load();
 if (found === 'game') {
