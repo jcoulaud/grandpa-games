@@ -1,0 +1,1244 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Belote · Jeux de Papi</title>
+<meta name="description" content="La belote en grand, pour les grands-parents : à quatre, avec un partenaire en face contre deux joueurs de l'ordinateur, en facile, moyen ou difficile. Gratuit, sans publicité, sans compte.">
+<link rel="canonical" href="https://jeux-papi.fr/belote/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Jeux de Papi">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://jeux-papi.fr/belote/">
+<meta property="og:title" content="Belote · Jeux de Papi">
+<meta property="og:description" content="La belote en grand, avec un partenaire contre deux joueurs de l'ordinateur. Gratuit, sans publicité, sans compte.">
+<meta property="og:image" content="https://jeux-papi.fr/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../lib/kit.css">
+<link rel="stylesheet" href="../lib/cards.css">
+<style>
+  /* The belote plays on an ochre gold felt, a café table, with cards of a burgundy back. */
+  :root { --felt-top: #C08A2E; --felt: #6B4A12; --shade: 45,28,5; --accent: #7A5212; --back: #7B2D1E;
+    --turn: #1F6F8B; --cream: #FFF4D6; }
+  button.game { --accent: #7A5212; }
+  button.game:hover { background: #8C5F16; }
+  button.game:active { background: #664410; }
+  #title svg { width: 30px; height: 30px; }
+
+  #table { position: relative; overflow: clip; }
+  .card { z-index: 10; transition: none; }
+  .card.hand { transition: transform .18s ease-out; }
+  .card.hand.can { cursor: pointer; }
+  .card.hand.can:hover { transform: translateY(calc(var(--h) * -.1)); outline: 3px solid #fff; }
+  /* A card he may not play now: darker, still readable and still clickable for the reason. */
+  .card.hand.no { cursor: pointer; filter: brightness(.7) saturate(.8); }
+  .card.hand.hint, .card.hand.hint:hover { transform: translateY(calc(var(--h) * -.14)); outline: 5px solid var(--gold);
+    box-shadow: 0 0 0 2px rgba(var(--shade),.8), 0 0 26px 8px rgba(255,200,61,.7); }
+
+  /* The retourne in his hand, when he took: a small white tag until he plays his first card. */
+  .card.hand .got { position: absolute; left: 50%; top: calc(var(--h) * -.17); translate: -50% 0; z-index: 3;
+    padding: 2px 10px; border-radius: 10px; background: #fff; color: var(--text); font: 700 20px/1.25 var(--ui);
+    box-shadow: 0 2px 6px rgba(0,0,0,.3); white-space: nowrap; }
+  .card.trick.won { outline: 5px solid var(--turn); }
+  .card.away { opacity: 0; pointer-events: none; }
+  .card.hand.shake { animation: refused .42s ease-in-out; }
+  @keyframes refused { 30% { transform: translateX(-4px); } 65% { transform: translateX(3px); } }
+
+  /* The three players of the computer, each by its place on the table. */
+  .seat {
+    position: absolute; z-index: 20; display: grid; grid-template-columns: auto auto; align-items: center; column-gap: 14px; row-gap: 8px; padding: 10px 18px 10px 10px;
+    background: #FFFDF6; color: var(--text); border-radius: 20px; border: 3px solid transparent;
+    box-shadow: 0 4px 18px rgba(0,0,0,.32); transition: border-color .2s;
+  }
+  /* His partner shares his team: the same warm cream as his own seat. */
+  .seat.mate { background: var(--cream); }
+  .seat.turn { border-color: var(--turn); box-shadow: 0 0 0 4px rgba(31,111,139,.35), 0 4px 18px rgba(0,0,0,.32); }
+  .seat.took { animation: took .6s ease-out; }
+  @keyframes took { 40% { transform: scale(1.06); } }
+  .ava { width: 52px; height: 52px; border-radius: 50%; flex: none; object-fit: cover; box-shadow: 0 0 0 2px #fff, 0 1px 4px rgba(0,0,0,.25); }
+  .face { width: 30px; height: 30px; border-radius: 50%; flex: none; object-fit: cover; }
+  .seat b { display: flex; align-items: center; gap: 8px; font: 700 24px/1.15 var(--ui); white-space: nowrap; }
+  .seat .where { display: block; font: 500 20px/1.3 var(--ui); color: #5A6461; white-space: nowrap; }
+  .seat .now { display: flex; align-items: center; gap: 6px; font: 600 20px/1.3 var(--ui); color: #3A4542; white-space: nowrap; min-height: 26px; }
+  .seat.turn .now { color: #155268; }
+  .seat .now svg, .tag svg { width: 20px; height: 20px; flex: none; }
+  .red-s { fill: var(--red); } .black-s { fill: var(--ink); }
+  /* The dealer and the taker: small tags by the name. */
+  .tag { display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: 8px; font: 700 20px/1.25 var(--ui); }
+  .tag.deal { background: #EFE6D2; color: #5A3A10; }
+  .tag.tk { background: #fff; border: 2px solid #7A5212; color: #5A3A10; }
+  .dots { display: inline-flex; gap: 5px; }
+  .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--turn); animation: dot 1.2s infinite; }
+  .dots i:nth-child(2) { animation-delay: .2s; } .dots i:nth-child(3) { animation-delay: .4s; }
+  @keyframes dot { 50% { opacity: .2; } }
+  .backs { position: relative; height: 36px; }
+  .backs i { position: absolute; top: 0; width: 26px; height: 36px; border-radius: 4px; border: 1px solid #3A120A;
+    background: repeating-linear-gradient(45deg, rgba(255,210,74,.35) 0 1px, transparent 1px 6px), repeating-linear-gradient(-45deg, rgba(255,210,74,.35) 0 1px, transparent 1px 6px), var(--back);
+    box-shadow: inset 0 0 0 2px var(--back), inset 0 0 0 3px rgba(255,255,255,.7); }
+  #seat1 .backs, #seat3 .backs { grid-column: 1 / -1; justify-self: center; }
+  #seat2 { grid-template-columns: auto auto auto; min-width: 360px; }
+  #seat1, #seat3 { min-width: 240px; }
+  /* A low table: the seats keep the name and what the player does, so they stay clear of each other. */
+  #table.low .seat .backs, #table.low .seat .where { display: none; }
+  #table.low .seat:not(#seat0) { padding: 6px 14px 6px 8px; }
+  #table.low .seat .ava { width: 44px; height: 44px; }
+  #table.low #seat2 { min-width: 280px; }
+  #table.low #seat1, #table.low #seat3 { min-width: 200px; }
+  /* His own seat: a strip above the left end of his hand. */
+  #seat0 { display: flex; align-items: center; gap: 12px; padding: 6px 16px 6px 6px; border-radius: 16px; z-index: 25; background: var(--cream); }
+  #seat0 .ava { width: 40px; height: 40px; }
+  #seat0 b { font-size: 22px; }
+  #seat0 .now { min-height: 0; }
+  /* A low table: his seat stands beside the left end of his hand, so it does not cover the trick. */
+  #seat0.beside { flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 14px; }
+  /* A phone: the three seats in one row on top, each a face over a name and what the player does. */
+  body.phone .seat:not(#seat0) { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border-radius: 14px; min-width: 0; text-align: center; }
+  body.phone .seat:not(#seat0) .ava { width: 30px; height: 30px; }
+  body.phone .seat:not(#seat0) b { font-size: 18px; justify-content: center; }
+  body.phone .seat .where, body.phone .seat .backs, body.phone .seat:not(#seat0) .tag { display: none; }
+  body.phone .seat .now { white-space: normal; font-size: 16px; line-height: 1.1; min-height: 18px; justify-content: center; }
+  body.phone .seat .now .dots { display: none; }
+  body.phone .seat > div { min-width: 0; }
+  /* His own seat would cover the trick: the message line and "À vous" in the trick say his turn. */
+  body.phone #seat0 { display: none; }
+
+  /* His place in the trick, while he has to play: a dashed cream card with "À vous". */
+  #mySlot { position: absolute; z-index: 8; display: none; place-items: center; width: var(--w); height: var(--h);
+    border-radius: calc(var(--w) * .09); border: 4px dashed var(--cream); background: rgba(45,28,5,.42);
+    color: #fff; font: 700 22px/1.2 var(--ui); text-align: center; }
+  #mySlot.on { display: grid; }
+  /* Why a card is refused, just above the card. */
+  #bubble { position: absolute; z-index: 400; max-width: 380px; padding: 12px 18px; border-radius: 16px; display: none;
+    background: #fff; color: var(--text); border: 3px solid var(--turn); font: 600 21px/1.3 var(--ui); box-shadow: 0 8px 24px rgba(0,0,0,.4); pointer-events: none; }
+  #bubble.on { display: block; }
+  #bubble::after { content: ""; position: absolute; left: var(--tip, 50%); bottom: -11px; width: 18px; height: 18px; margin-left: -9px;
+    background: #fff; border: 3px solid var(--turn); border-top: 0; border-left: 0; transform: rotate(45deg); }
+  /* "Belote !" and "Rebelote !" said by a player, above the seat (see callout). */
+  .callout { position: absolute; z-index: 450; padding: 8px 18px; border-radius: 18px; pointer-events: none;
+    background: var(--gold); color: #1F1A00; border: 3px solid #8A5F00; font: 800 26px/1.2 var(--ui); white-space: nowrap;
+    box-shadow: 0 8px 22px rgba(0,0,0,.4); animation: callout 2.2s ease-out both; }
+  @keyframes callout { 0% { opacity: 0; transform: translateY(12px) scale(.7); } 12% { opacity: 1; transform: none; } 80% { opacity: 1; } 100% { opacity: 0; } }
+  /* The first card of a trick sets the suit to follow. */
+  .card .first { position: absolute; right: calc(var(--w) * .06); top: calc(var(--h) * -.13); z-index: 3; padding: 1px 9px; border-radius: 9px;
+    background: #5A3A10; color: #fff; font: 700 20px/1.25 var(--ui); box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+
+  /* The mat in the middle of the café table, with the trump suit drawn large on it. */
+  #mid { position: absolute; z-index: 5; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(closest-side, rgba(70,44,6,.30), rgba(70,44,6,.18) 78%, transparent 100%);
+    box-shadow: inset 0 0 0 2px rgba(255,244,214,.26); display: grid; place-items: center; }
+  #mid svg { width: 46%; height: 46%; fill: rgba(255,244,214,.16); }
+  .sheet {
+    position: absolute; z-index: 300; transform-origin: 50% 0; display: none; flex-direction: column; align-items: center; gap: 14px; text-align: center;
+    background: #FFFDF6; color: var(--text); border-radius: 24px; padding: 22px 30px 24px; box-shadow: 0 18px 50px rgba(0,0,0,.45);
+  }
+  .sheet.on { display: flex; }
+  .sheet h2 { margin: 0; font: 700 28px/1.2 var(--ui); letter-spacing: -.01em; }
+  .sheet p { margin: 0; font: 400 22px/1.35 var(--ui); color: #3A4542; }
+  .sheet button { min-height: 58px; padding: 8px 24px; justify-content: center; }
+  /* The retourne lies on the mat during the bids, with its name under it. */
+  .card.turnup { z-index: 30; }
+  #retLabel { position: absolute; z-index: 30; display: none; padding: 2px 14px; border-radius: 12px; background: rgba(45,28,5,.62);
+    color: #fff; font: 700 20px/1.3 var(--ui); white-space: nowrap; }
+  #retLabel.on { display: block; }
+  /* His answer: a bar just above his hand, the question and one big button per answer. */
+  #bidBar { position: absolute; z-index: 300; display: none; align-items: center; gap: 14px; padding: 10px 12px 10px 18px;
+    background: #FFFDF6; color: var(--text); border-radius: 20px; border: 3px solid var(--turn);
+    box-shadow: 0 0 0 4px rgba(31,111,139,.3), 0 10px 30px rgba(0,0,0,.4); }
+  #bidBar.on { display: flex; }
+  #bidBar h2 { margin: 0; font: 700 24px/1.2 var(--ui); white-space: nowrap; }
+  #bidBar.bare h2 { display: none; }
+  #bidBtns { display: flex; gap: 10px; }
+  #bidBtns button { min-height: 58px; padding: 6px 18px; font-size: 22px; justify-content: center; white-space: nowrap; }
+  #bidBtns button svg { width: 30px; height: 30px; stroke: none; }
+  #bidBtns button.hint { background: var(--gold); border-color: #C9951A; box-shadow: 0 3px 0 #C9951A, 0 0 0 4px rgba(255,200,61,.45); }
+  /* A phone: the buttons two by two, under the question. */
+  body.phone #bidBar { flex-direction: column; align-items: stretch; padding: 8px; gap: 8px; }
+  body.phone #bidBar h2 { font-size: 20px; text-align: center; white-space: normal; }
+  body.phone #bidBtns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  body.phone #bidBtns button { font-size: 20px; padding: 4px 8px; }
+  #scoreSheet table { border-collapse: collapse; font: 600 22px/1.2 var(--ui); }
+  #scoreSheet th { font: 600 20px var(--ui); color: #5A6461; padding: 0 16px 8px; }
+  #scoreSheet td { padding: 8px 16px; border-top: 1px solid #E6E0D2; }
+  #scoreSheet td:first-child { text-align: left; color: #3A4542; }
+  #scoreSheet td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  #scoreSheet tr.sum td { font-weight: 800; }
+  #scoreSheet td.us { background: #FFF4D6; }
+  #scoreSheet .note { font: 700 22px/1.35 var(--ui); color: #5A3A10; max-width: 560px; }
+  #scoreSheet .note.bad { color: #8A1C1C; }
+  /* A low table: the score sheet takes two columns, the words on the left and the points on the right. */
+  #table.low #scoreSheet.on { display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto 1fr; gap: 10px 26px; align-items: center; text-align: left; }
+  #table.low #scoreSheet h2 { grid-area: 1 / 1; }
+  #table.low #scoreSheet .note { grid-area: 2 / 1; max-width: 340px; }
+  #table.low #scoreSheet button { grid-area: 3 / 1; justify-self: start; align-self: start; }
+  #table.low #scoreSheet table { grid-area: 1 / 2 / 4 / 3; }
+  #table.low #scoreSheet td { padding-block: 6px; }
+  body.phone #scoreSheet { padding: 16px 12px 18px; }
+  body.phone #scoreSheet th, body.phone #scoreSheet td { padding-inline: 8px; }
+  /* The end of the game: one fact per line. */
+  #overText { white-space: pre-line; }
+  body:has(#over.on) #scoreSheet { visibility: hidden; }
+
+  /* The side column: the trump, the scores, then the last trick. */
+  #side { position: absolute; z-index: 20; display: flex; flex-direction: column; gap: 12px; }
+  .box { background: #FFFDF6; color: var(--text); border-radius: 22px; padding: 14px 18px 16px; box-shadow: 0 4px 18px rgba(0,0,0,.32); }
+  .box h3 { margin: 0 0 8px; font: 700 23px var(--ui); color: #5A3A10; }
+  #atoutBox { display: flex; align-items: center; gap: 16px; }
+  #atoutBox .big { flex: none; width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; background: #fff; border: 3px solid #E0C58C; }
+  #atoutBox .big svg { width: 48px; height: 48px; }
+  #atoutBox .big.none { border-style: dashed; }
+  #atoutBox .txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  #atoutBox .txt b { font: 700 26px/1.15 var(--ui); }
+  #atoutBox .txt span { font: 500 20px/1.3 var(--ui); color: #4E5A57; }
+  #scoreSide { width: 100%; border-collapse: collapse; font: 600 21px/1.2 var(--ui); }
+  #scoreSide th { font: 600 20px var(--ui); color: #5A6461; text-align: right; padding: 0 0 6px 8px; }
+  #scoreSide td { padding: 6px 0; border-top: 1px solid #E6E0D2; }
+  #scoreSide td.n { text-align: right; padding-left: 8px; font-variant-numeric: tabular-nums; }
+  #scoreSide tr.us td { color: #1B2422; }
+  #scoreSide .who { display: flex; align-items: center; gap: 4px; }
+  #scoreSide .who img { margin-right: -10px; box-shadow: 0 0 0 2px #FFFDF6; }
+  #scoreSide .who span { margin-left: 14px; }
+  #state { margin: 8px 0 0; font: 500 20px/1.3 var(--ui); color: #4E5A57; }
+  #state:empty { display: none; }
+  #lastCards { display: flex; gap: 8px; }
+  .mini { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .mini em { position: absolute; top: -9px; left: -5px; padding: 0 6px; border-radius: 8px; background: #5A3A10; color: #fff; font: 700 20px/1.2 var(--ui); font-style: normal; }
+  .mini .f { width: 100%; height: 52px; border-radius: 9px; background: #fff; border: 1px solid #C9C1AE; display: flex; align-items: center;
+    justify-content: center; gap: 2px; font: 700 24px var(--ui); letter-spacing: -.04em; }
+  .mini .f.red { color: var(--red); } .mini .f.black { color: var(--ink); }
+  .mini .f .s { width: 20px; height: 20px; fill: currentColor; }
+  .mini.won .f { outline: 4px solid var(--turn); outline-offset: -1px; }
+  .mini .face { width: 32px; height: 32px; }
+  #lastText { margin: 8px 0 0; font: 600 20px/1.3 var(--ui); color: #3A4542; }
+  /* A low window drops the least useful parts first, so the last trick stays: see renderSide(). */
+  #side.no-goal .goal, #side.no-lasttext #lastText, #side.no-h3 #scores h3, #side.no-faces .mini .face,
+  #side.no-atout #atoutBox, #side.no-last #lastBox { display: none; }
+  #scores .goal { margin: 8px 0 0; font: 500 20px/1.3 var(--ui); color: #55605C; }
+  /* A phone: a strip under the seats with the trump and the totals. */
+  #strip { position: absolute; z-index: 20; display: none; align-items: center; justify-content: center; gap: 12px; padding: 4px 12px; border-radius: 14px;
+    background: #FFFDF6; color: var(--text); font: 600 20px/1.2 var(--ui); box-shadow: 0 3px 10px rgba(0,0,0,.3); white-space: nowrap; }
+  #strip.on { display: flex; }
+  body.phone #strip { flex-wrap: wrap; gap: 0 12px; font-size: 17px; white-space: normal; }
+  #strip svg { width: 22px; height: 22px; }
+
+  /* Little cream playing cards drift down in three waves. */
+  #joy { position: fixed; inset: 0; z-index: 4500; pointer-events: none; overflow: hidden; }
+  #joy i { position: absolute; top: -58px; width: 32px; height: 45px; padding: 5px; border-radius: 5px;
+    background: var(--cream); border: 2px solid #BD8D49; box-shadow: 0 2px 4px rgba(45,28,5,.25);
+    animation: fall 2s ease-in-out var(--t) both; }
+  #joy svg { width: 100%; height: 100%; }
+  @keyframes fall {
+    from { transform: translateY(0) rotate(-12deg); opacity: 0; }
+    18%, 75% { opacity: .9; }
+    to { transform: translate(var(--x), calc(100vh / var(--z, 1) + 60px)) rotate(var(--r)); opacity: 0; }
+  }
+
+  .guide-suit { min-width: 54px; min-height: 46px; flex: none; display: inline-flex; align-items: center;
+    justify-content: center; gap: 4px; padding: 0 6px; border: 1px solid #9AA6A1; border-radius: 8px; background: var(--face); font-weight: 700; }
+  .guide-suit.red { color: var(--red); }
+  .guide-suit svg { width: 24px; height: 24px; fill: currentColor; }
+  .guide-pts { width: 100%; border-collapse: collapse; text-align: center; font-variant-numeric: tabular-nums; }
+  .guide-pts th, .guide-pts td { padding: 3px 4px; }
+  .guide-pts th { text-align: left; white-space: nowrap; }
+  .guide-pts tr + tr td, .guide-pts tr + tr th { border-top: 1px solid #D5DCD9; }
+  .guide-pts thead td { font-weight: 700; }
+  @media (max-width: 700px) {
+    .guide-pts { font-size: 17px; }
+    .guide-pts th, .guide-pts td { padding: 2px 1px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
+    #joy { display: none; }
+  }
+</style>
+<script src="../lib/zoom.js"></script>
+</head>
+<body>
+<div id="bar">
+  <div id="title"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="3.5" width="12" height="17" rx="2.4" fill="#FFFDF6" stroke="#7A5212" stroke-width="1.3" transform="rotate(-10 8.5 12)"/><rect x="9.5" y="3.5" width="12" height="17" rx="2.4" fill="#FFFDF6" stroke="#7A5212" stroke-width="1.3" transform="rotate(8 15.5 12)"/><path transform="translate(11.2 8.6) scale(.085)" fill="#C4122F" d="M50 92C22 66 5 50 5 31 5 17 16 7 29 7c9 0 17 5 21 14 4-9 12-14 21-14 13 0 24 10 24 24 0 19-17 35-45 61z"/></svg>Belote</div>
+  <button id="undoBtn" data-icon="undo" title="Reprend votre dernier choix et ce qui a été joué après"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span><span class="tiny">Annuler</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre une bonne carte à jouer maintenant"><span class="long">Quelle carte jouer ?</span><span class="short">Quelle carte ?</span><span class="tiny">Idée</span></button>
+  <span class="spacer"></span>
+  <button id="helpBtn" data-icon="help">Règles</button>
+  <button id="newBtn" class="game">Nouvelle partie</button>
+</div>
+<div id="say"><div id="msg" aria-live="polite"></div></div>
+<div id="table">
+  <div id="mid"></div>
+  <div id="mySlot">À vous</div>
+  <div id="bubble" role="status"></div>
+  <div class="seat" id="seat0"></div>
+  <div class="seat" id="seat1"></div>
+  <div class="seat mate" id="seat2"></div>
+  <div class="seat" id="seat3"></div>
+  <div id="strip"></div>
+  <div id="retLabel">La retourne</div>
+  <div id="bidBar" role="group" aria-labelledby="bidTitle"><h2 id="bidTitle"></h2><div id="bidBtns"></div></div>
+  <div class="sheet" id="scoreSheet" role="group" aria-labelledby="scoreTitle">
+    <h2 id="scoreTitle"></h2>
+    <p class="note" id="scoreNote"></p>
+    <table id="scoreTable"></table>
+    <button id="nextBtn" class="primary"></button>
+  </div>
+  <aside id="side">
+    <div class="box" id="atoutBox"></div>
+    <div class="box" id="scores"><h3>Les points</h3><table id="scoreSide"></table><p id="state"></p><p class="goal">La partie se joue en 501 points.</p></div>
+    <div class="box" id="lastBox"><h3>Le dernier pli</h3><div id="lastCards"></div><p id="lastText"></p></div>
+  </aside>
+</div>
+<div id="joy" aria-hidden="true"></div>
+<footer id="rail"><div class="zoom"></div></footer>
+<div id="help" data-title="Comment jouer">
+  <section class="page">
+    <h3>Jouer avec André</h3>
+    <p>Vous jouez avec André, assis en face de vous, contre Simone et Henri.</p>
+    <p>À chaque manche, une équipe prend : elle choisit l'atout, et doit faire plus de points que l'autre équipe.</p>
+    <p>La première équipe qui atteint <strong>501 points</strong> gagne la partie. En cas d'égalité, on joue une manche de plus.</p>
+    <p>On joue chacun son tour, vers la droite. Les autres joueurs posent leurs cartes tout seuls.</p>
+  </section>
+  <section class="page">
+    <h3>Prendre ou passer</h3>
+    <ol>
+      <li>Chacun reçoit 5 cartes. Une carte est posée face visible : la retourne.</li>
+      <li>Premier tour : cliquez sur « Je prends » pour faire de sa couleur l'atout, ou sur « Je passe ».</li>
+      <li>Si tout le monde passe, deuxième tour : chacun peut choisir une autre couleur.</li>
+      <li>Celui qui prend reçoit la retourne et 2 cartes. Les autres reçoivent 3 cartes.</li>
+    </ol>
+    <p>Si personne ne prend, le joueur suivant distribue de nouveau.</p>
+  </section>
+  <section class="page">
+    <h3>Jouer une carte</h3>
+    <div class="guide-panel">
+      <figure class="guide-example">
+        <div class="guide-art" aria-hidden="true"><div data-help-card="48"></div><div data-help-card="23"></div></div>
+        <figcaption>Le 10 de trèfle est demandé. Sans trèfle, coupez avec un atout : ici le valet de cœur.</figcaption>
+      </figure>
+    </div>
+    <ul>
+      <li>Jouez la couleur demandée, à l'atout plus fort si vous pouvez.</li>
+      <li>Sans elle, si André gagne le pli, jouez ce que vous voulez.</li>
+      <li>Sinon, coupez, plus fort qu'un atout posé si possible. Sans atout, jouez ce que vous voulez.</li>
+    </ul>
+  </section>
+  <section class="page">
+    <h3>Compter les points</h3>
+    <div class="guide-panel">
+      <table class="guide-pts" aria-label="Points des cartes">
+        <thead><tr><th>Atout</th><td>V</td><td>9</td><td>A</td><td>10</td><td>R</td><td>D</td><td>8</td><td>7</td></tr></thead>
+        <tbody><tr><th>Points</th><td>20</td><td>14</td><td>11</td><td>10</td><td>4</td><td>3</td><td>0</td><td>0</td></tr></tbody>
+      </table>
+    </div>
+    <div class="guide-panel">
+      <table class="guide-pts" aria-label="Points des autres couleurs">
+        <thead><tr><th>Autres</th><td>A</td><td>10</td><td>R</td><td>D</td><td>V</td><td>9</td><td>8</td><td>7</td></tr></thead>
+        <tbody><tr><th>Points</th><td>11</td><td>10</td><td>4</td><td>3</td><td>2</td><td>0</td><td>0</td><td>0</td></tr></tbody>
+      </table>
+    </div>
+    <p>Les cartes sont rangées de la plus forte à la plus faible. Le dernier pli vaut 10 points de plus : le dix de der. Si une équipe fait tous les plis, il vaut 100 points.</p>
+  </section>
+  <section class="page">
+    <h3>Gagner la manche</h3>
+    <ul>
+      <li>Une manche vaut 162 points. L'équipe qui prend doit en faire plus que l'autre. Sinon, elle est « dedans » et l'autre équipe marque 162.</li>
+      <li><strong>Belote, rebelote :</strong> le roi et la dame d'atout dans la même main valent 20 points.</li>
+      <li><strong>Capot :</strong> une équipe qui fait tous les plis marque 252 points : 162, et 90 de plus au dix de der.</li>
+    </ul>
+    <p>Il n'y a pas d'autre annonce : ni tierce, ni carré.</p>
+  </section>
+  <section class="page">
+    <h3>Trouver de l'aide</h3>
+    <ul>
+      <li>« Quelle carte jouer ? » montre une bonne carte. Pendant les annonces, il conseille de prendre ou de passer.</li>
+      <li>« Annuler le dernier coup » reprend votre dernier choix et ce qui a été joué après.</li>
+      <li>Le panneau de droite montre l'atout, les points et le dernier pli.</li>
+    </ul>
+  </section>
+</div>
+
+<script src="../lib/store.js"></script>
+<script src="../lib/cards.js"></script>
+<script src="../lib/kit.js"></script>
+<script src="engine.js"></script>
+<script>
+'use strict';
+const { suit, rank, team, points, legal, refusal, play, bid, bidOptions, chooseBid, choosePlay, nextHand } = Belote;
+const { cardName, suitHtml, faceHtml, rd, cap, SUIT_NAMES, RANKS } = Cards;
+const $ = id => document.getElementById(id);
+const motion = matchMedia('(prefers-reduced-motion: reduce)');
+const BID_MS = 1000;       // between two bids of the computer players
+const STEP_MS = 800;       // between two cards of the computer players
+const FIRST_MS = 650;      // before the first one answers his card
+const SHOW_MS = 1500;      // a full trick stays on the table before it is taken away
+const AWAY_MS = 480;       // the trick slides to the player who took it
+const DEAL_MS = 90;        // between two cards of a deal
+
+// The four players. Seat 1 is on his right, 2 across (his partner), 3 on his left.
+const PLAYERS = [
+  { name: 'Vous', id: 'vous', where: '', color: '#C9951A' },
+  { name: 'Henri', id: 'henri', where: 'À votre droite', color: '#F0C6D0' },
+  { name: 'André', id: 'andre', where: 'En face, avec vous', color: '#CDE6B8' },
+  { name: 'Simone', id: 'simone', where: 'À votre gauche', color: '#B9D7F0' },
+];
+const US = 'Vous et André', THEM = 'Simone et Henri';
+const face = (s, cls = 'face') => `<img class="${cls}" src="../lib/avatars/${PLAYERS[s].id}.webp" alt="" style="background:${PLAYERS[s].color}">`;
+const suitSvg = s => `<svg viewBox="0 0 100 100" aria-hidden="true" class="${s === 1 || s === 2 ? 'red-s' : 'black-s'}"><use href="#su${s}"/></svg>`;
+const SUIT_DE = s => ['à pique', 'à cœur', 'à carreau', 'à trèfle'][s];
+
+/* ---------- State ----------
+   G: the game (see engine.js). undo: the games before each of his choices in this hand, a bid or a card:
+   one undo takes back his last choice and what the others did after it. hint: the card or the bid shown
+   by the hint. wonNow: this game is counted as won, so a win counts once. */
+let G, undo = [], level = 'facile', stats = { won: 0 }, wonNow = false, started = false;
+let hint = null, busy = false, gen = 0, timers = [], lastTap = null;
+// The win of this game went to the statistics: a win taken back by undo and won again is sent once.
+let sentWin = false;
+// What the table shows while the game is ahead of it: a full trick before it is taken away.
+let shown = null;
+// The line about the trick just taken: it stays, and his turn is added to it.
+let note = '';
+// The cards of his hand to deal in, from the dealer's seat.
+let dealing = null;
+// The retourne on its way to a taker who is not him.
+let retFly = null;
+let gameId = 0;
+let stale = false;
+addEventListener('gg-stale', () => { stale = true; cancelAll(); render(); });
+
+const ptsText = n => n === 0 ? 'aucun point' : n === 1 ? '1 point' : `${n} points`;
+// The level of the computer player in a seat. His partner always plays well.
+const levelOf = seat => seat === 2 ? 'fort' : level;
+const teamName = t => t === 0 ? US : THEM;
+
+/* ---------- Saves ---------- */
+async function save() {
+  if (stale) return false;
+  const id = gameId;
+  const parts = [];
+  if (started && G.phase !== 'over') parts.push('Partie en cours');
+  if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
+  const data = { v: 1, G, undo, level, stats, wonNow, sentWin, started };
+  if (await GG.save('belote', data, { summary: parts.join(' · '), undoLimits: [Infinity, 4, 0] })) return true;
+  if (stale || id !== gameId || G !== data.G) return false;
+  Kit.say("La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.");
+  return false;
+}
+// The save read back. 'game': a whole game; 'broken': a save whose game cannot be read, its wins and
+// its level kept; false: no save.
+function load() {
+  let v;
+  try { v = GG.load('belote'); } catch (e) { v = null; }
+  if (!v || typeof v !== 'object') return false;
+  if (v.stats && Number.isInteger(v.stats.won) && v.stats.won >= 0) stats = { won: v.stats.won };
+  level = Object.hasOwn(Belote.LEVELS, v.level) ? v.level : 'facile';
+  if (!Belote.check(v.G)) return 'broken';
+  G = v.G;
+  // An undo step is always his turn in this deal: a step from elsewhere would wait for nobody.
+  const fits = u => Belote.check(u) && u.turn === 0 && ['bid1', 'bid2', 'play'].includes(u.phase)
+    && u.handNo === G.handNo && u.dealer === G.dealer && u.seed === G.seed;
+  undo = Array.isArray(v.undo) ? v.undo.filter(u => { try { return fits(JSON.parse(u)); } catch (e) { return false; } }) : [];
+  wonNow = !!v.wonNow; sentWin = !!v.sentWin || wonNow; started = v.started !== false;
+  return 'game';
+}
+
+// Every change of the game goes through here: a win is counted once, and only when it is saved.
+async function commit(next) {
+  G = next;
+  const firstWin = G.phase === 'over' && G.result.winner === 0 && !wonNow, send = firstWin && !sentWin;
+  if (firstWin) { wonNow = true; stats.won++; }
+  if (send) sentWin = true;
+  const id = gameId, written = await save();
+  // The save with the win is written: the statistics get it, even if an undo came while it was waiting.
+  if (send) { if (written) GG.track('belote', 'won'); else if (id === gameId) sentWin = false; }
+  if (id !== gameId || G !== next || stale) return;
+  if (!written && firstWin) { wonNow = false; stats.won--; }
+}
+
+/* ---------- Messages ---------- */
+const sname = s => SUIT_NAMES[s];
+function refuseText(why) {
+  const led = suit(G.trick[0]);
+  if (why === 'suit') return `Vous avez du ${sname(led)} : vous devez en jouer.`;
+  if (why === 'monter') return "Vous devez monter à l'atout : jouez un atout plus fort.";
+  if (why === 'couper') return G.trick.some(c => suit(c) === G.trump) && led !== G.trump
+    ? `Vous n'avez pas de ${sname(led)} : vous devez jouer un atout, même plus faible.`
+    : `Vous n'avez pas de ${sname(led)} : vous devez couper avec un atout.`;
+  return "Vous devez surcouper : jouez un atout plus fort que celui posé.";
+}
+function turnMessage() {
+  if (G.phase === 'bid1' && G.turn === 0) return `À vous de parler : prenez-vous ${SUIT_DE(suit(G.turnup))} ?`;
+  if (G.phase === 'bid2' && G.turn === 0) return "Deuxième tour : choisissez l'atout, ou passez.";
+  if (G.phase !== 'play' || G.turn !== 0) return '';
+  if (!G.trick.length) return 'À vous de commencer le pli : cliquez sur une carte.';
+  const hand = G.hands[0], led = suit(G.trick[0]), T = G.trump;
+  if (hand.some(c => suit(c) === led)) return led === T ? 'À vous : jouez un atout, plus fort si vous pouvez.' : `À vous : jouez un ${sname(led)}.`;
+  const win = (G.leader + Belote.bestOf(G.trick, T)) % 4;
+  if (win === 2) return `Vous n'avez pas de ${sname(led)}, et André gagne le pli : jouez la carte de votre choix.`;
+  if (hand.some(c => suit(c) === T)) {
+    const top = G.trick[Belote.bestOf(G.trick, T)];
+    if (suit(top) !== T) return `Vous n'avez pas de ${sname(led)} : coupez avec un atout.`;
+    return legal(G).some(c => Belote.order(c, T) > Belote.order(top, T))
+      ? `Vous n'avez pas de ${sname(led)} : coupez avec un atout plus fort que celui posé.`
+      : `Vous n'avez pas de ${sname(led)} : jouez un atout, même plus faible.`;
+  }
+  return `Vous n'avez ni ${sname(led)} ni atout : jouez la carte de votre choix.`;
+}
+const say = Kit.say;
+// What a player said: "Henri passe.", "André prend à cœur."
+function bidLine(seat, choice) {
+  const who = PLAYERS[seat].name, verb = seat === 0;
+  if (choice === 'pass') return verb ? 'Vous passez.' : `${who} passe.`;
+  const s = choice === 'take' ? suit(G.turnup) : choice;
+  return verb ? `Vous prenez ${SUIT_DE(s)}.` : `${who} prend ${SUIT_DE(s)}.`;
+}
+
+// A refused click: the card shakes, the reason shows in a bubble just above it for 3 s, and the
+// message line says it too, with a short flash, so he sees that his click was heard.
+let bubbleT = 0;
+function refuse(c, text) {
+  shake(c);
+  say(text);
+  const m = $('msg'); m.classList.remove('flash'); void m.offsetWidth; m.classList.add('flash');
+  const card = els.get(c), b = $('bubble');
+  if (!card || !L) return;
+  b.textContent = text;
+  b.classList.add('on');
+  const hand = G.hands[0], shows = hand.indexOf(c) === hand.length - 1 ? L.w : L.stepX;
+  const x = card.offsetLeft + shows / 2;
+  const left = Math.max(8, Math.min(x - b.offsetWidth / 2, L.W - b.offsetWidth - 8));
+  b.style.left = left + 'px';
+  b.style.top = Math.max(8, card.offsetTop - b.offsetHeight - 22) + 'px';
+  b.style.setProperty('--tip', Math.max(20, Math.min(b.offsetWidth - 20, x - left)) + 'px');
+  clearTimeout(bubbleT);
+  bubbleT = setTimeout(hideBubble, 3000);
+}
+function hideBubble() { clearTimeout(bubbleT); $('bubble').classList.remove('on'); }
+
+/* ---------- His choices ---------- */
+function tapCard(c) {
+  if (stale) return;
+  hideBubble();
+  if (G.phase === 'bid1' || G.phase === 'bid2')
+    return refuse(c, G.turn === 0 && !busy ? 'Choisissez d\'abord de prendre ou de passer, avec les boutons.' : 'Attendez un instant : les autres joueurs parlent.');
+  if (busy || (G.phase === 'play' && G.turn !== 0)) return refuse(c, 'Attendez un instant : les autres joueurs posent leurs cartes.');
+  if (G.phase !== 'play') return;
+  const why = refusal(G, c);
+  if (why) return refuse(c, refuseText(why));
+  cancelAll();
+  undo.push(JSON.stringify(G));
+  hint = null;
+  const before = G;
+  commit(play(G, c));
+  afterCard(before, 0, c);
+}
+function myBid(choice) {
+  if (stale || busy || !G.phase.startsWith('bid') || G.turn !== 0 || !bidOptions(G).includes(choice)) return;
+  cancelAll();
+  undo.push(JSON.stringify(G));
+  hint = null;
+  started = true;
+  const before = G;
+  commit(bid(G, choice));
+  afterBid(before, 0, choice);
+}
+
+/* ---------- The bids ---------- */
+function afterBid(before, seat, choice) {
+  started = true;
+  if (seat !== 0) tookAnimation(seat);
+  if (G.redeal) {
+    // Everyone passed twice: a new deal by the next player.
+    undo = [];
+    say(`Personne ne prend : ${G.dealer === 0 ? 'vous distribuez' : PLAYERS[G.dealer].name + ' distribue'} de nouveau.`);
+    save();
+    dealing = { from: G.dealer, cards: G.hands[0].slice() };
+    render();
+    return later(step, 1800);
+  }
+  if (G.phase === 'play') {
+    const s = G.trump;
+    say(`${bidLine(seat, choice).slice(0, -1)} : le ${sname(s)} est l'atout.`);
+    // The cards of the second deal fly in to his hand, and the retourne from the middle to the taker.
+    dealing = { from: G.dealer, cards: G.hands[0].filter(c => !before.hands[0].includes(c) && c !== G.turnup) };
+    if (G.taker !== 0) retFly = { c: G.turnup, seat: G.taker };
+    // His cards are not played while they fly in: a click then says to wait.
+    busy = true;
+    render();
+    return later(() => { busy = false; step(); }, motion.matches ? 900 : 1700);
+  }
+  say(bidLine(seat, choice));
+  render();
+  later(step, BID_MS);
+}
+
+/* ---------- The play ----------
+   After each card, the trick is shown. A full trick stays a moment, then slides to the player who took
+   it. Then step() goes on: the next computer card, his turn, or the end of the hand. */
+function afterCard(before, seat, card) {
+  started = true;
+  const full = before.trick.length === 3;
+  const who = seat === 0 ? 'Vous posez' : `${PLAYERS[seat].name} pose`;
+  let line = `${who} ${cardName(card)}.`;
+  // Belote and rebelote: the king and the queen of trumps of one hand, said as they are played.
+  if (G.belote === seat && G.said > before.said) {
+    const word = G.said === 1 ? 'Belote !' : 'Rebelote !';
+    line = `${who} ${cardName(card)} : « ${word} »`;
+    callout(seat, word);
+  }
+  say(line);
+  if (!full) { render(); return later(step, seat === 0 ? FIRST_MS : STEP_MS); }
+  shown = { leader: before.leader, cards: [...before.trick, card], winner: G.last.winner };
+  busy = true;
+  render();
+  later(() => {
+    shown.away = true; render();
+    later(() => {
+      shown = null; busy = false;
+      const w = G.last.winner, p = G.last.pts;
+      const der = G.tricks === 8 ? (G.capot !== null ? ', dont 100 de dix de der pour le capot' : ', dix de der compris') : '';
+      note = w === 0 ? `Vous ramassez le pli : ${ptsText(p)}${der}.` : `${PLAYERS[w].name} ramasse le pli : ${ptsText(p)}${der}.`;
+      say(note);
+      tookAnimation(w);
+      render();
+      later(step, G.phase === 'play' && G.turn !== 0 ? STEP_MS : 700);
+    }, motion.matches ? 0 : AWAY_MS + 3 * 55);
+  }, motion.matches ? 900 : SHOW_MS);
+}
+
+function step() {
+  if (stale || busy) return;
+  if (G.phase === 'done' || G.phase === 'over') return handOver(true);
+  if (G.turn === 0) {
+    say((note ? note + ' ' : '') + turnMessage());
+    note = '';
+    render();
+    return;
+  }
+  render();
+  const seat = G.turn, my = gen;
+  later(() => {
+    if (my !== gen) return;
+    const before = G;
+    note = '';
+    if (G.phase === 'play') {
+      const c = choosePlay(G, levelOf(seat));
+      commit(play(G, c));
+      afterCard(before, seat, c);
+    } else {
+      const b = chooseBid(G, levelOf(seat));
+      commit(bid(G, b));
+      afterBid(before, seat, b);
+    }
+  }, 30);
+}
+
+/* ---------- End of a hand ---------- */
+function outcomeText() {
+  const T = team(G.taker), taker = G.taker === 0 ? 'Vous' : PLAYERS[G.taker].name;
+  const took = `${taker} ${G.taker === 0 ? 'avez' : 'a'} pris ${SUIT_DE(G.trump)}`;
+  // "Vous et André" takes the verb of "vous"; inside a sentence, it starts in lower case.
+  const them = 1 - T, low = t => t === 0 ? 'vous et André' : THEM;
+  if (G.outcome === 'capot') return `Capot ! ${teamName(T)} ${T === 0 ? 'faites' : 'font'} tous les plis : 252 points.`;
+  if (G.outcome === 'dedans') {
+    if (G.capot !== null) return `${took} : capot pour ${low(them)}, qui ${them === 0 ? 'faites' : 'font'} tous les plis.`;
+    return `${took} et ${G.taker === 0 ? 'êtes' : 'est'} dedans : ${low(them)} ${them === 0 ? 'marquez' : 'marquent'} 162 points.`;
+  }
+  return `${took} : contrat réussi.`;
+}
+function handOver(fresh) {
+  render();
+  if (G.phase === 'over') {
+    const won = G.result.winner === 0;
+    say(won ? 'Bravo, André et vous avez gagné la partie !' : 'Simone et Henri ont gagné la partie.');
+    const games = ['Retour aux jeux', Kit.home];
+    const totals = `\nLes points : ${US} ${G.scores[0]}, ${THEM} ${G.scores[1]}.`;
+    if (won) {
+      if (fresh) celebrate();
+      resultAfter(() => Kit.dialog('Bravo, vous avez gagné !',
+        `André et vous ${G.scores[0] > G.target ? 'dépassez' : 'atteignez'} ${G.target} points : la partie est finie.` + totals +
+        (!wonNow ? '' : stats.won === 1 ? "\nC'est votre première victoire." : `\nC'est votre ${stats.won}e victoire.`),
+        [['Nouvelle partie', askNewGame, true], games], true), !fresh || motion.matches ? 0 : 2600);
+    } else resultAfter(() => Kit.dialog('Simone et Henri ont gagné',
+      `Simone et Henri ${G.scores[1] > G.target ? 'dépassent' : 'atteignent'} ${G.target} points : la partie est finie.` + totals,
+      [['Nouvelle partie', askNewGame, true], games]), !fresh || motion.matches ? 0 : 500);
+    return;
+  }
+  say(`Fin de la manche : ${outcomeText()}${tieText()}`);
+}
+// Both teams on the same total at 501 or more: the game goes on.
+const tieText = () => G.phase === 'done' && G.scores[0] === G.scores[1] && G.scores[0] >= G.target
+  ? ` Égalité à ${G.scores[0]} points : on joue une manche de plus.` : '';
+// Keep the result pending if he reads the rules or checks the levels.
+function resultAfter(open, delay) {
+  function show() {
+    if (Kit.isOpen()) later(show, 120);
+    else open();
+  }
+  later(show, delay);
+}
+function nextHandNow() {
+  if (busy || stale || G.phase !== 'done') return;
+  cancelAll();
+  undo = []; hint = null;
+  commit(nextHand(G));
+  dealing = { from: G.dealer, cards: G.hands[0].slice() };
+  say(`${G.dealer === 0 ? 'Vous distribuez' : PLAYERS[G.dealer].name + ' distribue'} les cartes.`);
+  render();
+  later(step, 1400);
+}
+
+/* ---------- Buttons ---------- */
+function cancelAll() {
+  gen++; timers.forEach(clearTimeout); timers = [];
+  busy = false; shown = null; press = null; retFly = null;
+  hideBubble();
+  table.querySelectorAll('.departing, .callout').forEach(el => el.remove());
+  $('joy').replaceChildren();
+}
+function later(fn, ms) { const my = gen; const t = setTimeout(() => { timers = timers.filter(x => x !== t); if (my === gen) fn(); }, ms); timers.push(t); return t; }
+
+// Takes back his last choice and everything played after it, even while the others are playing.
+function doUndo() {
+  if (stale || !undo.length) return;
+  cancelAll();
+  Kit.closeDialog();
+  const before = G;
+  G = JSON.parse(undo.pop()); hint = null; note = '';
+  // The turn comes back: a click on the same card right after is a new choice, not a double-click.
+  lastTap = null;
+  // A win taken back is no longer counted.
+  if (wonNow && G.phase !== 'over') { wonNow = false; stats.won = Math.max(0, stats.won - 1); }
+  if (G.phase === 'play') {
+    // Cards already collected come back from the seat that won them.
+    if (before.last) for (const c of before.last.cards) {
+      if (!els.has(c) && (G.hands[0].includes(c) || G.trick.includes(c))) {
+        const [x, y] = seatXY(before.last.winner), el = cardEl(c);
+        el.style.left = x + 'px'; el.style.top = y + 'px';
+      }
+    }
+    for (const [seat, c] of before.log.slice(G.log.length)) {
+      if (seat !== 0 && els.has(c)) flyToSeat(c, seat);
+    }
+  }
+  save();
+  say('Coup annulé. ' + turnMessage());
+  render();
+}
+
+function showHint() {
+  if (busy || stale || Kit.isOpen() || G.turn !== 0) return;
+  if (G.phase === 'bid1' || G.phase === 'bid2') {
+    const b = chooseBid(G, 'fort', Belote.seeded(G.seed ^ 0x5bd1e995 ^ G.bids.length));
+    hint = { bid: b };
+    say(b === 'pass' ? 'Conseil : passez, votre jeu est trop faible pour prendre.'
+      : `Conseil : prenez ${SUIT_DE(b === 'take' ? suit(G.turnup) : b)}, avec le bouton jaune.`);
+    render();
+    return;
+  }
+  if (G.phase !== 'play') return;
+  say("Recherche d'une bonne carte…");
+  busy = true; render();
+  const my = gen;
+  setTimeout(() => {
+    if (my !== gen) return;
+    const c = choosePlay(G, 'fort', Belote.seeded(G.seed ^ 0x5bd1e995 ^ G.log.length), { trials: 60 });
+    busy = false; hint = { card: c };
+    say(`Posez ${cardName(c)} : la carte entourée de jaune.`);
+    render();
+  }, 40);
+}
+
+function askNewGame() {
+  Kit.chooseLevel(level, started && G.phase !== 'over', newGame);
+}
+async function newGame(lv) {
+  cancelAll();
+  if (lv) level = lv;
+  Kit.showLevel(level);
+  G = Belote.newGame(); undo = []; hint = null; wonNow = false; sentWin = false; started = false; note = '';
+  const id = ++gameId;
+  const written = save();
+  dealing = { from: G.dealer, cards: G.hands[0].slice() };
+  say('Simone distribue les cartes.');
+  render();
+  later(step, 1400);
+  if (await written && id === gameId && !stale) GG.track('belote', 'start');
+}
+
+/* ---------- Drawing ---------- */
+const table = $('table');
+const els = new Map();   // card -> its element
+motion.addEventListener('change', () => {
+  if (motion.matches) table.getAnimations({ subtree: true }).forEach(animation => animation.cancel());
+});
+let L = null;            // the layout: sizes and places
+function cardEl(c) {
+  let e = els.get(c);
+  if (!e) {
+    e = document.createElement('div');
+    e.className = 'card ' + (rd(c) ? 'red' : 'black');
+    e.innerHTML = faceHtml(c);
+    e.dataset.c = c;
+    table.appendChild(e);
+    els.set(c, e);
+  }
+  return e;
+}
+
+// The sizes come from the window: his hand along the bottom, the trick in the middle, the three
+// players around it, and the side column on the right when there is room.
+function layout() {
+  const W = table.clientWidth, H = table.clientHeight;
+  const narrow = W < 700;
+  const sideW = narrow ? 0 : W >= 1300 ? 300 : 272, pad = narrow ? 8 : 18;
+  const PW = W - 2 * pad - (sideW ? sideW + 20 : 0);
+  const topH = narrow ? 150 : 96;
+  const byW = narrow ? (PW - 10) / 5.2 : Math.min((PW - 10) / 5.9, (PW - 2 * 240 - 40) / 3.4);
+  const byH = (H - topH - 26) / (1.3 * (1.62 + .14 + .8));
+  const w = Math.floor(Math.max(56, Math.min(byW, byH, 160)));
+  const h = Math.round(w * 1.3);
+  document.documentElement.style.setProperty('--w', w + 'px');
+  document.documentElement.style.setProperty('--h', h + 'px');
+  const handTop = Math.round(H - h * .8);
+  const cx = pad + PW / 2;
+  const bandTop = topH + 14, bandBot = handTop - Math.round(h * .14);
+  const cy = Math.round((bandTop + bandBot) / 2);
+  return { W, H, w, h, pad, PW, sideW, handTop, cx, cy, topH, narrow, low: !narrow && H < 430 };
+}
+// Where each seat's card lies in the trick: his below the middle, Henri's right, André's above, Simone's left.
+function trickXY(seat) {
+  const { w, h, cx, cy } = L;
+  if (seat === 0) return [cx - w / 2, cy - h * .19];
+  if (seat === 1) return [cx + w * .62, cy - h / 2];
+  if (seat === 2) return [cx - w / 2, cy - h * .81];
+  return [cx - w * 1.62, cy - h / 2];
+}
+// The point a trick slides to, and a card comes from: the middle of the seat.
+function seatXY(seat) {
+  if (seat === 0) return [L.cx - L.w / 2, L.handTop];
+  const e = $('seat' + seat);
+  return [e.offsetLeft + e.offsetWidth / 2 - L.w / 2, e.offsetTop + e.offsetHeight / 2 - L.h / 2];
+}
+const bidding = () => G.phase === 'bid1' || G.phase === 'bid2';
+// What a seat shows under its name: its bid while the others speak, "joue" on its turn.
+function seatNow(s, turnSeat) {
+  const name = s === 0 ? '' : PLAYERS[s].name;
+  if (turnSeat === s) {
+    if (s === 0) return bidding() ? 'À vous de parler' : 'À vous de jouer';
+    return `<span class="dots"><i></i><i></i><i></i></span>${name} ${bidding() ? 'parle' : 'joue'}`;
+  }
+  if (bidding()) {
+    const said = G.bids.filter(b => b[0] === s).pop();
+    if (!said) return '';
+    return said[1] === 'pass' ? 'Passe' : `Prend ${suitSvg(said[1] === 'take' ? suit(G.turnup) : said[1])}`;
+  }
+  return '';
+}
+
+function render() {
+  if (!G) return;
+  L = layout();
+  const { w, h, pad, PW, handTop, cx, cy } = L;
+  const playing = G.phase === 'play' && G.turn === 0 && !busy && !stale;
+  const ok = new Set(playing ? legal(G) : []);
+  const inPlay = !bidding();
+  table.classList.toggle('low', L.low);
+  document.body.classList.toggle('phone', L.narrow);
+
+  // The seats: name, where, the dealer and the taker, what they say.
+  const turnSeat = !busy && !stale && (bidding() || G.phase === 'play') ? G.turn : -1;
+  const tags = s => (G.dealer === s && bidding() ? '<span class="tag deal">Donne</span>' : '')
+    + (inPlay && G.taker === s ? `<span class="tag tk" title="A pris">Prend ${suitSvg(G.trump)}</span>` : '');
+  for (const s of [1, 2, 3]) {
+    const e = $('seat' + s), p = PLAYERS[s], n = G.hands[s].length;
+    const backs = Array.from({ length: n }, (_, i) => `<i style="left:${i * 9}px"></i>`).join('');
+    e.innerHTML = `${face(s, 'ava')}
+      <div><b>${p.name}${tags(s)}</b><span class="where">${p.where}</span>
+      <span class="now">${seatNow(s, turnSeat)}</span></div>
+      <div class="backs" style="width:${n ? 26 + (n - 1) * 9 : 0}px">${backs}</div>`;
+    e.classList.toggle('turn', turnSeat === s || (busy && !shown && G.turn === s));
+  }
+  const s1 = $('seat1'), s2 = $('seat2'), s3 = $('seat3');
+  if (L.narrow) {
+    // A phone: Simone, André and Henri in one row on top, as they sit.
+    const sw = Math.floor((PW - 16) / 3);
+    [s3, s2, s1].forEach((e, i) => { e.style.width = sw + 'px'; e.style.left = pad + i * (sw + 8) + 'px'; e.style.top = '8px'; });
+  } else {
+    [s1, s2, s3].forEach(e => { e.style.width = ''; });
+    s2.style.left = Math.round(Math.max(pad, cx - s2.offsetWidth / 2)) + 'px';
+    s2.style.top = Math.round(Math.max(10, cy - h * .81 - Math.max(24, w * .3) - s2.offsetHeight)) + 'px';
+    const near = w * 1.62 + Math.max(24, w * .3);
+    s3.style.left = Math.round(Math.max(pad, cx - near - s3.offsetWidth)) + 'px'; s3.style.top = Math.round(cy - s3.offsetHeight / 2) + 'px';
+    s1.style.left = Math.round(Math.min(pad + PW - s1.offsetWidth, cx + near)) + 'px'; s1.style.top = Math.round(cy - s1.offsetHeight / 2) + 'px';
+  }
+  // His own seat, above the left end of his hand.
+  const s0 = $('seat0');
+  s0.innerHTML = `${face(0, 'ava')}<b>Vous${tags(0)}</b><span class="now">${seatNow(0, turnSeat)}</span>`;
+  s0.classList.toggle('turn', turnSeat === 0);
+  // The mat in the middle, with the trump drawn on it.
+  const mid = $('mid'), md = Math.round(w * 3.5);
+  mid.style.left = cx - md / 2 + 'px'; mid.style.top = cy - md / 2 + 'px'; mid.style.width = mid.style.height = md + 'px';
+  mid.innerHTML = inPlay ? suitSvg(G.trump).replace(/class="[^"]*"/, '') : '';
+
+  // His hand.
+  const live = new Set();
+  const hand = G.hands[0];
+  const n = hand.length;
+  const stepX = n > 1 ? Math.min(w * .7, (PW - w) / (n - 1)) : 0;
+  const x0 = cx - (w + stepX * (n - 1)) / 2;
+  L.stepX = stepX;
+  s0.style.left = Math.round(Math.max(pad, n ? x0 : cx - s0.offsetWidth / 2)) + 'px';
+  const fresh = dealing; dealing = null;
+  const mine = G.taker === 0 && inPlay && !G.log.some(x => x[0] === 0) && hand.includes(G.turnup);
+  s0.classList.remove('beside');
+  s0.style.top = Math.round(handTop - s0.offsetHeight - (mine ? h * .17 + 4 : 10)) + 'px';
+  // Over the trick in a low window: beside his hand instead, if there is room.
+  const tl = cx - w * 1.62 - 8, tright = cx + w * 1.62 + 8, tb = cy + h * .81 + 8;
+  if (!L.narrow && s0.offsetTop < tb && s0.offsetLeft < tright && s0.offsetLeft + s0.offsetWidth > tl) {
+    s0.classList.add('beside');
+    if (s0.offsetWidth <= x0 - pad - 8) { s0.style.left = pad + 'px'; s0.style.top = Math.round(L.H - s0.offsetHeight - 6) + 'px'; }
+    else s0.classList.remove('beside');
+  }
+  if (!L.narrow) for (const e of [s1, s3]) e.style.top = Math.round(Math.max(pad, Math.min(parseFloat(e.style.top), s0.offsetTop - e.offsetHeight - 8))) + 'px';
+  if (fresh && !motion.matches && !L.low && !L.narrow) {
+    const [dx, dy] = seatXY(fresh.from);
+    const board = table.getBoundingClientRect(), zoom = Zoom.z();
+    for (const seat of [s1, s2, s3]) {
+      const backs = [...seat.querySelectorAll('.backs i')];
+      const dealt = bidding() ? backs : backs.slice(5);
+      dealt.forEach((back, i) => {
+        const rect = back.getBoundingClientRect();
+        const x = dx + w / 2 - (rect.left + rect.width / 2 - board.left) / zoom;
+        const y = dy + h / 2 - (rect.top + rect.height / 2 - board.top) / zoom;
+        back.animate([{ transform: `translate(${x}px, ${y}px)` }, { transform: 'none' }],
+          { duration: 500, delay: i * DEAL_MS, easing: 'ease-out', fill: 'backwards' });
+      });
+    }
+  }
+  const slot = $('mySlot'), [sx, sy] = trickXY(0);
+  slot.classList.toggle('on', playing);
+  slot.style.left = sx + 'px'; slot.style.top = sy + 'px';
+  let k = 0;
+  hand.forEach((c, i) => {
+    const isNew = !els.has(c);
+    const e = cardEl(c); live.add(c);
+    e.querySelector('.first')?.remove();
+    e.className = 'card hand ' + (rd(c) ? 'red' : 'black');
+    if (playing) e.classList.add(ok.has(c) ? 'can' : 'no');
+    if (hint && hint.card === c) e.classList.add('hint');
+    const x = x0 + i * stepX;
+    const dealt = fresh && (fresh.cards.includes(c) || isNew);
+    moveCard(e, x, handTop, dealt ? seatXY(fresh.from) : null, dealt ? k++ * DEAL_MS : 0);
+    e.style.zIndex = 100 + i;
+    e.tabIndex = playing ? 0 : -1;
+    e.setAttribute('role', 'button'); e.setAttribute('aria-label', cardName(c) + (suit(c) === G.trump && inPlay ? ', atout' : ''));
+    const tag = e.querySelector('.got');
+    if (mine && c === G.turnup && !tag) e.insertAdjacentHTML('beforeend', '<span class="got">Retourne</span>');
+    else if (!(mine && c === G.turnup) && tag) tag.remove();
+  });
+  // The trick: the one on the table, or a full one about to go.
+  const tr = shown || { leader: G.leader, cards: G.phase === 'play' ? G.trick : [] };
+  tr.cards.forEach((c, i) => {
+    const seat = (tr.leader + i) % 4;
+    const isNew = !els.has(c);
+    const e = cardEl(c); live.add(c);
+    e.querySelector('.got')?.remove();
+    let origin = isNew ? seatXY(seat) : null;
+    if (e.classList.contains('hand') && !motion.matches) {
+      const rect = e.getBoundingClientRect(), board = table.getBoundingClientRect();
+      origin = [(rect.left - board.left) / Zoom.z(), (rect.top - board.top) / Zoom.z()];
+    }
+    e.className = 'card trick ' + (rd(c) ? 'red' : 'black');
+    e.removeAttribute('role'); e.tabIndex = -1;
+    if (i === 0 && !e.querySelector('.first')) e.insertAdjacentHTML('beforeend', '<span class="first">1er</span>');
+    let [x, y] = trickXY(seat);
+    if (shown && shown.away) { [x, y] = seatXY(shown.winner); e.classList.add('away'); }
+    else if (shown && seat === shown.winner) e.classList.add('won');
+    moveCard(e, x, y, origin, shown?.away ? i * 55 : 0);
+    e.style.zIndex = 40 + i;
+  });
+  if (bidding()) live.add(G.turnup);
+  // The retourne, taken by another player, flies to the taker's seat and goes.
+  if (retFly && els.has(retFly.c)) flyToSeat(retFly.c, retFly.seat);
+  retFly = null;
+  for (const [c, e] of els) if (!live.has(c)) { e.remove(); els.delete(c); }
+
+  renderBids(fresh);
+  renderScoreSheet();
+  renderSide();
+  Kit.showWins(stats.won);
+  $('undoBtn').disabled = stale || !undo.length;
+  // During the bids the hint says whether to take.
+  const hb = $('hintBtn'), mode = bidding() ? 'bid' : 'play';
+  if (hb.dataset.mode !== mode) {
+    hb.dataset.mode = mode;
+    hb.querySelector('.long').textContent = mode === 'bid' ? 'Prendre ou passer ?' : 'Quelle carte jouer ?';
+    hb.querySelector('.short').textContent = mode === 'bid' ? 'Prendre ?' : 'Quelle carte ?';
+    hb.title = mode === 'bid' ? 'Conseille de prendre ou de passer' : 'Montre une bonne carte à jouer maintenant';
+  }
+  $('hintBtn').disabled = stale || busy || G.turn !== 0 || !(bidding() || G.phase === 'play');
+}
+
+// The bids: the retourne on the mat, and his answer in a bar above his hand, one big button per answer.
+function renderBids(fresh) {
+  const mineNow = bidding() && G.turn === 0 && !busy && !stale;
+  const bar = $('bidBar');
+  bar.classList.toggle('on', mineNow);
+  $('seat0').style.visibility = mineNow ? 'hidden' : '';
+  if (!mineNow) return placeTurnup(fresh);
+  const s = suit(G.turnup);
+  $('bidTitle').textContent = G.phase === 'bid1' ? `Prenez-vous ${SUIT_DE(s)} ?` : "Choisissez l'atout :";
+  const opts = bidOptions(G);
+  const key = G.phase + ':' + s + ':' + (hint && hint.bid !== undefined ? hint.bid : '');
+  const box = $('bidBtns');
+  if (box.dataset.key !== key) {
+    box.dataset.key = key;
+    box.innerHTML = opts.map(o => {
+      const label = o === 'pass' ? 'Je passe' : o === 'take' ? `Je prends ${suitSvg(s)}` : `${suitSvg(o)}${cap(sname(o))}`;
+      return `<button type="button" data-bid="${o}" class="${hint && hint.bid === o ? 'hint' : ''}">${label}</button>`;
+    }).join('');
+  }
+  // The widest that fits: the question and the buttons, else the buttons alone.
+  bar.classList.remove('bare');
+  bar.style.width = L.narrow ? L.PW + 'px' : '';
+  if (L.narrow || bar.offsetWidth > L.PW) bar.classList.add('bare');
+  const x = Math.max(L.pad, Math.min(L.cx - bar.offsetWidth / 2, L.pad + L.PW - bar.offsetWidth));
+  bar.style.left = Math.round(x) + 'px';
+  bar.style.top = Math.round(L.handTop - bar.offsetHeight - 12) + 'px';
+  placeTurnup(fresh);
+}
+// The retourne on the mat, above his bid bar when it shows, with its name under it.
+function placeTurnup(fresh) {
+  const on = bidding(), lab = $('retLabel');
+  lab.classList.toggle('on', on);
+  if (!on) return;
+  const e = cardEl(G.turnup), bar = $('bidBar');
+  e.className = 'card turnup ' + (rd(G.turnup) ? 'red' : 'black');
+  e.querySelector('.got')?.remove(); e.querySelector('.first')?.remove();
+  e.removeAttribute('role'); e.tabIndex = -1;
+  const barTop = bar.classList.contains('on') ? bar.offsetTop : Infinity;
+  const y = Math.max(L.narrow ? L.topH : 8, Math.min(L.cy - L.h / 2 - 14, barTop - L.h - 40));
+  moveCard(e, L.cx - L.w / 2, y, fresh ? seatXY(fresh.from) : null);
+  e.style.zIndex = 30;
+  lab.style.left = Math.round(L.cx - lab.offsetWidth / 2) + 'px'; lab.style.top = Math.round(y + L.h + 6) + 'px';
+}
+
+// The score sheet at the end of a hand: the points of the tricks, the belote, what each team marks.
+function renderScoreSheet() {
+  const ss = $('scoreSheet');
+  const ended = (G.phase === 'done' || G.phase === 'over') && !busy;
+  ss.classList.toggle('on', ended);
+  if (!ended) return;
+  const over = G.phase === 'over';
+  $('scoreTitle').textContent = over ? 'Fin de la partie' : `Fin de la manche ${G.handNo + 1}`;
+  const note = $('scoreNote');
+  note.textContent = outcomeText() + tieText();
+  note.classList.toggle('bad', G.outcome === 'dedans' && team(G.taker) === 0);
+  const bel = [0, 1].map(t => G.belote !== null && team(G.belote) === t ? 20 : 0);
+  const row = (label, a, b, cls = '') => `<tr class="${cls}"><td>${label}</td><td class="n us">${a}</td><td class="n">${b}</td></tr>`;
+  const [a, b] = L.narrow ? ['Nous', 'Eux'] : [US, THEM];
+  $('scoreTable').innerHTML = `<tr><th><span class="sr">Ligne</span></th><th>${a}</th><th>${b}</th></tr>`
+    + row('Les plis', G.won[0], G.won[1])
+    + row('Belote', bel[0] ? '20' : '–', bel[1] ? '20' : '–')
+    + row('Cette manche', '+' + G.handPts[0], '+' + G.handPts[1], 'sum')
+    + row('Total', G.scores[0], G.scores[1], 'sum');
+  $('nextBtn').textContent = over ? 'Nouvelle partie' : 'Manche suivante';
+  place(ss, L.cx, L.cy);
+}
+
+// The side column: the trump, the scores and the last trick. A phone has a strip instead.
+function renderSide() {
+  const side = $('side'), strip = $('strip'), inPlay = !bidding();
+  const trumpLine = inPlay ? `${suitSvg(G.trump)}Atout ${sname(G.trump)}` : 'Atout : pas encore choisi';
+  strip.classList.toggle('on', L.narrow);
+  if (L.narrow) {
+    const by = inPlay ? `, ${G.taker === 0 ? 'vous' : PLAYERS[G.taker].name}` : '';
+    strip.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px">${trumpLine}${by}</span><span>Nous ${G.scores[0]} · Eux ${G.scores[1]}</span>`;
+    const top = Math.max(...[1, 2, 3].map(s => { const e = $('seat' + s); return e.offsetTop + e.offsetHeight; })) + 8;
+    strip.style.left = L.pad + 'px'; strip.style.width = L.PW + 'px'; strip.style.top = top + 'px';
+  }
+  side.style.display = L.sideW ? 'flex' : 'none';
+  if (!L.sideW) return;
+  side.style.left = L.W - L.pad - L.sideW + 'px'; side.style.width = L.sideW + 'px'; side.style.top = '10px';
+  side.classList.remove(...SIDE_DROPS);
+  $('atoutBox').innerHTML = inPlay
+    ? `<div class="big">${suitSvg(G.trump)}</div><div class="txt"><b>Atout ${sname(G.trump)}</b><span>${G.taker === 0 ? 'Vous avez pris' : PLAYERS[G.taker].name + ' a pris'}</span></div>`
+    : `<div class="big none"><b style="font:800 40px var(--ui);color:#7A5212">?</b></div><div class="txt"><b>Atout</b><span>Pas encore choisi</span></div>`;
+  const ended = G.phase === 'done' || G.phase === 'over';
+  const handCol = t => ended ? '+' + G.handPts[t] : inPlay ? G.won[t] : '–';
+  $('scoreSide').innerHTML = `<tr><th><span class="sr">Équipe</span></th><th>Manche</th><th>Total</th></tr>`
+    + `<tr class="us"><td><span class="who">${face(0)}${face(2)}<span>Vous</span></span></td><td class="n">${handCol(0)}</td><td class="n"><b>${G.scores[0]}</b></td></tr>`
+    + `<tr><td><span class="who">${face(3)}${face(1)}<span>Eux</span></span></td><td class="n">${handCol(1)}</td><td class="n"><b>${G.scores[1]}</b></td></tr>`;
+  $('state').textContent = inPlay && G.belote !== null && G.said > 0
+    ? `Belote annoncée par ${G.belote === 0 ? 'vous' : PLAYERS[G.belote].name}.` : '';
+  const last = inPlay ? G.last : null;
+  $('lastBox').style.display = last && !(shown && !shown.away) ? '' : 'none';
+  if (last) {
+    $('lastCards').innerHTML = last.cards.map((c, i) => {
+      const seat = (last.leader + i) % 4;
+      return `<div class="mini${seat === last.winner ? ' won' : ''}">${i === 0 ? '<em>1er</em>' : ''}<div class="f ${rd(c) ? 'red' : 'black'}">${RANKS[c % 13 + 1]}${suitHtml(suit(c))}</div>${face(seat)}</div>`;
+    }).join('');
+    $('lastText').textContent = (last.winner === 0 ? "Vous l'avez ramassé" : `${PLAYERS[last.winner].name} l'a ramassé`) + ` : ${ptsText(last.pts)}.`;
+  }
+  // Too high for the window: drop parts in this order until it fits. The trump also shows on the mat, and the taker's seat says "Prend".
+  for (const drop of SIDE_DROPS) { if (side.offsetHeight <= L.H - 14) break; side.classList.add(drop); }
+}
+const SIDE_DROPS = ['no-goal', 'no-lasttext', 'no-h3', 'no-atout', 'no-faces', 'no-last'];
+
+// A sheet stays inside the table, between top and bottom, so its buttons are always in view: in a short
+// window it is made smaller.
+function place(el, x, y, bottom = L.H - 8, top = 8) {
+  el.style.transform = '';
+  const room = bottom - top;
+  const fit = Math.min(1, room / el.offsetHeight, (L.W - 16) / el.offsetWidth), h = el.offsetHeight * fit;
+  el.style.transform = fit < 1 ? `scale(${fit})` : '';
+  el.style.left = Math.round(Math.max(8 - el.offsetWidth * (1 - fit) / 2, Math.min(x - el.offsetWidth / 2, L.W - 8 - el.offsetWidth * (1 + fit) / 2))) + 'px';
+  el.style.top = Math.round(Math.max(top, Math.min(y - h / 2, bottom - h))) + 'px';
+}
+
+/* ---------- Animations ----------
+   Each one is here, apart from the rules, so it can be tuned alone. With reduced motion, the CSS turns
+   the transitions and keyframes off, and these only place things. */
+// Set the final position once. Only the visual offset changes during a flight.
+function moveCard(el, x, y, origin = null, delay = 0) {
+  const oldX = parseFloat(el.style.left), oldY = parseFloat(el.style.top);
+  if (!origin && Math.abs(x - oldX) < .01 && Math.abs(y - oldY) < .01) return;
+  if (!origin && Number.isFinite(oldX)) {
+    const offset = getComputedStyle(el).translate.split(' ').map(parseFloat);
+    origin = [oldX + (offset[0] || 0), oldY + (offset[1] || 0)];
+  }
+  el.flight?.cancel();
+  el.flight = null;
+  el.style.left = x + 'px'; el.style.top = y + 'px';
+  if (!origin || motion.matches) return;
+  const away = el.classList.contains('away');
+  const dx = origin[0] - x, dy = origin[1] - y;
+  el.flight = el.animate([
+    { translate: `${dx}px ${dy}px`, scale: '1', opacity: 1, easing: 'cubic-bezier(.25,.58,.35,1)' },
+    { translate: '0px 2px', scale: away ? '.64' : '1.015', opacity: away ? .65 : 1, offset: .82 },
+    { translate: '0px 0px', scale: away ? '.58' : '1', opacity: away ? 0 : 1 }
+  ], { duration: away ? AWAY_MS : 500, delay, fill: 'backwards' });
+}
+// Detach the travelling card from the live map. Undo may need that card immediately.
+function flyToSeat(c, seat) {
+  const el = els.get(c);
+  els.delete(c);
+  if (motion.matches) { el.remove(); return; }
+  el.classList.add('away', 'departing');
+  moveCard(el, ...seatXY(seat));
+  later(() => el.remove(), AWAY_MS);
+}
+// The seat that took the trick swells once.
+function tookAnimation(seat) {
+  const el = $('seat' + seat);
+  if (el) { el.classList.remove('took'); void el.offsetWidth; el.classList.add('took'); }
+}
+// "Belote !" or "Rebelote !" over the seat that says it.
+function callout(seat, word) {
+  const e = document.createElement('div');
+  e.className = 'callout';
+  e.textContent = word;
+  table.appendChild(e);
+  const s = $('seat' + seat);
+  const x = s.offsetLeft + s.offsetWidth / 2 - e.offsetWidth / 2;
+  const y = seat === 0 ? s.offsetTop - e.offsetHeight - 6 : s.offsetTop + s.offsetHeight + 6;
+  e.style.left = Math.round(Math.max(8, Math.min(x, L.W - e.offsetWidth - 8))) + 'px';
+  e.style.top = Math.round(Math.max(8, y)) + 'px';
+  later(() => e.remove(), motion.matches ? 1600 : 2300);
+}
+// The win: a rain of hearts, diamonds, spades and clubs over the table, for about 3 s.
+function celebrate() {
+  if (motion.matches) return;
+  const joy = $('joy');
+  joy.innerHTML = Array.from({ length: 18 }, (_, i) => {
+    const side = i % 2 ? 1 : -1;
+    return `<i style="left:${3 + i * 37 % 92}%;--x:${side * 36}px;--r:${side * 32}deg;--t:${i % 3 * 300}ms">${suitSvg(i % 4)}</i>`;
+  }).join('');
+  later(() => joy.replaceChildren(), 2600);
+}
+function shake(c) {
+  const e = els.get(c);
+  if (!e) return;
+  e.classList.remove('shake'); void e.offsetWidth; e.classList.add('shake');
+}
+
+/* ---------- Mouse, touch and keys ----------
+   A press and release on the same card is a click, if the pointer moved less than 16 px. A second
+   click within half a second near the same spot is a double-click: it counts as one click. */
+// The browser counts successive mouse clicks, including clicks on native dialog buttons.
+addEventListener('click', e => {
+  if (e.detail > 1 && e.target.closest('button')) {
+    e.preventDefault(); e.stopImmediatePropagation();
+  }
+}, true);
+addEventListener('keydown', e => {
+  if (e.repeat && (['Enter', ' ', 'Escape'].includes(e.key) || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z'))) {
+    e.preventDefault(); e.stopImmediatePropagation();
+  }
+}, true);
+let press = null;
+table.addEventListener('pointerdown', e => {
+  if (e.button !== 0 || Kit.isOpen()) return;
+  const el = e.target.closest('.card.hand');
+  // A card still flying in may leave the pointer before the release: that release still counts on it,
+  // but only while the cards still fly. Once they land, a release off the card is not a click.
+  const moving = !!el && el.getAnimations().some(a => a.playState === 'running');
+  press = el ? { c: +el.dataset.c, x: e.clientX, y: e.clientY, id: e.pointerId, moving, busy, turn: G.log.length + ':' + G.phase + ':' + G.bids.length } : null;
+});
+addEventListener('pointerup', e => {
+  const p = press; press = null;
+  if (!p || e.pointerId !== p.id || Kit.isOpen()) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('.card.hand');
+  if ((!(p.moving && p.busy === busy) && (!el || +el.dataset.c !== p.c)) || Math.hypot(e.clientX - p.x, e.clientY - p.y) > 16) return;
+  if (p.turn !== G.log.length + ':' + G.phase + ':' + G.bids.length) return;
+  // The second click of a double-click is ignored, but only within the same turn: a click refused while
+  // the others play does not swallow the next one, made once it is his turn.
+  const t = performance.now(), prev = lastTap;
+  lastTap = { t, c: p.c, x: e.clientX, y: e.clientY, turn: p.turn + ':' + busy };
+  if (prev && prev.c === p.c && prev.turn === lastTap.turn && t - prev.t < 500 && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) < 24) return;
+  tapCard(p.c);
+});
+addEventListener('pointercancel', () => { press = null; });
+table.addEventListener('keydown', e => {
+  const el = e.target.closest && e.target.closest('.card.hand');
+  if (!el || (e.key !== 'Enter' && e.key !== ' ')) return;
+  e.preventDefault();
+  tapCard(+el.dataset.c);
+});
+$('bidBtns').addEventListener('click', e => {
+  const b = e.target.closest('button[data-bid]');
+  if (!b || b.disabled) return;
+  const v = b.dataset.bid;
+  myBid(v === 'take' || v === 'pass' ? v : +v);
+});
+
+$('undoBtn').onclick = doUndo;
+$('hintBtn').onclick = showHint;
+$('helpBtn').onclick = () => Kit.openHelp();
+$('newBtn').onclick = askNewGame;
+$('nextBtn').onclick = () => G.phase === 'over' ? askNewGame() : nextHandNow();
+addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (!Kit.isOpen()) doUndo(); }
+  else if (e.key === 'Escape' && !Kit.escape() && hint) { hint = null; say(turnMessage()); render(); }
+});
+addEventListener('resize', () => render());
+
+// The rules open by themselves the first time the game is opened.
+const found = load();
+if (found === 'game') {
+  Kit.showLevel(level);
+  if (G.phase === 'done' || G.phase === 'over') handOver(false);
+  else if (G.turn !== 0) { render(); later(step, 600); }
+  else { say(turnMessage()); render(); }
+} else if (found === 'broken') {
+  newGame(level);
+  note = "La partie enregistrée n'a pas pu être relue : voici une nouvelle partie.";
+  say(note);
+} else {
+  Kit.firstVisit(newGame);
+}
+</script>
+</body>
+</html>
