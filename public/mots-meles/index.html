@@ -50,6 +50,7 @@
   #bands { position: absolute; inset: 2px; z-index: 1; pointer-events: none; }
   .cell { position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer;
     font: 600 var(--f)/1 var(--ui); color: var(--ink); }
+  .letter { pointer-events: none; }
   .cell::before, .cell::after { content: ""; position: absolute; border-radius: 50%; z-index: -1; pointer-events: none; }
   .cell:hover::after { inset: 8%; background: rgba(166,58,80,.13); }
   /* The lines from the first letter chosen: a soft yellow dot on each letter they cross. */
@@ -64,6 +65,9 @@
 
   /* A word found: a rounded band of felt-pen colour, from its first letter to its last. */
   .band { position: absolute; height: var(--h); border-radius: calc(var(--h) / 2); transform-origin: calc(var(--h) / 2) 50%;
+    pointer-events: none; }
+  .band:not(.try) { overflow: hidden; }
+  .band:not(.try)::before { content: ""; position: absolute; inset: 0; border-radius: inherit; transform-origin: inherit;
     background: var(--fill); box-shadow: inset 0 0 0 3px var(--edge); }
   /* The letters he chose that spell no word: a dashed red band that fades. */
   .band.try { background: rgba(196,18,47,.08); box-shadow: none; border: 3px dashed #C4122F; }
@@ -84,9 +88,9 @@
   #words li.found .w::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 4px; border-radius: 2px; background: var(--edge); }
   #words li.hinted .w { text-decoration: underline 3px var(--gold); text-underline-offset: 5px; }
   /* The win: a round stamp, as a newspaper prints "Bravo". */
-  #stamp { display: none; align-self: center; margin-top: 18px; padding: 10px 22px; border: 4px solid #A63A50; border-radius: 14px;
+  #stamp { display: none; position: absolute; z-index: 3; left: 50%; top: 50%; translate: -50% -50%; pointer-events: none; background: var(--paper); padding: 10px 22px; border: 4px solid #A63A50; border-radius: 14px;
     color: #A63A50; font: 800 30px/1 var(--ui); letter-spacing: .04em; text-transform: uppercase; rotate: -6deg; }
-  #sheet.won #stamp { display: block; }
+  #sheet.wave #stamp { display: block; }
 
   /* The words found and the grids finished: chips in the bottom bar. */
   #count { flex: none; height: 46px; padding: 0 18px; display: flex; align-items: center; gap: 10px;
@@ -111,38 +115,37 @@
     .mini { --c: 28px; font-size: 20px; }
     #words { grid-auto-flow: row; grid-template-columns: 1fr 1fr; grid-template-rows: none; }
   }
-  @media (prefers-reduced-motion: reduce) { .cell.hint::before, .cell.shake { animation: none !important; } }
-
-  /* The motions, each in its own class, so they can be tuned apart. The timings are in the script too
-     (--draw-ms and the others), so the messages and the dialog follow them. */
   @media (prefers-reduced-motion: no-preference) {
-    .cell.hint::before { animation: hintGlow 1.4s ease-in-out infinite; }
-    .cell.anchor::before { animation: anchorIn .22s cubic-bezier(.2,1.3,.4,1); }
-    .cell.shake { animation: sh .3s; }
-    /* A word found: the band draws from the first letter to the last, like a pen. */
-    .band.new { animation: bandDraw var(--draw-ms) cubic-bezier(.45,0,.25,1) both; }
-    /* Undo: the band fades away. */
-    .band.out { animation: bandOut var(--out-ms) ease-in forwards; }
-    .band.try { animation: tryFade var(--try-ms) ease-in forwards; }
-    /* The list strikes the word once its band is drawn. */
-    #words li.just .w::after { animation: strike .4s ease-out var(--draw-ms) backwards; transform-origin: left; }
-    #words li.just .dot { animation: dotPop .35s cubic-bezier(.2,1.4,.4,1) var(--draw-ms) backwards; }
-    /* The win: every band pops in a wave, then the stamp comes down. */
-    #sheet.wave .band { animation: bandPop var(--pop-ms) cubic-bezier(.3,1.5,.5,1) var(--delay) both; }
-    #sheet.wave #stamp { animation: stampIn .5s cubic-bezier(.2,1.3,.4,1) var(--stamp-delay) backwards; }
-    /* A new grid: the letters come in row by row. */
-    #sheet.deal .cell { animation: letterIn .35s ease-out var(--row-delay) backwards; }
+    .cell.hint::before { animation: ringIn .48s ease-out; }
+    .cell.anchor::before { animation: ringIn .36s ease-out; }
+    .cell.lane::after { animation: laneIn .32s ease-out var(--lane-delay) backwards; }
+    .cell.wrong::before { animation: refusal .42s ease-in-out; }
+    .band.new::before { transition: transform var(--draw-ms) cubic-bezier(.36,.02,.24,1), opacity var(--draw-ms); }
+    @starting-style {
+      .band.new::before { transform: translateX(calc(var(--h) - 100%)); opacity: .55; }
+    }
+    .band.out::before { transform: translateX(calc(var(--h) - 100%)); opacity: 0;
+      transition: transform var(--out-ms) ease-in, opacity var(--out-ms) ease-in; }
+    .band.try { animation: tryFade var(--try-ms) ease-out forwards; }
+    #words li.just .w::after { animation: strike .42s ease-out var(--draw-ms) backwards; transform-origin: left; }
+    #words li.just .dot { animation: inkDot .38s ease-out var(--draw-ms) backwards; }
+    #sheet.wave .band:not(.out) { animation: bandPop var(--pop-ms) ease-in-out var(--delay); }
+    #sheet.wave #stamp { animation: stampIn .56s ease-out var(--stamp-delay) backwards; }
+    #sheet.deal .letter { animation: letterIn .38s ease-out var(--row-delay) backwards; }
   }
-  @keyframes hintGlow { 50% { box-shadow: 0 0 0 1.5px #5A4300, inset 0 0 0 1.5px #5A4300, 0 0 20px 6px rgba(255,200,61,.8); } }
-  @keyframes anchorIn { from { scale: .4; opacity: 0; } }
-  @keyframes bandDraw { from { clip-path: inset(0 calc(100% - var(--h)) 0 0 round calc(var(--h) / 2)); } to { clip-path: inset(0 0 0 0 round calc(var(--h) / 2)); } }
-  @keyframes bandOut { to { opacity: 0; scale: 1 .4; } }
-  @keyframes tryFade { 0%, 60% { opacity: 1; } 100% { opacity: 0; } }
-  @keyframes strike { from { scale: 0 1; } }
-  @keyframes dotPop { from { scale: .3; } }
-  @keyframes bandPop { 0%, 100% { scale: 1; } 45% { scale: 1.08 1.35; filter: brightness(1.08) saturate(1.3); } }
-  @keyframes stampIn { from { scale: 2.2; opacity: 0; rotate: -18deg; } }
-  @keyframes letterIn { from { opacity: 0; translate: 0 -8px; } }
+  @keyframes ringIn { from { transform: scale(.68); opacity: .3; } 70% { transform: scale(1.05); } }
+  @keyframes laneIn { from { transform: scale(.6); opacity: 0; } }
+  @keyframes refusal { 28% { transform: translateX(-3px); } 64% { transform: translateX(2px); } }
+  @keyframes tryFade { from { opacity: 0; } 24%, 68% { opacity: 1; } to { opacity: 0; } }
+  @keyframes strike { from { transform: scaleX(0); } }
+  @keyframes inkDot { from { transform: scale(.72); } 65% { transform: scale(1.14); } }
+  @keyframes bandPop { 50% { scale: 1.025 1.025; } }
+  @keyframes stampIn {
+    from { transform: translateY(-22px) rotate(-7deg) scale(1.22); opacity: 0; }
+    66% { transform: translateY(2px) rotate(1deg) scale(.97); opacity: 1; }
+    to { transform: none; }
+  }
+  @keyframes letterIn { from { opacity: 0; transform: translateY(-6px); } 75% { transform: translateY(1px); } }
 </style>
 <script src="../lib/zoom.js"></script>
 </head>
@@ -158,13 +161,12 @@
 <div id="say"><div id="msg" aria-live="polite"></div></div>
 <div id="table">
   <div id="sheet">
-    <div id="board"><div id="bands"></div><div id="grid" role="grid" aria-label="Grille de lettres"></div></div>
+    <div id="board"><div id="bands"></div><div id="grid" role="grid" aria-label="Grille de lettres"></div><div id="stamp" aria-hidden="true">Bravo !</div></div>
     <div id="list">
       <div id="kicker">Mots mêlés</div>
       <h2 id="theme"></h2>
       <hr>
       <ul id="words" aria-label="Les mots à trouver"></ul>
-      <div id="stamp" aria-hidden="true">Bravo !</div>
     </div>
   </div>
 </div>
@@ -224,8 +226,7 @@ const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 // The timings of the motions, shared with the style sheet. A band draws in DRAW_MS and fades in OUT_MS.
 // A wrong line stays TRY_MS. At the win, each band pops for POP_MS, WAVE_MS after the one before, and the
 // dialog opens once the stamp is down.
-const DRAW_MS = 480, OUT_MS = 320, TRY_MS = 1400, POP_MS = 520, WAVE_MS = 110, ROW_MS = 30;
-const motion = ms => reducedMotion.matches ? 0 : ms;
+const DRAW_MS = 540, OUT_MS = 320, TRY_MS = 1400, POP_MS = 520, WAVE_MS = 90, ROW_MS = 30;
 for (const [name, ms] of Object.entries({ draw: DRAW_MS, out: OUT_MS, try: TRY_MS, pop: POP_MS }))
   document.documentElement.style.setProperty(`--${name}-ms`, ms + 'ms');
 
@@ -310,7 +311,7 @@ async function pair(a, b, dragged) {
     if (ok && firstWin) GG.track('mots-meles', 'won');
     else if (!ok && firstWin) { wonNow = false; stats.won--; }
     if (G !== mine) return;
-    render(r.w);
+    render(r.w, a);
     if (G.result) return finish(!stale);
     if (saved) Kit.say(`Vous avez trouvé ${name(r.w)}.`);
     return;
@@ -391,15 +392,37 @@ function finish(show) {
   if (!show) return;
   const wait = showWin();
   const game = G;
-  later(() => G !== game || stale || Kit.isOpen() || Kit.dialog('Bravo, vous avez gagné !',
-    `Vous avez trouvé les ${G.words.length} mots. Grilles finies : ${stats.won}.`,
-    [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', Kit.home]], true), wait);
+  const open = () => {
+    if (G !== game || stale || Kit.isOpen()) return;
+    Kit.dialog('Bravo, vous avez gagné !',
+      `Vous avez trouvé les ${G.words.length} mots. Grilles finies : ${stats.won}.`,
+      [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', Kit.home]], true);
+  };
+  if (!wait) return open();
+  pendingWin = open;
+  later(endWave, wait);
 }
 
 /* ---------- Motions ----------
    Each motion is one function and one class of the style sheet. */
 function later(fn, ms) { const t = setTimeout(() => { timers = timers.filter(x => x !== t); fn(); }, ms); timers.push(t); return t; }
-function stopAll() { timers.forEach(clearTimeout); timers = []; sheet.classList.remove('wave', 'deal'); }
+let pendingWin;
+function endWave() {
+  sheet.classList.remove('wave');
+  const open = pendingWin;
+  pendingWin = null;
+  open?.();
+}
+reducedMotion.addEventListener('change', () => {
+  if (reducedMotion.matches && pendingWin) endWave();
+});
+function stopAll() {
+  pendingWin = null;
+  clearWrong();
+  bandsEl.querySelector('.try')?.remove();
+  timers.forEach(clearTimeout); timers = [];
+  sheet.classList.remove('wave', 'deal');
+}
 // A new grid: the letters come in row by row.
 function showDeal() {
   sheet.classList.remove('deal');
@@ -410,13 +433,16 @@ function showDeal() {
   later(() => sheet.classList.remove('deal'), G.size * ROW_MS + 400);
 }
 // A wrong pair: both letters shake in a red ring, and the line he chose shows dashed, then fades.
+let wrongTimer;
+function clearWrong() {
+  clearTimeout(wrongTimer);
+  gridEl().querySelectorAll('.wrong').forEach(e => e.classList.remove('wrong'));
+}
 function showWrong(a, b, line) {
-  for (const i of [a, b]) {
-    const e = cellEls[i];
-    e.classList.remove('shake', 'wrong'); void e.offsetWidth; e.classList.add('shake', 'wrong');
-    later(() => e.classList.remove('shake', 'wrong'), 700);
-  }
-  bandsEl.querySelectorAll('.band.try').forEach(e => e.remove());
+  clearWrong();
+  bandsEl.querySelector('.try')?.remove();
+  for (const i of [a, b]) cellEls[i].classList.add('wrong');
+  wrongTimer = setTimeout(clearWrong, 700);
   if (!line || reducedMotion.matches) return;
   const e = document.createElement('div');
   e.className = 'band try';
@@ -427,14 +453,13 @@ function showWrong(a, b, line) {
 // The win: once the last band is drawn, the bands pop one after the other, in the order found, then the
 // stamp comes down. Returns the time until the dialog.
 function showWin() {
-  if (reducedMotion.matches) return 300;
+  if (reducedMotion.matches) return 0;
   sheet.classList.remove('wave');
-  G.found.forEach((w, k) => bands.get(w)?.style.setProperty('--delay', k * WAVE_MS + 'ms'));
+  G.found.forEach((w, k) => bands.get(w)?.style.setProperty('--delay', DRAW_MS + k * WAVE_MS + 'ms'));
   const pops = G.found.length * WAVE_MS + POP_MS;
-  sheet.style.setProperty('--stamp-delay', pops - 200 + 'ms');
-  later(() => sheet.classList.add('wave'), DRAW_MS);
-  later(() => sheet.classList.remove('wave'), DRAW_MS + pops + 700);
-  return DRAW_MS + pops + 700;
+  sheet.style.setProperty('--stamp-delay', DRAW_MS + pops - 160 + 'ms');
+  sheet.classList.add('wave');
+  return DRAW_MS + pops + 640;
 }
 
 /* ---------- Drawing ---------- */
@@ -451,7 +476,9 @@ function build() {
   for (let i = 0; i < G.grid.length; i++) {
     const e = document.createElement('div');
     e.className = 'cell'; e.dataset.i = i; e.setAttribute('role', 'gridcell');
-    e.textContent = G.grid[i];
+    const letter = document.createElement('span');
+    letter.className = 'letter'; letter.textContent = G.grid[i];
+    e.appendChild(letter);
     grid.appendChild(e); cellEls.push(e);
   }
   sheet.style.setProperty('--n', String(G.size));
@@ -499,10 +526,13 @@ function place(e, a, b) {
   const n = G.size, h = Math.round(cell * .8);
   const x1 = (a % n + .5) * cell, y1 = (Math.floor(a / n) + .5) * cell, x2 = (b % n + .5) * cell, y2 = (Math.floor(b / n) + .5) * cell;
   const len = Math.hypot(x2 - x1, y2 - y1);
-  e.style.cssText += `left: ${x1 - h / 2}px; top: ${y1 - h / 2}px; width: ${len + h}px; --h: ${h}px; transform: rotate(${Math.atan2(y2 - y1, x2 - x1)}rad);`;
+  e.style.left = x1 - h / 2 + 'px';
+  e.style.top = y1 - h / 2 + 'px';
+  e.style.width = len + h + 'px';
+  e.style.transform = `rotate(${Math.atan2(y2 - y1, x2 - x1)}rad)`;
 }
 // The bands of the words found. A band just found draws in; a band taken back by undo fades away.
-function drawBands(just) {
+function drawBands(just, start) {
   for (const [w, e] of bands) if (!G.found.includes(w)) {
     bands.delete(w);
     if (reducedMotion.matches) { e.remove(); continue; }
@@ -514,11 +544,12 @@ function drawBands(just) {
     if (!e) {
       e = document.createElement('div');
       e.className = 'band' + (w === just ? ' new' : '');
+      if (w === just && start !== M.cells(G, w)[0]) e.dataset.reverse = '1';
       bands.set(w, e); bandsEl.appendChild(e);
-      if (w === just) setTimeout(() => e.classList.remove('new'), DRAW_MS + 50);
     }
     const [fill, edge] = pen(k), c = M.cells(G, w);
     e.style.setProperty('--fill', fill); e.style.setProperty('--edge', edge);
+    if (e.dataset.reverse) c.reverse();
     place(e, c[0], c[c.length - 1]);
   });
 }
@@ -535,26 +566,30 @@ function lanes() {
     }
   return out;
 }
-function render(just) {
+function render(just, start) {
   if (!G) return;
   build(); layout();
   const lane = lanes(), hintCell = hintW >= 0 ? M.cells(G, hintW)[0] : -1;
   cellEls.forEach((e, i) => {
     e.classList.toggle('anchor', i === anchor);
+    if (lane.has(i)) {
+      const steps = Math.max(Math.abs(i % G.size - anchor % G.size), Math.abs(Math.floor(i / G.size) - Math.floor(anchor / G.size)));
+      e.style.setProperty('--lane-delay', steps * 18 + 'ms');
+    }
     e.classList.toggle('lane', lane.has(i));
     e.classList.toggle('hint', i === hintCell);
     const r = Math.floor(i / G.size) + 1, k = i % G.size + 1;
     e.setAttribute('aria-label', `Ligne ${r}, colonne ${k} : ${G.grid[i]}${i === anchor ? ', choisie' : ''}${i === hintCell ? ", entourée par l'aide" : ''}`);
   });
-  drawBands(just);
+  drawBands(just, start);
   [...wordsEl.children].forEach((li, w) => {
     const k = G.found.indexOf(w);
     li.classList.toggle('found', k >= 0);
-    li.classList.toggle('just', w === just);
+    if (w === just) li.classList.add('just');
+    if (k < 0) li.classList.remove('just');
     li.classList.toggle('hinted', w === hintW);
     if (k >= 0) { li.style.setProperty('--fill', pen(k)[0]); li.style.setProperty('--edge', pen(k)[1]); }
   });
-  sheet.classList.toggle('won', G.result === 'won');
   $('count').textContent = `Mots trouvés : ${G.found.length} sur ${G.words.length}`;
   $('wins').textContent = stats.won ? `Grilles finies : ${stats.won}` : '';
   $('undoBtn').disabled = !G.found.length || !!G.result;
