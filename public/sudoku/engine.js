@@ -140,9 +140,10 @@
     }
     return null;
   }
-  const removal = (list, name, level) => {
+  // cells: the cells whose candidates make the reasoning, which the hint lights.
+  const removal = (list, name, level, cells) => {
     const keep = list.filter(([, , has]) => has);
-    return keep.length ? { name, level, remove: keep.map(([i, m]) => [i, m]) } : null;
+    return keep.length ? { name, level, remove: keep.map(([i, m]) => [i, m]), cells } : null;
   };
   // Pointing: a digit of a block that sits in one row or column of it leaves the rest of that line.
   // Claiming: a digit of a line that sits in one block leaves the rest of that block.
@@ -159,7 +160,7 @@
         } else if (where.every(j => BOX(j) === BOX(where[0]))) targets.push(18 + BOX(where[0]));
         for (const t of targets) {
           const list = UNITS[t].filter(j => !where.includes(j) && !g[j]).map(j => [j, m, !!(cand[j] & m)]);
-          const step = removal(list, u >= 18 ? 'pointing' : 'claiming', 2);
+          const step = removal(list, u >= 18 ? 'pointing' : 'claiming', 2, where);
           if (step) return step;
         }
       }
@@ -181,7 +182,7 @@
         let union = 0;
         for (const j of set) union |= cand[j];
         if (bits(union) !== k) continue;
-        const step = removal(open.filter(j => !set.includes(j)).map(j => [j, union, !!(cand[j] & union)]), 'naked' + k, level);
+        const step = removal(open.filter(j => !set.includes(j)).map(j => [j, union, !!(cand[j] & union)]), 'naked' + k, level, set);
         if (step) return step;
       }
     }
@@ -201,7 +202,7 @@
         const mask = set.reduce((m, d) => m | (1 << d), 0);
         const cells = open.filter(j => cand[j] & mask);
         if (cells.length !== k) continue;
-        const step = removal(cells.map(j => [j, ALL & ~mask, !!(cand[j] & ~mask)]), 'hidden' + k, level);
+        const step = removal(cells.map(j => [j, ALL & ~mask, !!(cand[j] & ~mask)]), 'hidden' + k, level, cells);
         if (step) return step;
       }
     }
@@ -229,7 +230,8 @@
             const i = byRow ? a * 9 + b : b * 9 + a;
             if (!g[i]) list.push([i, m, !!(cand[i] & m)]);
           }
-          const step = removal(list, k === 2 ? 'xwing' : 'swordfish', 3);
+          const at = set.flatMap(([a, w]) => w.map(b => byRow ? a * 9 + b : b * 9 + a));
+          const step = removal(list, k === 2 ? 'xwing' : 'swordfish', 3, at);
           if (step) return step;
         }
       }
@@ -254,7 +256,7 @@
           if (g[i] || i === p || i === pairs[a] || i === pairs[b]) continue;
           if (sees(i, pairs[a]) && sees(i, pairs[b]) && (!xyz || sees(i, p))) list.push([i, z, !!(cand[i] & z)]);
         }
-        const step = removal(list, xyz ? 'xyzwing' : 'xywing', 3);
+        const step = removal(list, xyz ? 'xyzwing' : 'xywing', 3, [p, pairs[a], pairs[b]]);
         if (step) return step;
       }
     }
@@ -299,6 +301,8 @@
     moyen: { level: 2, steps: 2 },
     fort: { level: 3, steps: 2 },
   };
+  // Only the three keys: a save with "toString" or "constructor" is not a level.
+  const isLevel = k => typeof k === 'string' && Object.hasOwn(LEVELS, k);
   function fullGrid(rnd) {
     const g = new Array(81).fill(0);
     search(g, 1, rnd);
@@ -309,7 +313,7 @@
   // stops at 38 to 42 givens. For Moyen and Difficile it goes as far as it can, then puts back the digits
   // where the reasoning gets stuck until the grid needs exactly the level.
   function make(level, seed) {
-    const L = LEVELS[level] || LEVELS.facile;
+    const L = LEVELS[isLevel(level) ? level : 'facile'];
     const rnd = random(seed);
     for (let tries = 1; ; tries++) {
       const solution = fullGrid(rnd);
@@ -338,13 +342,15 @@
         g[at] = solution[at]; g[80 - at] = solution[80 - at];
         r = grade(toString(g));
       }
+      // Facile: the digits given back must not take it past its most givens.
+      if (L.givens && g.filter(Boolean).length > L.givens[1]) continue;
       if (r.level === L.level && r.steps[L.level] >= (L.steps || 0)) return { givens: toString(g), solution: toString(solution), tries };
     }
   }
 
   // ---------- The game ----------
   function newGame(level, seed) {
-    const key = LEVELS[level] ? level : 'facile';
+    const key = isLevel(level) ? level : 'facile';
     const { givens, solution } = make(key, seed);
     return { level: key, seed: seed >>> 0, givens, solution, cells: '0'.repeat(81), notes: new Array(81).fill(0), result: '' };
   }
@@ -413,12 +419,19 @@
   //   { kind: 'wrong', cell, digit }               a digit of his breaks no rule but is not the solution
   //   { kind: 'naked', cell, digit }               only this digit fits this cell
   //   { kind: 'hidden', cell, digit, unit }        in this row, column or block, the digit fits only here
-  //   { kind: 'deep', cell, digit, technique }     the next digit a longer reasoning finds
+  //   { kind: 'deep', cell, digit, technique, via, unit, removed, cells }
+  //       the next digit a longer reasoning finds. via 'naked': the reasoning took the digits removed out of
+  //       this cell. via 'hidden': it took the digit out of the other cells of this unit. cells: the cells
+  //       whose candidates did it.
   function hint(G) {
     if (G.result) return null;
     const b = board(G);
     const bad = conflicts(G);
-    if (bad.length) { const c = clash(G, bad[0], b); return { kind: 'clash', cell: bad[0], digit: b[bad[0]], unit: c.unit, other: c.cell }; }
+    // Of two of his digits that clash, erase the one that is not the solution: at least one is not.
+    if (bad.length) {
+      const i = bad.find(j => b[j] !== +G.solution[j]) ?? bad[0], c = clash(G, i, b);
+      return { kind: 'clash', cell: i, digit: b[i], unit: c.unit, other: c.cell };
+    }
     for (let i = 0; i < 81; i++) if (b[i] && b[i] !== +G.solution[i]) return { kind: 'wrong', cell: i, digit: b[i] };
     const cand = candidates(b);
     const n = nakedSingle(b, cand);
@@ -427,16 +440,26 @@
     if (h) return { kind: 'hidden', cell: h.place[0], digit: h.place[1], unit: UNIT_KIND(h.unit) };
     // Reason further until a digit can be placed.
     let technique = '';
+    const start = cand.slice(), used = [];
     for (let k = 0; k < 400; k++) {
       const s = nextStep(b, cand);
       if (!s) break;
-      if (s.place) return { kind: 'deep', cell: s.place[0], digit: s.place[1], technique: technique || s.name };
+      if (s.place) {
+        const [i, d] = s.place, naked = s.name === 'naked';
+        // The steps that matter: those that emptied this cell, or that took d out of the rest of the unit.
+        const hits = ([j, m]) => naked ? j === i : j !== i && m & (1 << d) && UNITS[s.unit].includes(j);
+        const cells = new Set(used.filter(u => u.remove.some(hits)).flatMap(u => u.cells));
+        cells.delete(i);
+        return { kind: 'deep', cell: i, digit: d, technique: technique || s.name, via: naked ? 'naked' : 'hidden',
+          unit: naked ? '' : UNIT_KIND(s.unit), removed: naked ? digitsOf(start[i] & ~(1 << d)) : [], cells: [...cells] };
+      }
       technique = technique || s.name;
       apply(b, cand, s);
+      used.push(s);
     }
     // The reasoning of the solver is stuck (it never is on a grid it made): give the solution of a cell.
     const i = b.indexOf(0);
-    return { kind: 'deep', cell: i, digit: +G.solution[i], technique: '' };
+    return { kind: 'deep', cell: i, digit: +G.solution[i], technique: '', via: '', unit: '', removed: [], cells: [] };
   }
 
   // ---------- Saves ----------
@@ -444,7 +467,7 @@
   // A save read back must be a game this file could have made: a full solution that keeps every rule,
   // givens that are part of it with one solution, and his digits only in the empty cells.
   function valid(G) {
-    if (!G || typeof G !== 'object' || !LEVELS[G.level]) return false;
+    if (!G || typeof G !== 'object' || !isLevel(G.level)) return false;
     if (!grid81(G.givens) || !grid81(G.solution) || !grid81(G.cells)) return false;
     if (G.solution.includes('0')) return false;
     const sol = toArray(G.solution);
@@ -461,7 +484,7 @@
   function restore(data) {
     if (!data || typeof data !== 'object' || !data.G || typeof data.G !== 'object') return null;
     const g = { ...data.G };
-    if (!LEVELS[g.level]) g.level = LEVELS[data.level] ? data.level : 'facile';
+    if (!isLevel(g.level)) g.level = isLevel(data.level) ? data.level : 'facile';
     if (g.notes === undefined) g.notes = new Array(81).fill(0);
     if (g.result === undefined) g.result = finish(g).result;
     if (!Number.isInteger(g.seed)) g.seed = 0;
@@ -473,7 +496,9 @@
       let u;
       try { u = typeof s === 'string' ? JSON.parse(s) : s; } catch (e) { u = null; }
       if (!u || !grid81(u.cells) || ![...u.cells].every((c, i) => c === '0' || g.givens[i] === '0')
-        || !Array.isArray(u.notes) || u.notes.length !== 81 || u.notes.some(n => !Number.isInteger(n) || n < 0 || n & ~ALL)) { undo.length = 0; continue; }
+        || !Array.isArray(u.notes) || u.notes.length !== 81 || u.notes.some(n => !Number.isInteger(n) || n < 0 || n & ~ALL)
+        // A won grid takes no more moves, so it is never the grid before a move.
+        || finish({ ...g, cells: u.cells }).result) { undo.length = 0; continue; }
       undo.push(JSON.stringify({ cells: u.cells, notes: u.notes }));
     }
     const won = data.stats && Number.isInteger(data.stats.won) && data.stats.won >= 0 ? data.stats.won : 0;

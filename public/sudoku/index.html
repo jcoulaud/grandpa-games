@@ -293,29 +293,34 @@ function choose(i) {
   else Kit.say(notesOn ? 'Choisissez les chiffres à noter en petit dans cette case.' : `Choisissez le chiffre de cette case ${padWhere()}.`);
 }
 const padWhere = () => $('stage').classList.contains('under') ? 'en dessous' : 'à droite';
+// A full grid that is not won has red digits: a full grid that keeps every rule is the solution.
+const FIX_RED = 'La grille est pleine, mais des chiffres sont en rouge : corrigez-les.';
 const WON_LINE = 'Cette grille est terminée : cliquez sur « Nouvelle partie » pour en commencer une autre.';
 
 // Before a move: why it cannot be done, said in one sentence, or false.
 function refuse(what, d) {
   if (G.result) { Kit.say(WON_LINE); return true; }
-  if (sel < 0) { Kit.say("Cliquez d'abord sur une case vide de la grille."); return true; }
+  if (sel < 0) { Kit.say(what === 'erase' ? "Cliquez d'abord sur la case à effacer." : "Cliquez d'abord sur une case vide de la grille."); return true; }
   const why = S.refusal(G, sel, what, d);
   if (!why) return false;
-  if (why === 'given') Kit.say('Ce chiffre est un chiffre du départ : il ne peut pas changer. Choisissez une case vide.');
+  if (why === 'given') Kit.say(what === 'erase' ? 'Ce chiffre est un chiffre du départ : il ne peut pas être effacé.'
+    : 'Ce chiffre est un chiffre du départ : il ne peut pas changer. Choisissez une case vide.');
   else if (why === 'same') Kit.say(`Ce ${d} est déjà écrit dans cette case.`);
   else if (why === 'empty') Kit.say('Cette case est déjà vide.');
   else if (why === 'filled') Kit.say('Cette case a déjà un chiffre : effacez-le pour y mettre des notes.');
   shake(sel);
   return true;
 }
-// Keeps the grid before the move for undo, and counts a win once it is saved.
+// Keeps the grid before the move for undo, and counts a win once it is saved. Gives what save gives.
 async function commit(next) {
   undo.push(S.snapshot(G));
   G = next; hint = null;
   const firstWin = G.result === 'won' && !wonNow;
   if (firstWin) { wonNow = true; stats.won++; }
-  if (await save()) { if (firstWin) GG.track('sudoku', 'won'); }
-  else if (firstWin) { wonNow = false; stats.won--; }
+  const ok = await save();
+  if (ok) { if (firstWin) GG.track('sudoku', 'won'); }
+  else if (firstWin) { wonNow = false; stats.won--; render(); }
+  return ok;
 }
 // Each move changes the grid, draws it and says what happened at once, then waits for the save. A save
 // that fails replaces the message (see save).
@@ -330,12 +335,13 @@ async function digit(d) {
   drawMove(previous, i);
   const fresh = S.complete(G).filter(x => !before.includes(x));
   fresh.forEach(animKeyDone);
-  if (G.result) { finish(true); return written; }
+  if (G.result) { finish(written); return written; }
   if (r.clash) {
     blameCell(r.clash.cell);
     shake(i);
     Kit.say(`Il y a déjà un ${d} dans ${UNIT_NAME[r.clash.unit]}.`);
-  } else if (fresh.includes(d)) Kit.say(`Bravo, les neuf ${d} sont en place !`);
+  } else if (S.filled(G)) Kit.say(FIX_RED);
+  else if (fresh.includes(d)) Kit.say(`Bravo, les neuf ${d} sont écrits sans doublon !`);
   else Kit.say(`Vous avez écrit un ${d}. Encore ${plural(empties(), 'case', 'cases')} à remplir.`);
   await written;
 }
@@ -359,19 +365,20 @@ async function eraseCell() {
   await written;
 }
 function setNotes(on) {
-  if (!ready()) return;
+  if (!ready() || double('notes')) return;
   notesOn = on;
   render();
   Kit.say(on ? 'Notes : les chiffres s\'écrivent en petit. Cliquez encore sur « Notes » pour écrire en grand.' : 'Les chiffres s\'écrivent de nouveau en grand.');
 }
 async function doUndo() {
-  if (!ready() || !undo.length || G.result) return;
+  if (!ready() || !undo.length || G.result || double('undo')) return;
   stopAll();
   const previous = G;
   G = S.back(G, undo.pop()); hint = null;
   const written = save();
   drawMove(previous);
-  Kit.say(undo.length ? 'Le dernier coup est annulé.' : 'Le dernier coup est annulé. La grille est comme au départ.');
+  // A save short of room keeps fewer steps, so the first step kept may not be the start.
+  Kit.say(playing() || G.notes.some(Boolean) ? 'Le dernier coup est annulé.' : 'Le dernier coup est annulé. La grille est comme au départ.');
   await written;
 }
 
@@ -390,31 +397,37 @@ async function showHint() {
     next = S.write(G, i, h.digit).G;
     text = h.kind === 'naked' ? `Dans cette case, seul le ${h.digit} est possible.`
       : h.kind === 'hidden' ? `Dans ${UNIT_NAME[h.unit]}, le ${h.digit} ne peut aller que dans cette case.`
+      : h.via === 'naked' ? `À cause des cases en jaune, ${digitList(h.removed)} ${h.removed.length > 1 ? 'ne vont' : 'ne va'} pas dans cette case : il n'y reste que le ${h.digit}.`
+      : h.via === 'hidden' ? `À cause des cases en jaune, le ${h.digit} ne va dans aucune autre case de ${UNIT_NAME[h.unit]} : il va donc ici.`
       : `Ici, il faut un raisonnement plus long : le ${h.digit} va dans cette case.`;
   }
   const previous = G, before = S.complete(G);
   const written = commit(next);
   sel = i;
-  hint = { cell: i, house: h.kind === 'hidden' ? houseOf(i, h.unit) : [] };
+  hint = { cell: i, house: h.kind === 'hidden' ? houseOf(i, h.unit) : h.kind === 'deep' ? h.cells : [] };
   drawMove(previous, i);
   S.complete(G).filter(x => !before.includes(x)).forEach(animKeyDone);
-  if (G.result) { finish(true); return written; }
+  if (G.result) { finish(written); return written; }
   Kit.say(text);
   await written;
 }
+const digitList = ds => ds.map(d => 'le ' + d).join(', ').replace(/, (le \d)$/, ' et $1');
 const houseOf = (i, unit) => S.UNITS[unit === 'row' ? S.ROW(i) : unit === 'col' ? 9 + S.COL(i) : 18 + S.BOX(i)];
 
-/* ---------- End of the game ---------- */
-function finish(show) {
+/* ---------- End of the game ----------
+   written: the save of the winning move. The win sheet waits for it: a save refused (a full memory, or a
+   window behind another) shows no win. Without it, the game was won before a reload. */
+function finish(written) {
+  const show = !!written;
   hint = null; notesOn = false; sel = -1; render();
   const text = `Bravo, la grille est complète ! Niveau ${Kit.levelNames[level].toLowerCase()}.`;
   if (!show) { if (saved && !stale) Kit.say(text); return; }
   if (saved && !stale) Kit.say(text);
   animWin();
   const game = G;
-  const open = () => G === game && !stale && !Kit.isOpen() && Kit.dialog('Bravo, vous avez gagné !',
+  const open = () => written.then(ok => ok && G === game && !stale && !Kit.isOpen() && Kit.dialog('Bravo, vous avez gagné !',
     `Vous avez rempli toute la grille du niveau ${Kit.levelNames[level].toLowerCase()}.` + (stats.won > 1 ? ` C'est votre victoire numéro ${stats.won}.` : ''),
-    [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', Kit.home]], true);
+    [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', Kit.home]], true));
   if (reducedMotion.matches) open();
   else pendingWin = open;
 }
@@ -441,15 +454,18 @@ function makeGrid(lv, seed) {
     worker.postMessage({ id, level: lv, seed });
   });
 }
-function askNewGame() { stopAll(); render(); Kit.chooseLevel(level, playing(), newGame); }
+// A menu opened during the gold wave opens the win sheet at once: it offers a new game too.
+const winFirst = () => { if (!pendingWin) return false; showWinDialog(); return true; };
+function askNewGame() { if (making || winFirst()) return; stopAll(); render(); Kit.chooseLevel(level, playing(), newGame); }
+// One grid is made at a time: a second request would leave the first one's timer to stop the worker.
 async function newGame(lv) {
+  if (making) return;
   stopAll(); lastTap = null;
   if (lv) level = lv;
   Kit.showLevel(level);
-  const job = ++making;
+  making = 1;
   Kit.say('Je prépare une nouvelle grille…');
   const g = await makeGrid(level, crypto.getRandomValues(new Uint32Array(1))[0]);
-  if (job !== making) return;
   making = 0;
   G = g; undo = []; sel = -1; hint = null; wonNow = false; notesOn = false;
   const written = save();
@@ -583,7 +599,7 @@ function render() {
   keys.forEach(e => {
     const d = +e.dataset.d, on = done.has(d);
     e.classList.toggle('done', on);
-    e.setAttribute('aria-label', on ? `${d}, les neuf sont en place` : String(d));
+    e.setAttribute('aria-label', on ? `${d}, les neuf sont écrits` : String(d));
   });
   $('notesBtn').setAttribute('aria-pressed', notesOn ? 'true' : 'false');
   $('undoBtn').disabled = !undo.length || !!G.result;
@@ -701,14 +717,18 @@ $('eraseBtn').onclick = eraseCell;
 $('notesBtn').onclick = () => setNotes(!notesOn);
 $('undoBtn').onclick = doUndo;
 $('hintBtn').onclick = showHint;
-$('helpBtn').onclick = () => { stopAll(); render(); Kit.openHelp(); };
+$('helpBtn').onclick = () => { if (winFirst()) return; stopAll(); render(); Kit.openHelp(); };
 $('newBtn').onclick = askNewGame;
 addEventListener('keydown', e => {
   if (e.key === 'Escape') { Kit.escape(); return; }
   if (Kit.isOpen()) return;
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); doUndo(); return; }
+  // A key held down repeats: it counts once, so a note is not put and taken off again.
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (!e.repeat) { lastTap = null; doUndo(); } return; }
   if (e.ctrlKey || e.metaKey || e.altKey || !G) return;
-  const n = /^Digit[1-9]$/.test(e.code) || /^Numpad[1-9]$/.test(e.code) ? +e.code.slice(-1) : /^[1-9]$/.test(e.key) ? +e.key : 0;
+  // The top row by its place, so AZERTY works without Shift. The keypad by its key: without Num Lock
+  // its 4 is an arrow.
+  const n = /^[1-9]$/.test(e.key) ? +e.key : /^Digit[1-9]$/.test(e.code) ? +e.code.slice(-1) : 0;
+  if ((n || e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') && e.repeat) { e.preventDefault(); return; }
   if (n) { e.preventDefault(); lastTap = null; digit(n); return; }
   if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') { e.preventDefault(); lastTap = null; eraseCell(); return; }
   const move = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] }[e.key];
@@ -725,7 +745,8 @@ addEventListener('resize', () => { clearMove(); render(); });
 if (load()) {
   Kit.showLevel(level);
   render();
-  if (G.result) finish(false);
+  if (G.result) finish();
+  else if (S.filled(G)) Kit.say(FIX_RED);
   else Kit.say(playing() ? `À vous : encore ${plural(empties(), 'case', 'cases')} à remplir.` : `Remplissez les ${empties()} cases vides. Cliquez sur une case, puis sur un chiffre.`);
 } else {
   render();

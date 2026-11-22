@@ -18,6 +18,14 @@ const key = d => page.locator(`.key[data-d="${d}"]`);
 const cls = i => cell(i).getAttribute('class');
 const sol = i => g(i => +G.solution[i], i);
 const emptyCells = () => g(() => [...Array(81).keys()].filter(i => Sudoku.board(G)[i] === 0));
+// Fills a Facile grid but its first empty cell, which it returns. skip: one more cell to leave empty.
+const nearWin = (p, skip = -1) => p.evaluate(skip => {
+  let g2 = G;
+  const first = [...g2.givens].indexOf('0');
+  for (let k = first + 1; k < 81; k++) if (g2.givens[k] === '0' && k !== skip) g2 = Sudoku.write(g2, k, +g2.solution[k]).G;
+  G = g2; undo = []; save(); render();
+  return first;
+}, skip);
 const start = async (p, label) => {
   await p.locator('#overBtns button', { hasText: label }).click();
   await p.waitForFunction(() => G && !making);
@@ -91,20 +99,37 @@ if (givens[e3] === '0') {
   ok(await g(i => +G.cells[i], e3) === free, 'Ctrl+Z brings it back');
   await page.keyboard.press('Control+z');
 }
+// The keypad without Num Lock sends an arrow on the code of its 4: it moves, it does not write a 4.
+{
+  const before = await g(() => ({ sel, cells: G.cells }));
+  await g(() => dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', code: 'Numpad4' })));
+  const after = await g(() => ({ sel, cells: G.cells }));
+  ok(after.sel === (before.sel % 9 ? before.sel - 1 : before.sel + 8) && after.cells === before.cells, 'the keypad 4 without Num Lock moves the cell and writes nothing');
+}
 
 // 7. Notes: small digits, a second click takes one off, and a double-click counts once.
 await cell(e2).click();
-await page.click('#notesBtn');
-ok(await page.locator('#notesBtn').getAttribute('aria-pressed') === 'true' && /petit/.test(await msg()), 'the "Notes" key turns notes on');
+await page.locator('#notesBtn').dblclick();
+ok(await page.locator('#notesBtn').getAttribute('aria-pressed') === 'true' && /petit/.test(await msg()), 'the "Notes" key turns notes on, even with a double-click');
 await key(3).click(); await key(7).click();
 ok(await g(i => G.notes[i], e2) === (1 << 3 | 1 << 7) && await page.locator(`.cell[data-i="${e2}"] .notes i:not(:empty)`).count() === 2, 'two notes show in the cell');
 await key(4).dblclick();
 ok(await g(i => G.notes[i] & (1 << 4), e2) !== 0, 'a double-click on a key adds one note, not two');
+// A keyboard digit held down repeats: the note stays.
+await page.keyboard.down('5'); await page.keyboard.down('5'); await page.keyboard.down('5'); await page.keyboard.up('5');
+ok(await g(i => G.notes[i] & (1 << 5), e2) !== 0, 'a digit held down on the keyboard notes once');
 await wait(550);
 await key(4).click();
 ok(await g(i => G.notes[i] & (1 << 4), e2) === 0, 'a second click takes the note off');
 await page.click('#notesBtn');
 ok(await page.locator('#notesBtn').getAttribute('aria-pressed') === 'false', 'a second click on "Notes" writes big again');
+// A double-click on undo takes one move back, not two.
+{
+  const n = await g(() => undo.length);
+  await page.locator('#undoBtn').dblclick();
+  ok(await g(() => undo.length) === n - 1, 'a double-click on undo takes one move back');
+  await wait(550);
+}
 await page.screenshot({ path: `${OUT}/sudoku-notes.png` });
 
 // 8. The hint fills a cell and says why.
@@ -131,6 +156,11 @@ await wait(300);
 const after = await g(() => ({ cells: G.cells, notes: G.notes.join(), undo: undo.length }));
 ok(JSON.stringify(before) === JSON.stringify(after) && !(await g(() => Kit.isOpen())), 'a reload keeps the digits, the notes and the undo');
 ok(await g(() => GG.meta('sudoku').summary === 'Partie en cours'), 'the tile says a game is in progress');
+await page.click('#eraseBtn');
+ok((await msg()) === "Cliquez d'abord sur la case à effacer.", 'Effacer before a cell asks for the cell to erase, not an empty one');
+await cell(given).click(); await wait(550);
+await page.click('#eraseBtn');
+ok(/ne peut pas être effacé/.test(await msg()), 'Effacer on a given says it cannot be erased');
 
 // 10. A digit complete gets a check, and the last cell wins once, after the wave of the blocks.
 await g(() => {
@@ -186,17 +216,75 @@ await page.screenshot({ path: `${OUT}/sudoku-difficile.png` });
   await p.goto(URL);
   await p.evaluate(() => Kit.closeHelp());
   await start(p, 'Facile');
-  const i = await p.evaluate(() => {
-    let g2 = G;
-    const first = [...g2.givens].indexOf('0');
-    for (let k = first + 1; k < 81; k++) if (g2.givens[k] === '0') g2 = Sudoku.write(g2, k, +g2.solution[k]).G;
-    G = g2; save(); render();
-    return first;
-  });
+  const pmsg = () => p.evaluate(() => document.getElementById('msg').textContent);
+  const play = async (i, d) => {
+    await p.locator(`.cell[data-i="${i}"]`).click();
+    await p.locator(`.key[data-d="${d ?? await p.evaluate(i => +G.solution[i], i)}"]`).click();
+    await p.waitForTimeout(250);
+  };
+  // A full grid with a red digit says to correct it, also after a reload.
+  const first0 = await p.evaluate(() => [...G.givens].indexOf('0'));
+  const j = await p.evaluate(f => [...G.givens].findIndex((c, k) => c === '0' && k > f + 9), first0);
+  const i = await nearWin(p, j);
+  const red = await p.evaluate(j => Sudoku.PEERS[j].map(k => +G.givens[k]).find(Boolean), j);
+  await play(j, red);
+  await p.waitForTimeout(550);
+  await play(i);
+  const full = 'La grille est pleine, mais des chiffres sont en rouge : corrigez-les.';
+  ok(await p.evaluate(() => G.result === '' && Sudoku.filled(G)) && await pmsg() === full, 'a full grid with a red digit says to correct the red digits');
+  await p.evaluate(() => GG.flush());
+  await p.reload();
+  await p.waitForTimeout(300);
+  ok(await pmsg() === full, 'a reload of that grid says the same');
+  // A win whose save is refused shows no win sheet and no win in the count.
+  await p.evaluate(() => { GG.save = async () => false; });
+  await play(j);
+  ok(await p.evaluate(() => G.result === 'won' && !Kit.isOpen() && stats.won === 0 && document.getElementById('wins').textContent === ''),
+    'a win that cannot be saved opens no win sheet and counts nothing on the screen');
+  await p.close();
+}
+{
+  const p = await browser.newPage({ viewport: { width: 1366, height: 680 }, reducedMotion: 'reduce' });
+  await p.goto(URL);
+  await p.evaluate(() => Kit.closeHelp());
+  await start(p, 'Facile');
+  const i = await nearWin(p);
   await p.locator(`.cell[data-i="${i}"]`).click();
   await p.locator(`.key[data-d="${await p.evaluate(i => +G.solution[i], i)}"]`).click();
   await p.waitForTimeout(250);
   ok(await p.evaluate(() => Kit.isOpen() && G.result === 'won'), 'with reduced motion, the win sheet opens at once');
+  // Two requests for a new grid: the first one is made, the second waits for it.
+  await p.evaluate(() => Kit.closeDialog());
+  await p.evaluate(() => Promise.all([newGame('fort'), newGame('facile')]));
+  ok(await p.evaluate(() => G.level === 'fort' && workerOk && worker !== null), 'a second request during a new grid leaves the first one and its worker alone');
+  // A longer reasoning lights its cells and says what they rule out.
+  const deep = await p.evaluate(async () => {
+    G = Sudoku.newGame('moyen', 3917403667); undo = []; render();
+    for (let k = 0; k < 81 && !G.result; k++) {
+      lastTap = null;
+      await showHint();
+      const text = document.getElementById('msg').textContent;
+      if (/À cause des cases en jaune/.test(text)) return { text, lit: document.querySelectorAll('.cell.why').length };
+    }
+    return null;
+  });
+  ok(deep && deep.lit > 0 && /(ne (va|vont) pas dans cette case : il n'y reste que le \d|ne va dans aucune autre case)/.test(deep.text), `a longer hint gives its reason: ${deep && deep.text}`);
+  await p.close();
+}
+// 13b. A menu opened during the gold wave opens the win sheet.
+{
+  const p = await browser.newPage({ viewport: { width: 1366, height: 680 } });
+  await p.goto(URL);
+  await p.evaluate(() => Kit.closeHelp());
+  await start(p, 'Facile');
+  const i = await nearWin(p);
+  await p.locator(`.cell[data-i="${i}"]`).click();
+  await p.locator(`.key[data-d="${await p.evaluate(i => +G.solution[i], i)}"]`).click();
+  await p.waitForFunction(() => document.getElementById('grid').dataset.board === 'win', null, { timeout: 2000 });
+  await p.click('#helpBtn');
+  await p.waitForSelector('#over.on', { timeout: 1000 }).catch(() => {});
+  ok(/Bravo, vous avez gagné/.test(await p.evaluate(() => document.getElementById('overTitle').textContent)) && await p.evaluate(() => Kit.isOpen()),
+    '"Règles" during the wave opens the win sheet instead of losing it');
   await p.close();
 }
 
@@ -204,7 +292,8 @@ await page.screenshot({ path: `${OUT}/sudoku-difficile.png` });
 // 44 px or more, the text 20 px or more (13 on a phone), the digits 30 px, the longest message fits,
 // and the rules pages fit without scrolling from 620 px high.
 const WINDOWS = [[1366, 680], [1093, 530], [1920, 1000], [1280, 620], [390, 760], [1366, 680, 1.3], [1920, 1000, 1.75]];
-const LONGEST = 'Notes : les chiffres s\'écrivent en petit. Cliquez encore sur « Notes » pour écrire en grand.';
+// A longer hint can name seven digits that a cell cannot take.
+const LONGEST = "À cause des cases en jaune, le 1, le 2, le 3, le 4, le 5, le 6 et le 7 ne vont pas dans cette case : il n'y reste que le 8.";
 for (const [w, h, z] of WINDOWS) {
   const name = `${w}x${h}` + (z ? ` at ${z * 100} %` : '');
   const phone = w < 700;

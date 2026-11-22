@@ -68,7 +68,9 @@ for (const level of Object.keys(S.LEVELS)) {
   const a = S.newGame(level, 77), b = S.newGame(level, 78);
   ok(JSON.stringify(a) === JSON.stringify(S.newGame(level, 77)) && a.givens !== b.givens, `${level}: a seed always gives the same grid`);
 }
-ok(S.newGame('expert', 5).level === 'facile', 'an unknown level makes a Facile grid');
+ok(S.newGame('expert', 5).level === 'facile' && S.newGame('toString', 5).level === 'facile', 'an unknown level makes a Facile grid');
+// Putting digits back to keep Facile to singles used to leave up to 48 givens on these seeds.
+ok([7533, 2899].every(seed => givens(S.newGame('facile', seed).givens) <= 42), 'Facile never goes past 42 givens');
 
 // 5. The levels: each needs harder reasoning than the one below.
 {
@@ -106,9 +108,6 @@ ok(S.newGame('expert', 5).level === 'facile', 'an unknown level makes a Facile g
   const boxOnly = [1, 2, 3, 4, 5, 6, 7, 8, 9].find(d => ![S.ROW(empty), 9 + S.COL(empty)].some(u => S.UNITS[u].some(j => +G.givens[j] === d))
     && S.UNITS[18 + S.BOX(empty)].some(j => +G.givens[j] === d));
   if (boxOnly) ok(S.write(G, empty, boxOnly).clash.unit === 'box', 'a digit already in the block only names the block');
-  // A digit that breaks no rule but is not the solution shows no clash.
-  const legal = [1, 2, 3, 4, 5, 6, 7, 8, 9].find(d => d !== right && !S.PEERS[empty].some(j => +G.givens[j] === d));
-  if (legal) ok(!S.write(G, empty, legal).clash && !S.conflicts(S.write(G, empty, legal).G).length, 'a legal but wrong digit is not shown as wrong');
   // Notes.
   const other = S.PEERS[empty].find(j => G.givens[j] === '0');
   let n = S.note(G, other, right);
@@ -149,20 +148,32 @@ ok(S.newGame('expert', 5).level === 'facile', 'an unknown level makes a Facile g
   if (legal) {
     h = S.hint(S.write(G, empty, legal).G);
     ok(h.kind === 'wrong' && h.cell === empty, 'a legal digit that is not the solution comes next, only when asked');
+    ok(!S.write(G, empty, legal).clash && !S.conflicts(S.write(G, empty, legal).G).length, 'a legal but wrong digit is not shown as wrong');
   }
+  // Two copies of a digit in a row, the right one first: the hint erases the wrong one.
+  const row = S.UNITS.slice(0, 9).find(u => u.filter(j => G.givens[j] === '0').length >= 2);
+  const [a, b] = row.filter(j => G.givens[j] === '0');
+  h = S.hint(S.write(S.write(G, a, +G.solution[a]).G, b, +G.solution[a]).G);
+  ok(h.kind === 'clash' && h.cell === b, 'of two clashing digits, the hint erases the one that is not the solution');
   for (const level of Object.keys(S.LEVELS)) {
-    let won = 0, wrong = 0, deep = 0;
+    let won = 0, wrong = 0, deep = 0, unexplained = 0;
     for (let seed = 1; seed <= 8; seed++) {
       let g = S.newGame(level, seed * 31);
       for (let k = 0; k < 81 && !g.result; k++) {
         const x = S.hint(g);
         if (x.digit !== +g.solution[x.cell]) wrong++;
-        if (x.kind === 'deep') deep++;
+        if (x.kind === 'deep') {
+          deep++;
+          // A longer reasoning names its cells, and the digits it rules out of the cell or of the unit.
+          const b = S.board(g);
+          if (!x.cells.length || x.cells.some(j => b[j]) || !(x.via === 'naked' ? x.removed.length && !x.removed.includes(x.digit) : x.unit)) unexplained++;
+        }
         g = S.write(g, x.cell, x.digit).G;
       }
       if (g.result === 'won') won++;
     }
     ok(won === 8 && !wrong, `${level}: following the hint wins 8 grids out of 8 with no wrong digit (${deep} longer reasonings)`);
+    ok(!unexplained, `${level}: each longer reasoning lights its cells and names what it rules out`, `${unexplained} without a reason`);
   }
 }
 
@@ -195,6 +206,10 @@ ok(S.newGame('expert', 5).level === 'facile', 'an unknown level makes a Facile g
   ok(!S.restore({ G: { ...G, result: 'won' } }), 'a win with empty cells is refused');
   r = S.restore({ ...data, undo: [S.snapshot(G0), '{broken', { cells: 'x' }, S.snapshot(G)] });
   ok(r && r.undo.length === 1 && r.undo[0] === S.snapshot(G), 'a broken step of the undo drops the steps before it');
+  ok(!S.valid({ ...G, level: 'toString' }) && S.restore({ ...data, G: { ...G, level: 'constructor' } }).level === 'moyen',
+    'a level such as "constructor" is not a level: the level saved beside it is taken');
+  r = S.restore({ ...data, undo: [S.snapshot(G0), JSON.stringify({ cells: [...G.solution].map((c, i) => G.givens[i] === '0' ? c : '0').join(''), notes: G.notes })] });
+  ok(r && r.undo.length === 0, 'an undo step that is a won grid is refused, with the steps before it');
   ok(S.restore({ ...data, wonNow: true }).wonNow === false, 'a game not won cannot be counted as won');
   ok(S.restore({ ...data, stats: { won: -2 } }).stats.won === 0, 'a broken count of wins starts at 0');
 }
