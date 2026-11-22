@@ -47,6 +47,8 @@
   content: ""; position: absolute; inset: 3px; border: 4px solid var(--gold); border-radius: 50%; z-index: 2;
   box-shadow: 0 0 0 1.5px rgba(var(--shade),.8), inset 0 0 0 1.5px rgba(var(--shade),.8);
 }
+/* Facile marks what the numbers prove: a check on a safe square, a pale flag on a mine. */
+.c.ghost svg { opacity: .45; }
 @keyframes pulse { 50% { background: rgba(255,200,61,.45); } }
 .c.shake { animation: sh .3s; z-index: 3; }
 
