@@ -66,7 +66,7 @@
     $('quit').addEventListener('click', home);
   }
   if ($('rail') && !$('rail').querySelector('.credit'))
-    $('rail').insertAdjacentHTML('afterbegin', `<a class="credit" href="https://x.com/JulienCoulaud" target="_blank" rel="noopener"><img src="${libRoot}icons/julien.webp" width="34" height="34" alt=""><span>Fait par <b>Julien Coulaud</b></span></a>`);
+    $('rail').insertAdjacentHTML('afterbegin', `<a class="credit" href="https://x.com/JulienCoulaud" target="_blank" rel="noopener"><img src="${libRoot}icons/julien.webp" width="34" height="34" alt=""><span>Par <b>Julien Coulaud</b></span></a>`);
   // The icons of the buttons, and of the copies of buttons in the rules guide: a copy to click (.here) also gets the hand.
   document.querySelectorAll('button[data-icon], #help [data-icon]').forEach(b => b.insertAdjacentHTML('afterbegin', icon(b.dataset.icon)));
   document.querySelectorAll('#help .guide-btn.here').forEach(b => b.insertAdjacentHTML('beforeend', icon('hand')));
