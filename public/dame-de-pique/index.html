@@ -57,7 +57,7 @@
   @keyframes took { 40% { transform: scale(1.06); } }
   .ava { width: 52px; height: 52px; border-radius: 50%; flex: none; display: grid; place-items: center;
     font: 700 26px var(--ui); color: #fff; box-shadow: inset 0 -3px 0 rgba(0,0,0,.18); }
-  /* The players of the computer: a cartoon face, drawn on their own color while it loads. */
+  /* A cartoon face, drawn on the player's color while it loads. */
   img.ava { object-fit: cover; box-shadow: 0 0 0 2px #fff, 0 1px 4px rgba(0,0,0,.25); }
   .face { width: 30px; height: 30px; border-radius: 50%; flex: none; object-fit: cover; font: 700 20px/30px var(--ui); color: #fff; text-align: center; }
   .seat b { display: block; font: 700 24px/1.15 var(--ui); }
@@ -291,7 +291,7 @@ const WHERE = ['', 'à votre gauche', 'en face', 'à votre droite'];
 let cast = ['jeanne', 'paul', 'louise'], PLAYERS, TO;
 function setCast(ids) {
   cast = ids;
-  PLAYERS = [{ name: 'Vous', where: '', color: '#C9951A' },
+  PLAYERS = [{ name: 'Vous', id: 'vous', where: '', color: '#C9951A' },
     ...ids.map((id, i) => ({ ...CAST[id], id, where: WHERE[i + 1] }))];
   // To whom the cards go, as he sees it.
   TO = { 1: `à ${PLAYERS[1].name}, à votre gauche`, 2: `à ${PLAYERS[2].name}, en face de vous`, 3: `à ${PLAYERS[3].name}, à votre droite` };
@@ -303,9 +303,8 @@ function newCast() {
   setCast(pool.slice(0, 3));
 }
 setCast(cast);
-// A player's face: his own "V", or the cartoon of a player of the computer.
-const face = (s, cls = 'face') => s === 0 ? `<div class="${cls}" style="background:${PLAYERS[0].color}">V</div>`
-  : `<img class="${cls}" src="../lib/avatars/${PLAYERS[s].id}.webp" alt="" style="background:${PLAYERS[s].color}">`;
+// A player's cartoon face, drawn on the player's color while it loads.
+const face = (s, cls = 'face') => `<img class="${cls}" src="../lib/avatars/${PLAYERS[s].id}.webp" alt="" style="background:${PLAYERS[s].color}">`;
 const ARROWS = { 1: '<path d="M19 12H5M11 6l-6 6 6 6"/>', 2: '<path d="M12 19V5M6 11l6-6 6 6"/>', 3: '<path d="M5 12h14M13 6l6 6-6 6"/>' };
 const HEART = '<svg viewBox="0 0 100 100" aria-hidden="true"><use href="#su1"/></svg>';
 const SPADE = '<svg viewBox="0 0 100 100" aria-hidden="true"><use href="#su0"/></svg>';

@@ -48,6 +48,7 @@ await page.getByRole('button', { name: 'Moyen', exact: true }).click();
 ok(!(await g(() => Kit.isOpen())) && await g(() => level === 'moyen'), 'the level is chosen after the rules');
 ok(await g(() => cast.length === 3 && !['jeanne', 'paul', 'louise'].some(id => cast.includes(id))), 'a new game seats three other players');
 ok(await g(() => [1, 2, 3].every(s => document.querySelector(`#seat${s} img.ava`).src.endsWith(`/lib/avatars/${cast[s - 1]}.webp`))), 'each player shows a face');
+ok(await g(() => document.querySelector('#seat0 img.ava').src.endsWith('/lib/avatars/vous.webp')), 'you show a face too');
 // The checks below name the first three players.
 await g(() => { setCast(['jeanne', 'paul', 'louise']); save(); render(); });
 
