@@ -65,10 +65,11 @@ ok(!(await g(() => help.classList.contains('on'))), 'Escape closes the rules');
 
 // Autosave across a reload
 await g(() => { for (let n = 0; n < 3; n++) clickStock(); });
-// Safe cards may still be going home on their own: wait until the board stops changing.
+// Safe cards may still be going home on their own: wait until the board stops changing and no card is
+// shown before it moves (it waits 1 s, longer than one step of this loop).
 const snap = () => g(() => JSON.stringify({ S: { stock: S.stock, waste: S.waste, tab: S.tab, found: S.found }, u: undo.length }));
 let before = await snap();
-for (let n = 0; n < 20; n++) { await page.waitForTimeout(700); const s2 = await snap(); if (s2 === before) break; before = s2; }
+for (let n = 0; n < 20; n++) { await page.waitForTimeout(700); const s2 = await snap(); if (s2 === before && await g(() => autoId === null)) break; before = s2; }
 await page.reload(); await page.waitForTimeout(1500);
 ok(!(await g(() => help.classList.contains('on'))), 'rules do not open again after the first visit');
 const after = await g(() => JSON.stringify({ S: { stock: S.stock, waste: S.waste, tab: S.tab, found: S.found }, u: undo.length }));
