@@ -55,6 +55,13 @@
   #actions { gap: 10px; }
   #actions button { justify-content: center; min-height: 54px; font-size: 22px; }
   #shoot:not(:disabled) { font-weight: 700; }
+  /* When the hole is over, the button breathes with a gold ring so he sees where to click next. */
+  #shoot.next:not(:disabled) { animation: callNext 1.4s ease-in-out infinite; }
+  @keyframes callNext {
+    0%, 100% { scale: 1; box-shadow: 0 3px 0 #C9951A, 0 0 0 0 rgba(255, 200, 60, .75); }
+    50% { scale: 1.06; box-shadow: 0 3px 0 #C9951A, 0 0 0 12px rgba(255, 200, 60, 0); }
+  }
+  @media (prefers-reduced-motion: reduce) { #shoot.next:not(:disabled) { animation: none; outline: 4px solid #C9951A; outline-offset: 3px; } }
 
   /* The hole: an island under a soft sky. */
   #stage { position: relative; min-height: 0; border-radius: 22px; overflow: hidden;
