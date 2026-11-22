@@ -36,7 +36,7 @@ const WINDOWS = [
   { name: 'laptop-zoom-130', width: 1366, height: 680, minText: 20, zoom: 1.3 },
   { name: 'monitor-zoom-175', width: 1920, height: 1000, minText: 20, zoom: 1.75 },
 ];
-const GAMES = ['solitaire', 'freecell', 'dames', 'dame-de-pique', 'demineur', 'yams', 'bataille-navale'];
+const GAMES = ['solitaire', 'freecell', 'dames', 'dame-de-pique', 'demineur', 'yams', 'bataille-navale', 'paires'];
 // The longest kind of message a game says, to check the message line never cuts it.
 const LONG = 'Vous pouvez déplacer 3 cartes à la fois pour le moment. Videz une case libre ou une colonne pour en déplacer plus.';
 const shots = join(OUT, 'layout');

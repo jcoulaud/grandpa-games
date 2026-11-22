@@ -16,6 +16,8 @@ const CORE = [
   'demineur/', 'demineur/engine.js', 'demineur/icon.svg',
   'yams/', 'yams/engine.js', 'yams/icon.svg',
   'bataille-navale/', 'bataille-navale/engine.js', 'bataille-navale/ships.js', 'bataille-navale/icon.svg',
+  'paires/', 'paires/engine.js', 'paires/icon.svg',
+  ...['coq', 'vache', 'cochon', 'chat', 'chien', 'mouton', 'canard', 'lapin', 'tournesol', 'pomme', 'cerises', 'poire', 'carotte', 'tracteur', 'arrosoir'].map(id => `paires/img/${id}.webp`),
   ...['vous', 'jeanne', 'louise', 'simone', 'odette', 'colette', 'yvonne', 'paul', 'marcel', 'rene', 'andre', 'henri', 'gaston'].map(id => `lib/avatars/${id}.webp`),
 ];
 
