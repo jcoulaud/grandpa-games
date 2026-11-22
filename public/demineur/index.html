@@ -94,6 +94,28 @@
     /* Four buttons share the row: each puts its icon above its word. */
     #undoBtn, #hintBtn, #flagBtn, #helpBtn { flex-direction: column; gap: 0; padding: 3px 2px; text-align: center; font-size: 18px; }
   }
+  /* The mine goes off: a flash, a fireball, a shock wave, sparks and smoke over the square, and the
+     board shakes. The dialog comes after it. */
+  .blast { position: absolute; width: var(--b); height: var(--b); margin: calc(var(--b) / -2) 0 0 calc(var(--b) / -2);
+    pointer-events: none; z-index: 5; }
+  .blast > * { position: absolute; inset: 0; border-radius: 50%; opacity: 0; }
+  .blast .flash { background: radial-gradient(circle, #fff 0 18%, #FFF3A0 35%, rgba(255,220,90,0) 70%); animation: flash .45s ease-out; }
+  .blast .fire { background: radial-gradient(circle, #FFE36B 0 15%, #FF9A1F 38%, #E0322F 58%, rgba(122,13,11,0) 72%); animation: fire .8s ease-out .05s; }
+  .blast .wave { border: 6px solid rgba(255,240,200,.9); animation: wave .6s ease-out; }
+  .blast .smoke { background: radial-gradient(circle, rgba(70,60,55,.75) 0 30%, rgba(70,60,55,0) 70%); animation: smoke 1.2s ease-out .2s; }
+  .blast .spark { inset: auto; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px; background: #FFD34D;
+    box-shadow: 0 0 8px 2px #FF8A1F; animation: spark .7s cubic-bezier(.2,.7,.4,1); }
+  @keyframes flash { 0% { opacity: 1; scale: .1; } 40% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: 1.1; } }
+  @keyframes fire { 0% { opacity: 1; scale: .15; } 50% { opacity: 1; scale: .9; } 100% { opacity: 0; scale: 1.15; } }
+  @keyframes wave { 0% { opacity: 1; scale: .1; } 100% { opacity: 0; scale: 1.6; } }
+  @keyframes smoke { 0% { opacity: 0; scale: .4; } 30% { opacity: 1; } 100% { opacity: 0; scale: 1.4; translate: 0 -12%; } }
+  @keyframes spark { 0% { opacity: 1; transform: rotate(var(--a)) translateX(0); }
+    100% { opacity: 0; transform: rotate(var(--a)) translateX(var(--d)) scale(.3); } }
+  .c.boom.pop { animation: pop .4s ease-out; z-index: 4; }
+  @keyframes pop { 30% { scale: 1.35; } }
+  .quake { animation: quake .5s; }
+  @keyframes quake { 15% { translate: -9px 4px; } 30% { translate: 8px -5px; } 45% { translate: -6px -3px; }
+    60% { translate: 5px 4px; } 75% { translate: -3px 2px; } }
   @media (prefers-reduced-motion: reduce) { .c.hint::after, .c.shake { animation: none; } }
 </style>
 <script src="../lib/zoom.js"></script>
@@ -269,9 +291,32 @@ function finish(show) {
       [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', home]], true), REDUCED ? 0 : 600);
   } else {
     say('Perdu : il y avait une mine sous cette case. « Annuler le dernier coup » reprend juste avant.');
+    if (show && !REDUCED) explode();
     if (show) later(() => Kit.dialog('Une mine a sauté', 'Il y avait une mine sous cette case. Vous pouvez reprendre la partie juste avant ce coup.',
-      [['Annuler le dernier coup', doUndo, true], ['Nouvelle partie', askNewGame], ['Retour aux jeux', home]]), REDUCED ? 0 : 500);
+      [['Annuler le dernier coup', doUndo, true], ['Nouvelle partie', askNewGame], ['Retour aux jeux', home]]), REDUCED ? 0 : 1400);
   }
+}
+// The explosion over the mine that went off. It removes itself, or doUndo removes it.
+function explode() {
+  const e = squares[G.boom];
+  if (!e) return;
+  const r = e.getBoundingClientRect(), t = table.getBoundingClientRect();
+  const b = document.createElement('div');
+  b.className = 'blast';
+  b.style.left = r.left - t.left + table.scrollLeft + r.width / 2 + 'px';
+  b.style.top = r.top - t.top + table.scrollTop + r.height / 2 + 'px';
+  b.style.setProperty('--b', Math.round(r.width * 5) + 'px');
+  b.innerHTML = '<i class="smoke"></i><i class="fire"></i><i class="flash"></i><i class="wave"></i>'
+    + Array.from({ length: 14 }, (_, k) => `<i class="spark" style="--a:${k * 360 / 14 + Math.random() * 16}deg;--d:${Math.round(r.width * (1.6 + Math.random()))}px"></i>`).join('');
+  table.appendChild(b);
+  e.classList.add('pop');
+  for (const x of [boardEl, $('frame')]) { x.classList.remove('quake'); void x.offsetWidth; x.classList.add('quake'); }
+  later(clearBlast, 1400);
+}
+function clearBlast() {
+  document.querySelectorAll('.blast').forEach(b => b.remove());
+  for (const x of [boardEl, $('frame')]) x.classList.remove('quake');
+  squares.forEach(e => e.classList.remove('pop'));
 }
 const home = () => { location.href = $('home').href; };
 
@@ -279,7 +324,7 @@ const home = () => { location.href = $('home').href; };
 function later(fn, ms) { const t = setTimeout(() => { timers = timers.filter(x => x !== t); fn(); }, ms); timers.push(t); return t; }
 function doUndo() {
   if (!undo.length) return;
-  timers.forEach(clearTimeout); timers = [];
+  timers.forEach(clearTimeout); timers = []; clearBlast();
   Kit.closeDialog();
   G = JSON.parse(undo.pop()); hint = null; lastTap = null; setArming(false);
   save(); render();

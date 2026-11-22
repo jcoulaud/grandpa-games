@@ -89,7 +89,9 @@ ok(await g(() => G.result === null && G.layout.some(i => G.cells[i] === '.')), '
 const before = await cells();
 const mine = await g(() => G.layout.find(i => G.cells[i] === '.'));
 await click(mine);
-await wait(700);
+ok(await page.locator('.blast').count() === 1 && !(await g(() => Kit.isOpen())), 'the mine explodes before the dialog opens');
+await wait(1100);
+ok(await page.locator('.blast').count() === 0, 'the explosion clears itself');
 ok(await g(() => G.result === 'lost' && G.boom >= 0), 'a click on a mine loses the game');
 ok(await page.locator('.c.boom svg').count() === 1, 'only the mine that went off is shown');
 ok(await page.locator('#overBtns button.primary').textContent() === 'Annuler le dernier coup', 'the dialog offers "Annuler le dernier coup" first');
