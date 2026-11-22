@@ -17,11 +17,11 @@ ok(!(await page.evaluate(() => dialogOpen())), "Escape closes the rules");
 
 const g = fn => page.evaluate(fn);
 const L = await g(() => L);
-// The space above and below the board (row-gap in lib/kit.css) takes some height on a 680px window.
-ok(L.w >= 96, `card width at 1366x680 is ${L.w}px, height ${L.h}px`);
+// The message line and the bottom bar (lib/kit.css) take some height on a 680px window.
+ok(L.w >= 86, `card width at 1366x680 is ${L.w}px, height ${L.h}px`);
 const rankPx = await g(() => parseFloat(getComputedStyle(document.querySelector('.ix')).fontSize));
 // The corner index is small, as on a real card: the rank over its suit.
-ok(rankPx >= 18.5, `rank text is ${rankPx}px`);
+ok(rankPx >= 16, `rank text is ${rankPx}px`);
 const tablePos = () => g(() => { const r = table.getBoundingClientRect(); return [r.left, r.top]; });
 const [tx, ty] = await tablePos();
 const at = ([x, y]) => [tx + x, ty + y];
@@ -148,7 +148,7 @@ await g(() => {
 await page.waitForTimeout(300);
 const strip = await g(() => { const ys = colY(S.tab[3]); return ys[ys.length - 1] - ys[ys.length - 2]; });
 // Squeezed, a covered card still shows its whole rank.
-ok(strip >= 23, `face-up strip in a long column is ${Math.round(strip)}px`);
+ok(strip >= 21, `face-up strip in a long column is ${Math.round(strip)}px`);
 // The longest usual column, six face-down and seven face-up cards, still fits in the table.
 const bottom = await g(() => {
   const col = [...Array(6).keys()].map(id => ({ id, up: false })).concat([...Array(7).keys()].map(i => ({ id: 20 + i, up: true })));

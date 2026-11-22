@@ -48,7 +48,7 @@ When a game changes its save format, it must still read the old format. His save
   - A wrong place keeps the card chosen and says why in one sentence.
   - "Règles" opens a three-page guide to the rules and the controls. It also opens by itself the first time the game is opened. A "Fermer" button closes it from every page.
   - Labels name the pioche, the défausse and the foundations ("Rangement").
-  - "Montrer un bon coup" shows the next move of a winning plan as a sentence. Click the framed place or the ringed card.
+  - "Que jouer maintenant ?" shows the next move of a winning plan as a sentence. Click the framed place or the ringed card.
   - Safe cards go to the foundations by themselves, one every 0.45 s. Once every card is face up, the game finishes itself at one card every 0.14 s.
   - The stock shows how many cards are left.
   - The suits, pips and court cards are inline SVG drawn for this game. They do not depend on a font.
@@ -91,7 +91,7 @@ When a game changes its save format, it must still read the old format. His save
   - The mines are placed at the first click. The first square and its neighbours hold no mine. A board is kept only if the hint's own reasoning clears it from the first square, so no game needs a guess. The reasoning uses one number at a time, the total of mines, and on Moyen and Difficile two numbers whose closed squares overlap. A board takes under 5 ms.
   - The board is a function of a seed saved with the game and of the first square: after an undo of the first click, the same square gives the same board.
   - A left click opens a square. The right click, or the "Drapeau" button followed by one click, puts a flag. A left click on a flag takes it off. A click on a number that touches as many flags as its value opens the squares around it.
-  - "Montrer un bon coup" frames a wrong flag first. Otherwise it frames the squares that follow from the numbers, rings the numbers it used, and says why in one sentence.
+  - "Que jouer maintenant ?" frames a wrong flag first. Otherwise it frames the squares that follow from the numbers, rings the numbers it used, and says why in one sentence.
   - Facile guides him. `Demineur.sure(G)` repeats the hint's reasoning to find every closed square the numbers prove: the board marks each safe one with a green check and each mine with a red "!". After each move, the hint shows its frame, its ring and its sentence by itself. A left click on a red "!" puts a flag, and a click on a square without a mark is refused, so Facile cannot be lost.
   - On Moyen and Difficile, a mine shows only the mine that went off, and the dialog offers "Annuler le dernier coup" first. No timer.
   - A phone turns a wide board a quarter and scrolls down to the rest of it.
@@ -105,7 +105,7 @@ When a game changes its save format, it must still read the old format. His save
   - The computer knows only its own shots and the ships it sank. Facile fires at random, half the time beside a hit. Moyen finishes each ship hit along its line and searches one colour of a chessboard. Difficile fires where the ships still afloat fit in the most ways. On 300 games each, they need about 68, 45 and 39 shots.
   - Each shot takes its time. A yellow sight closes in on the square. In the water, a column of water rises and falls, drops arc out and fall back, and foam rings spread. On a ship, a flash, a ball of fire, sparks and debris, dark smoke that drifts, and the square shakes. A sunk ship gets two or three blasts along it before it comes up dark. A word shows above the square, or below it near the top: "Plouf !", "Touché !" or "Coulé !". The computer waits until his shot has landed, its sight glides over his sea to its target, and its shot falls the same way: about 4 s from his click to his next turn. With "reduced motion" on, none of this plays and the computer answers at once.
   - The computer's shot depends only on the game, so a reload during its turn gives the same shot.
-  - "Montrer un bon coup" frames the square where the computer's ships afloat fit in the most ways, rings the hits it follows, and says why in one sentence.
+  - "Que jouer maintenant ?" frames the square where the computer's ships afloat fit in the most ways, rings the hits it follows, and says why in one sentence.
   - A save read back is checked whole: straight ships that do not touch, shots that match the ships, the turn and the result. A broken save starts a new game.
   - A phone puts the computer's sea on top and scrolls down to his own.
 

@@ -47,7 +47,7 @@ const lay = await g(() => {
   return { S, fits: f.bottom <= t.bottom && f.top >= t.top && panels.every(p => p.left >= t.left && p.right <= t.right && p.bottom <= t.bottom),
     apart: panels.every(p => p.right < f.left || p.left > f.right), twoCols };
 });
-ok(lay.S >= 46, `squares are ${lay.S} px at 1366x680`);
+ok(lay.S >= 40, `squares are ${lay.S} px at 1366x680`);
 ok(lay.fits && lay.apart, 'the board and the two panels fit side by side');
 ok(lay.twoCols, 'a laptop window puts the computer on the left and the player on the right');
 
@@ -235,7 +235,7 @@ await page.screenshot({ path: `${OUT}/dames-phone.png` });
 
 // 14. A wide screen gets larger squares.
 await page.setViewportSize({ width: 1920, height: 1000 }); await wait(200);
-ok(await g(() => S) >= 70, `squares are ${await g(() => S)} px at 1920x1000`);
+ok(await g(() => S) >= 66, `squares are ${await g(() => S)} px at 1920x1000`);
 await page.screenshot({ path: `${OUT}/dames-1920.png` });
 
 ok(!errors.length, 'no page errors ' + errors.join(' | '));

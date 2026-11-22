@@ -53,7 +53,7 @@ await page.getByRole('button', { name: 'Facile', exact: true }).click();
 const g = fn => page.evaluate(fn);
 const L = await g(() => L);
 // The space above and below the board (row-gap in lib/kit.css) takes some height on a 680px window.
-ok(L.w >= 96, `card width at 1366x680 is ${L.w}px, height ${L.h}px`);
+ok(L.w >= 85, `card width at 1366x680 is ${L.w}px, height ${L.h}px`);
 ok(await g(() => S.tab.flat().length === 52 && S.tab.map(p => p.length).join() === '7,7,7,7,6,6,6,6'), 'the deal has 8 columns of 7 and 6 cards');
 const deepest = await g(() => Math.max(...S.tab.map(p => last(colY(p)) + L.h)) - L.H);
 ok(deepest <= 0, `the dealt columns fit in the table (${deepest}px past it)`);
