@@ -64,6 +64,8 @@
   /* The sea he fires on, during his turn, is framed in yellow. */
   .sea::after { content: ""; position: absolute; left: calc(var(--lab) - 5px); top: calc(var(--s) - 5px); right: -5px; bottom: -5px;
     border-radius: 9px; border: 5px solid transparent; pointer-events: none; z-index: 4; }
+  /* During the computer's turn his own sea is framed in white. */
+  .side.turn#side0 .sea::after { border-color: #F4F8FA; box-shadow: 0 0 0 2px rgba(var(--shade),.7), 0 0 24px rgba(255,255,255,.35); }
   .side.turn#side1 .sea::after { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(var(--shade),.7), 0 0 28px rgba(255,200,61,.55); }
 
   /* A square of sea, with small waves. */
@@ -86,15 +88,50 @@
     box-shadow: inset 0 0 0 4px var(--gold), inset 0 0 0 6px rgba(var(--shade),.8); }
   /* A shot: the yellow ring closes in on the square, the mark pops up, and a wave spreads from it:
      white for the water, orange for a hit. */
-  .q.last::before { animation: aim .35s ease-out both; }
-  .q.last > svg { animation: pop .45s .25s cubic-bezier(.2,1.5,.4,1) both; }
-  .q > svg .wave { display: none; transform-origin: 50% 50%; }
-  .q.last > svg .wave { display: inline; animation: wave .9s .3s ease-out both; }
-  @keyframes aim { from { transform: scale(2.4); opacity: 0; } }
+  /* The shot falls in about 1.6 s. The yellow ring closes in on the square; then, in the water, a column
+     rises and falls, drops fly out and two waves spread; on a ship, a flash, the fire, sparks, smoke,
+     and the square shakes. A word rises from the square: "Plouf !", "Touché !" or "Coulé !". */
+  .q.last::before { animation: aim .5s ease-in both; }
+  .q.last > svg .mark { transform-box: view-box; transform-origin: 50% 50%; animation: pop .55s .45s cubic-bezier(.2,1.6,.4,1) both; }
+  /* The impact, over three squares around the square shot (Ships.fx). */
+  .impact { position: relative; z-index: 5; pointer-events: none; }
+  .impact svg { position: absolute; left: -100%; top: -100%; width: 300%; height: 300%; overflow: visible; }
+  .impact svg * { transform-box: view-box; transform-origin: 50% 50%; }
+  .impact .ripple { animation: ripple 1.2s .45s ease-out both; }
+  .impact .ripple.late { animation-delay: .75s; }
+  .impact .column { transform-origin: 50% 53%; animation: column 1s .45s ease-out both; }
+  .impact .column.thin { animation-delay: .55s; }
+  .impact .fly { animation: fly .9s .5s cubic-bezier(.2,.7,.4,1) both; }
+  .impact .flash { animation: flash .45s .45s ease-out both; }
+  .impact .ball { animation: ball .8s .5s ease-out both; }
+  .impact .ball.core { animation-duration: .6s; }
+  .impact .ball.again { animation: ball .8s .9s ease-out both; }
+  .impact .smoke { animation: smoke 2s .7s ease-out both; }
+  .q.last.boom { animation: quake .45s .45s; }
+  .boat.appear { animation: surface 1s .5s ease-out both; }
+  @keyframes aim { from { transform: scale(3); opacity: 0; } 70% { opacity: 1; } }
   @keyframes pop { from { transform: scale(.2); opacity: 0; } }
-  @keyframes wave { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.9); opacity: 0; } }
+  @keyframes ripple { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
+  @keyframes column { from { transform: scaleY(0); } 35% { transform: scaleY(1.1); } 80% { opacity: 1; } to { transform: scaleY(0); opacity: 0; } }
+  @keyframes fly { from { transform: translate(0, 0) scale(.5); opacity: 0; } 15% { opacity: 1; } 75% { opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 0; } }
+  @keyframes flash { from { transform: scale(.2); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
+  @keyframes ball { from { transform: scale(.1); opacity: 1; } 45% { transform: scale(1); opacity: 1; } to { transform: scale(1.2); opacity: 0; } }
+  @keyframes smoke { from { transform: translateY(0) scale(.3); opacity: 0; } 20% { opacity: .85; } to { transform: translateY(-70px) scale(1.4); opacity: 0; } }
+  @keyframes quake { 20% { translate: -4px 2px; } 40% { translate: 4px -2px; } 60% { translate: -3px -1px; } 80% { translate: 2px 1px; } }
+  /* The word of the shot, over its square. */
+  /* It sits above the square, so the impact stays in view. */
+  .word { position: relative; z-index: 6; pointer-events: none; display: flex; align-items: center; justify-content: center; overflow: visible; }
+  .word span { white-space: nowrap; padding: 2px 12px; border-radius: 12px; font: 800 24px var(--ui); color: #fff;
+    background: rgba(var(--shade),.8); box-shadow: 0 4px 12px rgba(0,0,0,.4); animation: word 1.6s .9s ease-out both; }
+  .word.touche span, .word.coule span { background: #C4122F; }
+  .word.coule span { font-size: 28px; }
+  @keyframes word { from { transform: translateY(-30%) scale(.6); opacity: 0; } 15% { transform: translateY(-110%) scale(1.1); opacity: 1; }
+    75% { transform: translateY(-140%); opacity: 1; } to { transform: translateY(-170%); opacity: 0; } }
+  /* The computer's sight: it looks over his sea, then fires. */
+  .scope { position: relative; z-index: 5; pointer-events: none; display: grid; place-items: center; }
+  .scope svg { width: 150%; height: 150%; flex: none; animation: seek .4s ease-out both; }
+  @keyframes seek { from { transform: scale(1.8) rotate(-40deg); opacity: 0; } }
   /* A ship just sunk comes up dark from the sea; the squares around it turn pale. */
-  .boat.appear { animation: surface .7s ease-out both; }
   @keyframes surface { from { opacity: 0; transform: scale(1.12); } }
   .q.clear.fresh { animation: fade .6s .3s both; }
   @keyframes fade { from { background: linear-gradient(160deg, #2F80B5, #1D5F8E); } }
@@ -131,7 +168,6 @@
   .legend i.clear { background: linear-gradient(160deg, #7BA6C4, #6690AE); }
   .legend i.clear::after { content: ""; width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.7); }
   .legend svg { width: 26px; height: 26px; }
-  .legend svg .wave { display: none; }
   /* A phone: the computer's sea on top, his own under it, each with its ships listed under it. */
   @media (max-width: 700px) {
     #table { flex-direction: column; justify-content: flex-start; overflow-y: auto; padding: 0 0 16px; gap: 22px; }
@@ -155,8 +191,8 @@
     #hintBtn, #moveBtn, #helpBtn { flex-direction: column; gap: 0; padding: 3px 2px; text-align: center; font-size: 18px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .q.hint::after, .q.shake, .q.last::before, .q.last > svg, .q.last > svg .wave, .boat.appear, .q.clear.fresh, .side.turn .turn-tag { animation: none; }
-    .q.last > svg .wave { display: none; }
+    .q.hint::after, .q.shake, .q.last::before, .q.last > svg .mark, .q.last.boom, .boat.appear, .q.clear.fresh, .side.turn .turn-tag, .scope svg { animation: none; }
+    .word, .impact { display: none; }
   }
 </style>
 <script src="../lib/zoom.js"></script>
@@ -216,7 +252,8 @@
 const B = Bataille;
 const $ = id => document.getElementById(id);
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const THINK = REDUCED ? 250 : 900;
+// The computer's turn: his shot falls first, then its sight looks over his sea, then it fires.
+const THINK = REDUCED ? 250 : 2000, SEEK = REDUCED ? 0 : 450;
 // The same width as the style sheet: a phone puts the computer's sea on top.
 const PHONE = matchMedia('(max-width: 700px)');
 const where = () => PHONE.matches ? 'en haut' : 'à droite';
@@ -282,21 +319,60 @@ function tap(k, i) {
   told = shot.kind === 'eau' ? `${at} : à l'eau.` : shot.kind === 'touche' ? `${at} : touché !`
     : `${at} : touché, coulé ! C'était son ${shipName(shot.ship)}.`;
   commit(shot.G);
+  word(1, i, shot.kind);
   if (G.result) { finish(!stale); return true; }
   // A stale window shows the kit's reload prompt. A move that could not be saved keeps the warning
   // of save() on the message line, and the game still goes on.
   if (stale) return true;
-  if (saved) say(told + " L'ordinateur tire…");
+  if (saved) say(told + " L'ordinateur vise…");
   later(answer, THINK);
   return true;
 }
 
 // The computer's shot. Its square depends only on the game, so a reload in between gives the same shot.
+// Its sight first stops on two squares near it, then on it, and the shot falls.
 function answer() {
   if (G.result || G.turn !== 'them') return;
   const i = B.aim(G);
   if (i < 0) return;
+  if (!SEEK) return fireAt(i);
+  const r = Math.floor(i / B.N), c = i % B.N, near = [];
+  for (let n = 0; n < 2; n++) {
+    const rr = Math.min(9, Math.max(0, r + Math.round((Math.random() - .5) * 6))), cc = Math.min(9, Math.max(0, c + Math.round((Math.random() - .5) * 6)));
+    near.push(rr * B.N + cc);
+  }
+  [...near, i].forEach((j, n) => later(() => showScope(j), n * SEEK));
+  later(() => fireAt(i), 3 * SEEK + 150);
+}
+const gridAt = i => `${Math.floor(i / B.N) + 2} / ${i % B.N + 2}`;
+function showScope(i) {
+  seas[0].querySelectorAll('.scope').forEach(e => e.remove());
+  const e = document.createElement('div');
+  e.className = 'scope'; e.style.gridArea = gridAt(i); e.innerHTML = SCOPE;
+  seas[0].appendChild(e);
+}
+const SCOPE = '<svg viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="30" r="17" fill="none" stroke="#1F2A31" stroke-width="6"/><circle cx="30" cy="30" r="17" fill="none" stroke="#FFC83D" stroke-width="3"/>'
+  + '<path d="M30 4v16M30 40v16M4 30h16M40 30h16" stroke="#1F2A31" stroke-width="6" stroke-linecap="round"/><path d="M30 5v14M30 41v14M5 30h14M41 30h14" stroke="#FFC83D" stroke-width="3" stroke-linecap="round"/><circle cx="30" cy="30" r="3" fill="#E8411F"/></svg>';
+// The impact of a shot plays over its square, and its word rises from it, then both go.
+const WORDS = { eau: 'Plouf !', touche: 'Touché !', coule: 'Coulé !' };
+function word(k, i, kind) {
+  if (REDUCED) return;
+  seas[k].querySelectorAll('.word, .impact').forEach(e => e.remove());
+  const fx = document.createElement('div');
+  fx.className = 'impact'; fx.style.gridArea = gridAt(i); fx.innerHTML = Ships.fx[kind];
+  seas[k].appendChild(fx);
+  setTimeout(() => fx.remove(), 2800);
+  const e = document.createElement('div');
+  e.className = 'word ' + kind; e.style.gridArea = gridAt(i); e.setAttribute('aria-hidden', 'true');
+  e.innerHTML = `<span>${WORDS[kind]}</span>`;
+  seas[k].appendChild(e);
+  setTimeout(() => e.remove(), 2400);
+}
+function fireAt(i) {
+  seas[0].querySelectorAll('.scope').forEach(e => e.remove());
+  if (G.result || G.turn !== 'them' || B.aim(G) !== i) return;
   const at = B.name(i), shot = B.fire(G, 0, i);
+  word(0, i, shot.kind);
   const theirs = shot.kind === 'eau' ? `L'ordinateur tire en ${at} : à l'eau.`
     : shot.kind === 'touche' ? `L'ordinateur tire en ${at} : touché, votre ${shipName(shot.ship)}.`
     : `L'ordinateur tire en ${at} : coulé, votre ${shipName(shot.ship)} !`;
@@ -312,7 +388,7 @@ function finish(show) {
   hint = null;
   render();
   // A result shown late does not cover a dialog he opened in between, such as the levels.
-  const dialog = (...a) => later(() => { if (!Kit.isOpen()) Kit.dialog(...a); }, REDUCED ? 0 : 700);
+  const dialog = (...a) => later(() => { if (!Kit.isOpen()) Kit.dialog(...a); }, REDUCED ? 0 : 2200);
   // A result that could not be saved keeps the warning on the message line, and the dialog says it.
   const lost = saved ? '' : " Attention : la partie n'a pas pu être enregistrée, la mémoire de l'ordinateur est pleine.";
   const tell = text => { if (saved) say(text); };
@@ -363,6 +439,7 @@ function newGame(lv) {
   Kit.showLevel(level);
   const seed = crypto.getRandomValues(new Uint32Array(1))[0];
   G = B.newGame(level, seed); hint = null; lastShot = null; wonNow = false; told = '';
+  seas[0].querySelectorAll('.scope, .word, .impact').forEach(e => e.remove()); seas[1].querySelectorAll('.word, .impact').forEach(e => e.remove());
   // A stale window cannot save, so it does not count a game either.
   if (save()) GG.track('bataille-navale', 'start');
   render();
@@ -466,7 +543,7 @@ function render() {
       else if (x === 'c' && e.classList.contains('fresh')) cls += ' fresh';
       if (k === 1 && x === 'x') cls += ' burn';
       if (x === 's') cls += ' wreck';
-      if (G.last[k] === i) cls += ' last';
+      if (G.last[k] === i) cls += ' last' + (x === 'x' || x === 's' ? ' boom' : '');
       if (k === 1 && framed.has(i)) cls += ' hint';
       if (k === 1 && ringed.has(i)) cls += ' ring';
       const html = x === 'x' || x === 's' ? Ships.hit : x === 'o' ? Ships.splash : '';

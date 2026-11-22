@@ -54,18 +54,43 @@
       : `<svg viewBox="0 0 ${W} 100" aria-hidden="true">${g}</svg>`;
   }
 
-  // A hit: a burst of fire. A shot in the water: white rings and drops. The ring of class "wave"
-  // shows only on the last shot, where it spreads out once (see the page's style).
+  // A hit: a burst of fire. A shot in the water: white rings and drops. The part of class "mark" pops up
+  // on the last shot (see the page's style).
   const hit = '<svg viewBox="0 0 100 100" aria-hidden="true" overflow="visible">'
-    + '<circle class="wave" cx="50" cy="50" r="40" fill="none" stroke="#FFB23F" stroke-width="8"/>'
-    + '<path d="M50 4l9 22 21-12-6 24 23 6-20 13 15 19-24-3-2 24-16-19-16 19-2-24-24 3 15-19-20-13 23-6-6-24 21 12z" fill="#E8411F" stroke="#7A0D0B" stroke-width="4" stroke-linejoin="round"/>'
+    + '<g class="mark"><path d="M50 4l9 22 21-12-6 24 23 6-20 13 15 19-24-3-2 24-16-19-16 19-2-24-24 3 15-19-20-13 23-6-6-24 21 12z" fill="#E8411F" stroke="#7A0D0B" stroke-width="4" stroke-linejoin="round"/>'
     + '<path d="M50 24l6 14 14-6-4 15 14 5-13 7 8 12-15-2-2 14-8-12-8 12-2-14-15 2 8-12-13-7 14-5-4-15 14 6z" fill="#FFB23F"/>'
-    + '<circle cx="50" cy="52" r="11" fill="#FFF1A8"/></svg>';
+    + '<circle cx="50" cy="52" r="11" fill="#FFF1A8"/></g></svg>';
   const splash = '<svg viewBox="0 0 100 100" aria-hidden="true" overflow="visible">'
-    + '<circle class="wave" cx="50" cy="50" r="40" fill="none" stroke="#fff" stroke-width="6"/>'
-    + '<circle cx="50" cy="50" r="30" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="5"/>'
+    + '<g class="mark"><circle cx="50" cy="50" r="30" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="5"/>'
     + '<circle cx="50" cy="50" r="15" fill="#F4F8FA" stroke="rgba(255,255,255,.6)" stroke-width="6"/>'
-    + '<circle cx="18" cy="24" r="5" fill="#F4F8FA"/><circle cx="82" cy="22" r="4" fill="#F4F8FA"/><circle cx="84" cy="78" r="5" fill="#F4F8FA"/><circle cx="20" cy="80" r="4" fill="#F4F8FA"/></svg>';
+    + '<g class="drops"><circle cx="18" cy="24" r="5" fill="#F4F8FA"/><circle cx="82" cy="22" r="4" fill="#F4F8FA"/><circle cx="84" cy="78" r="5" fill="#F4F8FA"/><circle cx="20" cy="80" r="4" fill="#F4F8FA"/></g></g></svg>';
 
-  root.Ships = { ship, hit, splash };
+  // The impact of a shot, drawn over three squares around it and played once (see the page's style):
+  //   eau     a column of water that rises and falls, drops that fly out, two waves
+  //   touche  a flash, a ball of fire, sparks that fly out, smoke that rises
+  //   coule   the same, larger, with a second blast
+  // Each flying piece has its way out in --dx and --dy.
+  const around = (n, r, extra) => [...Array(n)].map((_, k) => {
+    const a = (k / n) * 2 * Math.PI + .3;
+    return extra(Math.round(Math.cos(a) * r), Math.round(Math.sin(a) * r), k);
+  }).join('');
+  const water = '<svg viewBox="0 0 300 300" aria-hidden="true">'
+    + '<ellipse class="ripple" cx="150" cy="150" rx="60" ry="60" fill="none" stroke="#fff" stroke-width="7"/>'
+    + '<ellipse class="ripple late" cx="150" cy="150" rx="60" ry="60" fill="none" stroke="#fff" stroke-width="5"/>'
+    + '<path class="column" d="M128 158C122 120 132 70 150 18C168 70 178 120 172 158Z" fill="#F4F8FA"/>'
+    + '<path class="column thin" d="M112 160C106 136 110 110 118 88C126 110 130 136 128 160Z" fill="#DDEBF3"/>'
+    + '<path class="column thin" d="M188 160C182 136 186 110 194 86C202 110 206 136 204 160Z" fill="#DDEBF3"/>'
+    + around(10, 110, (dx, dy, k) => `<circle class="fly" style="--dx:${dx}px;--dy:${dy - 40}px" cx="150" cy="140" r="${6 + (k % 3) * 2}" fill="#F4F8FA"/>`)
+    + '</svg>';
+  const fire = big => '<svg viewBox="0 0 300 300" aria-hidden="true">'
+    + `<circle class="flash" cx="150" cy="150" r="${big ? 90 : 70}" fill="#FFF1A8"/>`
+    + `<circle class="ball" cx="150" cy="150" r="${big ? 62 : 48}" fill="#FF8A1F"/>`
+    + `<circle class="ball core" cx="150" cy="150" r="${big ? 36 : 28}" fill="#FFE07A"/>`
+    + around(big ? 14 : 10, big ? 140 : 115, (dx, dy, k) => `<rect class="fly spark" style="--dx:${dx}px;--dy:${dy}px" x="143" y="143" width="14" height="14" rx="4" fill="${k % 2 ? '#FFD15C' : '#FF6A2B'}"/>`)
+    + `<g class="smoke" fill="#3A444B"><circle cx="128" cy="128" r="${big ? 34 : 26}"/><circle cx="170" cy="118" r="${big ? 30 : 22}"/><circle cx="150" cy="96" r="${big ? 26 : 20}"/></g>`
+    + (big ? '<circle class="ball again" cx="150" cy="150" r="70" fill="#FF6A2B"/>' : '')
+    + '</svg>';
+  const fx = { eau: water, touche: fire(false), coule: fire(true) };
+
+  root.Ships = { ship, hit, splash, fx };
 })(typeof window !== 'undefined' ? window : globalThis);

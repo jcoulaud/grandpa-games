@@ -152,6 +152,29 @@ const onTop = await g(i => { const q = document.querySelector(`.q[data-k="0"][da
   const e = document.elementsFromPoint(r.x + r.width / 2, r.y + r.height / 2); return e.findIndex(x => x.classList.contains('boat')) < e.indexOf(q); }, own);
 ok(onTop, 'a refused click on his own ship does not hide the ship');
 
+// 11f. With animations on, each shot takes its time: his shot falls with its word, the computer's
+// sight looks over his sea, then its shot falls, about 3.5 s after his click.
+const slow = await browser.newPage({ viewport: { width: 1366, height: 680 }, reducedMotion: 'no-preference' });
+slow.on('pageerror', e => errors.push(e.message));
+await slow.goto(URL);
+await slow.click('#helpClose');
+await slow.getByRole('button', { name: 'Facile', exact: true }).click();
+await slow.evaluate(() => { const v = Bataille.view(G, 1); tap(1, v.findIndex((x, i) => x === '.' && Bataille.shipAt(G, 1, i) < 0)); });
+await slow.waitForTimeout(600);
+ok(await slow.locator('#sea1 .word.eau').textContent() === 'Plouf !', 'a shot in the water says "Plouf !" over its square');
+ok(await slow.evaluate(() => G.turn === 'them' && /L'ordinateur vise/.test(document.getElementById('msg').textContent)), 'his shot shows first, while the computer aims');
+await slow.waitForTimeout(1700);
+ok(await slow.locator('#sea0 .scope').count() === 1 && await slow.evaluate(() => G.turn === 'them'), 'then the computer\'s sight looks over his sea');
+await slow.waitForFunction(() => G.turn === 'me', null, { timeout: 4000 });
+ok(await slow.locator('#sea0 .scope').count() === 0 && await slow.locator('#sea0 .word').count() === 1, 'then it fires with its word, and the sight goes');
+await slow.waitForTimeout(2600);
+ok(await slow.locator('.word').count() === 0, 'the words go after their animation');
+await slow.evaluate(() => { G = { ...G, turn: 'me' }; const i = G.fleets[1][0][0]; tap(1, i); });
+await slow.waitForTimeout(700);
+await slow.screenshot({ path: `${OUT}/bataille-navale-hit.png` });
+ok(await slow.locator('#sea1 .word.touche').count() === 1 && await slow.locator('#sea1 .q.last.boom').count() === 1, 'a hit says "Touché !" and its square shakes');
+await slow.close();
+
 // 12. A phone: the computer's sea on top, and a click there fires.
 const phone = await browser.newPage({ viewport: { width: 390, height: 760 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' });
 phone.on('pageerror', e => errors.push(e.message));
