@@ -1,0 +1,832 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morpion · Jeux de Papi</title>
+<meta name="description" content="Le morpion en grand, pour les grands-parents : le petit morpion de 3 cases sur 3 et le grand morpion à 5 croix alignées sur une feuille de cahier, contre l'ordinateur. Gratuit, sans publicité, sans compte.">
+<link rel="canonical" href="https://jeux-papi.fr/morpion/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Jeux de Papi">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://jeux-papi.fr/morpion/">
+<meta property="og:title" content="Morpion · Jeux de Papi">
+<meta property="og:description" content="Le morpion en grand, sur une feuille de cahier, contre l'ordinateur. Gratuit, sans publicité, sans compte.">
+<meta property="og:image" content="https://jeux-papi.fr/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../lib/kit.css">
+<style>
+  /* The morpion plays on a pastel lilac felt, under a sheet of French squared school paper (Seyès):
+     a thick line every square, three fine lines across it, and a red margin on the left. His crosses
+     are in blue ballpoint ink, the computer's rings in red ink. */
+  :root {
+    --felt-top: #B98AC9; --felt: #6B4580; --shade: 40,20,52; --accent: #6B4580;
+    --paper: #FFFEF8; --thick: #8F7FC8; --fine: #E6DFF3; --margin-red: #E0525E;
+    --blue: #1F3FBF; --red-ink: #C8102E; --pencil: #2E2A5A;
+    --c: 34px; --n: 11; --g: 34px; --m: 40px; --pen: 11;
+  }
+  #title svg { width: 32px; height: 32px; }
+  button.game { --accent: #6B4580; }
+  button.game:hover { background: #7C5493; }
+  button.game:active { background: #5A3A6C; }
+
+  #table { display: flex; align-items: center; justify-content: center; gap: 28px; padding: 0 20px 6px; overflow: hidden; }
+  #table[hidden] { display: none; }
+  #table.below { flex-direction: column; gap: 12px; }
+  #board { flex: none; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+
+  /* ---------- The score of the series ----------
+     On the players' cards, the draws on the goal card. When the cards are under the sheet or away, on a
+     strip of the same paper above the sheet. When the cards on the right cannot hold it, on a card of
+     paper on the left of the sheet. */
+  #strip { display: none; align-items: center; gap: 18px; height: 40px; padding: 0 16px; border-radius: 4px;
+    background: var(--paper); color: var(--pencil); font: 600 20px var(--ui); white-space: nowrap;
+    box-shadow: 0 1px 0 rgba(0,0,0,.08), 0 6px 16px rgba(var(--shade),.4); }
+  #table.strip #strip, #table.left #strip { display: flex; }
+  #table.left #board { flex-direction: row; gap: 16px; }
+  #table.left #strip { flex-direction: column; align-items: flex-start; width: 200px; height: auto; padding: 12px 16px; gap: 10px; }
+  #strip span { display: inline-flex; align-items: center; gap: 6px; }
+  #strip svg { width: 22px; height: 22px; flex: none; overflow: visible; }
+  #strip svg path { fill: none; stroke-width: 12; stroke-linecap: round; }
+  #strip b, .tally strong, #draws strong { font-weight: 700; }
+  #strip .x b { color: var(--blue); } #strip .o b { color: var(--red-ink); }
+  /* On the cards, the score takes the place of the line under the name, which comes back when the
+     score goes on the left. */
+  .seat .head .sub { display: none; }
+  #table.left .seat .head .sub { display: block; }
+  #you .tally strong { color: var(--blue); } #cpu .tally strong { color: var(--red-ink); }
+  #table.left .seat .head .tally, #table.left #goal { display: none; }
+  /* A low window keeps only the draws on the goal card. */
+  #side.tight #goal > :not(#draws) { display: none; }
+  #side.tight #draws { margin-top: 0; }
+
+  /* ---------- The sheet ---------- */
+  #sheet {
+    position: relative; border-radius: 4px;
+    background:
+      linear-gradient(var(--thick) 0 2px, transparent 2px) 0 0 / 100% var(--g),
+      linear-gradient(var(--fine) 0 1px, transparent 1px) 0 0 / 100% calc(var(--g) / 4),
+      linear-gradient(90deg, var(--thick) 0 2px, transparent 2px) var(--m) 0 / var(--g) 100%,
+      var(--paper);
+    box-shadow: 0 1px 0 rgba(0,0,0,.08), 0 18px 40px rgba(var(--shade),.45), 0 4px 10px rgba(var(--shade),.25);
+  }
+  /* Big board: the squares of the paper are the squares of the game, from the margin to the edge. */
+  #sheet.big { padding: 0 2px 2px var(--m); }
+  /* While the side measures itself, both players show their line of state. */
+  #side.measure .seat .now { display: flex; }
+  /* Little board: the grid stands one paper square inside the sheet, drawn by hand in ink. */
+  #sheet.small { padding: var(--g) var(--g) var(--g) calc(var(--m) + var(--g)); }
+  /* The margin: paper with the rows only, and the red line. */
+  #margin {
+    position: absolute; left: 0; top: 0; bottom: 0; width: var(--m); border-radius: 4px 0 0 4px;
+    background:
+      linear-gradient(var(--thick) 0 2px, transparent 2px) 0 0 / 100% var(--g),
+      linear-gradient(var(--fine) 0 1px, transparent 1px) 0 0 / 100% calc(var(--g) / 4),
+      var(--paper);
+    border-right: 2.5px solid var(--margin-red);
+  }
+  #grid { position: relative; display: grid; grid-template-columns: repeat(var(--n), var(--c)); grid-auto-rows: var(--c); touch-action: none; }
+  #hash { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  #hash path { fill: none; stroke: var(--pencil); stroke-width: .045; stroke-linecap: round; }
+  .cell { position: relative; }
+  /* His turn: a free square shows a pale cross under the mouse, so he sees where it will go. */
+  #grid.yours .cell.free { cursor: pointer; }
+  #grid.yours .cell.free:hover { background: rgba(107,69,128,.11); }
+  #grid.yours .cell.free:hover::after, .cell.hint::after {
+    content: ""; position: absolute; inset: 10%; opacity: .3;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='%231F3FBF' stroke-width='11' stroke-linecap='round'%3E%3Cpath d='M26 24C40 40 58 60 76 78M75 25C60 42 42 58 24 77'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+  /* The hint: a yellow frame with a dark edge. */
+  .cell.hint::before {
+    content: ""; position: absolute; inset: -3px; z-index: 3; pointer-events: none; border: 5px solid var(--gold); border-radius: 8px;
+    background: rgba(255,200,61,.3); box-shadow: 0 0 0 1.5px rgba(var(--shade),.8), inset 0 0 0 1.5px rgba(var(--shade),.6);
+  }
+  #sheet.small .cell.hint::before { inset: 6px; border-width: 7px; border-radius: 14px; }
+  /* The computer's last ring: a soft red ground, until he plays. */
+  .cell.last { background: rgba(200,16,46,.09); box-shadow: inset 0 0 0 2px rgba(200,16,46,.35); }
+  #sheet.small .cell.last { box-shadow: none; border-radius: 18px; background: rgba(200,16,46,.07); }
+  /* The squares of the line that won. */
+  .cell.won { background: rgba(255,200,61,.34); }
+  .cell.won.o { background: rgba(200,16,46,.13); }
+
+  /* The marks, drawn in ink. */
+  .mark { position: absolute; inset: 7%; width: 86%; height: 86%; overflow: visible; pointer-events: none; }
+  #sheet.small .mark { inset: 13%; width: 74%; height: 74%; }
+  .mark path { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: var(--pen); }
+  .mark.x path { stroke: var(--blue); }
+  .mark.o path { stroke: var(--red-ink); }
+  #strike { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 4; }
+  #strike path { fill: none; stroke-linecap: round; }
+  #fx { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+
+  /* ---------- The two players and the goal ---------- */
+  #side { flex: none; width: 300px; display: flex; flex-direction: column; gap: 14px; }
+  #table.below #side { width: auto; flex-direction: row; }
+  #table.alone #side, #table.below #goal, #side.short #whoStarts { display: none; }
+  .seat, #goal { background: #FFFDF8; color: var(--text); border-radius: 22px; padding: 12px 16px; box-shadow: 0 4px 18px rgba(var(--shade),.4); border: 3px solid transparent; transition: border-color .2s, box-shadow .2s; }
+  .seat .head { display: flex; align-items: center; gap: 14px; }
+  .seat svg { width: 46px; height: 46px; flex: none; overflow: visible; }
+  .seat svg path { fill: none; stroke-width: 11; stroke-linecap: round; }
+  .seat b { display: block; font: 700 24px/1.15 var(--ui); }
+  .seat .head span { display: block; font: 500 20px/1.25 var(--ui); color: #5A5466; }
+  .seat .now { display: none; align-items: center; gap: 10px; margin-top: 8px; padding: 5px 12px; border-radius: 12px; background: #FFF4D6; font: 600 20px var(--ui); }
+  .seat.turn .now { display: flex; }
+  #you.turn { border-color: var(--gold); box-shadow: 0 0 0 4px rgba(255,200,61,.3), 0 4px 18px rgba(var(--shade),.4); }
+  #cpu.turn { border-color: var(--accent); }
+  #cpu .now { background: #F1E9F6; }
+  .dots { display: inline-flex; gap: 5px; }
+  .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: dot 1.2s infinite; }
+  .dots i:nth-child(2) { animation-delay: .2s; } .dots i:nth-child(3) { animation-delay: .4s; }
+  @keyframes dot { 50% { opacity: .2; } }
+  #goal { font: 500 20px/1.35 var(--ui); color: #3F3A4A; }
+  #goal b { display: block; margin-bottom: 4px; font: 700 21px var(--ui); color: var(--accent); }
+  #goal p { margin: 0; }
+  #goal p + p { margin-top: 6px; }
+  #table.below .seat { padding: 10px 14px; border-radius: 18px; }
+  #table.below .seat svg { width: 34px; height: 34px; }
+  #table.below .seat .head span { display: none; }
+  #table.below .seat .now { margin-top: 6px; padding: 4px 10px; }
+  @media (max-width: 699px) { #table { padding: 0 8px 6px; } .seat b { font-size: 20px; } .seat .now { font-size: 16px; }
+    #strip { gap: 12px; padding: 0 12px; font-size: 17px; } #strip svg { width: 18px; height: 18px; } }
+
+  /* The ink touches down, follows the pen, then settles into the paper. */
+  .mark.ink { animation: land .56s ease-out; }
+  @keyframes land {
+    from { transform: translateY(-7%) scale(1.06); opacity: .55; }
+    72% { transform: translateY(1%) scale(.98); opacity: 1; }
+  }
+  .mark.ink path { stroke-dasharray: 1; animation: pen .23s ease-in-out both; }
+  .mark.ink path + path { animation-delay: .26s; }
+  .mark.o.ink path { animation-duration: .51s; }
+  @keyframes pen { from { stroke-dashoffset: 1; opacity: 0; } 6% { opacity: 1; } to { stroke-dashoffset: 0; } }
+  .cell:has(> .o.ink)::before {
+    content: ""; position: absolute; inset: 8%; border: 2px solid var(--red-ink);
+    border-radius: 50%; pointer-events: none; animation: locate .56s ease-out both;
+  }
+  @keyframes locate { from { transform: scale(.72); opacity: .55; } to { transform: scale(1); opacity: 0; } }
+  #strike path.draw { stroke-dasharray: 1; animation: pen .7s .56s ease-in-out both; }
+  .cell.hop .mark { animation: hop .48s ease-in-out var(--d) both; }
+  @keyframes hop { 45% { transform: translateY(-9%) rotate(-3deg); } }
+  /* A gold star stamped on the middle mark, like a teacher's mark in a notebook. */
+  .star { position: absolute; width: var(--s); height: var(--s); margin: calc(var(--s) / -2);
+    animation: stamp 1.28s ease-out both; }
+  @keyframes stamp {
+    from { opacity: 0; transform: translateY(-18%) rotate(-16deg) scale(1.24); }
+    28% { opacity: 1; transform: rotate(-7deg) scale(.96); }
+    40%, 72% { opacity: 1; transform: rotate(-8deg); }
+    to { opacity: 0; transform: translateY(-7%) rotate(-8deg); }
+  }
+  .mark.erased { animation: erase .34s ease-out var(--d) both; }
+  @keyframes erase { to { opacity: 0; transform: translateY(-5%) scale(.94); } }
+  .cell.hint::before { animation: pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .75; } }
+  .cell.shake { animation: nudge .36s ease-in-out; }
+  @keyframes nudge { 28% { transform: translateX(-3px); } 68% { transform: translateX(2px); } }
+
+  /* ---------- The rules guide ---------- */
+  .guide-sheet { flex: none; display: block; border-radius: 4px; background: #FFFEF8; box-shadow: 0 0 0 1px #D5CDE6, 0 3px 8px rgba(40,20,52,.18); }
+  .guide-sheet .rule { stroke: #A99BD6; stroke-width: 1; }
+  .guide-sheet .fine { stroke: #E4DDF3; stroke-width: 1; }
+  .guide-sheet .red { stroke: #E0525E; stroke-width: 2; }
+  .guide-sheet .x { fill: none; stroke: #1F3FBF; stroke-width: 3.4; stroke-linecap: round; }
+  .guide-sheet .o { fill: none; stroke: #C8102E; stroke-width: 3.4; stroke-linecap: round; }
+  .guide-sheet .pencil { fill: none; stroke: #2E2A5A; stroke-width: 2.4; stroke-linecap: round; }
+  .guide-sheet .strike { fill: none; stroke: #1F3FBF; stroke-width: 3; stroke-linecap: round; opacity: .85; }
+
+  @media (max-width: 700px) { .guide-sheet { width: 112px; height: auto; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .star, .erased, .cell.last::before { display: none; }
+  }
+</style>
+<script src="../lib/zoom.js"></script>
+</head>
+<body>
+<div id="bar">
+  <div id="title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="#1F3FBF" stroke-width="2.6" stroke-linecap="round" fill="none"/><circle cx="17" cy="17" r="4" stroke="#C8102E" stroke-width="2.6" fill="none"/></svg>Morpion</div>
+  <button id="undoBtn" data-icon="undo" title="Reprend votre dernière croix et la réponse de l'ordinateur"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span><span class="tiny">Annuler</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre une bonne case et dit pourquoi"><span class="long">Où jouer ?</span><span class="short">Où jouer ?</span><span class="tiny">Idée</span></button>
+  <span class="spacer"></span>
+  <button id="helpBtn" data-icon="help">Règles</button>
+  <button id="newBtn" class="game">Nouvelle partie</button>
+</div>
+<div id="say"><div id="msg" aria-live="polite"></div></div>
+<div id="table">
+  <div id="board">
+    <div id="strip" aria-hidden="true"><span class="x"><svg viewBox="0 0 100 100"><path d="M26 24C40 40 58 60 76 78M75 25C60 42 42 58 24 77" stroke="#1F3FBF"/></svg>Vous <b id="stripYou">0</b></span><span class="o"><svg viewBox="0 0 100 100"><path d="M54 21C35 18 20 33 21 51C22 69 36 80 52 79C69 78 80 65 79 48C78 33 67 22 50 22" stroke="#C8102E"/></svg>Ordinateur <b id="stripCpu">0</b></span><span>Nuls <b id="stripDraws">0</b></span></div>
+    <div id="sheet">
+      <div id="margin"></div>
+      <div id="grid" role="grid" aria-label="Grille du morpion"></div>
+    </div>
+  </div>
+  <div id="side">
+    <div class="seat" id="you">
+      <div class="head"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M26 24C40 40 58 60 76 78M75 25C60 42 42 58 24 77" stroke="#1F3FBF"/></svg><div><b>Vous</b><span class="tally" id="youTally"></span><span class="sub">Les croix bleues</span></div></div>
+      <div class="now">À vous de jouer</div>
+    </div>
+    <div class="seat" id="cpu">
+      <div class="head"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M54 21C35 18 20 33 21 51C22 69 36 80 52 79C69 78 80 65 79 48C78 33 67 22 50 22" stroke="#C8102E"/></svg><div><b>L'ordinateur</b><span class="tally" id="cpuTally"></span><span class="sub" id="cpuLevel">Les ronds rouges</span></div></div>
+      <div class="now"><span class="dots"><i></i><i></i><i></i></span>Il réfléchit</div>
+    </div>
+    <div id="goal"><b>Pour gagner</b><p id="goalText"></p><p id="whoStarts"></p><p id="draws"></p></div>
+  </div>
+</div>
+<footer id="rail"><div class="zoom"></div></footer>
+<div id="help" data-title="Comment jouer">
+  <section class="page">
+    <h3>Poser une croix</h3>
+    <p>Vous jouez les croix bleues. L'ordinateur joue les ronds rouges.</p>
+    <div class="guide-panel">
+      <figure class="guide-example">
+        <svg class="guide-sheet" width="150" height="150" viewBox="0 0 150 150" aria-hidden="true">
+          <path class="fine" d="M0 7.5H150M0 22.5H150M0 37.5H150M0 52.5H150M0 67.5H150M0 82.5H150M0 97.5H150M0 112.5H150M0 127.5H150M0 142.5H150"/>
+          <path class="rule" d="M0 30H150M0 60H150M0 90H150M0 120H150M30 0V150M60 0V150M90 0V150M120 0V150"/>
+          <path class="pencil" d="M60 18V132M90 18V132M18 60H132M18 90H132"/>
+          <path class="o" d="M77 67C68 66 64 72 64 76C64 82 70 85 75 85C81 85 86 80 85 75C85 70 81 67 75 67"/>
+          <path class="x" d="M37 67L53 83M53 67L37 83"/>
+        </svg>
+        <figcaption>Cliquez sur une case vide : votre croix s'y dessine. Puis l'ordinateur pose son rond.</figcaption>
+      </figure>
+    </div>
+    <p>Chacun joue à son tour. Vous commencez la première partie, puis l'ordinateur commence la suivante, et ainsi de suite.</p>
+  </section>
+  <section class="page">
+    <h3>Le petit morpion : niveau facile</h3>
+    <p>La grille a 3 cases sur 3. Alignez 3 croix pour gagner : en ligne, en colonne ou en diagonale.</p>
+    <div class="guide-panel">
+      <figure class="guide-example">
+        <svg class="guide-sheet" width="150" height="150" viewBox="0 0 150 150" aria-hidden="true">
+          <path class="fine" d="M0 7.5H150M0 22.5H150M0 37.5H150M0 52.5H150M0 67.5H150M0 82.5H150M0 97.5H150M0 112.5H150M0 127.5H150M0 142.5H150"/>
+          <path class="rule" d="M0 30H150M0 60H150M0 90H150M0 120H150M30 0V150M60 0V150M90 0V150M120 0V150"/>
+          <path class="pencil" d="M60 18V132M90 18V132M18 60H132M18 90H132"/>
+          <path class="x" d="M28 28L50 50M50 28L28 50M64 64L86 86M86 64L64 86M100 100L122 122M122 100L100 122"/>
+          <path class="o" d="M112 28C104 27 99 33 99 39C99 46 105 50 111 50C118 50 123 45 122 38C122 32 117 28 110 28M40 99C32 98 28 104 28 110C28 117 34 121 40 121C47 121 51 116 51 109C51 103 46 99 39 99"/>
+          <path class="strike" d="M21 21L129 129"/>
+        </svg>
+        <figcaption>Trois croix en diagonale : la partie est gagnée, et la ligne est barrée.</figcaption>
+      </figure>
+    </div>
+    <p>Si la grille est pleine sans alignement, c'est un match nul.</p>
+  </section>
+  <section class="page">
+    <h3>Le grand morpion : niveaux moyen et difficile</h3>
+    <p>La feuille a 11 cases sur 11. Alignez 5 croix à la suite pour gagner. Six croix ou plus gagnent aussi.</p>
+    <div class="guide-panel">
+      <figure class="guide-example">
+        <svg class="guide-sheet" width="224" height="96" viewBox="0 0 224 96" aria-hidden="true">
+          <path class="fine" d="M0 8H224M0 16H224M0 24H224M0 40H224M0 48H224M0 56H224M0 72H224M0 80H224M0 88H224"/>
+          <path class="rule" d="M0 32H224M0 64H224M28 0V96M60 0V96M92 0V96M124 0V96M156 0V96M188 0V96M220 0V96"/>
+          <path class="red" d="M22 0V96"/>
+          <path class="x" d="M34 38L54 58M54 38L34 58M66 38L86 58M86 38L66 58M98 38L118 58M118 38L98 58M130 38L150 58M150 38L130 58M162 38L182 58M182 38L162 58"/>
+          <path class="o" d="M205 38C198 37 194 42 194 48C194 54 199 58 204 58C210 58 214 54 214 48C214 42 210 38 204 38M141 6C134 5 130 10 130 16C130 22 135 26 140 26C146 26 150 22 150 16C150 10 146 6 140 6"/>
+          <path class="strike" d="M33 48H183"/>
+        </svg>
+        <figcaption>Cinq croix à la suite : en ligne, en colonne ou en diagonale.</figcaption>
+      </figure>
+    </div>
+    <p>Bloquez les ronds avant qu'ils soient cinq. Le jeu vous prévient quand l'ordinateur en a trois ou quatre alignés.</p>
+  </section>
+  <section class="page">
+    <h3>Trouver de l'aide pendant la partie</h3>
+    <ul>
+      <li>« Où jouer ? » encadre une bonne case en jaune et dit pourquoi.</li>
+      <li>« Annuler le dernier coup » reprend votre croix et la réponse de l'ordinateur. Vous pouvez annuler autant de fois que vous voulez.</li>
+      <li>Près de la feuille, le score de la série : les parties gagnées par chacun et les matchs nuls. Il repart à zéro quand vous changez de niveau.</li>
+    </ul>
+    <p>La partie est enregistrée après chaque coup.</p>
+  </section>
+</div>
+
+<script src="../lib/store.js"></script>
+<script src="../lib/kit.js"></script>
+<script src="engine.js"></script>
+<script>
+'use strict';
+const { X, O } = Morpion;
+const $ = id => document.getElementById(id);
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const INK_MS = REDUCED ? 0 : 560;      // a mark takes this long to draw
+const THINK_MS = 700;                  // the computer never answers faster, so his cross is seen first
+const STRIKE_MS = REDUCED ? 0 : 700;   // the winning line is crossed out
+const CHEER_MS = REDUCED ? 0 : 1340;   // the wave and the star stamp
+
+/* ---------- State ----------
+   G: the game (see engine.js). level: its level. series: the score since the level was chosen,
+   { level, you, cpu, draws, games }: games is the number of games begun, so the first player turns.
+   counted: the end of this game is in the series (an undo after the end takes it back out).
+   total: { won } for the tile. wonNow: this game is counted as won once (undo keeps it). */
+let G, level = 'facile', series = null, counted = false, total = { won: 0 }, wonNow = false;
+let phase = 'player', gen = 0, timers = [], hint = null, lastCpu = -1, down = null, lastTap = null;
+let gameId = 0, pendingResult = null, stale = false, resultWrite = null, undoWaits = false;
+addEventListener('gg-stale', () => { stale = true; });
+const freshSeries = lv => ({ level: lv, you: 0, cpu: 0, draws: 0, games: 0 });
+const say = Kit.say;
+const big = () => G.n > 3;
+const crosses = n => `${n} croix`;
+const scoreLine = () => `Vous ${series.you} · Ordinateur ${series.cpu} · Nuls ${series.draws}`;
+// Adds d to the score of the winner w (X, O, or 0 for a draw), never below 0.
+function tally(w, d) {
+  const key = w === X ? 'you' : w === O ? 'cpu' : 'draws';
+  series[key] = Math.max(0, series[key] + d);
+}
+const playing = () => !G.result && G.moves.some((c, i) => Morpion.mover(G, i) === X);
+
+/* ---------- Saves ---------- */
+async function save() {
+  const id = gameId;
+  const parts = [];
+  if (playing()) parts.push('Partie en cours');
+  if (total.won) parts.push(total.won === 1 ? '1 victoire' : `${total.won} victoires`);
+  const data = { v: 2, level, n: G.n, first: G.first, moves: G.moves, series, counted, total, wonNow };
+  if (await GG.save('morpion', data, { summary: parts.join(' · ') })) return true;
+  if (stale || id !== gameId) return false;
+  say("La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.");
+  return false;
+}
+const count = v => Number.isInteger(v) && v >= 0 ? v : 0;
+// A save from any version: the moves are replayed, so a broken game starts afresh, but the score and
+// the wins are kept when they read well.
+function load() {
+  let v;
+  try { v = GG.load('morpion'); } catch (e) { return false; }
+  if (!v || typeof v !== 'object') return false;
+  if (v.total && typeof v.total === 'object') total = { won: count(v.total.won) };
+  level = typeof v.level === 'string' && Object.hasOwn(Morpion.LEVELS, v.level) ? v.level : 'facile';
+  // The score of another level is not this level's score.
+  const s = v.series && typeof v.series === 'object' && (v.series.level === undefined || v.series.level === level) ? v.series : null;
+  series = s ? { level, you: count(s.you), cpu: count(s.cpu), draws: count(s.draws), games: count(s.games) } : freshSeries(level);
+  // Saves without a size are from the 13 by 13 sheet: that game goes on with it.
+  const g = Morpion.restore({ level, first: v.first, moves: v.moves, n: Number.isInteger(v.n) ? v.n : 13 });
+  if (!g) return false;
+  G = g; counted = !!s && !!v.counted && !!G.result; wonNow = !!v.wonNow;
+  // A counted result is in the score, even when the save lost it.
+  if (counted && !series[G.result.winner === X ? 'you' : G.result.winner === O ? 'cpu' : 'draws']) tally(G.result.winner, 1);
+  // This game is in the count of games begun, so the other player starts the next one: odd when he
+  // started it, even when the computer did.
+  const odd = G.first === X ? 1 : 0;
+  if (series.games < 1) series.games = odd ? 1 : 2;
+  else if (series.games % 2 !== odd) series.games++;
+  const k = G.moves.length - 1;
+  lastCpu = k >= 0 && !G.result && Morpion.mover(G, k) === O ? G.moves[k] : -1;
+  return true;
+}
+
+/* ---------- The player's moves ---------- */
+function turnMessage() {
+  return big() ? 'À vous : cliquez sur une case vide pour poser votre croix.' : 'À vous : cliquez sur une case vide de la grille pour poser votre croix.';
+}
+// The warning when the computer can win or make an open four at its next move, else null.
+function warning() {
+  const danger = Morpion.danger(G);
+  if (danger === 'win') return `Attention : l'ordinateur peut aligner ${G.k} ronds au prochain coup. Bloquez-le !`;
+  if (danger === 'wins') return `Attention : l'ordinateur peut aligner ${G.k} ronds à plusieurs endroits, et une croix n'en bloque qu'un. Annulez votre dernier coup.`;
+  if (danger === 'three') return "Attention : l'ordinateur a trois ronds alignés, libres aux deux bouts.";
+  if (danger === 'gap') return "Attention : l'ordinateur a trois ronds sur une ligne, avec une case vide entre eux, libres aux deux bouts.";
+  return null;
+}
+// True when the cross is placed.
+function tap(i) {
+  if (phase === 'thinking' || phase === 'anim') return say("Attendez un instant : l'ordinateur joue."), false;
+  if (phase === 'hint') return say('Attendez un instant : je cherche une bonne case.'), false;
+  const why = Morpion.refusal(G, i);
+  if (why === 'over') return say('Cette partie est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.'), false;
+  if (why) {
+    shake(i);
+    say(why === 'mine' ? 'Cette case a déjà votre croix : choisissez une case vide.'
+      : "Cette case a déjà un rond de l'ordinateur : choisissez une case vide.");
+    return false;
+  }
+  playCross(i);
+  return true;
+}
+function playCross(i) {
+  cancelAll();
+  G = Morpion.play(G, i);
+  hint = null; lastCpu = -1;
+  phase = 'anim';
+  if (G.result) return finish(true, i);
+  render(i);
+  save();
+  computerTurn();
+}
+
+/* ---------- The computer ----------
+   It thinks in a Web Worker made from engine.js, so the page never freezes. If the worker cannot
+   start, it thinks in the page instead, after the screen has been drawn. */
+let worker = null, workerUrl = null, workerOk = true, pending = null;
+function ask(game, lv) {
+  const plain = { level: game.level, n: game.n, k: game.k, first: game.first, moves: game.moves, result: game.result };
+  const here = () => lv === 'hint' ? Morpion.hint(plain) : Morpion.think(plain, lv);
+  return new Promise(resolve => {
+    const id = Math.random();
+    const local = () => setTimeout(() => resolve(here()), 30);
+    if (workerOk && !worker) {
+      try {
+        workerUrl = workerUrl || URL.createObjectURL(new Blob([Morpion.source], { type: 'text/javascript' }));
+        worker = new Worker(workerUrl);
+      } catch (e) { workerOk = false; worker = null; }
+    }
+    if (!worker) return local();
+    // No answer in time: the worker is broken, so think here this time and every next time.
+    const guard = setTimeout(() => { if (!pending || pending.id !== id) return; stopWorker(); workerOk = false; local(); }, 6000);
+    pending = { id, guard, done: answer => { clearTimeout(guard); resolve(answer); } };
+    worker.onmessage = e => { if (pending && e.data.id === pending.id) { const p = pending; pending = null; p.done(e.data.answer); } };
+    worker.onerror = e => { e.preventDefault(); if (!pending || pending.id !== id) return; stopWorker(); workerOk = false; local(); };
+    worker.postMessage({ id, G: plain, level: lv });
+  });
+}
+function stopWorker() { if (pending) clearTimeout(pending.guard); if (worker) worker.terminate(); worker = null; pending = null; }
+
+function computerTurn() {
+  phase = 'thinking';
+  const my = ++gen, t0 = Date.now();
+  renderSide();
+  say("L'ordinateur réfléchit…");
+  ask(G, level).then(answer => {
+    if (my !== gen || !answer) return;
+    later(() => { if (my === gen) computerPlays(answer.cell); }, Math.max(0, THINK_MS - (Date.now() - t0)));
+  });
+}
+// The ring is saved first, then drawn: closing the page while it is drawn loses nothing.
+async function computerPlays(c) {
+  const next = Morpion.play(G, c);
+  if (!next) return;
+  G = next; lastCpu = c;
+  phase = 'anim';
+  if (G.result) return finish(true, c);
+  const written = save();
+  render(c);
+  const my = gen;
+  await settle();
+  if (my !== gen) return;
+  phase = 'player';
+  renderSide(); renderGrid();
+  // A failed save keeps its message on the line.
+  if (await written && my === gen) say(computerSaid(c));
+}
+function computerSaid(c) {
+  const warn = warning();
+  if (warn) return warn;
+  if (Morpion.blocked(G, c)) return "L'ordinateur a bloqué vos croix. À vous de jouer.";
+  return "L'ordinateur a posé son rond. À vous de jouer.";
+}
+// Waits until the mark just drawn is finished.
+const settle = () => new Promise(resolve => later(resolve, INK_MS));
+
+/* ---------- End of the game ---------- */
+function resultText() {
+  const r = G.result, k = r.line ? r.line.length : G.k;
+  if (r.winner === X) return `Vous avez aligné ${crosses(k)}.`;
+  if (r.winner === O) return `Il a aligné ${k} ronds.`;
+  return big() ? 'La feuille est pleine, sans 5 croix ni 5 ronds à la suite.' : "La grille est pleine et personne n'a aligné 3 marques.";
+}
+// show: open the end sheet. move: the last mark, drawn now; -1 after a reload, without the cheer.
+function finish(show, move = -1) {
+  phase = 'over'; hint = null;
+  const r = G.result, k = r.line ? r.line.length : G.k;
+  let firstWin = false, fresh = false;
+  if (!counted) {
+    counted = true; fresh = true;
+    tally(r.winner, 1);
+    if (r.winner === X && !wonNow) { wonNow = true; total.won++; firstWin = true; }
+  }
+  render(move);
+  const title = r.winner === X ? 'Bravo, vous avez gagné !' : r.winner === O ? "L'ordinateur a gagné" : 'Match nul';
+  say(r.winner === X ? `Bravo, vous avez gagné : vous avez aligné ${crosses(k)}.`
+    : r.winner === O ? `L'ordinateur a gagné : il a aligné ${k} ronds.` : `Match nul : ${big() ? 'la feuille' : 'la grille'} est pleine.`);
+  const my = gen;
+  // A result counts once, and only when it is saved: a stale window cannot count it a second time.
+  // A result already counted is not saved again, so opening it in another window changes nothing.
+  const id = gameId;
+  // The end sheet and an undo wait for this write, so they never show or save a result it lost.
+  if (fresh) resultWrite = save().then(written => {
+    resultWrite = null;
+    if (id !== gameId) return;
+    if (written) { if (firstWin) GG.track('morpion', 'won'); return; }
+    if (counted) { counted = false; tally(r.winner, -1); }
+    if (firstWin) { wonNow = false; total.won--; }
+    renderSide();
+  });
+  if (!show) return;
+  const drawn = move >= 0;
+  const wait = !drawn ? 300 : INK_MS + (r.line ? STRIKE_MS + (r.winner === X ? CHEER_MS : 400) : 300);
+  if (drawn && r.line && r.winner === X && !REDUCED) later(() => celebrate(r.line), INK_MS + STRIKE_MS);
+  const next = ['Partie suivante', nextGame, true];
+  const games = ['Retour aux jeux', Kit.home];
+  later(() => Promise.resolve(resultWrite).then(() => {
+    if (my !== gen) return;
+    const text = `${resultText()} ${scoreLine()}.`;
+    pendingResult = () => {
+      if (my !== gen || stale) return;
+      if (r.winner === X) Kit.dialog(title, text, [next, ['Changer de niveau', askNewGame], games], true);
+      else if (r.winner === O) Kit.dialog(title, text, [['Annuler le dernier coup', doUndo, true], ['Partie suivante', nextGame], games]);
+      else Kit.dialog(title, text, [next, games]);
+    };
+    showPendingResult();
+  }), REDUCED ? 0 : wait);
+}
+
+/* ---------- Buttons ---------- */
+function showPendingResult() {
+  if (!pendingResult || Kit.isOpen()) return;
+  const open = pendingResult;
+  pendingResult = null;
+  open();
+}
+const dialogs = new MutationObserver(showPendingResult);
+for (const id of ['help', 'over']) dialogs.observe($(id), { attributes: true, attributeFilter: ['class'] });
+
+function cancelAll() {
+  pendingResult = null;
+  down = null;
+  for (const mark of grid.querySelectorAll('.erased')) mark.remove();
+  for (const e of grid.querySelectorAll('.hop, .shake')) e.classList.remove('hop', 'shake');
+  if ($('fx')) $('fx').replaceChildren();
+  gen++;
+  timers.forEach(clearTimeout); timers = []; stopWorker();
+}
+function later(fn, ms) { const t = setTimeout(() => { timers = timers.filter(x => x !== t); fn(); }, ms); timers.push(t); return t; }
+
+// Takes back his last cross and the computer's answer, also while the computer thinks or after the end.
+function doUndo() {
+  if (resultWrite) {
+    const id = gameId;
+    if (!undoWaits) { undoWaits = true; resultWrite.then(() => { undoWaits = false; if (id === gameId) doUndo(); }); }
+    return;
+  }
+  const back = Morpion.undo(G);
+  if (!back) return;
+  cancelAll();
+  Kit.closeDialog();
+  if (G.result && counted) tally(G.result.winner, -1);
+  const removed = REDUCED ? [] : G.moves.slice(back.moves.length).reverse().map(i => [i, cells[i].firstElementChild]);
+  counted = false;
+  G = back; hint = null; phase = 'player'; lastTap = null;
+  const k = G.moves.length - 1;
+  lastCpu = k >= 0 && Morpion.mover(G, k) === O ? G.moves[k] : -1;
+  say('Coup annulé. ' + (warning() || turnMessage()));
+  render(); save();
+  removed.forEach(([i, mark], k) => {
+    mark.classList.remove('ink');
+    mark.classList.add('erased');
+    mark.style.setProperty('--d', k * 90 + 'ms');
+    cells[i].appendChild(mark);
+    later(() => mark.remove(), 340 + k * 90);
+  });
+}
+
+function showHint() {
+  if (phase !== 'player' || G.result) return;
+  const my = gen;
+  say("Je cherche une bonne case…");
+  phase = 'hint';
+  renderSide();
+  ask(G, 'hint').then(answer => {
+    if (my !== gen) return;
+    phase = 'player';
+    if (!answer) { render(); return; }
+    hint = answer.cell;
+    say(answer.why);
+    render();
+  });
+}
+
+function askNewGame() { Kit.chooseLevel(level, playing(), newGame); }
+const nextGame = () => newGame(level);
+// The same level goes on with the series, and the first player turns. Another level starts a new series.
+async function newGame(lv) {
+  const id = ++gameId;
+  lastTap = null;
+  cancelAll();
+  if (lv && lv !== level) { level = lv; series = freshSeries(lv); }
+  if (!series || series.level !== level) series = freshSeries(level);
+  const first = series.games % 2 === 0 ? X : O;
+  series.games++;
+  Kit.showLevel(level);
+  G = Morpion.newGame(level, first);
+  counted = false; wonNow = false; hint = null; lastCpu = -1; phase = 'player';
+  render();
+  const written = save();
+  if (first === O) { computerTurn(); say("Nouvelle partie : l'ordinateur commence."); }
+  else say('Nouvelle partie : vous commencez. ' + (big() ? 'Cliquez sur une case vide.' : 'Cliquez sur une case de la grille.'));
+  if (await written && id === gameId) GG.track('morpion', 'start');
+}
+
+/* ---------- Drawing ---------- */
+const table = $('table'), sheet = $('sheet'), grid = $('grid');
+const PATH = {
+  [X]: '<path pathLength="1" d="M26 24C40 40 58 60 76 78"/><path pathLength="1" d="M75 25C60 42 42 58 24 77"/>',
+  [O]: '<path pathLength="1" d="M54 21C35 18 20 33 21 51C22 69 36 80 52 79C69 78 80 65 79 48C78 33 67 22 50 22"/>',
+};
+let cells = [], builtFor = 0;
+function build() {
+  const n = G.n;
+  if (builtFor === n) return;
+  builtFor = n;
+  grid.innerHTML = '';
+  cells = [];
+  for (let i = 0; i < n * n; i++) {
+    const e = document.createElement('div');
+    e.className = 'cell'; e.dataset.i = i; e.setAttribute('role', 'gridcell');
+    grid.appendChild(e); cells.push(e);
+  }
+  // The little grid is drawn by hand in ink; the big one is the paper itself.
+  if (n === 3) grid.insertAdjacentHTML('beforeend', '<svg id="hash" viewBox="0 0 3 3" aria-hidden="true"><path d="M1.01 .1Q.97 1.5 1.02 2.9M2 .12Q2.04 1.5 1.98 2.88M.1 .99Q1.5 1.04 2.9 .98M.12 2.01Q1.5 1.96 2.88 2.02"/></svg>');
+  grid.insertAdjacentHTML('beforeend', '<svg id="strike" aria-hidden="true"></svg><div id="fx"></div>');
+  sheet.classList.toggle('big', n > 3); sheet.classList.toggle('small', n === 3);
+}
+
+// The squares fill the height of the table: 34 px or more on his laptop for the big sheet. The players
+// and the goal stand on the right; on a narrow window, the players go under the sheet, or away.
+function layout() {
+  const n = G.n, W = table.clientWidth, H = table.clientHeight;
+  const bigBoard = n > 3;
+  // The sheet in squares: the margin, the grid, and one paper square around the little grid.
+  const mU = bigBoard ? 1 : 0.5, padW = bigBoard ? 0 : 0.5, padH = bigBoard ? 0 : 0.5;
+  const cap = bigBoard ? 60 : 160;
+  const fit = (w, h) => Math.min(w / (n + mU + padW), h / (n + padH), cap);
+  // A low window: who started goes, then the goal card keeps only the draws, then the score goes on a
+  // card on the left of the sheet, so the players always fit beside the sheet. The side is measured in
+  // its place on the right; its height does not depend on the sheet.
+  const sideEl = $('side');
+  table.classList.remove('below', 'alone', 'strip', 'left');
+  sideEl.classList.remove('tight', 'short');
+  sideEl.classList.add('measure');
+  if (sideEl.scrollHeight > H) sideEl.classList.add('short');
+  if (sideEl.scrollHeight > H) sideEl.classList.add('tight');
+  if (sideEl.scrollHeight > H) table.classList.add('left');
+  sideEl.classList.remove('measure');
+  // The strip above the sheet takes 40 px and a gap of 8; the card on the left 200 px and a gap of 16.
+  const S = 48, left = table.classList.contains('left') ? 216 : 0;
+  const side = 300, gap = 28;
+  let mode = 'side', c = fit(W - 40 - side - gap - left, H - 14);
+  const full = fit(W - 24, H - 14 - S);
+  if (W < 700 || c < full * 0.8) {
+    const below = fit(W - 24, H - 14 - 112 - S);
+    if (below >= Math.min(full, bigBoard ? 26 : 90)) { mode = 'below'; c = below; } else { mode = 'alone'; c = full; }
+  }
+  c = bigBoard ? Math.floor(c) : Math.floor(c / 4) * 4;
+  const g = bigBoard ? c : c / 4;
+  const root = document.documentElement.style;
+  root.setProperty('--c', c + 'px'); root.setProperty('--g', g + 'px'); root.setProperty('--n', n);
+  root.setProperty('--m', c * mU + 'px');
+  root.setProperty('--pen', bigBoard ? 13 : 9);
+  table.classList.toggle('below', mode === 'below'); table.classList.toggle('alone', mode === 'alone');
+  table.classList.toggle('strip', mode !== 'side');
+  if (mode !== 'side') { sideEl.classList.remove('tight', 'short'); table.classList.remove('left'); }
+}
+
+
+// animate: the square whose mark is drawn now with the pen.
+function render(animate = -1) {
+  if (!G) return;
+  build(); renderSide(); layout();
+  renderGrid(animate);
+}
+function renderGrid(animate = -1) {
+  const b = Morpion.board(G);
+  const line = G.result && G.result.line ? new Set(G.result.line) : null;
+  grid.classList.toggle('yours', phase === 'player' && !G.result);
+  for (let i = 0; i < cells.length; i++) {
+    const e = cells[i], v = b[i];
+    if (+(e.dataset.v || 0) !== v || i === animate) {
+      e.dataset.v = v;
+      e.innerHTML = v ? `<svg class="mark ${v === X ? 'x' : 'o'}${i === animate && !REDUCED ? ' ink' : ''}" viewBox="0 0 100 100" aria-hidden="true">${PATH[v]}</svg>` : '';
+    }
+    e.classList.toggle('free', !v);
+    e.classList.toggle('hint', i === hint && !v);
+    e.classList.toggle('last', i === lastCpu && !G.result);
+    e.classList.toggle('won', !!line && line.has(i));
+    e.classList.toggle('o', !!line && line.has(i) && G.result.winner === O);
+    const r = Math.floor(i / G.n) + 1, q = i % G.n + 1;
+    e.setAttribute('aria-label', `Ligne ${r}, colonne ${q} : ${v === X ? 'votre croix' : v === O ? 'un rond' : 'vide'}`);
+  }
+  if (G.result && G.result.line) {
+    if (animate >= 0 || !$('strike').firstChild) strikeLine(G.result.line, G.result.winner, animate >= 0);
+  } else $('strike').innerHTML = '';
+}
+function renderSide() {
+  const lv = Kit.levelNames[level].toLowerCase();
+  $('cpuLevel').textContent = 'Niveau ' + lv;
+  $('you').classList.toggle('turn', (phase === 'player' || phase === 'hint') && !G.result);
+  $('cpu').classList.toggle('turn', phase === 'thinking' || (phase === 'anim' && lastCpu >= 0));
+  $('goalText').textContent = `Alignez ${crosses(G.k)} à la suite, en ligne, en colonne ou en diagonale.`;
+  $('whoStarts').textContent = G.first === X ? 'Cette partie, vous avez commencé.' : "Cette partie, l'ordinateur a commencé.";
+  const s = series || freshSeries(level);
+  const won = n => `<strong>${n}</strong> ${n > 1 ? 'parties gagnées' : 'partie gagnée'}`;
+  $('youTally').innerHTML = won(s.you); $('cpuTally').innerHTML = won(s.cpu);
+  $('draws').innerHTML = `<strong>${s.draws}</strong> ${s.draws > 1 ? 'matchs nuls' : 'match nul'}`;
+  $('stripYou').textContent = s.you; $('stripCpu').textContent = s.cpu; $('stripDraws').textContent = s.draws;
+  Kit.showWins(total.won);
+  $('undoBtn').disabled = !G.moves.some((c, i) => Morpion.mover(G, i) === X);
+  $('hintBtn').disabled = phase !== 'player' || !!G.result;
+}
+
+/* ---------- Animations ----------
+   The board stays still while the marks and the gold star move. */
+// The winning line, crossed out from its first to its last mark, a little past each end.
+function strikeLine(line, winner, animate) {
+  const n = G.n, a = line[0], z = line[line.length - 1];
+  const ax = a % n + .5, ay = Math.floor(a / n) + .5, zx = z % n + .5, zy = Math.floor(z / n) + .5;
+  const len = Math.hypot(zx - ax, zy - ay), ux = (zx - ax) / len, uy = (zy - ay) / len, over = n > 3 ? .42 : .36;
+  const d = `M${(ax - ux * over).toFixed(3)} ${(ay - uy * over).toFixed(3)}L${(zx + ux * over).toFixed(3)} ${(zy + uy * over).toFixed(3)}`;
+  const svg = $('strike');
+  svg.setAttribute('viewBox', `0 0 ${n} ${n}`);
+  const colour = winner === X ? 'var(--blue)' : 'var(--red-ink)';
+  svg.innerHTML = `<path pathLength="1" d="${d}" stroke="${colour}" stroke-width="${n > 3 ? .14 : .075}"${animate && !REDUCED ? ' class="draw"' : ''}/>`;
+}
+// The wave runs from the first cross to the last, even on a line longer than five.
+function celebrate(line) {
+  const spacing = Math.min(130, 650 / (line.length - 1));
+  line.forEach((i, k) => {
+    cells[i].style.setProperty('--d', k * spacing + 'ms');
+    cells[i].classList.add('hop');
+  });
+  const mid = line[Math.floor(line.length / 2)];
+  const x = (mid % G.n + .5) * 100 / G.n, y = (Math.floor(mid / G.n) + .5) * 100 / G.n;
+  $('fx').innerHTML = `<svg class="star" aria-hidden="true" viewBox="0 0 64 64" style="left:${x}%;top:${y}%;--s:calc(var(--c) * .85)">
+    <path d="M32 4l8 17 19 3-14 14 3 20-16-9-17 9 3-20L4 24l20-3z" fill="#FFC83D" stroke="#6B4580" stroke-width="3" stroke-linejoin="round"/>
+    <path d="m22 32 7 7 14-15" fill="none" stroke="#493352" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  later(() => $('fx').replaceChildren(), 1280);
+}
+function shake(i) {
+  const e = cells[i];
+  if (!e || REDUCED) return;
+  e.classList.remove('shake'); void e.offsetWidth; e.classList.add('shake');
+}
+
+/* ---------- Mouse and touch ----------
+   The square under the press counts, even if the hand slips a little before the release (16 px).
+   A second click on a cross just placed, within half a second, is a double-click: it counts as one.
+   A press counts only in the turn it began: one held through the computer's move plays nothing. */
+grid.addEventListener('animationend', e => {
+  if (e.animationName === 'land') e.target.classList.remove('ink');
+});
+let buttonTap = null;
+function nearButtonTap(e) {
+  return buttonTap && performance.now() - buttonTap.time < 500 &&
+    Math.hypot(e.clientX - buttonTap.x, e.clientY - buttonTap.y) <= 8 * Zoom.z();
+}
+grid.addEventListener('pointerdown', e => {
+  // A dialog can disappear under the mouse between the two presses.
+  if (e.button !== 0 || Kit.isOpen() || nearButtonTap(e)) return;
+  const cell = e.target.closest('.cell');
+  if (!cell) return;
+  e.preventDefault();
+  down = { i: +cell.dataset.i, x: e.clientX, y: e.clientY, id: e.pointerId, turn: phase + G.moves.length };
+});
+addEventListener('pointerup', e => {
+  if (!down || e.pointerId !== down.id) return;
+  const d = down; down = null;
+  if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 16 * Zoom.z() || d.turn !== phase + G.moves.length) return;
+  // Only a click that placed a cross makes the next click on its square a double-click.
+  const t = performance.now(), prev = lastTap;
+  if (prev && prev.i === d.i && t - prev.t < 500) return;
+  lastTap = tap(d.i) ? { t, i: d.i } : null;
+});
+addEventListener('pointercancel', () => { down = null; });
+
+addEventListener('click', e => {
+  if (!e.detail || !e.target.closest('button')) return;
+  if (e.detail > 1 || (nearButtonTap(e) && !buttonTap.button.isConnected)) {
+    e.preventDefault(); e.stopImmediatePropagation();
+    return;
+  }
+  buttonTap = { button: e.target.closest('button'), x: e.clientX, y: e.clientY, time: performance.now() };
+}, true);
+addEventListener('keydown', e => {
+  if (e.repeat && (['Enter', ' ', 'Escape'].includes(e.key) || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z'))) {
+    e.preventDefault(); e.stopImmediatePropagation();
+  }
+}, true);
+
+$('undoBtn').onclick = doUndo;
+$('hintBtn').onclick = showHint;
+$('helpBtn').onclick = () => Kit.openHelp();
+$('newBtn').onclick = askNewGame;
+addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (!Kit.isOpen()) doUndo(); }
+  else if (e.key === 'Escape') Kit.escape();
+});
+addEventListener('resize', () => render());
+// The message line may take two lines on a phone: the table changes height, so the sheet fits again.
+if (window.ResizeObserver) new ResizeObserver(() => { if (G && !table.hidden) { layout(); } }).observe(table);
+
+// The rules open by themselves the first time the game is opened.
+if (load()) {
+  Kit.showLevel(level);
+  render();
+  if (G.result) finish(true);
+  else if (Morpion.turn(G) === O) computerTurn();
+  else say(warning() || (G.moves.length ? turnMessage() : 'À vous de commencer : cliquez sur une case vide.'));
+} else {
+  if (!series) series = freshSeries(level);
+  Kit.firstVisit(newGame);
+}
+</script>
+</body>
+</html>
