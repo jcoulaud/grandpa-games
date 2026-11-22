@@ -68,7 +68,7 @@
   @media (max-width: 700px) { #deco { display: none; } }
 
   /* Greeting */
-  header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; margin-bottom: clamp(8px, 3vh - 8px, 32px); }
+  header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; margin-bottom: clamp(20px, 3vh + 4px, 44px); }
   /* The tagline may take two lines, so the clock stays on the right of the name and the games start higher. */
   #brand { display: flex; align-items: center; gap: calc(22px * var(--k)); flex: 1 1 520px; min-width: 0; }
   #now { flex: none; }
@@ -82,7 +82,7 @@
 
   /* The games, in families, each under its name. Every tile always shows: a heading costs no click, where a
      filter would hide games and could stay on by mistake. */
-  #games { display: flex; flex-direction: column; gap: calc(30px * var(--k)); }
+  #games { display: flex; flex-direction: column; gap: calc(48px * var(--k)); }
   .family h2 { margin: 0 0 calc(12px * var(--k)); display: flex; align-items: center; gap: 14px; font: 700 calc(28px * var(--k)) var(--title); color: #fff; }
   .family h2::after { content: ""; flex: 1; border-top: 2px solid rgba(255,255,255,.22); }
   .family .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(320px * var(--k))), 1fr)); gap: calc(22px * var(--k)); }
