@@ -18,106 +18,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../lib/kit.css">
-<style>
-  /* The démineur plays on brown earth, around a field of green turf. An open square is pale sand. */
-  :root {
-    --felt-top: #8A6234; --felt: #4A3217; --shade: 40,26,10; --accent: #2F6B2A;
-    --s: 50px; --f: 10px;
-  }
-  #title svg { width: 32px; height: 32px; }
-
-  /* A phone scrolls down the table to the rest of a tall board. */
-  #table { position: relative; overflow: hidden; touch-action: pan-y; }
-  #frame {
-    position: absolute; border-radius: 12px;
-    background: linear-gradient(160deg, rgba(255,255,255,.12), transparent 40%, rgba(0,0,0,.25)), #5A3D1E;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.2), inset 0 0 0 1px rgba(0,0,0,.4), 0 24px 60px rgba(0,0,0,.45), 0 6px 14px rgba(0,0,0,.3);
-  }
-  #board {
-    position: absolute; display: grid; touch-action: pan-y; background: #3B5E2A;
-    grid-template-columns: repeat(var(--cols), var(--s)); grid-auto-rows: var(--s);
-    box-shadow: 0 0 0 2px #2A1A0B;
-  }
-  /* On a tall, narrow window (a phone), the board turns a quarter: its rows become columns. */
-  #board.turned { grid-auto-flow: column; grid-template-columns: none; grid-template-rows: repeat(var(--cols), var(--s)); grid-auto-columns: var(--s); }
-
-  /* A closed square: a raised tile of turf. */
-  .c {
-    position: relative; display: grid; place-items: center; cursor: pointer;
-    background: linear-gradient(155deg, #8CCB63, #6AAE45 55%, #5B9C3A);
-    box-shadow: inset 0 2px 0 rgba(255,255,255,.35), inset 0 -3px 0 rgba(0,0,0,.22), inset 0 0 0 1px rgba(30,60,15,.55);
-    font: 700 max(20px, calc(var(--s) * .62)) / 1 var(--ui);
-  }
-  .c:hover { background: linear-gradient(155deg, #A2DA7C, #7FC058 55%, #6AAE45); }
-  /* An open square: flat sand, with its number in a strong colour. */
-  .c.o { cursor: default; background: #F1E4C3; box-shadow: inset 0 0 0 1px rgba(120,90,40,.35); }
-  .c.o.n { cursor: pointer; }
-  .c.o:hover { background: #F1E4C3; }
-  .c.n1 { color: #1F4FB8; } .c.n2 { color: #1C7128; } .c.n3 { color: #C4122F; } .c.n4 { color: #182F7A; }
-  .c.n5 { color: #7A1C1C; } .c.n6 { color: #0B6B6B; } .c.n7 { color: #1B1B1B; } .c.n8 { color: #5A5A5A; }
-  .c svg { width: 72%; height: 72%; pointer-events: none; }
-  /* The mine that went off: red, with the mine drawn on it. */
-  .c.boom { background: #E0322F; box-shadow: inset 0 0 0 3px #7A0D0B; }
-  /* The hint: the squares it is about are framed in yellow, the numbers it uses get a yellow ring. */
-  .c.hint::after {
-    content: ""; position: absolute; inset: 2px; border: 5px solid var(--gold); border-radius: 6px; z-index: 2;
-    box-shadow: inset 0 0 0 1.5px rgba(var(--shade),.8), 0 0 0 1.5px rgba(var(--shade),.8); animation: pulse 1.4s ease-in-out infinite;
-  }
-  .c.ring::after {
-    content: ""; position: absolute; inset: 3px; border: 4px solid var(--gold); border-radius: 50%; z-index: 2;
-    box-shadow: 0 0 0 1.5px rgba(var(--shade),.8), inset 0 0 0 1.5px rgba(var(--shade),.8);
-  }
-  @keyframes pulse { 50% { background: rgba(255,200,61,.45); } }
-  .c.shake { animation: sh .3s; z-index: 3; }
-
-  /* The flag button stays pressed while it waits for a square. */
-  #flagBtn[aria-pressed="true"] { background: var(--gold); border-color: #C9951A; box-shadow: 0 0 0 4px rgba(255,200,61,.45), 0 3px 0 #C9951A; }
-  #flagBtn svg path:first-child { fill: #C4122F; stroke: #7A0D0B; }
-  #board.arming .c:not(.o):hover { background: linear-gradient(155deg, #FFE08A, #F2C14A); }
-
-  /* The flags put, out of the mines: a chip beside the message line. */
-  #flags { flex: none; height: 46px; padding: 0 18px; display: flex; align-items: center; gap: 10px;
-    background: #fff; color: var(--text); font: 600 21px var(--ui); white-space: nowrap;
-    border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,.25); }
-  #flags svg { width: 26px; height: 26px; flex: none; }
-  #flags:empty { display: none; }
-  /* A page 1340 px wide or less: the count goes, like the wins. The message after each flag still says it. */
-  html.narrow #flags { display: none; }
-
-  #helpText .demo { display: flex; gap: 24px; align-items: center; margin: 6px 0 10px; }
-  #helpText .demo svg { width: 150px; height: 150px; flex: none; border-radius: 6px; }
-
-  @media (max-width: 700px) {
-    #flagBtn { order: 1; flex: 1 1 0; min-width: 0; padding: 4px 8px; gap: 6px; justify-content: center;
-      font-size: 20px; line-height: 1.05; white-space: normal; text-align: left; }
-    #flagBtn svg { width: 22px; height: 22px; }
-    /* Four buttons share the row: each puts its icon above its word. */
-    #undoBtn, #hintBtn, #flagBtn, #helpBtn { flex-direction: column; gap: 0; padding: 3px 2px; text-align: center; font-size: 18px; }
-  }
-  /* The mine goes off: a flash, a fireball, a shock wave, sparks and smoke over the square, and the
-     board shakes. The dialog comes after it. */
-  .blast { position: absolute; width: var(--b); height: var(--b); margin: calc(var(--b) / -2) 0 0 calc(var(--b) / -2);
-    pointer-events: none; z-index: 5; }
-  .blast > * { position: absolute; inset: 0; border-radius: 50%; opacity: 0; }
-  .blast .flash { background: radial-gradient(circle, #fff 0 18%, #FFF3A0 35%, rgba(255,220,90,0) 70%); animation: flash .45s ease-out; }
-  .blast .fire { background: radial-gradient(circle, #FFE36B 0 15%, #FF9A1F 38%, #E0322F 58%, rgba(122,13,11,0) 72%); animation: fire .8s ease-out .05s; }
-  .blast .wave { border: 6px solid rgba(255,240,200,.9); animation: wave .6s ease-out; }
-  .blast .smoke { background: radial-gradient(circle, rgba(70,60,55,.75) 0 30%, rgba(70,60,55,0) 70%); animation: smoke 1.2s ease-out .2s; }
-  .blast .spark { inset: auto; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px; background: #FFD34D;
-    box-shadow: 0 0 8px 2px #FF8A1F; animation: spark .7s cubic-bezier(.2,.7,.4,1); }
-  @keyframes flash { 0% { opacity: 1; scale: .1; } 40% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: 1.1; } }
-  @keyframes fire { 0% { opacity: 1; scale: .15; } 50% { opacity: 1; scale: .9; } 100% { opacity: 0; scale: 1.15; } }
-  @keyframes wave { 0% { opacity: 1; scale: .1; } 100% { opacity: 0; scale: 1.6; } }
-  @keyframes smoke { 0% { opacity: 0; scale: .4; } 30% { opacity: 1; } 100% { opacity: 0; scale: 1.4; translate: 0 -12%; } }
-  @keyframes spark { 0% { opacity: 1; transform: rotate(var(--a)) translateX(0); }
-    100% { opacity: 0; transform: rotate(var(--a)) translateX(var(--d)) scale(.3); } }
-  .c.boom.pop { animation: pop .4s ease-out; z-index: 4; }
-  @keyframes pop { 30% { scale: 1.35; } }
-  .quake { animation: quake .5s; }
-  @keyframes quake { 15% { translate: -9px 4px; } 30% { translate: 8px -5px; } 45% { translate: -6px -3px; }
-    60% { translate: 5px 4px; } 75% { translate: -3px 2px; } }
-  @media (prefers-reduced-motion: reduce) { .c.hint::after, .c.shake { animation: none; } }
-</style>
+<link rel="stylesheet" href="style.css">
 <script src="../lib/zoom.js"></script>
 </head>
 <body>
@@ -166,6 +67,7 @@
 <script src="../lib/store.js"></script>
 <script src="../lib/kit.js"></script>
 <script src="engine.js"></script>
+<script src="board.js"></script>
 <script>
 'use strict';
 const D = Demineur;
@@ -296,28 +198,6 @@ function finish(show) {
       [['Annuler le dernier coup', doUndo, true], ['Nouvelle partie', askNewGame], ['Retour aux jeux', home]]), REDUCED ? 0 : 1400);
   }
 }
-// The explosion over the mine that went off. It removes itself, or doUndo removes it.
-function explode() {
-  const e = squares[G.boom];
-  if (!e) return;
-  const r = e.getBoundingClientRect(), t = table.getBoundingClientRect();
-  const b = document.createElement('div');
-  b.className = 'blast';
-  b.style.left = r.left - t.left + table.scrollLeft + r.width / 2 + 'px';
-  b.style.top = r.top - t.top + table.scrollTop + r.height / 2 + 'px';
-  b.style.setProperty('--b', Math.round(r.width * 5) + 'px');
-  b.innerHTML = '<i class="smoke"></i><i class="fire"></i><i class="flash"></i><i class="wave"></i>'
-    + Array.from({ length: 14 }, (_, k) => `<i class="spark" style="--a:${k * 360 / 14 + Math.random() * 16}deg;--d:${Math.round(r.width * (1.6 + Math.random()))}px"></i>`).join('');
-  table.appendChild(b);
-  e.classList.add('pop');
-  for (const x of [boardEl, $('frame')]) { x.classList.remove('quake'); void x.offsetWidth; x.classList.add('quake'); }
-  later(clearBlast, 1400);
-}
-function clearBlast() {
-  document.querySelectorAll('.blast').forEach(b => b.remove());
-  for (const x of [boardEl, $('frame')]) x.classList.remove('quake');
-  squares.forEach(e => e.classList.remove('pop'));
-}
 const home = () => { location.href = $('home').href; };
 
 /* ---------- Buttons ---------- */
@@ -383,93 +263,6 @@ function newGame(lv) {
   render();
   if (saved) say("Cliquez sur une case pour commencer : la première n'a jamais de mine.");
 }
-
-/* ---------- Drawing ---------- */
-const table = $('table'), boardEl = $('board');
-let squares = [], built = '', S = 50;
-function build() {
-  const key = G.w + 'x' + G.h;
-  if (built === key) return;
-  built = key; boardEl.innerHTML = ''; squares = [];
-  for (let i = 0; i < G.w * G.h; i++) {
-    const e = document.createElement('div');
-    e.className = 'c'; e.dataset.i = i; e.setAttribute('role', 'gridcell');
-    boardEl.appendChild(e); squares.push(e);
-  }
-}
-// The board fills the table, in the middle, with squares as large as fit (72 px at most). A tall,
-// narrow window (a phone) turns a wide board a quarter, so its squares stay large.
-function layout() {
-  const W = table.clientWidth, H = table.clientHeight;
-  const turned = H > W && G.w > G.h;
-  const cols = turned ? G.h : G.w, rows = turned ? G.w : G.h;
-  const room = (len, n) => (len - 32) / (n + .4);
-  // A phone scrolls down to the rest of the board rather than make its squares too small.
-  S = Math.floor(Math.max(24, Math.min(room(W, cols), innerWidth < 700 ? 72 : room(H, rows), 72)));
-  const F = Math.max(8, Math.round(S * .2));
-  const BX = Math.round((W - cols * S) / 2), BY = Math.max(F + 8, Math.round((H - rows * S) / 2));
-  const root = document.documentElement.style;
-  root.setProperty('--s', S + 'px'); root.setProperty('--cols', String(G.w));
-  boardEl.classList.toggle('turned', turned);
-  boardEl.style.left = BX + 'px'; boardEl.style.top = BY + 'px';
-  const frame = $('frame');
-  frame.style.left = BX - F + 'px'; frame.style.top = BY - F + 'px';
-  frame.style.width = cols * S + 2 * F + 'px'; frame.style.height = rows * S + 2 * F + 'px';
-  table.style.overflowY = BY + rows * S + F > H ? 'auto' : 'hidden';
-}
-
-function render() {
-  if (!G) return;
-  build(); layout();
-  const framed = new Set(hint ? hint.cells : []), ringed = new Set(hint && hint.ring ? hint.ring : []);
-  for (let i = 0; i < squares.length; i++) {
-    const e = squares[i], c = G.cells[i];
-    const n = c === 'o' ? D.number(G, i) : 0;
-    const boom = i === G.boom;
-    let cls = 'c' + (c === 'o' ? ' o' : '') + (n ? ' n n' + n : '') + (boom ? ' boom' : '');
-    if (framed.has(i)) cls += ' hint';
-    if (ringed.has(i)) cls += ' ring';
-    const html = boom ? MINE : c === 'f' ? FLAG : n ? String(n) : '';
-    if (e.className.replace(' shake', '') !== cls) e.className = cls;
-    if (e.dataset.html !== html) { e.innerHTML = html; e.dataset.html = html; }
-    const r = Math.floor(i / G.w) + 1, k = i % G.w + 1;
-    e.setAttribute('aria-label', `Ligne ${r}, colonne ${k} : ${boom ? 'mine' : c === 'f' ? 'drapeau' : c === 'o' ? (n ? n + (n === 1 ? ' mine autour' : ' mines autour') : 'vide') : 'fermée'}`);
-  }
-  $('flags').innerHTML = FLAG + `Drapeaux : ${D.flags(G)} sur ${G.mines}`;
-  $('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
-  $('undoBtn').disabled = !undo.length;
-  $('hintBtn').disabled = !!G.result;
-  $('flagBtn').disabled = !!G.result;
-}
-function shake(i) {
-  const e = squares[i];
-  if (!e) return;
-  e.classList.remove('shake'); void e.offsetWidth; e.classList.add('shake');
-}
-
-/* ---------- Mouse and touch ----------
-   A press and release on the same square is a click; the hand may move up to 16 px. The left button
-   opens, the right button puts or takes off a flag. A second click on the same square with the same
-   button within half a second is a double-click: it counts as one click. */
-const squareOf = e => { const el = e.target.closest && e.target.closest('.c'); return el ? +el.dataset.i : -1; };
-let press = null;
-boardEl.addEventListener('contextmenu', e => e.preventDefault());
-boardEl.addEventListener('pointerdown', e => {
-  if ((e.button !== 0 && e.button !== 2) || Kit.isOpen()) return;
-  e.preventDefault();
-  press = { i: squareOf(e), button: e.button, x: e.clientX, y: e.clientY, pointer: e.pointerId };
-});
-addEventListener('pointerup', e => {
-  if (!press || e.pointerId !== press.pointer || e.button !== press.button) return;
-  const p = press; press = null;
-  const el = document.elementFromPoint(e.clientX, e.clientY), i = el && el.closest('.c') ? +el.closest('.c').dataset.i : -1;
-  if (p.i < 0 || (i !== p.i && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 16)) return;
-  const t = performance.now(), prev = lastTap;
-  lastTap = { t, i: p.i, button: p.button };
-  if (prev && prev.i === p.i && prev.button === p.button && t - prev.t < 500) return;
-  tap(p.i, p.button === 2 ? 'flag' : 'open');
-});
-addEventListener('pointercancel', () => { press = null; });
 
 $('undoBtn').onclick = doUndo;
 $('hintBtn').onclick = showHint;

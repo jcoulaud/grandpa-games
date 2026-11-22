@@ -84,6 +84,8 @@ When a game changes its save format, it must still read the old format. His save
 
 - `public/demineur/`: the démineur (Minesweeper). Facile is 9 by 9 with 10 mines, Moyen 14 by 10 with 22, Difficile 20 by 10 with 36, so the squares stay about 47 px on his laptop.
   - `engine.js` holds the rules, the board maker and the hint. It has no DOM, so the page and the tests run the same code.
+  - `board.js` draws the board, plays the explosion and reads the mouse and touch. `style.css` holds the page's styles. `index.html` holds the game, its saves and its buttons.
+  - When a mine goes off, it explodes over its square and the board shakes, then the dialog opens. With reduced motion, the dialog opens at once.
   - The mines are placed at the first click. The first square and its neighbours hold no mine. A board is kept only if the hint's own reasoning clears it from the first square, so no game needs a guess. The reasoning uses one number at a time, the total of mines, and on Moyen and Difficile two numbers whose closed squares overlap. A board takes under 5 ms.
   - The board is a function of a seed saved with the game and of the first square: after an undo of the first click, the same square gives the same board.
   - A left click opens a square. The right click, or the "Drapeau" button followed by one click, puts a flag. A left click on a flag takes it off. A click on a number that touches as many flags as its value opens the squares around it.
@@ -146,7 +148,7 @@ Windows Quick Assist is the easiest way to do this with him on the phone.
 ## Publish
 
 - The site lives at https://jeux-papi.fr only. `www.jeux-papi.fr` redirects there (a redirect rule on the zone), and the workers.dev address is off, because saves on a PC belong to one exact address.
-- Each push to `main` runs `.github/workflows/deploy.yml`: typecheck, database migrations, deploy. "Run workflow" in the Actions tab deploys `main` again.
+- `.github/workflows/deploy.yml` runs the typecheck and `bun run test` on each pull request and each push to `main`. On `main`, when they pass, it applies the database migrations and deploys. "Run workflow" in the Actions tab tests and deploys `main` again. If a test fails, the screenshots are attached to the run.
 - The workflow uses the `CLOUDFLARE_API_TOKEN` repository secret: the Cloudflare account token "grandpa-games GitHub deploy". It can edit Workers and D1 on the account, and routes, DNS and certificates on `jeux-papi.fr` only. To replace it, create a new account token with the same permissions under Manage Account, then Account API Tokens, and run `gh secret set CLOUDFLARE_API_TOKEN`.
 - `bun run deploy` does the same from a terminal logged in with `wrangler login`.
 
