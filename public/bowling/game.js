@@ -1,6 +1,5 @@
 import {
   fresh,
-  rack,
   restore,
   defaults,
   pinsFor,
@@ -58,7 +57,7 @@ function preview(choice = shot) {
     arrival(trajectory(choice, game.level)) === null ? 'Dans la rigole' : off === 0 ? 'Au milieu' : Math.abs(off) + (off < 0 ? ' à gauche' : ' à droite');
   $('curveLabel').textContent = curve === 0 ? 'Tout droit' :
     ['', 'Un peu vers', 'Vers', 'Fort vers'][Math.abs(curve)] + (curve < 0 ? ' la gauche' : ' la droite');
-  view.aim(sheet(game).done ? rack(game.seed) : pinsFor(game), choice, game.level);
+  view.aim(pinsFor(game), choice, game.level);
 }
 // The aim stays on the 39 boards of the lane, so each press of ◀ or ▶ moves the mark he sees.
 // Only a curve that carries the ball off the boards sends it into the gutter.
@@ -198,7 +197,7 @@ async function shoot() {
       celebrate(mark);
     }
   };
-  const [ok] = await Promise.all([write, view.animate(result, announce, s.done ? rack(game.seed) : pinsFor(game), s.done || s.freshRack)]);
+  const [ok] = await Promise.all([write, view.animate(result, announce, pinsFor(game), s.freshRack && !s.done)]);
   busy = false;
   if (stale) return;
   render(ok ? message(result) : 'La partie ne peut pas être enregistrée sur cet appareil.', before.total);

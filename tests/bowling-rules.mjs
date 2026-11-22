@@ -113,22 +113,6 @@ test('recorded rigid bodies tumble, stay inside solid surfaces, lose energy and 
   assert.ok(B.simulate(pins, wide, 'facile').gutter);
 });
 
-test('unsupported pins recover below the tipping angle and fall above it', () => {
-  for (const tilt of [0.08, 0.25]) {
-    const y = B.com * Math.cos(tilt) + B.profile[1][0] * Math.sin(tilt);
-    const pin = { id: 6, x: 0, z: B.length, y, tilt, heading: 0 };
-    const result = B.simulate([pin], { ...B.defaults(), aim: 45 }, 'moyen', true);
-    assert.ok(result.sleeping);
-    const final = result.frames.at(-1).pins[0];
-    if (tilt === 0.08) {
-      assert.ok(final.tilt < Math.PI / 180);
-      assert.equal(result.standing[0].tilt, 0);
-    } else {
-      assert.ok(final.tilt > (80 * Math.PI) / 180);
-      assert.equal(result.count, 1);
-    }
-  }
-});
 test('the foot settles after a glancing hit on the 8 pin', () => {
   const pins = B.rack(Math.imul(2, 2654435761));
   const r = B.simulate(pins, { aim: 23, speed: 5, curve: -2 }, 'moyen', true);
@@ -182,16 +166,13 @@ test('all seven curves bend in order and reach the selected board', () => {
     }
   }
 });
-test('the start spot follows the curve only, and every pocket hook stays on the boards', () => {
-  for (let curve = -3; curve <= 3; curve++) {
-    const starts = new Set();
-    for (const aim of [10, 17.5, 20, 22.5, 30]) {
-      const path = B.trajectory({ aim, speed: 6, curve }, 'moyen');
-      starts.add(path[0].x);
-      assert.ok(Math.abs(path[0].x - curve * 5 * B.board) < 1e-12);
+test('the ball leaves from its start board, and the hint start keeps every pocket hook on the boards', () => {
+  for (let curve = -3; curve <= 3; curve++)
+    for (const aim of [10, 20, 30]) {
+      assert.ok(Math.abs(B.trajectory({ start: 12, aim, speed: 6, curve }, 'moyen')[0].x - B.boardX(12)) < 1e-12);
+      // A shot that names no start leaves from the hint's start for its curve.
+      assert.ok(Math.abs(B.trajectory({ aim, speed: 6, curve }, 'moyen')[0].x - B.boardX(B.defaultStart(curve))) < 1e-12);
     }
-    assert.equal(starts.size, 1);
-  }
   for (const level of Object.keys(B.goals))
     for (const side of [-1, 1])
       for (let step = 1; step <= 3; step++)
@@ -274,48 +255,4 @@ test('the same imperfect player reaches each higher goal less often', () => {
   console.log('Goals reached in 64 games:', wins);
   assert.deepEqual(wins, [52, 25, 11]);
   assert.ok(wins[0] > wins[1] && wins[1] > wins[2] && wins[2] > 0);
-});
-
-test('the pinsetter stands a pin upright when an old save resumes', () => {
-  const p = { ...B.rack(9)[9], tilt: 0.08, heading: 1.2 };
-  const g = B.fresh('moyen', 0, 9);
-  g.throws = [{ ...B.defaults(), count: 9, standing: [p] }];
-  assert.deepEqual(B.restore(g, 1), g);
-  const result = B.play(B.restore(g, 1), { ...B.defaults(), aim: -5 }, true);
-  const saved = result.frames[0].pins[0];
-  assert.equal(saved.tilt, 0);
-  assert.equal(saved.y, B.com);
-  for (const q of [
-    [0, 0, 0, 0],
-    [NaN, 0, 0, 1],
-    [1, 0, 0, 0]
-  ]) {
-    g.throws[0].standing = [{ ...p, q }];
-    assert.equal(B.restore(g, 1).throws.length, 0);
-  }
-});
-
-test('older saves keep the recorded hook, pin leave and original goal', () => {
-  for (const [level, goal, savedGoal] of [
-    ['facile', 105],
-    ['moyen', 120],
-    ['fort', 140],
-    ['facile', 100, 100],
-    ['fort', 145, 145]
-  ]) {
-    for (const [spin, curve] of [
-      ['none', 0],
-      ['left', -2],
-      ['right', 2]
-    ]) {
-      const g = B.fresh(level, 2, 42);
-      B.play(g, B.defaults());
-      g.goal = savedGoal;
-      const recorded = g.throws[0];
-      const { curve: unused, ...old } = recorded;
-      g.throws[0] = { ...old, spin };
-      const restored = B.restore(g, 99);
-      assert.deepEqual(restored, { ...g, goal, throws: [{ ...recorded, curve }] });
-    }
-  }
 });

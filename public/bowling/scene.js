@@ -14,7 +14,6 @@ import {
   gutterWidth,
   radius,
   rack,
-  boardX,
   trajectory,
   arrival
 } from './engine.js';
@@ -782,12 +781,10 @@ export function createScene(canvas) {
   resize();
   const orientation = new T.Quaternion();
   function rotation(target, p) {
-    if (p.q) {
-      const [x, y, z, w] = p.q;
-      return target.set(-x, -y, z, w);
-    }
-    const axis = v(Math.sin(p.heading) * Math.sin(p.tilt), Math.cos(p.tilt), Math.cos(p.heading) * Math.sin(p.tilt));
-    return target.setFromUnitVectors(new T.Vector3(0, 1, 0), axis);
+    // A recorded frame carries the orientation; a resting pin stands upright.
+    if (!p.q) return target.identity();
+    const [x, y, z, w] = p.q;
+    return target.set(-x, -y, z, w);
   }
   const axis = new T.Vector3();
   function showPins(list, next = list, fraction = 0) {
@@ -978,18 +975,9 @@ export function createScene(canvas) {
       requestAnimationFrame(tick);
     });
   }
-  function pick(p) {
-    const ray = new T.Raycaster();
-    ray.setFromCamera({ x: (2 * p.x) / canvas.clientWidth - 1, y: 1 - (2 * p.y) / canvas.clientHeight }, camera);
-    const hit = ray.intersectObjects(pins.filter((p) => p.m.visible).map((p) => p.m))[0];
-    if (hit) return { x: hit.object.parent.position.x, z: -hit.object.parent.position.z, pin: true };
-    const at = new T.Vector3();
-    if (!ray.ray.intersectPlane(new T.Plane(new T.Vector3(0, 1, 0), 0), at) || -at.z < 0.1) return null;
-    return { x: at.x, z: Math.min(length, -at.z) };
-  }
   function ballAt() {
     const center = screen(ball.position.x, radius, 0);
     return { ...center, radius: screen(ball.position.x + radius, radius, 0).x - center.x };
   }
-  return { aim, animate, pick, ballAt };
+  return { aim, animate, ballAt };
 }

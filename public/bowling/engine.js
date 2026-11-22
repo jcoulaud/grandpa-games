@@ -11,6 +11,9 @@ export const defaults = () => ({ start: 20, aim: 20, speed: 6, curve: 0 });
 export const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 export const boardAt = (x) => clamp(20 + x / board, -5, 45);
 export const boardX = (aim) => (aim - 20) * board;
+// A start that gives a hook room on the boards: 5 boards towards the side of the hook per curve step.
+// The hint uses it, and so does a shot that names no start.
+export const defaultStart = (curve) => 20 + curve * 5;
 
 export function rack(seed) {
   let state = seed >>> 0;
@@ -24,9 +27,7 @@ export function rack(seed) {
       pins.push({
         id: pins.length + 1,
         x: (i - row / 2) * 0.3048 + jitter(),
-        z: length + row * 0.3048 * Math.sqrt(0.75) + jitter(),
-        tilt: 0,
-        heading: 0
+        z: length + row * 0.3048 * Math.sqrt(0.75) + jitter()
       });
   }
   return pins;
@@ -71,9 +72,8 @@ export function trajectory(shot, level, through = length, edges = true, error = 
   // and the widest hooks stay on the boards. A faster ball carries more spin, so each step bends
   // about as much at every force.
   const centreSlope = (boardX(shot.aim) - target) / through;
-  // The ball leaves from the board he chose on the foul line. A throw saved before he could
-  // choose starts 5 boards towards the side of its hook for each curve step.
-  const release = error?.release ?? (Number.isFinite(shot.start) ? boardX(shot.start) : shot.curve * 5 * board);
+  // The ball leaves from the board he chose on the foul line.
+  const release = error?.release ?? boardX(shot.start ?? defaultStart(shot.curve));
   const slope = centreSlope - release / through + (error?.offset ?? 0) / length;
   let gutter = 0;
   for (const p of path) {
@@ -171,24 +171,18 @@ export const pinShape = [
   [0.346, 0.0323],
   [0.36, 0.021]
 ];
+// Every body starts upright: the pins of a rack, the pins left standing (set upright by the pinsetter)
+// and the ball.
 function body(pin, ball = false) {
-  const half = (pin.tilt || 0) / 2,
-    heading = pin.heading || 0;
-  const [qx, qy, qz, qw] = pin.q || [
-    stable(Math.cos(heading) * Math.sin(half)),
-    0,
-    stable(-Math.sin(heading) * Math.sin(half)),
-    stable(Math.cos(half))
-  ];
   return {
     id: pin.id,
     x: pin.x,
     y: pin.y ?? com,
     z: pin.z,
-    qx,
-    qy,
-    qz,
-    qw,
+    qx: 0,
+    qy: 0,
+    qz: 0,
+    qw: 1,
     vx: 0,
     vy: 0,
     vz: 0,
@@ -205,12 +199,12 @@ function body(pin, ball = false) {
     restX: pin.x,
     restY: pin.y ?? com,
     restZ: pin.z,
-    restQx: qx,
-    restQy: qy,
-    restQz: qz,
-    restQw: qw,
+    restQx: 0,
+    restQy: 0,
+    restQz: 0,
+    restQw: 1,
     still: 0,
-    asleep: !ball && half === 0,
+    asleep: !ball,
     quiet: 0,
     grounded: false,
     touching: false,
@@ -826,7 +820,7 @@ export function simulate(pins, shot, level, record = false, hz = 480, audit = nu
   const standing = bodies
     .slice(1)
     .filter((p) => p.uy > Math.cos(tipping) && Math.abs(p.x) <= width / 2 && p.z <= deckEnd && p.z >= length - 0.4)
-    .map(({ id, x, z }) => ({ id, x, z, tilt: 0, heading: 0 }));
+    .map(({ id, x, z }) => ({ id, x, z }));
   return {
     standing,
     count: pins.length - standing.length,
@@ -889,7 +883,7 @@ export function pinsFor(g) {
   const s = sheet(g);
   if (s.done) return g.throws.at(-1).standing;
   if (s.freshRack) return rack(g.seed + Math.imul(g.throws.length, 0x9e3779b1));
-  return g.throws.at(-1).standing.map(({ id, x, z }) => ({ id, x, z, tilt: 0, heading: 0 }));
+  return g.throws.at(-1).standing.map(({ id, x, z }) => ({ id, x, z }));
 }
 const throwSeed = (g) => (g.seed + Math.imul(g.throws.length + 1, 0x85ebca6b)) >>> 0;
 export function play(g, shot, record = false) {
@@ -897,7 +891,7 @@ export function play(g, shot, record = false) {
   const { start, aim, speed, curve } = shot;
   const seed = throwSeed(g);
   const result = simulate(pinsFor(g), { ...shot, seed }, g.level, record);
-  g.throws.push({ ...(Number.isFinite(start) && { start }), aim, speed, curve, seed, count: result.count, standing: result.standing });
+  g.throws.push({ start: start ?? defaultStart(curve), aim, speed, curve, seed, count: result.count, standing: result.standing });
   const s = sheet(g);
   if (s.done && s.total >= g.goal) g.wins++;
   return result;
@@ -922,22 +916,20 @@ export function restore(raw, seed) {
     raw.throws.length > 21
   )
     return reset;
-  // Keep the goal and pin positions recorded under earlier rules.
-  const oldGoal = { facile: 105, moyen: 120, fort: 140 }[raw.level];
-  const goal = raw.goal ?? oldGoal;
-  const previousGoal = { facile: 100, moyen: 120, fort: 145 }[raw.level];
-  if (![oldGoal, previousGoal, { facile: 130, moyen: 150, fort: 170 }[raw.level], reset.goal].includes(goal))
-    return reset;
-  const g = { ...reset, goal, seed: raw.seed, throws: [] };
+  // A save keeps the goal it was played for, so a later change of the goals never changes a game in progress.
+  if (!Number.isSafeInteger(raw.goal) || raw.goal < 50 || raw.goal > 300) return reset;
+  const g = { ...reset, goal: raw.goal, seed: raw.seed, throws: [] };
   if (raw.reported === true) g.reported = true;
   for (const t of raw.throws) {
     const pins = pinsFor(g);
-    const curve = t && (Object.hasOwn(t, 'curve') ? t.curve : { none: 0, left: -2, right: 2 }[t.spin]);
+    const curve = t?.curve;
     if (
       sheet(g).done ||
       !t ||
-      (t.seed !== undefined && t.seed !== throwSeed(g)) ||
-      (t.start !== undefined && (!Number.isFinite(t.start) || t.start < 1 || t.start > 39)) ||
+      t.seed !== throwSeed(g) ||
+      !Number.isFinite(t.start) ||
+      t.start < 1 ||
+      t.start > 39 ||
       !Number.isFinite(t.aim) ||
       t.aim < -5 ||
       t.aim > 45 ||
@@ -957,30 +949,21 @@ export function restore(raw, seed) {
       if (
         !p ||
         !ids.delete(p.id) ||
-        ![p.x, p.z, p.heading, p.tilt].every(Number.isFinite) ||
-        (p.q !== undefined &&
-          (!Array.isArray(p.q) ||
-            p.q.length !== 4 ||
-            !p.q.every(Number.isFinite) ||
-            Math.abs(Math.hypot(...p.q) - 1) > 1e-5 ||
-            Math.abs(1 - 2 * (p.q[0] ** 2 + p.q[2] ** 2) - Math.cos(p.tilt)) > 1e-5)) ||
-        (p.y !== undefined && (!Number.isFinite(p.y) || p.y < 0.1 || p.y > 0.4)) ||
+        ![p.x, p.z].every(Number.isFinite) ||
         Math.abs(p.x) > width / 2 ||
         p.z < length - 0.4 ||
-        p.z > deckEnd ||
-        p.tilt < 0 ||
-        p.tilt >= tipping
+        p.z > deckEnd
       )
         return reset;
     }
     g.throws.push({
-      ...(t.start !== undefined && { start: t.start }),
+      start: t.start,
       aim: t.aim,
       speed: t.speed,
       curve,
-      ...(t.seed !== undefined && { seed: t.seed }),
+      seed: t.seed,
       count: t.count,
-      standing: t.standing
+      standing: t.standing.map(({ id, x, z }) => ({ id, x, z }))
     });
   }
   if (sheet(g).done && sheet(g).total >= g.goal && !g.wins) return reset;
@@ -999,7 +982,7 @@ export function hint(g) {
     for (const strength of full ? [2, 1, 3, 0, -1] : [0, 1, -1, 2, -2]) {
       for (const aim of targets) {
         const curve = strength * (aim > 20 ? -1 : 1),
-          start = 20 + curve * 5;
+          start = defaultStart(curve);
         const count = simulate(pins, { start, aim, speed, curve, seed: throwSeed(g) }, g.level).count;
         if (count > most) {
           most = count;

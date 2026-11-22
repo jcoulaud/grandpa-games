@@ -250,7 +250,6 @@ try {
     });
     assert.deepEqual(problems, [], 'screen ' + [width, height, zoom] + ' ' + JSON.stringify(problems));
   }
-  await setSize(1366, 680, 1);
   // Compare full and single-pin renders. Count bright pin pixels against the deck
   // to measure the visible rack without relying on camera constants.
   await setSize(1366, 680, 1);
