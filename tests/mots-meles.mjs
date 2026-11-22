@@ -122,6 +122,47 @@ await wait(300);
 ok(await g(b => G.grid === b.grid && JSON.stringify(G.found) === JSON.stringify(b.found), before) && await page.locator('.band').count() === 2, 'a reload keeps the grid, the words found and their bands');
 ok(!(await g(() => Kit.isOpen())) && /Encore 4 mots à trouver/.test(await msg()), 'a reload says how many words are left');
 
+// 10b. Slips of the hand. A refused drag keeps its first letter, so a click on the right last letter ends it.
+const centre = async i => { const b = await cellAt(i).boundingBox(); return [b.x + b.width / 2, b.y + b.height / 2]; };
+const drag = async (from, points) => {
+  await page.mouse.move(...await centre(from)); await page.mouse.down();
+  for (const pt of points) await page.mouse.move(...pt, { steps: 8 });
+  await page.mouse.up(); await page.mouse.move(5, 5); await wait(560);
+};
+const c2 = await g(() => MotsMeles.cells(G, 2));
+await drag(c2[0], [await centre(c2[c2.length - 2])]);
+ok(/Presque/.test(await msg()) && /anchor/.test(await cls(c2[0])), 'a refused drag keeps its first letter');
+await click(c2[c2.length - 1]);
+ok(await msg() === `Vous avez trouvé ${caps[2]}.`, 'a click on the right last letter then finds the word');
+// A press on the last letter that moves 18 px inside it is still a click on it.
+const [w3s, w3e] = await ends(3);
+await click(w3s);
+const [ex, ey] = await centre(w3e);
+await page.mouse.move(ex - 9, ey); await page.mouse.down(); await page.mouse.move(ex + 9, ey, { steps: 4 }); await page.mouse.up();
+await page.mouse.move(5, 5); await wait(560);
+ok(await msg() === `Vous avez trouvé ${caps[3]}.`, 'a small move of the mouse inside the last letter still finds the word');
+// A drag let go outside the grid finds nothing and keeps its first letter.
+const [w4s, w4e] = await ends(4);
+const gridBox = await page.locator('#board').boundingBox();
+await drag(w4s, [await centre(w4e), [gridBox.x + gridBox.width + 60, gridBox.y + gridBox.height + 60]]);
+ok(await g(() => !G.found.includes(4)) && /anchor/.test(await cls(w4s)) && /Vous avez choisi/.test(await msg()), 'a drag let go outside the grid finds nothing and keeps its first letter');
+await click(w4e);
+ok(await g(() => G.found.includes(4)), 'a click on the last letter then finds the word');
+// A double-click that lands in the next letter is one click.
+const edge = await g(() => [...G.grid].findIndex((x, i) => i % G.size < G.size - 1));
+const eb = await cellAt(edge).boundingBox();
+await page.mouse.click(eb.x + eb.width - 3, eb.y + eb.height / 2); await wait(120);
+await page.mouse.click(eb.x + eb.width + 3, eb.y + eb.height / 2);
+await page.mouse.move(5, 5);
+ok(/anchor/.test(await cls(edge)) && /Vous avez choisi/.test(await msg()), 'a double-click across two letters chooses the first one only');
+await wait(560); await click(edge);
+// A double-click on "Annuler le dernier coup" takes back one word.
+const foundBefore = await g(() => G.found.length);
+await page.dblclick('#undoBtn');
+await wait(400);
+ok(await g(() => G.found.length) === foundBefore - 1, 'a double-click on undo takes back one word, not two');
+await click(w4s); await click(w4e);
+
 // 11. The win: every word, the bands pop in a wave, then the dialog. It is counted once.
 const sent = { won: 0, start: 0 };
 await page.exposeFunction('sent', kind => { sent[kind]++; });
@@ -134,6 +175,13 @@ for (let w = 0; w < 6; w++) {
 await wait(200);
 ok(await g(() => G.result === 'won' && document.getElementById('sheet').classList.contains('wave')), 'the last word wins and the bands pop in a wave');
 ok(!(await g(() => Kit.isOpen())), 'the win sheet waits for the wave');
+// The rules opened during the wave: the win dialog is there when they close.
+await page.click('#helpBtn');
+await wait(3000);
+ok(await g(() => !document.getElementById('over').classList.contains('on')), 'the win dialog does not open over the rules');
+await page.click('#helpClose');
+await page.waitForSelector('#over.on', { timeout: 1000 });
+ok(/Bravo/.test(await g(() => document.getElementById('overTitle').textContent)), 'the rules opened during the wave do not lose the win dialog');
 await page.waitForSelector('#over.on', { timeout: 4000 });
 ok(/Bravo, vous avez gagné/.test(await g(() => document.getElementById('overTitle').textContent)), 'the win dialog says bravo');
 await page.screenshot({ path: `${OUT}/mots-meles-won.png` });
@@ -160,6 +208,13 @@ await wait(300);
 ok(await g(() => Kit.isOpen()), 'a broken save is not loaded: the rules open');
 await page.click('#helpClose');
 await page.getByRole('button', { name: 'Facile', exact: true }).click();
+await wait(200);
+ok(await g(() => stats.won === 1 && GG.load('mots-meles').stats.won === 1), 'a broken grid keeps the count of grids finished');
+// A save with a level this game does not know loads at the level of its size.
+await g(() => { const G0 = MotsMeles.find(MotsMeles.newGame('moyen', 9), 0); return GG.save('mots-meles', { G: { ...G0, level: 'normal' } }); });
+await page.reload();
+await wait(300);
+ok(await g(() => !Kit.isOpen() && G.level === 'moyen' && G.found.length === 1), 'a save with an unknown level loads at the level of its size');
 // An old save without its level, its statistics or its themes still loads.
 await g(() => { const G0 = MotsMeles.find(MotsMeles.newGame('moyen', 9), 0); const { level, ...bare } = G0; return GG.save('mots-meles', { G: bare }); });
 await page.reload();
@@ -175,9 +230,33 @@ for (const [label, size, count] of [['Moyen', 11, 9], ['Difficile', 13, 12]]) {
   ok(s.size === size && s.words === count && s.f >= 30, `${label} has ${size} by ${size} letters of ${s.f} px and ${count} words`);
   await page.screenshot({ path: `${OUT}/mots-meles-${label.toLowerCase()}.png` });
 }
-await click(0);
+// A press held on the last letter of Difficile while a new Facile grid starts: the release does nothing.
+const lastCell = await g(() => G.grid.length - 1);
+await page.mouse.move(...await centre(lastCell)); await page.mouse.down();
+await g(() => newGame('facile'));
+await page.mouse.up(); await page.mouse.move(5, 5); await wait(560);
+ok(!/undefined/.test(await msg()) && await g(() => anchor === -1), 'a press held across a new grid is forgotten');
+await click(0); await click(1);
+// Undo whose save is still on its way when a new grid starts: the new grid is left alone.
+const undoAcross = await g(async () => {
+  newGame('fort');
+  await GG.flush?.();
+  G = MotsMeles.find(G, 11); render();
+  const real = GG.save;
+  let release;
+  GG.save = (...a) => new Promise(r => { release = () => r(real.apply(GG, a)); });
+  const u = undo();
+  GG.save = real;
+  newGame('facile');
+  release();
+  try { await u; } catch (e) { return e.message; }
+  return document.getElementById('msg').textContent;
+});
+ok(!/annulé/.test(undoAcross) && /Trouvez les 6 mots/.test(undoAcross), 'an undo saved after a new grid started says nothing about it: ' + undoAcross);
+const [n0s, n0e] = await ends(0);
+await click(n0s); await click(n0e);
 await page.click('#newBtn');
-ok(/Attention/.test(await g(() => document.getElementById('overText').textContent)) || await g(() => G.found.length === 0), 'a new game during a game warns first');
+ok(/Attention/.test(await g(() => document.getElementById('overText').textContent)), 'a new game during a game warns first');
 await page.keyboard.press('Escape');
 // The longest message fits in the line.
 await g(() => Kit.say("Presque : FOURCHETTE commence bien ici, mais sa dernière lettre est ailleurs."));
@@ -208,11 +287,12 @@ for (const [w, h, z] of WINDOWS) {
     await p.locator('#overBtns button', { hasText: label }).first().click();
     await p.waitForTimeout(150);
     // One word found and one letter chosen, so the band and the ring are measured too.
-    await p.evaluate(() => { G = MotsMeles.find(G, 0); anchor = MotsMeles.cells(G, 1)[0]; render(); Kit.say("Presque : FOURCHETTE commence bien ici, mais sa dernière lettre est ailleurs."); });
+    // A count of grids finished too, so both chips of the bottom bar are measured.
+    await p.evaluate(() => { stats.won = 14; G = MotsMeles.find(G, 0); anchor = MotsMeles.cells(G, 1)[0]; render(); Kit.say("Presque : FOURCHETTE commence bien ici, mais sa dernière lettre est ailleurs."); });
     const r = await p.evaluate(phone => {
       const inside = (e, box) => { const a = e.getBoundingClientRect(), b = box.getBoundingClientRect(); return a.left >= b.left - 1 && a.right <= b.right + 1 && a.top >= b.top - 1 && a.bottom <= b.bottom + 1; };
       const sheet = document.getElementById('sheet'), table = document.getElementById('table');
-      const wide = document.scrollingElement.scrollWidth <= document.scrollingElement.clientWidth + 1 && [...document.querySelectorAll('#bar, #say, #table, #rail, #sheet')].every(e => e.getBoundingClientRect().right <= innerWidth + 1);
+      const wide = document.scrollingElement.scrollWidth <= document.scrollingElement.clientWidth + 1 && [...document.querySelectorAll('#bar, #say, #table, #rail, #sheet, #wins, #count')].filter(e => e.getClientRects().length).every(e => e.getBoundingClientRect().right <= innerWidth + 1);
       const fits = phone ? sheet.getBoundingClientRect().right <= table.getBoundingClientRect().right + 1 : inside(sheet, table);
       const listApart = (() => { const a = document.getElementById('board').getBoundingClientRect(), b = document.getElementById('list').getBoundingClientRect(); return a.right <= b.left + 1 || a.bottom <= b.top + 1; })();
       const small = [];
@@ -251,10 +331,13 @@ await calm.goto(URL);
 await calm.evaluate(() => Kit.closeHelp());
 await calm.getByRole('button', { name: 'Facile', exact: true }).click();
 await calm.evaluate(() => { for (let w = 0; w < G.words.length - 1; w++) G = MotsMeles.find(G, w); save(); render(); });
+// The memory is full at the last word: the win dialog says the grid was not saved.
+await calm.evaluate(() => { GG.save = async () => false; });
 const last = await calm.evaluate(() => { const c = MotsMeles.cells(G, G.words.length - 1); return [c[0], c[c.length - 1]]; });
 for (const i of last) { await calm.locator(`.cell[data-i="${i}"]`).click(); await calm.mouse.move(5, 5); await calm.waitForTimeout(560); }
 await calm.waitForSelector('#over.on', { timeout: 1500 });
 ok(await calm.evaluate(() => G.result === 'won' && !document.getElementById('sheet').classList.contains('wave')), 'with reduced motion the win comes without the wave');
+ok(/mémoire de l'ordinateur est pleine/.test(await calm.evaluate(() => document.getElementById('overText').textContent)), 'a win that could not be saved says so in the dialog');
 await calm.close();
 
 ok(!errors.length, 'no page error' + (errors.length ? ': ' + errors.join(' | ') : ''));

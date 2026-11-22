@@ -38,8 +38,9 @@ for (const [level, L] of Object.entries(M.LEVELS)) {
       if (M.occurrences(G.grid, G.size, w.key).length !== 1) copies++;
       if (w.key.length < L.min || w.key.length > L.max) bad++;
     }
-    const own = new Set(G.words.flatMap((w, k) => M.cells(G, k)));
-    for (const b of M.BLOCKED) for (const cells of M.occurrences(G.grid, G.size, b)) if (cells.some(i => !own.has(i))) rude++;
+    // A blocked word inside one word of the list is part of it; across two words or the filler it is not.
+    const homes = G.words.map((w, k) => new Set(M.cells(G, k)));
+    for (const b of M.BLOCKED) for (const cells of M.occurrences(G.grid, G.size, b)) if (!homes.some(h => cells.every(i => h.has(i)))) rude++;
   }
   const ms = (Date.now() - start) / 400;
   ok(!bad, `${level}: 400 grids of ${L.words} words, each in its place`, `${bad} bad`);
@@ -57,6 +58,9 @@ for (const [level, L] of Object.entries(M.LEVELS)) {
   const ALLT = THEMES.map(t => t.title);
   ok(ALLT.includes(M.newGame('facile', 5, ALLT).theme), 'with every theme just played, a grid still comes');
   ok(M.newGame('expert', 5).level === 'facile', 'an unknown level makes a Facile grid');
+  // Difficile seed 2279 once read BITE across four words of « Les oiseaux ».
+  const B = M.newGame('fort', 2279), homes = B.words.map((w, k) => new Set(M.cells(B, k)));
+  ok(!M.occurrences(B.grid, B.size, 'BITE').some(c => !homes.some(h => c.every(i => h.has(i)))), 'Difficile seed 2279 spells no rude word across the words');
 }
 // Facile only to the right and down, Moyen never backwards, Difficile also backwards.
 {
@@ -169,6 +173,14 @@ for (const [level, L] of Object.entries(M.LEVELS)) {
   ok(M.valid(M.withLevel(bare)) && M.withLevel(bare).level === 'moyen', 'a save without its level takes the level of its size');
   ok(!M.valid(M.withLevel({ ...bare, size: 12 })), 'a save without its level and with an unknown size is still refused');
   ok(M.withLevel(null) === null && M.withLevel(G) === G, 'withLevel leaves the rest alone');
+  ok(M.withLevel({ ...G, level: 'expert' }).level === 'moyen' && M.valid(M.withLevel({ ...G, level: 'expert' })), 'a save with an unknown level takes the level of its size');
+  // One letter changed outside the words that makes a second copy of a word: it could be read, not found.
+  let copy = null;
+  for (let i = 0; i < F.grid.length && !copy; i++) for (const x of new Set(F.words.map(w => w.key).join(''))) {
+    const grid = F.grid.slice(0, i) + x + F.grid.slice(i + 1);
+    if (F.words.some(w => M.occurrences(grid, F.size, w.key).length > 1)) { copy = { ...F, grid }; break; }
+  }
+  ok(copy && !M.valid(copy), 'a save with a second copy of a word is refused');
 }
 
 console.log(fails ? `\n${fails} FAILED` : '\nALL PASSED');

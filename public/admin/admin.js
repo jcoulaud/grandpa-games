@@ -6,7 +6,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const store = { get: k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
   set: (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} } };
 // A game's name from its folder: dame-de-pique -> Dame de pique, unless NAMES gives it.
-const NAMES = { freecell: 'FreeCell', demineur: 'Démineur' }; // names that the folder cannot spell
+const NAMES = { freecell: 'FreeCell', demineur: 'Démineur', 'mots-meles': 'Mots mêlés' }; // names that the folder cannot spell
 const gameName = id => NAMES[id] || (id.charAt(0).toUpperCase() + id.slice(1)).replace(/-/g, ' ');
 const fmt = v => Number(v || 0).toLocaleString('fr-FR');
 const plural = (v, one, many) => `${fmt(v)} ${v > 1 ? many : one}`;

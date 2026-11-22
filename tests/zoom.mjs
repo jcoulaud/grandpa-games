@@ -142,7 +142,21 @@ try {
   }
   ok(await g(cards => picks.length === 3 && cards.every(c => picks.includes(c)), cards), 'dame de pique at 130 %: the cards clicked are the cards chosen');
 
-  // 6. A smaller window lowers the size it can hold; a phone stays at 100 % and shows no buttons.
+  // 6. Mots mêlés at 130 %: a click on the first letter and one on the last find the word, and a drag too.
+  await page.goto(gameUrl('mots-meles'));
+  await page.click('#helpClose');
+  await page.locator('#overBtns button', { hasText: 'Difficile' }).click();
+  await wait(300);
+  const letter = i => g(i => { const r = document.querySelector(`.cell[data-i="${i}"]`).getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }, i);
+  const word = w => g(w => { const c = MotsMeles.cells(G, w); return [c[0], c[c.length - 1]]; }, w);
+  for (const i of await word(0)) { await page.mouse.click(...await letter(i)); await page.mouse.move(5, 5); await wait(560); }
+  ok(await g(() => G.found.includes(0)), 'mots mêlés at 130 %: the letters clicked find the word');
+  const [ds, de] = await word(1);
+  await page.mouse.move(...await letter(ds)); await page.mouse.down();
+  await page.mouse.move(...await letter(de), { steps: 10 }); await page.mouse.up();
+  ok(await g(() => G.found.includes(1)), 'mots mêlés at 130 %: a drag from the first letter to the last finds the word');
+
+  // 7. A smaller window lowers the size it can hold; a phone stays at 100 % and shows no buttons.
   await page.setViewportSize({ width: 1093, height: 530 }); await wait(200);
   ok(await zoomText() === '100 %', 'a 1093 by 530 window holds 100 % at most: ' + await zoomText());
   await page.setViewportSize({ width: 390, height: 760 }); await wait(200);

@@ -115,9 +115,11 @@
   }
 
   // Fills the free cells, then draws again any free cell that spells a second copy of a word of the list
-  // or a blocked word. Returns null when a second copy is made only of letters of the list.
+  // or a blocked word. Returns null when a second copy, or a blocked word across two words, is made only
+  // of letters of the list. A blocked word inside one word of the list is part of that word: it stays.
   function fill(grid, words, size, rnd) {
     const own = new Set(grid.map((x, i) => x ? i : -1).filter(i => i >= 0));
+    const homes = words.map(w => new Set(cells(w, size)));
     const pool = FILLER + words.map(w => w.key).join('');
     const out = grid.map(x => x || pick(pool, rnd));
     for (let round = 0; round < 400; round++) {
@@ -135,7 +137,10 @@
       }
       for (const b of BLOCKED) for (const at of occurrences(s, size, b)) {
         const free = at.filter(i => !own.has(i));
-        if (!free.length) continue;
+        if (!free.length) {
+          if (homes.some(h => at.every(i => h.has(i)))) continue;
+          return null;
+        }
         clean = false;
         out[pick(free, rnd)] = pick(FILLER, rnd);
       }
@@ -258,9 +263,9 @@
     return total;
   }
 
-  // A save without its level takes the level of its size.
+  // A save without its level, or with a level this file does not know, takes the level of its size.
   function withLevel(G) {
-    if (!G || typeof G !== 'object' || G.level !== undefined) return G;
+    if (!G || typeof G !== 'object' || Object.hasOwn(LEVELS, G.level)) return G;
     const level = Object.keys(LEVELS).find(k => LEVELS[k].sizes.includes(G.size));
     return level ? { ...G, level } : G;
   }
@@ -282,6 +287,8 @@
       const er = w.r + w.dr * (w.key.length - 1), ec = w.c + w.dc * (w.key.length - 1);
       if ([w.r, w.c, er, ec].some(x => x < 0 || x >= n)) return false;
       if (cells(w, n).some((i, k) => G.grid[i] !== w.key[k])) return false;
+      // A second copy of the word could be read but not found.
+      if (occurrences(G.grid, n, w.key).length !== 1) return false;
     }
     if (!Array.isArray(G.found) || new Set(G.found).size !== G.found.length) return false;
     if (G.found.some(w => !Number.isInteger(w) || w < 0 || w >= G.words.length)) return false;

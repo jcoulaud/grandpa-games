@@ -114,6 +114,8 @@
     #list { align-self: stretch; }
     .mini { --c: 28px; font-size: 20px; }
     #words { grid-auto-flow: row; grid-template-columns: 1fr 1fr; grid-template-rows: none; }
+    /* The two counts take two rows when they do not fit side by side. */
+    #rail { flex-wrap: wrap; }
   }
   @media (prefers-reduced-motion: no-preference) {
     .cell.hint::before { animation: ringIn .48s ease-out; }
@@ -265,27 +267,30 @@ async function save() {
 function load() {
   try {
     const v = GG.load('mots-meles');
-    const g = v && M.withLevel(v.G);
+    if (!v) return false;
+    // The grids finished and the themes are kept, even when the grid is broken.
+    if (v.stats && Number.isInteger(v.stats.won) && v.stats.won >= 0) stats = { won: v.stats.won };
+    recent = Array.isArray(v.recent) ? v.recent.filter(t => typeof t === 'string').slice(0, 8) : [];
+    const g = M.withLevel(v.G);
     if (!M.valid(g)) return false;
     G = g; level = G.level;
     // Only a finished grid can be counted as won.
     wonNow = !!v.wonNow && G.result === 'won';
-    if (v.stats && Number.isInteger(v.stats.won) && v.stats.won >= 0) stats = { won: v.stats.won };
-    recent = Array.isArray(v.recent) ? v.recent.filter(t => typeof t === 'string').slice(0, 8) : [];
     return true;
   } catch (e) { return false; }
 }
 
 /* ---------- His clicks ----------
    A click chooses the first letter, a click on another letter ends the word, a click on the same letter
-   cancels it. A drag of more than 16 px from one letter to another also works. A second click on the same
-   letter within half a second is a double-click: it counts as one click. */
-let lastTap = null, press = null, over = -1;
-function tap(i) {
+   cancels it. A drag of more than 16 px from one letter to another also works: it ends on the letter
+   where the button is let go. A second click within half a second on the same letter, or within 24 px,
+   is a double-click: it counts as one click. */
+let lastTap = null, press = null;
+function tap(i, x, y) {
   if (Kit.isOpen() || !G) return;
   const t = performance.now(), prev = lastTap;
-  lastTap = { i, t };
-  if (prev && prev.i === i && t - prev.t < 500) return;
+  lastTap = { i, t, x, y };
+  if (prev && t - prev.t < 500 && (prev.i === i || Math.hypot(x - prev.x, y - prev.y) < 24)) return;
   if (G.result) return Kit.say('Cette grille est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.');
   if (anchor < 0) {
     anchor = i; render();
@@ -295,10 +300,10 @@ function tap(i) {
     anchor = -1; render();
     return Kit.say("Lettre annulée. Cliquez sur la première lettre d'un mot.");
   }
-  pair(anchor, i, false);
+  pair(anchor, i);
 }
 
-async function pair(a, b, dragged) {
+async function pair(a, b) {
   const r = M.check(G, a, b);
   if (r.kind === 'won') return Kit.say('Cette grille est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.');
   if (r.kind === 'found') {
@@ -316,8 +321,7 @@ async function pair(a, b, dragged) {
     if (saved) Kit.say(`Vous avez trouvé ${name(r.w)}.`);
     return;
   }
-  // A refusal keeps the first letter chosen by a click, so he can try another last letter.
-  if (dragged) anchor = -1;
+  // A refusal keeps the first letter chosen, by a click or a drag, so he can try another last letter.
   render();
   showWrong(a, b, r.kind === 'none' || r.kind === 'almost');
   if (r.kind === 'already') Kit.say(`Vous avez déjà trouvé ${name(r.w)} : cherchez un autre mot.`);
@@ -328,26 +332,33 @@ async function pair(a, b, dragged) {
   else Kit.say(`« ${r.text} » n'est pas un mot de la liste : essayez une autre dernière lettre.`);
 }
 
+// The letter under the pointer, or -1 outside the grid.
+const cellOf = e => { const c = e.target instanceof Element && e.target.closest('#grid .cell'); return c ? +c.dataset.i : -1; };
 gridEl().addEventListener('pointerdown', e => {
   const cell = e.target.closest('.cell');
   if (!cell || e.button !== 0) return;
   // A touch keeps the events on the letter it started on: release it, so the letter under the finger is known.
   if (cell.hasPointerCapture && cell.hasPointerCapture(e.pointerId)) cell.releasePointerCapture(e.pointerId);
   press = { i: +cell.dataset.i, x: e.clientX, y: e.clientY, moved: false };
-  over = press.i;
 });
-gridEl().addEventListener('pointerover', e => { const cell = e.target.closest('.cell'); if (press && cell) over = +cell.dataset.i; });
+// A drag starts once the pointer is 16 px away, on another letter: a small move inside a letter stays a click.
 addEventListener('pointermove', e => {
   if (!press || press.moved || Math.hypot(e.clientX - press.x, e.clientY - press.y) < 16) return;
+  const at = cellOf(e);
+  if (at < 0 || at === press.i) return;
   press.moved = true;
   // A drag starts at its first letter, whatever was chosen before.
   if (!Kit.isOpen() && G && !G.result) { anchor = press.i; render(); }
 });
-addEventListener('pointerup', () => {
+addEventListener('pointerup', e => {
   if (!press) return;
-  const p = press; press = null;
-  if (p.moved && over >= 0 && over !== p.i && !Kit.isOpen() && G && !G.result) { lastTap = null; pair(p.i, over, true); }
-  else tap(p.i);
+  const p = press, end = cellOf(e); press = null;
+  if (!p.moved) return tap(p.i, p.x, p.y);
+  lastTap = null;
+  if (Kit.isOpen() || !G || G.result) return;
+  if (end >= 0 && end !== p.i) return pair(p.i, end);
+  // Let go outside the grid or back on the first letter: the first letter stays chosen.
+  Kit.say(`Vous avez choisi le ${G.grid[p.i]}. Cliquez maintenant sur la dernière lettre du mot.`);
 });
 addEventListener('pointercancel', () => { press = null; });
 
@@ -356,11 +367,22 @@ async function undo() {
   if (!G || Kit.isOpen()) return;
   if (G.result) return Kit.say('Cette grille est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.');
   if (!G.found.length) return Kit.say("Aucun mot n'est encore trouvé : il n'y a rien à annuler.");
-  const w = G.found[G.found.length - 1];
+  const w = name(G.found[G.found.length - 1]);
   G = M.undo(G); anchor = -1;
+  const mine = G;
   await save();
+  // A new grid started while the save was on its way: the message is no longer about it.
+  if (G !== mine) return;
   render();
-  if (saved) Kit.say(`Vous avez annulé ${name(w)} : il est de nouveau à chercher.`);
+  if (saved) Kit.say(`Vous avez annulé ${w} : il est de nouveau à chercher.`);
+}
+// A double-click on the button takes back one word, not two.
+let lastUndo = -Infinity;
+function undoClick() {
+  const t = performance.now();
+  if (t - lastUndo < 500) return;
+  lastUndo = t;
+  undo();
 }
 function showHint() {
   if (!G || G.result || Kit.isOpen()) return;
@@ -371,7 +393,7 @@ function showHint() {
 
 function askNewGame() { stopAll(); Kit.chooseLevel(level, playing(), newGame); }
 async function newGame(lv) {
-  stopAll(); lastTap = null;
+  stopAll(); lastTap = null; press = null;
   if (lv) level = lv;
   Kit.showLevel(level);
   G = M.newGame(level, crypto.getRandomValues(new Uint32Array(1))[0], recent);
@@ -393,9 +415,12 @@ function finish(show) {
   const wait = showWin();
   const game = G;
   const open = () => {
-    if (G !== game || stale || Kit.isOpen()) return;
+    if (G !== game || stale) return;
+    // The rules opened during the wave: the win dialog waits until they close.
+    if (Kit.isOpen()) { later(open, 300); return; }
+    // A grid that could not be saved is not counted: the dialog says why, as the message line did.
     Kit.dialog('Bravo, vous avez gagné !',
-      `Vous avez trouvé les ${G.words.length} mots. Grilles finies : ${stats.won}.`,
+      `Vous avez trouvé les ${G.words.length} mots. ` + (saved ? `Grilles finies : ${stats.won}.` : FULL),
       [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', Kit.home]], true);
   };
   if (!wait) return open();
@@ -596,9 +621,10 @@ function render(just, start) {
   $('hintBtn').disabled = !!G.result;
 }
 
-$('undoBtn').onclick = undo;
+$('undoBtn').onclick = undoClick;
 $('hintBtn').onclick = showHint;
-$('helpBtn').onclick = () => { stopAll(); Kit.openHelp(); };
+// The rules during the win wave let it end, so the win dialog still comes once they close.
+$('helpBtn').onclick = () => { if (!pendingWin) stopAll(); Kit.openHelp(); };
 $('newBtn').onclick = askNewGame;
 addEventListener('keydown', e => {
   if (e.key === 'Escape') {
