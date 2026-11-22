@@ -62,7 +62,7 @@ const lay = await g(() => {
     apart: (() => { const a = document.getElementById('seat1').getBoundingClientRect(), b = document.getElementById('seat3').getBoundingClientRect(), s = document.getElementById('side').getBoundingClientRect();
       return a.right <= L.cx - L.w * 1.62 && b.left >= L.cx + L.w * 1.62 && b.right <= s.left; })() };
 });
-ok(lay.w >= 110, `cards are ${lay.w} px wide at 1366x680`);
+ok(lay.w >= 102, `cards are ${lay.w} px wide at 1366x680`);
 ok(lay.n === 13 && lay.corners, 'the rank and suit of all 13 cards are in view');
 ok(lay.seats && lay.apart, 'the three players and the scores fit, clear of the trick');
 

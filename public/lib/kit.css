@@ -5,15 +5,19 @@
   /* Each game has its own felt: a game page may set these three. */
   --felt-top: #1A6A5F; --felt: #0F4F47; --shade: 6,28,25;
   --face: #FFFDF6; --ink: #14171A; --red: #C4122F; --back: #1F4470;
-  --ui: "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --ui: "Atkinson Hyperlegible Next", "Segoe UI", system-ui, sans-serif;
+  --title: "Fraunces", Georgia, serif;
 }
+/* The fonts, kept on the site so they work offline. Atkinson Hyperlegible Next was drawn for readers
+   with low vision: letters that look alike (I l 1, O 0) differ. Fraunces, a soft serif, is for the titles. */
+@font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 400 800; font-display: swap; src: url("../fonts/atkinson-next.woff2") format("woff2"); }
+@font-face { font-family: "Fraunces"; font-weight: 600 700; font-display: swap; src: url("../fonts/fraunces.woff2") format("woff2"); }
 * { box-sizing: border-box; }
 /* Read by a screen reader, not shown. */
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 html, body { margin: 0; height: 100%; }
 body {
-  display: grid; grid-template-rows: auto auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); /* never wider than the window */
-  padding-bottom: clamp(8px, 8vh - 40px, 40px); box-sizing: border-box; /* 40px on a tall window, less on a laptop so the cards stay large */
+  display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); /* never wider than the window */
   background: radial-gradient(120% 100% at 50% 0%, var(--felt-top), var(--felt) 70%) var(--felt); color: #fff;
   font-family: var(--ui);
   overflow: hidden; user-select: none; -webkit-user-select: none; touch-action: none;
@@ -27,7 +31,7 @@ body {
 #home:hover { background: #3A4542; }
 #home:focus-visible { outline: 4px solid #1B2422; outline-offset: 3px; }
 #home svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-#title { display: flex; align-items: center; gap: 10px; font: 700 28px var(--ui); letter-spacing: -.01em;
+#title { display: flex; align-items: center; gap: 10px; font: 700 28px var(--title); letter-spacing: -.01em;
   margin-right: 10px; padding-left: 16px; border-left: 2px solid #D5DCD9; }
 /* Groups in the bar: going back, playing, the game. A spacer pushes the game buttons to the right. */
 #bar .spacer { flex: 1; }
@@ -39,8 +43,6 @@ body {
 #bar.fit-tiny { gap: 8px; } #bar.fit-tiny .long, #bar.fit-tiny .short { display: none; } #bar.fit-tiny .tiny { display: inline; }
 #bar.fit-tiny #title { margin-right: 4px; padding-left: 12px; }
 #bar.fit-bare #title { display: none; }
-/* A page 1340 px wide or less (lib/zoom.js sets the class): the win count goes. */
-html.narrow #wins { display: none !important; }
 #title svg { width: 28px; height: 28px; fill: var(--accent); }
 button {
   min-height: 54px; padding: 6px 20px; border-radius: 15px; cursor: pointer; /* padding + 2px border = the old 8px 22px */
@@ -61,7 +63,7 @@ button.primary:hover { background: #FFD666; }
 button.primary:active { background: #F2BB2E; }
 /* A yellow button with nothing to do yet looks idle too, so yellow always means "press me". */
 button.primary:disabled, button.primary:disabled:hover { background: transparent; color: #8C9692; border: 2px dashed #C9D1CE; box-shadow: none; transform: none; }
-/* Win count: a chip at the right of the message line. */
+/* Win count: a chip at the left of the bottom bar. */
 #wins { flex: none; height: 46px; padding: 0 18px; display: flex; align-items: center; gap: 10px;
   background: #fff; color: var(--text); font: 600 21px var(--ui); white-space: nowrap;
   border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,.25); }
@@ -93,13 +95,11 @@ button.game { --accent: #0B6B5D; background: var(--accent); color: #fff; --edge:
 button.game:hover { background: #0E7D6D; }
 button.game:active { background: #095A4E; }
 
-/* Message line: under the top bar, where his eyes already are, in the middle of the row. The win count
-   (and the flags in the Démineur) are on its left, the size buttons on its right. Dark bold text on a
-   warm cream band with a gold edge. A new text flashes once (see Kit.say). */
-#say { display: flex; align-items: center; gap: 10px; padding: 4px clamp(10px, 1.4vw, 18px); margin-bottom: clamp(8px, 8vh - 40px, 40px); }
-#say .zoom { flex: none; }
+/* Message line: under the top bar, where his eyes already are, centred with room above and under it.
+   Dark bold text on a warm cream band with a gold edge. A new text flashes once (see Kit.say). */
+#say { display: flex; justify-content: center; padding: clamp(16px, 4vh - 8px, 32px) clamp(10px, 1.4vw, 18px) clamp(12px, 8vh - 40px, 40px); }
 #msg {
-  flex: 0 1 auto; min-width: 0; height: 52px; margin-inline: auto; padding: 2px 24px 2px 16px; box-sizing: border-box;
+  flex: 0 1 auto; min-width: 0; height: 52px; padding: 2px 24px 2px 16px; box-sizing: border-box;
   display: flex; align-items: center; gap: 12px;
   background: #FFF4D6; color: var(--text); font: 700 23px/1.2 var(--ui);
   border: 2px solid #E9C46A; border-radius: 16px; box-shadow: 0 4px 14px rgba(0,0,0,.3);
@@ -112,19 +112,28 @@ button.game:active { background: #095A4E; }
 #msg.flash { animation: flash 1s; }
 @keyframes flash { 25% { background: #FFD666; } }
 @media (prefers-reduced-motion: reduce) { #msg.flash { animation: none; } }
-/* A short page (lib/zoom.js sets the class): the band and the gaps close up, so the board keeps its size. */
-html.short #say { padding-block: 4px; margin-bottom: 8px; }
-html.short body { padding-bottom: 8px; }
-/* A narrow page (a tablet, a phone): the message stays under the top bar, and the counts and the size
-   buttons go under the board, so the message has the whole width. */
-@media (max-width: 900px) {
-  body { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto minmax(0, 1fr) auto; }
-  #bar, #table { grid-column: 1 / -1; }
-  #say { display: contents; }
-  #msg { grid-row: 2; grid-column: 1 / -1; max-width: calc(100% - 20px); margin: 8px auto; }
-  #flags, #wins { grid-row: 4; grid-column: 1; justify-self: start; margin: 10px 0 0 10px; }
-  #say .zoom { grid-row: 4; grid-column: 2; margin: 10px 10px 0 0; }
+/* Bottom bar, always at the foot of the window: who made the games and the counts on the left, the size
+   buttons on the right. Kit adds the credit. */
+#rail { grid-row: 4; /* its own row, also while the table is hidden */ display: flex; align-items: center; gap: 10px; padding: 5px clamp(10px, 1.4vw, 18px); margin-top: clamp(0px, 4vh - 28px, 24px);
+  background: rgba(0,0,0,.18); border-top: 1px solid rgba(255,255,255,.08); }
+#rail .zoom { margin-left: auto; }
+.credit { flex: none; min-height: 46px; padding: 4px 20px 4px 4px; display: inline-flex; align-items: center; gap: 12px; border-radius: 999px;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.2); color: rgba(255,255,255,.78);
+  font: 500 20px var(--ui); text-decoration: none; white-space: nowrap; transition: background-color .12s; }
+.credit b { color: #fff; font-weight: 700; }
+.credit img { width: 38px; height: 38px; flex: none; border-radius: 50%; box-shadow: 0 0 0 2px var(--gold, #FFC83D); }
+.credit:hover { background: rgba(255,255,255,.16); }
+.credit:focus-visible { outline: 4px solid #fff; outline-offset: 3px; }
+/* A page 1340 px wide or less (lib/zoom.js sets the class): the counts and the size buttons need the room. */
+html.narrow .credit { display: none; }
+/* A phone has no size buttons and no credit: the bar goes when it has no count to show. */
+@media (max-width: 699px) {
+  .credit { display: none; }
+  #rail:not(:has(> :not(:empty, .zoom, .credit))) { display: none; }
 }
+/* A short page (lib/zoom.js sets the class): the gaps close up, so the board keeps its size. */
+html.short #say { padding-block: 8px; }
+html.short #rail { margin-top: 0; }
 #msg::before { content: ""; flex: none; width: 28px; height: 28px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230B6B5D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 12a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.2-4.6A8.5 8.5 0 1 1 21 12z'/%3E%3C/svg%3E") center / contain no-repeat; }
 
 /* Rules guide */

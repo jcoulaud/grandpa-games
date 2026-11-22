@@ -19,12 +19,19 @@ mkdirSync(OUT, { recursive: true });
 // size checked here is the size on his PC.
 const selawik = w => readFileSync(join(here, "fonts", `selawik-${w}.woff2`)).toString('base64');
 export const SEGOE = { 400: selawik(400), 600: selawik(600), 700: selawik(700) };
-// Runs in the page before its own scripts.
-export function useFont(faces) {
+// Runs in the page before its own scripts. The site draws its text in its own fonts (lib/kit.css); the
+// cards still use Segoe UI. With everywhere: true, the font also replaces the site's fonts.
+export function useFont({ everywhere = false, ...faces }) {
   const names = ['Segoe UI Variable Display', 'Segoe UI Variable Text', 'Segoe UI'];
   for (const [weight, b64] of Object.entries(faces)) {
     const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
     for (const name of names) document.fonts.add(new FontFace(name, bytes, { weight }));
+  }
+  if (everywhere) {
+    const style = document.createElement('style');
+    style.textContent = ':root { --ui: "Segoe UI" !important; --title: "Segoe UI" !important; }';
+    const add = () => document.documentElement.append(style);
+    if (document.documentElement) add(); else document.addEventListener('readystatechange', add, { once: true });
   }
 }
 

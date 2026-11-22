@@ -25,17 +25,18 @@
 <div id="bar">
   <div id="title"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="4" fill="#6AAE45"/><path d="M9 18V5.5l8 3.5-8 3.5" fill="#C4122F" stroke="#7A0D0B" stroke-width="1" stroke-linejoin="round"/><path d="M9 18V5" stroke="#2A1A0B" stroke-width="1.6" stroke-linecap="round"/><path d="M6 18.5h6" stroke="#2A1A0B" stroke-width="1.6" stroke-linecap="round"/></svg>Démineur</div>
   <button id="undoBtn" data-icon="undo" title="Reprend votre dernier coup"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span><span class="tiny">Annuler</span></button>
-  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre une case sûre et explique pourquoi"><span class="long">Montrer un bon coup</span><span class="short">Un bon coup</span><span class="tiny">Idée</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre une case sûre et explique pourquoi"><span class="long">Que jouer maintenant ?</span><span class="short">Que jouer ?</span><span class="tiny">Idée</span></button>
   <button id="flagBtn" aria-pressed="false" title="Le prochain clic pose un drapeau, ou le retire"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 20V4.5l11 4.5-11 4.5"/><path d="M7 21V4M4 21h7"/></svg><span class="long">Poser un drapeau</span><span class="short">Drapeau</span><span class="tiny">Drapeau</span></button>
   <span class="spacer"></span>
   <button id="helpBtn" data-icon="help">Règles</button>
   <button id="newBtn" class="game">Nouvelle partie</button>
 </div>
-<div id="say"><div id="flags"></div><div id="wins"></div><div id="msg" aria-live="polite"></div><div class="zoom"></div></div>
+<div id="say"><div id="msg" aria-live="polite"></div></div>
 <div id="table">
   <div id="frame"></div>
   <div id="board" role="grid" aria-label="Terrain"></div>
 </div>
+<footer id="rail"><div id="flags"></div><div id="wins"></div><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
   <section class="page">
     <h3>Le but</h3>
@@ -64,7 +65,7 @@
   </section>
   <section class="page">
     <h3>Les boutons</h3>
-    <p>« Montrer un bon coup » encadre une case sûre, ou une mine, et dit pourquoi.</p>
+    <p>« Que jouer maintenant ? » encadre une case sûre, ou une mine, et dit pourquoi.</p>
     <p>Si une mine saute, « Annuler le dernier coup » reprend la partie juste avant. « Nouvelle partie » vous permet de choisir le niveau. La partie est enregistrée à chaque coup.</p>
   </section>
 </div>

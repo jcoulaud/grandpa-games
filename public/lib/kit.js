@@ -6,11 +6,12 @@
 //     <span class="spacer"></span>
 //     <button id="newBtn" class="game">Nouvelle partie</button>
 //   </div>
-//   <div id="say"><div id="wins"></div><div id="msg" aria-live="polite"></div><div class="zoom"></div></div>
+//   <div id="say"><div id="msg" aria-live="polite"></div></div>
 //   <div id="table"></div>
+//   <footer id="rail"><div id="wins"></div><div class="zoom"></div></footer>
 //   <div id="help" data-title="Comment jouer"><section class="page">…</section>…</div>
 //
-// This file adds the "Jeux" button that goes back to the library, the button icons, the frame and
+// This file adds the "Jeux" button that goes back to the library, the credit in the bottom bar, the button icons, the frame and
 // the page buttons of the rules guide, and the dialog. The game then calls:
 //
 //   Kit.say(text)                           the message line
@@ -43,6 +44,8 @@
     const home = location.protocol === 'file:' ? libRoot + 'index.html' : libRoot;
     bar.insertAdjacentHTML('afterbegin', `<a id="home" href="${home}" aria-label="Retour aux jeux">${icon('back')}Jeux</a>`);
   }
+  if ($('rail') && !$('rail').querySelector('.credit'))
+    $('rail').insertAdjacentHTML('afterbegin', `<a class="credit" href="https://x.com/JulienCoulaud" target="_blank" rel="noopener"><img src="${libRoot}icons/julien.webp" width="38" height="38" alt=""><span>Fait par <b>Julien Coulaud</b></span></a>`);
   document.querySelectorAll('button[data-icon]').forEach(b => b.insertAdjacentHTML('afterbegin', icon(b.dataset.icon)));
 
   // Each label stays on one line: the bar takes the long labels if they fit, else the short ones, else one

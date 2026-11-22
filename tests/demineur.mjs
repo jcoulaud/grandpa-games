@@ -154,7 +154,7 @@ for (const [level, w, h, n] of [['moyen', 14, 10, 22], ['fort', 20, 10, 36]]) {
   await start(level);
   ok(await g(() => [G.w, G.h, G.mines].join()) === [w, h, n].join(), `${level}: ${w} by ${h} with ${n} mines`);
   const S = await g(() => S);
-  ok(S >= 42, `${level}: squares are ${S} px at 1366x680`);
+  ok(S >= 40, `${level}: squares are ${S} px at 1366x680`);
 }
 await page.screenshot({ path: `${OUT}/demineur-fort.png` });
 await page.setViewportSize({ width: 1093, height: 530 });

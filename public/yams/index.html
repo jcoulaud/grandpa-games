@@ -218,12 +218,12 @@
 <div id="bar">
   <div id="title"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="4.5" fill="#FFFDF6" stroke="#6A2A12" stroke-width="1.6"/><g fill="#1B1B1B"><circle cx="7.6" cy="7.6" r="1.8"/><circle cx="16.4" cy="7.6" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="7.6" cy="16.4" r="1.8"/><circle cx="16.4" cy="16.4" r="1.8"/></g></svg>Yams</div>
   <button id="undoBtn" data-icon="undo" title="Reprend la dernière case que vous avez remplie"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span><span class="tiny">Annuler</span></button>
-  <button id="hintBtn" class="primary" data-icon="bulb" title="Dit quels dés garder, ou dans quelle case marquer"><span class="long">Montrer un bon coup</span><span class="short">Un bon coup</span><span class="tiny">Idée</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Dit quels dés garder, ou dans quelle case marquer"><span class="long">Que jouer maintenant ?</span><span class="short">Que jouer ?</span><span class="tiny">Idée</span></button>
   <span class="spacer"></span>
   <button id="helpBtn" data-icon="help">Règles</button>
   <button id="newBtn" class="game">Nouvelle partie</button>
 </div>
-<div id="say"><div id="wins"></div><div id="msg" aria-live="polite"></div><div class="zoom"></div></div>
+<div id="say"><div id="msg" aria-live="polite"></div></div>
 <div id="table">
   <div id="tray">
     <div class="seat" id="seat1"></div>
@@ -239,6 +239,7 @@
     <div id="halves"><table id="top"></table><table id="bottom"></table></div>
   </div>
 </div>
+<footer id="rail"><div id="wins"></div><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
   <section class="page">
     <h3>Le but</h3>
@@ -271,7 +272,7 @@
     <h3>Barrer une case</h3>
     <p>Si vos dés ne vont dans aucune case, ou s'ils y marquent trop peu, vous pouvez barrer une case où ils ne marquent rien : elle marque 0 point, et vous gardez les autres cases pour plus tard. Ces cases disent « barrer ».</p>
     <h3>Les boutons</h3>
-    <p>« Montrer un bon coup » encadre les dés à garder, ou la meilleure case. « Annuler le dernier coup » reprend la dernière case remplie. « Nouvelle partie » vous laisse choisir la force de l'ordinateur. La partie est enregistrée à chaque coup.</p>
+    <p>« Que jouer maintenant ? » encadre les dés à garder, ou la meilleure case. « Annuler le dernier coup » reprend la dernière case remplie. « Nouvelle partie » vous laisse choisir la force de l'ordinateur. La partie est enregistrée à chaque coup.</p>
   </section>
 </div>
 
