@@ -111,6 +111,8 @@ ok(avg.facile < avg.moyen && avg.moyen < avg.fort, 'each level takes more turns 
   ok(!P.valid(null) && !P.valid({}), 'an empty save is refused');
   ok(!P.valid({ ...P.newGame('facile', 3), seen: '1'.repeat(12) }), 'cards seen without a turn are refused');
   const { level, cols, rows, ...bare } = G;
+  ok(!P.valid(P.withLevel({ ...G, level: 'expert' })), 'a save with an unknown level is still refused');
+  ok(!P.valid({ ...P.newGame('facile', 3), turns: 1 }), 'a turn without a card seen is refused');
   ok(P.valid(P.withLevel(bare)) && P.withLevel(bare).level === 'facile', 'a save without its level takes the level of its cards');
 }
 

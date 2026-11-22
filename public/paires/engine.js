@@ -100,7 +100,7 @@
 
   // A save without its level takes the level of its number of cards.
   function withLevel(G) {
-    if (!G || typeof G !== 'object' || LEVELS[G.level] || !Array.isArray(G.cards)) return G;
+    if (!G || typeof G !== 'object' || G.level !== undefined || !Array.isArray(G.cards)) return G;
     const key = Object.keys(LEVELS).find(k => LEVELS[k].cols * LEVELS[k].rows === G.cards.length);
     return key ? { ...G, level: key, cols: LEVELS[key].cols, rows: LEVELS[key].rows } : G;
   }
@@ -125,7 +125,7 @@
     if (!Number.isInteger(G.turns) || G.turns < pairs(G)) return false;
     // Each turn shows two cards, and the card up one more: no more cards can have been seen.
     const seen = [...G.seen].filter(x => x === '1').length;
-    if (seen > 2 * G.turns + (G.up >= 0 ? 1 : 0)) return false;
+    if (seen > 2 * G.turns + (G.up >= 0 ? 1 : 0) || (G.turns > 0 && seen < 2)) return false;
     return G.result === (pairs(G) === total(G) ? 'won' : '');
   }
 
