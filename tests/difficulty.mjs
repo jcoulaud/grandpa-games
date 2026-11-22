@@ -4,7 +4,7 @@ import { gameUrl, launch } from './harness.mjs';
 
 const browser = await launch();
 try {
-  for (const game of ['solitaire', 'freecell', 'dames', 'dame-de-pique', 'demineur', 'yams', 'bataille-navale', 'paires']) {
+  for (const game of ['solitaire', 'freecell', 'dames', 'dame-de-pique', 'demineur', 'yams', 'bataille-navale', 'paires', 'sudoku']) {
     const page = await browser.newPage({ reducedMotion: 'reduce' });
     await page.goto(gameUrl(game));
     assert.equal(await page.evaluate(id => GG.load(id), game), null);
@@ -22,8 +22,10 @@ try {
       if (first) assert.equal(await page.locator('#overBtns button.primary').textContent(), 'Facile');
       if (texts[0] === back) assert.equal(await page.locator('#overBtns button.primary').textContent(), back);
       const choice = choices.getByText(label, { exact: true });
-      if (game === 'dames' || game === 'dame-de-pique' || game === 'demineur' || game === 'yams' || game === 'bataille-navale' || game === 'paires') {
+      if (game === 'dames' || game === 'dame-de-pique' || game === 'demineur' || game === 'yams' || game === 'bataille-navale' || game === 'paires' || game === 'sudoku') {
         await choice.click();
+        // The sudoku makes its grid in a worker: the save comes after it.
+        if (game === 'sudoku') await page.waitForFunction(() => G && !making);
       } else {
         // Inspect the chosen deal in the click handler's turn, before automatic moves.
         const valid = await choice.evaluate(button => {

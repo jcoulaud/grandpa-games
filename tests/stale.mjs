@@ -7,12 +7,14 @@ const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++
 // Each window records what it would send to the statistics.
 const spy = page => page.evaluate(() => { window.sent = []; GG.track = (game, kind) => sent.push(kind); });
 
-for (const game of ['solitaire', 'freecell', 'dames', 'dame-de-pique', 'demineur', 'yams', 'bataille-navale', 'paires']) {
+for (const game of ['solitaire', 'freecell', 'dames', 'dame-de-pique', 'demineur', 'yams', 'bataille-navale', 'paires', 'sudoku']) {
   const ctx = await browser.newContext({ reducedMotion: 'reduce' });
   const a = await ctx.newPage(), b = await ctx.newPage();
   await a.goto(gameUrl(game));
   await a.click('#helpClose');
   await a.getByRole('button', { name: 'Facile', exact: true }).click();
+  // The sudoku makes its grid in a worker and saves it after: b must open after that save.
+  if (game === 'sudoku') await a.waitForFunction(() => G && !making);
   await b.goto(gameUrl(game));
   await b.evaluate(() => newGame('facile'));
   await spy(a);
@@ -37,6 +39,37 @@ for (const game of ['solitaire', 'freecell', 'dames', 'dame-de-pique', 'demineur
     });
     ok(!won.saved && !won.counted && !won.flag && !won.sent, `${game}: a stale window does not count a win`);
   }
+  await ctx.close();
+}
+
+// The sudoku opens its win sheet once the winning move is saved. A window that does not know yet that it
+// is behind shows no win, counts none, and asks to reload.
+{
+  const ctx = await browser.newContext({ reducedMotion: 'reduce' });
+  const a = await ctx.newPage(), b = await ctx.newPage();
+  await a.goto(gameUrl('sudoku'));
+  await a.click('#helpClose');
+  await a.getByRole('button', { name: 'Facile', exact: true }).click();
+  await a.waitForFunction(() => G && !making);
+  const first = await a.evaluate(async () => {
+    let g = G;
+    const first = [...g.givens].indexOf('0');
+    for (let k = first + 1; k < 81; k++) if (g.givens[k] === '0') g = Sudoku.write(g, k, +g.solution[k]).G;
+    G = g; render();
+    await save();
+    return first;
+  });
+  await b.goto(gameUrl('sudoku'));
+  await b.evaluate(() => newGame('facile'));
+  await spy(a);
+  const r = await a.evaluate(async i => {
+    sel = i; lastTap = null;
+    await digit(+G.solution[i]);
+    return { result: G.result, won: stats.won, wins: document.getElementById('wins').textContent, sent: sent.includes('won'),
+      title: document.getElementById('overTitle').textContent };
+  }, first);
+  ok(r.result === 'won' && !r.won && !r.wins && !r.sent, 'sudoku: a stale window does not count a win');
+  ok(r.title === 'Le jeu a changé ailleurs', `sudoku: after a win in a stale window, it asks to reload (${r.title})`);
   await ctx.close();
 }
 
