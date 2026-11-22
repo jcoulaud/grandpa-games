@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#A63A50"/>
+  <rect x="9" y="9" width="46" height="46" rx="4" fill="#FBF6EA"/>
+  <g fill="#211A17" font-family="Segoe UI, Arial, sans-serif" font-weight="700" font-size="13" text-anchor="middle">
+    <text x="19" y="26">M</text><text x="32" y="26">O</text><text x="45" y="26">T</text>
+    <text x="19" y="47">E</text><text x="32" y="47">S</text><text x="45" y="47">L</text>
+  </g>
+  <rect x="11" y="13" width="42" height="17" rx="8.5" fill="none" stroke="#D9435E" stroke-width="3"/>
+</svg>
