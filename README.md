@@ -108,6 +108,7 @@ When a game changes its save format, it must still read the old format. His save
   - `engine.js` holds the rules, the deal and the hint. It has no DOM, so the page and the tests run the same code.
   - Facile has 6 pairs, Moyen 10 and Difficile 15. The 15 pictures of the farm and the garden are in `img/`, made with gpt-image-2 and saved as 384 px WebP. Facile and Moyen take theirs at random among the 15.
   - The cards have a red vichy back. One click turns a card. Two cards alike stay up with a green tick. Two cards that differ stay up in a red frame for 2.6 s, or until his next click, then turn back.
+  - A card turns up in 0.52 s with a small lift, and the message line names it once its picture is readable. Two cards that differ tilt once, then turn back in 0.7 s. A pair lifts together and its ticks come in. A new game settles the cards into place, and the last pair sends a wave across the columns before the win sheet. With reduced motion, only the frames, ticks and messages change.
   - The grid takes the number of columns that gives the largest cards: 10 by 3 for Difficile on his laptop, 5 by 6 on a phone.
   - "Aide" uses only the cards he has seen: the twin of the card up, two cards seen that make a pair, or else a card never turned. Following it always wins.
   - The win says the number of turns and his best score at that level. A save read back is checked whole, and a broken save starts a new game.

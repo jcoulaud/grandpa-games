@@ -215,6 +215,8 @@ function load() {
 /* ---------- His cards ---------- */
 // The message line names a card once its picture is readable. A newer message replaces one still waiting.
 let lineTimer = 0, missTimer = 0;
+// When each card last started to turn up, so a card of a miss is named as soon as its picture is readable.
+const turnedAt = {};
 function say(text) { clearTimeout(lineTimer); Kit.say(text); }
 function sayAfter(text, ms) {
   clearTimeout(lineTimer);
@@ -226,8 +228,16 @@ const left = () => P.total(G) - P.pairs(G);
 
 function later(fn, ms) { const t = setTimeout(() => { timers = timers.filter(x => x !== t); fn(); }, ms); timers.push(t); return t; }
 function hideShown() { clearTimeout(missTimer); shown = null; }
-// A dialog stops the timers of the table. A message still waiting is kept: it is for the game on the table.
-function stopAll() { timers.forEach(clearTimeout); timers = []; hideShown(); }
+// A miss ended by a click beside the cards or by a dialog, before its pictures could be read, says so.
+function endMiss() {
+  if (!shown) return;
+  const early = performance.now() - shown.at < motion(UP_MS);
+  hideShown(); lastTap = null; render();
+  if (early && saved && !stale) say("Ce n'est pas une paire : les cartes sont retournées.");
+}
+// A dialog stops the timers of the table and ends the lift of a pair. A message still waiting is kept:
+// it is for the game on the table.
+function stopAll() { timers.forEach(clearTimeout); timers = []; just = null; endMiss(); }
 
 // The deal settles the cards from the top left corner outwards; the win runs a wave across the columns.
 function boardEffect(kind) {
@@ -254,7 +264,7 @@ function tap(i) {
   lastTap = { i, t };
   if (prev && prev.i === i && t - prev.t < 500) return;
   // A card of a miss whose picture is already readable stays up: it does not turn again, and is named at once.
-  const since = shown && (shown.a === i || shown.b === i) ? performance.now() - shown.at : -1;
+  const since = shown && (shown.a === i || shown.b === i) ? performance.now() - (turnedAt[i] || 0) : -1;
   hideShown();
   if (gridEl.dataset.board === 'deal') delete gridEl.dataset.board;
   const why = P.refusal(G, i);
@@ -262,7 +272,7 @@ function tap(i) {
   if (why === 'found') { shake(i); render(); return say(`Cette paire de ${pic(i).many} est déjà trouvée : choisissez une carte à l'envers.`); }
   if (why === 'up') { shake(i); render(); return say('Cette carte est déjà retournée : choisissez une deuxième carte.'); }
   const visible = cards[i].classList.contains('up');
-  if (!visible) cards[i].dataset.lift = '';
+  if (!visible) { cards[i].dataset.lift = ''; turnedAt[i] = performance.now(); }
   const r = P.flip(G, i);
   G = r.G; hint = null;
   const firstWin = G.result === 'won' && !wonNow;
@@ -326,7 +336,7 @@ function showHint() {
 
 function askNewGame() { stopAll(); render(); Kit.chooseLevel(level, playing(), newGame); }
 function newGame(lv) {
-  stopAll(); clearTimeout(lineTimer); lastTap = null; just = null;
+  stopAll(); clearTimeout(lineTimer); lastTap = null;
   if (lv) level = lv;
   Kit.showLevel(level);
   G = P.newGame(level, crypto.getRandomValues(new Uint32Array(1))[0]);
@@ -401,12 +411,7 @@ function shake(i) {
 $('hintBtn').onclick = showHint;
 $('helpBtn').onclick = () => { stopAll(); render(); Kit.openHelp(); };
 // A miss turns back at his next click, wherever it is.
-addEventListener('pointerdown', e => {
-  if (!shown || (e.target.closest && e.target.closest('.card'))) return;
-  const early = performance.now() - shown.at < motion(UP_MS);
-  hideShown(); render();
-  if (early && saved && !stale) say("Ce n'est pas une paire : les cartes sont retournées.");
-}, true);
+addEventListener('pointerdown', e => { if (shown && !(e.target.closest && e.target.closest('.card'))) endMiss(); }, true);
 $('newBtn').onclick = askNewGame;
 addEventListener('keydown', e => { if (e.key === 'Escape') Kit.escape(); });
 addEventListener('resize', render);
