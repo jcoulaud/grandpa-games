@@ -54,7 +54,7 @@
   </section>
   <section class="page">
     <h3>Le niveau Facile</h3>
-    <p>Au niveau Facile, le jeu vous guide. Une coche verte montre une case sûre : cliquez dessus pour l'ouvrir. Un drapeau pâle montre une mine : cliquez dessus pour y poser le drapeau.</p>
+    <p>Au niveau Facile, le jeu vous guide. Une coche verte montre une case sûre : cliquez dessus pour l'ouvrir. Un point d'exclamation rouge montre une mine : cliquez dessus pour y poser un drapeau.</p>
     <p>Le chiffre qui explique le coup est entouré en jaune, et la ligne du haut dit pourquoi. Une case sans marque peut cacher une mine : le jeu ne l'ouvre pas.</p>
   </section>
   <section class="page">
@@ -81,6 +81,8 @@ const $ = id => document.getElementById(id);
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const FLAG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 19V4.5l10 4.2-10 4.2" fill="#C4122F" stroke="#7A0D0B" stroke-width="1.2" stroke-linejoin="round"/><path d="M8 20V4" stroke="#2A1A0B" stroke-width="2" stroke-linecap="round"/><path d="M4.5 20.5h7" stroke="#2A1A0B" stroke-width="2" stroke-linecap="round"/></svg>';
 const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="#FFF8E6" stroke="#2A4A15" stroke-width="1.2"/><path d="M7.8 12.4l2.9 2.9 5.6-6.1" fill="none" stroke="#1C7128" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+// Facile marks what the numbers prove: a check on a safe square, a red "!" on a mine.
+const DANGER = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="#C4122F" stroke="#7A0D0B" stroke-width="1.2"/><path d="M12 7.2v6" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/><circle cx="12" cy="16.6" r="1.6" fill="#fff"/></svg>';
 const MINE = '<svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#141211" stroke-width="2.2" stroke-linecap="round"><path d="M12 2.5v19M2.5 12h19M5.3 5.3l13.4 13.4M18.7 5.3 5.3 18.7"/></g><circle cx="12" cy="12" r="6.6" fill="#141211"/><circle cx="9.7" cy="9.7" r="1.9" fill="#fff"/></svg>';
 
 /* ---------- State ----------
@@ -180,7 +182,7 @@ function tap(i, how) {
       if (!flagsLeft()) return refuse(i, `Vous avez posé ${G.mines} drapeaux, autant que de mines : retirez-en un d'abord.`);
       return play(D.flag(G, i), 'Drapeau posé.');
     }
-    if (!s.safe.includes(i)) return refuse(i, "Cette case n'est pas sûre : elle peut cacher une mine. Cliquez sur une case cochée ou sur un drapeau pâle.");
+    if (!s.safe.includes(i)) return refuse(i, "Cette case n'est pas sûre : elle peut cacher une mine. Cliquez sur une case cochée ou sur un point d'exclamation rouge.");
   }
   const first = G.first < 0;
   const next = D.open(G, i);

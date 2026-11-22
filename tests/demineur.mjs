@@ -164,12 +164,12 @@ ok(small >= 26 && await g(() => { const f = document.getElementById('frame').get
   `Difficile fits a 1093 by 530 window, with squares of ${small} px`);
 
 // 12. Facile guides him: the marks are right, the reason comes after each move, a guess is refused,
-// a click on a pale flag puts the flag, and clicking only the marks wins.
+// a click on a red "!" puts a flag, and clicking only the marks wins.
 await start('facile');
 await g(() => { G = Demineur.newGame('facile', 4242); save(); render(); });
 ok(await page.locator('.c').count() === 81, 'Facile has 9 by 9 squares');
 await click(40);
-const marks = () => g(() => ({ safe: [...document.querySelectorAll('.c.safe')].map(e => +e.dataset.i), mine: [...document.querySelectorAll('.c.ghost')].map(e => +e.dataset.i) }));
+const marks = () => g(() => ({ safe: [...document.querySelectorAll('.c.safe')].map(e => +e.dataset.i), mine: [...document.querySelectorAll('.c.danger')].map(e => +e.dataset.i) }));
 let m = await marks();
 ok(m.safe.length + m.mine.length > 0 && /^Bien joué ! /.test(await msg()), `the first click marks ${m.safe.length} safe squares and ${m.mine.length} mines, and gives the reason: ${await msg()}`);
 ok(await page.locator('.c.ring').count() > 0, 'the number behind the reason has a yellow ring');
@@ -181,9 +181,9 @@ let wrongMark = 0, clicks = 0;
 for (; clicks < 120 && await g(() => !G.result); clicks++) {
   m = await marks();
   if (await g(s => s.safe.some(i => Demineur.isMine(G, i)) || s.mine.some(i => !Demineur.isMine(G, i)), m)) wrongMark++;
-  const ghost = m.mine[0];
-  await click(ghost >= 0 ? ghost : m.safe[0]);
-  if (ghost >= 0 && (await cells())[ghost] !== 'f') wrongMark++;
+  const danger = m.mine[0];
+  await click(danger >= 0 ? danger : m.safe[0]);
+  if (danger >= 0 && (await cells())[danger] !== 'f') wrongMark++;
 }
 await wait(800);
 ok(!wrongMark && await g(() => G.result === 'won'), `left clicks on the marks alone win, in ${clicks} clicks, with no wrong mark`);

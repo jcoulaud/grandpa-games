@@ -41,7 +41,7 @@ function render() {
   build(); layout();
   const framed = new Set(hint ? hint.cells : []), ringed = new Set(hint && hint.ring ? hint.ring : []);
   const marks = guided() ? D.sure(G) : { safe: [], mine: [] };
-  const safe = new Set(marks.safe), ghost = new Set(marks.mine);
+  const safe = new Set(marks.safe), danger = new Set(marks.mine);
   for (let i = 0; i < squares.length; i++) {
     const e = squares[i], c = G.cells[i];
     const n = c === 'o' ? D.number(G, i) : 0;
@@ -49,13 +49,13 @@ function render() {
     let cls = 'c' + (c === 'o' ? ' o' : '') + (n ? ' n n' + n : '') + (boom ? ' boom' : '');
     if (framed.has(i)) cls += ' hint';
     if (ringed.has(i)) cls += ' ring';
-    const marked = c === '.' && (safe.has(i) ? 'safe' : ghost.has(i) ? 'ghost' : '');
+    const marked = c === '.' && (safe.has(i) ? 'safe' : danger.has(i) ? 'danger' : '');
     if (marked) cls += ' ' + marked;
-    const html = boom ? MINE : c === 'f' ? FLAG : marked === 'safe' ? CHECK : marked === 'ghost' ? FLAG : n ? String(n) : '';
+    const html = boom ? MINE : c === 'f' ? FLAG : marked === 'safe' ? CHECK : marked === 'danger' ? DANGER : n ? String(n) : '';
     if (e.className.replace(' shake', '') !== cls) e.className = cls;
     if (e.dataset.html !== html) { e.innerHTML = html; e.dataset.html = html; }
     const r = Math.floor(i / G.w) + 1, k = i % G.w + 1;
-    e.setAttribute('aria-label', `Ligne ${r}, colonne ${k} : ${boom ? 'mine' : c === 'f' ? 'drapeau' : c === 'o' ? (n ? n + (n === 1 ? ' mine autour' : ' mines autour') : 'vide') : marked === 'safe' ? 'fermée, sûre' : marked === 'ghost' ? 'fermée, mine repérée' : 'fermée'}`);
+    e.setAttribute('aria-label', `Ligne ${r}, colonne ${k} : ${boom ? 'mine' : c === 'f' ? 'drapeau' : c === 'o' ? (n ? n + (n === 1 ? ' mine autour' : ' mines autour') : 'vide') : marked === 'safe' ? 'fermée, sûre' : marked === 'danger' ? 'fermée, mine repérée' : 'fermée'}`);
   }
   $('flags').innerHTML = FLAG + `Drapeaux : ${D.flags(G)} sur ${G.mines}`;
   $('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
