@@ -113,6 +113,8 @@
 <script src="../lib/store.js"></script>
 <script src="../lib/cards.js"></script>
 <script src="../lib/kit.js"></script>
+<script src="solver.js"></script>
+<script src="../lib/solver-worker.js"></script>
 <script>
 'use strict';
 /* ---------- Cards ---------- */
@@ -126,115 +128,7 @@ const SHOW_MS = 1000, FLY_MS = 800; // an automatic card in play: how long it is
 
 const HELLO = "Cliquez sur la carte à déplacer. Si elle a plusieurs places possibles, cliquez ensuite sur celle que vous voulez.";
 
-/* ---------- Solver ----------
-   Draw-one Klondike with unlimited redeals: every stock/waste card can be reached
-   by turning the deck, so the solver treats them as one "talon" set. */
-function sClone(x) { return { cols: x.cols.map(c => ({ d: c.d.slice(), u: c.u.slice() })), f: x.f.slice(), t: x.t.slice() }; }
-function sFlip(c) { if (!c.u.length && c.d.length) c.u.push(c.d.pop()); }
-function sFits(id, onto) { return rd(id) !== rd(onto) && rk(onto) === rk(id) + 1; }
-function sCanF(x, id) { return x.f[st(id)] === rk(id) - 1; }
-// A card is safe to send home when no card that could still need it is left out.
-function sSafe(x, id) {
-  const r = rk(id); if (r <= 2) return true;
-  const o = rd(id) ? [0, 3] : [1, 2];
-  return x.f[o[0]] >= r - 1 && x.f[o[1]] >= r - 1;
-}
-function sNormalize(x, log) {
-  for (let moved = true; moved;) {
-    moved = false;
-    for (let i = 0; i < 7; i++) {
-      const c = x.cols[i], id = last(c.u);
-      if (id !== undefined && sCanF(x, id) && sSafe(x, id)) { c.u.pop(); sFlip(c); x.f[st(id)]++; log.push({ k: 'tf', src: i, id }); moved = true; }
-    }
-    for (let j = 0; j < x.t.length; j++) {
-      const id = x.t[j];
-      if (sCanF(x, id) && sSafe(x, id)) { x.t.splice(j--, 1); x.f[st(id)]++; log.push({ k: 'xf', id }); moved = true; }
-    }
-  }
-}
-function sMoves(x) {
-  const home = [], tt = [], xt = [];
-  for (let i = 0; i < 7; i++) { const id = last(x.cols[i].u); if (id !== undefined && sCanF(x, id)) home.push({ k: 'tf', src: i, id }); }
-  for (const id of x.t) if (sCanF(x, id)) home.push({ k: 'xf', id });
-  for (let i = 0; i < 7; i++) {
-    const c = x.cols[i];
-    for (let n = 0; n < c.u.length; n++) {
-      const id = c.u[n];
-      let pri;
-      if (n > 0) { const under = c.u[n - 1]; if (!sCanF(x, under)) continue; pri = 100; } // frees a card for home
-      else if (c.d.length) pri = 10 + c.d.length;                                         // turns a card over
-      else if (rk(id) === 13) continue;                                                    // king already at the bottom
-      else pri = 0;                                                                        // empties a column
-      let emptyDone = false;
-      for (let j = 0; j < 7; j++) {
-        if (j === i) continue;
-        const top = last(x.cols[j].u);
-        if (top === undefined) { if (rk(id) === 13 && !emptyDone) { emptyDone = true; tt.push({ k: 'tt', src: i, n, dst: j, id, pri }); } }
-        else if (sFits(id, top)) tt.push({ k: 'tt', src: i, n, dst: j, id, pri });
-      }
-    }
-  }
-  for (const id of x.t) {
-    let emptyDone = false;
-    for (let j = 0; j < 7; j++) {
-      const top = last(x.cols[j].u);
-      if (top === undefined) { if (rk(id) === 13 && !emptyDone) { emptyDone = true; xt.push({ k: 'xt', id, dst: j }); } }
-      else if (sFits(id, top)) xt.push({ k: 'xt', id, dst: j });
-    }
-  }
-  // A foundation card may come back down to hold a card. Safe cards would go straight back.
-  const ft = [];
-  for (let s = 0; s < 4; s++) {
-    if (x.f[s] < 2) continue;
-    const id = s * 13 + x.f[s] - 1;
-    if (sSafe(x, id)) continue;
-    let emptyDone = false;
-    for (let j = 0; j < 7; j++) {
-      const top = last(x.cols[j].u);
-      if (top === undefined) { if (rk(id) === 13 && !emptyDone) { emptyDone = true; ft.push({ k: 'ft', id, dst: j }); } }
-      else if (sFits(id, top)) ft.push({ k: 'ft', id, dst: j });
-    }
-  }
-  tt.sort((a, b) => b.pri - a.pri);
-  return home.concat(tt.filter(m => m.pri > 0), xt, tt.filter(m => m.pri === 0), ft);
-}
-function sApply(x, m) {
-  const y = sClone(x);
-  if (m.k === 'tf') { const c = y.cols[m.src]; c.u.pop(); sFlip(c); y.f[st(m.id)]++; }
-  else if (m.k === 'xf') { y.t.splice(y.t.indexOf(m.id), 1); y.f[st(m.id)]++; }
-  else if (m.k === 'tt') { const c = y.cols[m.src]; y.cols[m.dst].u.push(...c.u.splice(m.n)); sFlip(c); }
-  else if (m.k === 'ft') { y.f[st(m.id)]--; y.cols[m.dst].u.push(m.id); }
-  else { y.t.splice(y.t.indexOf(m.id), 1); y.cols[m.dst].u.push(m.id); }
-  return y;
-}
-function sKey(x) {
-  return x.cols.map(c => c.d.length + '.' + (c.d[0] ?? '') + ':' + c.u.join(',')).sort().join('|')
-    + '#' + x.t.slice().sort((a, b) => a - b).join(',');
-}
-// Returns { win: true, path } | { win: false } | { unknown: true }
-function solve(x0, budget) {
-  const seen = new Set(), path = [];
-  let nodes = 0;
-  const x = sClone(x0), pre = [];
-  sNormalize(x, pre);
-  const dfs = x => {
-    if (x.f.every(n => n === 13)) return true;
-    if (++nodes > budget) throw 'budget';
-    const k = sKey(x);
-    if (seen.has(k)) return false;
-    seen.add(k);
-    for (const m of sMoves(x)) {
-      const y = sApply(x, m), log = [m];
-      sNormalize(y, log);
-      path.push(...log);
-      if (dfs(y)) return true;
-      path.length -= log.length;
-    }
-    return false;
-  };
-  try { return dfs(x) ? { win: true, nodes, path: pre.concat(path) } : { win: false }; }
-  catch (e) { if (e === 'budget') return { unknown: true }; throw e; }
-}
+const { solve, sApply, sNormalize, sFits, sSafe, sMoves } = Solver;
 
 /* ---------- Game state ---------- */
 // S.found[s] holds suit s. Cards are { id, up }.
@@ -290,17 +184,16 @@ function winnableDeal() {
 // A win counts as soon as the last card is home, before the celebration, so an undo cannot lose it.
 // Returns true if the game was saved. A win is counted, and sent, only once it is saved: a stale window
 // cannot save, so it cannot count a win a second time.
-function save() {
+async function save() {
   const firstWin = isWon() && !S.won;
   if (firstWin) { S.won = true; stats.won++; }
   const parts = [];
   if (S.moves > 0 && !isWon()) parts.push('Partie en cours');
   if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
-  for (const n of [Infinity, 2000, 300, 50, 0]) {
-    if (GG.save('solitaire', { S, level, undo: n ? undo.slice(-n) : [], stats }, { summary: parts.join(' · ') })) {
-      if (firstWin) GG.track('solitaire', 'won');
-      return true;
-    }
+  const data = { S, level, undo, stats };
+  if (await GG.save('solitaire', data, { summary: parts.join(' · '), undoLimits: [Infinity, 2000, 300, 50, 0] })) {
+    if (firstWin) GG.track('solitaire', 'won');
+    return true;
   }
   if (firstWin) { S.won = false; stats.won--; }
   return false;
@@ -473,7 +366,7 @@ function onTap(id, pile) {
 // It waits while the player holds a card, reads a hint or answers a question.
 function autoStep() {
   if (busy) return;
-  if (drag || sel !== null || hintStock || dialogOpen()) { autoT = setTimeout(autoStep, AUTO_DELAY); return; }
+  if (hintPending || drag || sel !== null || hintStock || dialogOpen()) { autoT = setTimeout(autoStep, AUTO_DELAY); return; }
   if (isWon()) return celebrate();
   const finishing = S.tab.every(p => p.every(c => c.up));
   const x = toSolver();
@@ -555,7 +448,7 @@ function lostDialog() {
 function askNewGame() {
   if (!drag) Kit.chooseLevel(level, S.moves > 0 && !isWon(), newGame);
 }
-function newGame(nextLevel = level) {
+async function newGame(nextLevel = level) {
   level = nextLevel;
   Kit.showLevel(level);
   busy = true; drag = null; plan = null; autoCount = 0;
@@ -564,10 +457,11 @@ function newGame(nextLevel = level) {
   winnableDeal(); undo = [];
   flash([]); // the outline of the last move does not carry over to the new deal
   // A stale window cannot save, so it does not count a game either.
-  if (save()) GG.track('solitaire', 'start');
+  const written = save();
   setMsg(HELLO);
   render({ deal: true });
   dealT = setTimeout(() => { busy = false; autoStep(); }, REDUCED ? 100 : 1600);
+  if (await written) GG.track('solitaire', 'start');
 }
 // Restores an earlier position. A game that was won stays counted once.
 function restore(snap) {
@@ -603,14 +497,15 @@ function backToWinnable() {
 // never walks in circles: it is only recomputed when the player leaves it.
 // The plan key keeps column order, because plan moves name columns by number.
 const planKey = x => x.cols.map(c => c.d.length + ':' + c.u.join(',')).join('|') + '#' + x.t.join(',');
-function hintMove() {
+async function hintMove() {
   const x = toSolver(), pre = [];
+  const game = S, position = JSON.stringify(x);
   sNormalize(x, pre);
   if (pre.length) return { move: pre[0] };
   const k = planKey(x);
   if (plan && plan.has(k)) return { move: plan.get(k) };
-  let r = solve(x, 60000);
-  if (r.unknown) r = solve(x, 400000);
+  const r = await searchHint(createSolver, x);
+  if (game !== S || position !== JSON.stringify(toSolver())) return null;
   if (!r.win) return r;
   plan = new Map();
   let y = x;
@@ -630,9 +525,15 @@ function hintDraw() {
   setMsg(S.stock.length ? 'Cliquez sur la pioche pour tourner une carte.' : 'Cliquez sur la pioche pour la retourner.');
   render();
 }
-function showHint() {
-  if (busy || drag || isWon()) return;
-  const r = hintMove();
+let hintPending = false;
+async function showHint() {
+  if (hintPending || busy || drag || isWon()) return;
+  hintPending = true;
+  const game = S, selected = sel;
+  setMsg("Recherche d’un bon coup…");
+  const r = await hintMove();
+  hintPending = false;
+  if (!r || game !== S || selected !== sel || drag || busy || dialogOpen()) return;
   let m = r.move;
   if (!m && r.win === false) return lostDialog();
   // The solver ran out of time. The game does not guess: a guessed move can lose a winnable game.
@@ -829,7 +730,7 @@ function celebrate() {
     { duration: 500, delay: s * 120, iterations: 2, easing: 'ease-in-out' }));
   clearTimeout(winT);
   winT = setTimeout(() => isWon() && dialog('Bravo, vous avez gagné !', stats.won === 1 ? "C'est votre première victoire." : `C'est votre ${stats.won}e victoire.`,
-    [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', () => { location.href = document.getElementById('home').href; }]], true), REDUCED ? 0 : 1500);
+    [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', Kit.home]], true), REDUCED ? 0 : 1500);
 }
 
 /* ---------- Dialog ---------- */

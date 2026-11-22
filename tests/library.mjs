@@ -120,6 +120,9 @@ try {
   const during = await page3.evaluate(async () => (await caches.keys()).join());
   check('old version kept while a game is open', v1.includes('test-1') && during.includes('test-1'), during);
   await page.close();
+  await page3.bringToFront();
+  await page3.waitForFunction(async () => (await caches.keys()).join() === 'grandpa-games-test-2');
+  check('the waiting update starts after the game closes with the library left open', true);
   await page3.close();
   writeFileSync(versionFile, "self.VERSION = 'test-3';\n");
   // The app opens again: one start is enough to get the newest version.
@@ -173,6 +176,21 @@ try {
   await adm.click('#clearErr');
   await adm.waitForFunction(() => document.querySelector('#errors').textContent.includes('Aucune erreur'));
   check('admin clears the errors', sql('SELECT COUNT(*) AS n FROM errors')[0].n === 0);
+
+  // A logout discards an overview response that was already in flight.
+  const overview = await (await fetch(BASE + 'api/admin/overview', { headers: { Authorization: 'Bearer ' + ADMIN } })).json();
+  let respond;
+  const pending = new Promise(resolve => respond = resolve);
+  await adm.route('**/api/admin/overview', respond, { times: 1 });
+  await adm.evaluate(() => { window.pendingOverview = load(); });
+  const route = await pending;
+  await adm.click('#logout');
+  await route.fulfill({ json: overview });
+  await adm.evaluate(() => window.pendingOverview);
+  check('logout clears the dashboard and discards a pending overview', await adm.evaluate(() => (
+    document.getElementById('app').hidden && !document.getElementById('total').textContent
+  )));
+
 
   // 7. Phone width: no sideways scroll.
   const phone = await browser.newPage({ viewport: { width: 390, height: 844 } });

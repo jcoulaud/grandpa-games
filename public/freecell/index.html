@@ -103,6 +103,7 @@
 <script src="../lib/cards.js"></script>
 <script src="../lib/kit.js"></script>
 <script src="solver.js"></script>
+<script src="../lib/solver-worker.js"></script>
 <script>
 'use strict';
 /* ---------- Cards ---------- */
@@ -164,17 +165,16 @@ function winnableDeal() {
 // A win counts as soon as the last card is home, before the celebration, so an undo cannot lose it.
 // Returns true if the game was saved. A win is counted, and sent, only once it is saved: a stale window
 // cannot save, so it cannot count a win a second time.
-function save() {
+async function save() {
   const firstWin = isWon() && !S.won;
   if (firstWin) { S.won = true; stats.won++; }
   const parts = [];
   if (S.moves > 0 && !isWon()) parts.push('Partie en cours');
   if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
-  for (const n of [Infinity, 2000, 300, 50, 0]) {
-    if (GG.save('freecell', { S, level, undo: n ? undo.slice(-n) : [], stats }, { summary: parts.join(' · ') })) {
-      if (firstWin) GG.track('freecell', 'won');
-      return true;
-    }
+  const data = { S, level, undo, stats };
+  if (await GG.save('freecell', data, { summary: parts.join(' · '), undoLimits: [Infinity, 2000, 300, 50, 0] })) {
+    if (firstWin) GG.track('freecell', 'won');
+    return true;
   }
   if (firstWin) { S.won = false; stats.won--; }
   return false;
@@ -358,7 +358,7 @@ function onTap(id, pile) {
 // It waits while the player holds a card, reads a hint or answers a question.
 function autoStep() {
   if (busy) return;
-  if (drag || sel !== null || dialogOpen()) { autoT = setTimeout(autoStep, AUTO_DELAY); return; }
+  if (hintPending || drag || sel !== null || dialogOpen()) { autoT = setTimeout(autoStep, AUTO_DELAY); return; }
   if (isWon()) return celebrate();
   const finishing = S.tab.every(p => sRun(p) === p.length);
   const x = toSolver();
@@ -417,7 +417,7 @@ function lostDialog() {
 function askNewGame() {
   if (!drag) Kit.chooseLevel(level, S.moves > 0 && !isWon(), newGame);
 }
-function newGame(nextLevel = level) {
+async function newGame(nextLevel = level) {
   level = nextLevel;
   Kit.showLevel(level);
   busy = true; drag = null; plan = null; autoCount = 0;
@@ -426,10 +426,11 @@ function newGame(nextLevel = level) {
   winnableDeal(); undo = [];
   flash([]); // the outline of the last move does not carry over to the new deal
   // A stale window cannot save, so it does not count a game either.
-  if (save()) GG.track('freecell', 'start');
+  const written = save();
   setMsg(HELLO);
   render({ deal: true });
   dealT = setTimeout(() => { busy = false; autoStep(); }, REDUCED ? 100 : 2200);
+  if (await written) GG.track('freecell', 'start');
 }
 // Restores an earlier position. A game that was won stays counted once.
 function restore(snap) {
@@ -467,14 +468,15 @@ function backToWinnable() {
 // never walks in circles: it is only recomputed when the player leaves it.
 // The plan key keeps column order, because plan moves name columns by number.
 const planKey = x => x.c.map(c => c.join(',')).join('|') + '#' + x.l.join(',');
-function hintMove() {
+async function hintMove() {
   const x = toSolver(), pre = [];
+  const game = S, position = JSON.stringify(x);
   sNormalize(x, pre);
   if (pre.length) return { move: pre[0] };
   const k = planKey(x);
   if (plan && plan.has(k)) return { move: plan.get(k) };
-  let r = solve(x, 60000);
-  if (r.unknown) r = solve(x, 400000);
+  const r = await searchHint(createSolver, x);
+  if (game !== S || position !== JSON.stringify(toSolver())) return null;
   if (!r.win) return r;
   plan = new Map();
   let y = x;
@@ -491,9 +493,15 @@ function hintText(m, dst) {
   const extra = n === 1 ? ' et la carte posée dessus' : n > 1 ? ` et les ${n} cartes posées dessus` : '';
   return `Posez ${name}${extra} ${where}.${go}`;
 }
-function showHint() {
-  if (busy || drag || isWon()) return;
-  const r = hintMove();
+let hintPending = false;
+async function showHint() {
+  if (hintPending || busy || drag || isWon()) return;
+  hintPending = true;
+  const game = S, selected = sel;
+  setMsg("Recherche d’un bon coup…");
+  const r = await hintMove();
+  hintPending = false;
+  if (!r || game !== S || selected !== sel || drag || busy || dialogOpen()) return;
   let m = r.move;
   if (!m && r.win === false) return lostDialog();
   // The solver ran out of time. The game does not guess: a card sent home too early can lose the game,
@@ -671,7 +679,7 @@ function celebrate() {
     { duration: 500, delay: s * 120, iterations: 2, easing: 'ease-in-out' }));
   clearTimeout(winT);
   winT = setTimeout(() => dialog('Bravo, vous avez gagné !', stats.won === 1 ? "C'est votre première victoire." : `C'est votre ${stats.won}e victoire.`,
-    [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', () => { location.href = document.getElementById('home').href; }]], true), REDUCED ? 0 : 1500);
+    [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', Kit.home]], true), REDUCED ? 0 : 1500);
 }
 
 /* ---------- Dialog ---------- */

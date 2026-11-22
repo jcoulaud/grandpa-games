@@ -1,7 +1,7 @@
 // The FreeCell solver: it deals only games it has won, gives the hints and sees a lost game.
 // A position is { c: the 8 columns, l: the cards in the free cells (sorted), f: cards home per suit }.
 // The search is best-first: it always grows the position that looks closest to the end.
-(() => {
+function createSolver() {
 'use strict';
 const rk = id => id % 13 + 1, st = id => (id / 13) | 0, rd = id => st(id) === 1 || st(id) === 2;
 const last = a => a[a.length - 1];
@@ -116,7 +116,7 @@ function solve(x0, budget) {
   let nodes = 0;
   while (heap.length) {
     const node = pop();
-    if (++nodes > budget) return { unknown: true };
+    if (++nodes > budget || seen.size >= 400000) return { unknown: true };
     for (const m of sMoves(node.x)) {
       const y = sApply(node.x, m), log = [m];
       sNormalize(y, log);
@@ -134,5 +134,6 @@ function solve(x0, budget) {
   }
   return { win: false };
 }
-(typeof window !== 'undefined' ? window : globalThis).Solver = { solve, sApply, sMoves, sNormalize, sFits, sSafe, sRun };
-})();
+return { solve, sApply, sMoves, sNormalize, sFits, sSafe, sRun };
+}
+globalThis.Solver = createSolver();

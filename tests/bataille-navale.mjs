@@ -93,7 +93,7 @@ ok(/touché|ligne|colonne/.test(await msg()) && await page.locator('#sea1 .q.rin
 // 9. A reload during the computer's turn: the computer answers, with the same shot.
 w = await water();
 const expected = await g(i => { const n = Bataille.fire(G, 1, i).G; return Bataille.aim(n); }, w);
-await g(i => { timers.forEach(clearTimeout); const r = Bataille.fire(G, 1, i); G = r.G; save(); }, w);
+await g(i => { timers.forEach(clearTimeout); const r = Bataille.fire(G, 1, i); G = r.G; return save(); }, w);
 await page.reload();
 await answered();
 ok(await g(i => G.last[0] === i, expected), 'after a reload during its turn, the computer fires the same shot');
@@ -136,7 +136,7 @@ await page.keyboard.press('Escape');
 // 11d. A press made during the computer's turn, released after its shot, does not fire.
 await g(() => newGame('facile'));
 w = await water();
-await g(i => { tap(1, i); timers.forEach(clearTimeout); timers = []; }, w);
+await g(async i => { await tap(1, i); timers.forEach(clearTimeout); timers = []; }, w);
 const w3 = await water();
 const box = await sq(1, w3).boundingBox();
 await page.mouse.move(box.x + 10, box.y + 10); await page.mouse.down();

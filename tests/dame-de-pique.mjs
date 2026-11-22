@@ -130,6 +130,7 @@ await clickCard(await g(() => G.hands[0][0]));
 ok((await g(() => G.hands[0].length)) === n5 && (await msg()).includes('Attendez'), 'a click while the others play is refused');
 
 // 6. Undo takes back his card and the cards played after it.
+await page.evaluate(() => GG.flush());
 await page.reload(); await wait(300);
 await myTurn();
 const snap = await g(() => JSON.stringify(G));
@@ -140,6 +141,7 @@ ok((await g(() => JSON.stringify(G))) === snap, 'undo puts back the table as it 
 ok((await msg()).startsWith('Coup annulé'), 'the line says the move is taken back');
 
 // 7. A reload keeps the game, the level and the turn.
+await page.evaluate(() => GG.flush());
 await page.reload(); await wait(300);
 ok((await g(() => JSON.stringify(G))) === snap && await g(() => level === 'moyen'), 'a reload brings back the same game');
 
@@ -157,6 +159,7 @@ ok((await g(() => document.getElementById('scoreTitle').textContent)) === 'Fin d
 await page.screenshot({ path: `${OUT}/ddp-scores.png` });
 await page.keyboard.press('Escape');
 ok(await g(() => document.getElementById('scoreSheet').classList.contains('on')), 'Escape leaves the score sheet in place');
+await page.evaluate(() => GG.flush());
 await page.reload(); await wait(300);
 ok(await g(() => document.getElementById('scoreSheet').classList.contains('on')), 'the score sheet comes back after a reload');
 await page.click('#nextBtn'); await wait(200);
@@ -219,6 +222,7 @@ ok(await g(() => /atteint 100 points : la partie est finie\.\n[^]*\nLes points :
 ok(await g(() => getComputedStyle(document.getElementById('scoreSheet')).visibility === 'hidden'), 'the score sheet hides behind the win sheet');
 await page.screenshot({ path: `${OUT}/ddp-won.png` });
 ok((await g(() => GG.meta('dame-de-pique').summary)) === '1 victoire', 'the library tile shows the win');
+await page.evaluate(() => GG.flush());
 await page.reload(); await wait(300);
 ok(await g(() => stats.won === 1 && G.phase === 'over'), 'a reload does not count the win again');
 await g(() => Kit.closeDialog());

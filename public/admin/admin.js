@@ -29,29 +29,50 @@ function toast(text) {
   clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2200);
 }
 
+let session = 0;
 async function api(path, body) {
+  const current = session;
+  const token = store.get(KEY);
   const r = await fetch('/api/admin/' + path, {
     method: body ? 'POST' : 'GET',
-    headers: { Authorization: 'Bearer ' + store.get(KEY), 'Content-Type': 'application/json' },
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
   });
+  if (current !== session || token !== store.get(KEY)) return;
   if (r.status === 401) { showLogin('Mot de passe incorrect.'); throw new Error('401'); }
   if (r.status === 429) { showLogin('Trop d’essais. Réessayez dans 15 minutes.'); throw new Error('429'); }
   const d = await r.json().catch(() => ({}));
+  if (current !== session || token !== store.get(KEY)) return;
   if (!r.ok) { toast(d.error || 'Erreur ' + r.status); throw new Error(d.error); }
   return d;
 }
 
 function showLogin(err) {
+  session++;
   store.set(KEY, '');
+  data = null; byDay = {};
+  chart.points = [];
+  renderEmpty();
   $('login').hidden = false; $('app').hidden = true;
   $('loginErr').textContent = err || '';
   $('pw').focus();
 }
 
+// Remove the snapshot from the DOM so a later login starts with a clean dashboard.
+function renderEmpty() {
+  for (const id of ['games', 'errors', 'chartSvg', 'tip', 'errSub', 'total', 'rangeLabel',
+    'kToday', 'k7', 'kNew', 'kGames', 'fToday', 'f7', 'fNew', 'fGames', 'spToday', 'sp7', 'spGames']) {
+    $(id).replaceChildren();
+  }
+  $('tip').hidden = $('clearErr').hidden = true;
+}
+
 let data = null, byDay = {}, range = [7, 30, 90].includes(+store.get(RANGE_KEY)) ? +store.get(RANGE_KEY) : 30;
 async function load() {
-  data = await api('overview');
+  const current = session;
+  const overview = await api('overview');
+  if (!overview || current !== session) return;
+  data = overview;
   byDay = Object.fromEntries(data.days.map(d => [d.day, d]));
   $('login').hidden = true; $('app').hidden = false;
   render();
@@ -209,20 +230,23 @@ let resizeT = 0;
 addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => data && drawChart(), 120); });
 document.querySelector('.seg').addEventListener('click', e => {
   const b = e.target.closest('button[data-range]');
-  if (!b) return;
+  if (!b || !data) return;
   range = +b.dataset.range; store.set(RANGE_KEY, String(range));
   render();
 });
 $('clearErr').onclick = async () => {
   if (!confirm('Effacer toutes les erreurs ?')) return;
-  await api('errors/clear', {}); toast('Erreurs effacées.'); load();
+  try { if (await api('errors/clear', {})) { toast('Erreurs effacées.'); await load(); } } catch {}
 };
 $('logout').onclick = () => showLogin();
 $('login').querySelector('form').onsubmit = async e => {
   e.preventDefault();
+  session++;
   store.set(KEY, $('pw').value.trim());
   $('pw').value = '';
   try { await load(); } catch (err) {}
 };
+
+addEventListener('storage', e => { if (e.key === KEY && !store.get(KEY)) showLogin(); });
 
 if (store.get(KEY)) { $('app').hidden = false; load().catch(() => {}); } else showLogin();

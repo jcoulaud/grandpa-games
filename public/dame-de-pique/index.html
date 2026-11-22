@@ -342,16 +342,14 @@ const listNames = cards => {
 };
 
 /* ---------- Saves ---------- */
-function save() {
+async function save() {
   if (stale) return false;
   const parts = [];
   if (started && G.phase !== 'over') parts.push('Partie en cours');
   if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
-  for (const n of [Infinity, 4, 0]) {
-    const data = { v: 1, G, cast, picks, got, undo: n ? undo.slice(-n) : [], level, stats, wonNow, started };
-    if (GG.save('dame-de-pique', data, { summary: parts.join(' · ') })) return true;
-    if (stale) return false;
-  }
+  const data = { v: 1, G, cast, picks, got, undo, level, stats, wonNow, started };
+  if (await GG.save('dame-de-pique', data, { summary: parts.join(' · '), undoLimits: [Infinity, 4, 0] })) return true;
+  if (stale) return false;
   Kit.say("La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.");
   return false;
 }
@@ -370,11 +368,11 @@ function load() {
 }
 
 // Every change of the game goes through here: a win is counted once, and only when it is saved.
-function commit(next) {
+async function commit(next) {
   G = next;
   const firstWin = G.phase === 'over' && G.result.winner === 0 && !wonNow;
   if (firstWin) { wonNow = true; stats.won++; }
-  if (save()) { if (firstWin) GG.track('dame-de-pique', 'won'); }
+  if (await save()) { if (firstWin) GG.track('dame-de-pique', 'won'); }
   else if (firstWin) { wonNow = false; stats.won--; }
 }
 
@@ -524,7 +522,7 @@ function handOver(fresh) {
     say(won ? (mates.length ? `Bravo, vous partagez la victoire avec ${names(mates)} !` : 'Bravo, vous avez gagné la partie !')
       : `${names(ws)} ${verb(ws, 'a', 'ont')} gagné la partie.`);
     if (!fresh) return;
-    const games = ['Retour aux jeux', () => { location.href = $('home').href; }];
+    const games = ['Retour aux jeux', Kit.home];
     // Why the game ended, and the four totals.
     const reached = [0, 1, 2, 3].filter(s => G.scores[s] >= 100);
     const why = `${names(reached)} ${verb(reached, 'a', 'ont', 'avez')} atteint 100 points : la partie est finie.\n`;
@@ -595,16 +593,17 @@ function showHint() {
 function askNewGame() {
   Kit.chooseLevel(level, started && G.phase !== 'over', newGame);
 }
-function newGame(lv) {
+async function newGame(lv) {
   cancelAll();
   if (lv) level = lv;
   Kit.showLevel(level);
   newCast();
   G = DDP.newGame(); picks = []; got = []; undo = []; hint = []; wonNow = false; started = false;
   // A stale window cannot save, so it does not count a game either.
-  if (save()) GG.track('dame-de-pique', 'start');
+  const written = save();
   if (G.phase === 'pass') say(turnMessage());
   render();
+  if (await written) GG.track('dame-de-pique', 'start');
 }
 
 /* ---------- Drawing ---------- */

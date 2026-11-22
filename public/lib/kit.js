@@ -44,6 +44,15 @@
     const home = location.protocol === 'file:' ? libRoot + 'index.html' : libRoot;
     bar.insertAdjacentHTML('afterbegin', `<a id="home" href="${home}" aria-label="Retour aux jeux">${icon('back')}Jeux</a>`);
   }
+  async function home() {
+    await GG.flush();
+    location.href = $('home').href;
+  }
+  $('home')?.addEventListener('click', event => {
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    home();
+  });
   if ($('rail') && !$('rail').querySelector('.credit'))
     $('rail').insertAdjacentHTML('afterbegin', `<a class="credit" href="https://x.com/JulienCoulaud" target="_blank" rel="noopener"><img src="${libRoot}icons/julien.webp" width="38" height="38" alt=""><span>Fait par <b>Julien Coulaud</b></span></a>`);
   document.querySelectorAll('button[data-icon]').forEach(b => b.insertAdjacentHTML('afterbegin', icon(b.dataset.icon)));
@@ -139,7 +148,7 @@
     const levels = Object.entries(levelNames).map(([key, label]) =>
       [label, () => start(key), !playing && key === (level || 'facile'), levelNotes[key]]);
     const buttons = playing ? [['Continuer la partie', null, true], ...levels]
-      : [...levels, level ? ['Continuer la partie', null] : ['Retour aux jeux', () => { location.href = $('home').href; }]];
+      : [...levels, level ? ['Continuer la partie', null] : ['Retour aux jeux', home]];
     dialog('Nouvelle partie', playing ? 'Attention : la partie en cours sera effacée si vous choisissez un niveau.'
       : 'Choisissez le niveau de difficulté.', buttons);
     $('box').classList.add('levels');
@@ -219,5 +228,5 @@
       [['Recharger le jeu', () => location.reload(), true]]);
   });
 
-  window.Kit = { firstVisit, levelNames, showLevel, chooseLevel, say, dialog, closeDialog, openHelp, closeHelp, isOpen, escape, icon };
+  window.Kit = { home, firstVisit, levelNames, showLevel, chooseLevel, say, dialog, closeDialog, openHelp, closeHelp, isOpen, escape, icon };
 })();

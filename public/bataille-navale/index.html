@@ -321,11 +321,11 @@ const playing = () => started() && !G.result;
 const shipName = s => B.FLEET[s].name;
 
 /* ---------- Saves ---------- */
-function save() {
+async function save() {
   const parts = [];
   if (playing()) parts.push('Partie en cours');
   if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
-  if (GG.save('bataille-navale', { v: 1, G, level, stats, wonNow }, { summary: parts.join(' · ') })) return (saved = true);
+  if (await GG.save('bataille-navale', { v: 1, G, level, stats, wonNow }, { summary: parts.join(' · ') })) return (saved = true);
   saved = false;
   if (!stale) Kit.say("La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.");
   return false;
@@ -344,17 +344,18 @@ function load() {
 const say = Kit.say;
 
 // A win counts once, and only when it is saved: a stale window cannot count it a second time.
-function commit(next) {
+async function commit(next) {
   G = next; hint = null;
   const firstWin = G.result === 'won' && !wonNow;
   if (firstWin) { wonNow = true; stats.won++; }
-  if (save()) { if (firstWin) GG.track('bataille-navale', 'won'); }
-  else if (firstWin) { wonNow = false; stats.won--; }
+  const written = save();
   render();
+  if (await written) { if (firstWin) GG.track('bataille-navale', 'won'); }
+  else if (firstWin) { wonNow = false; stats.won--; render(); }
 }
 
 // A click on square i of sea k. Returns true when it fires.
-function tap(k, i) {
+async function tap(k, i) {
   if (Kit.isOpen()) return false;
   if (G.result) { say(G.result === 'won' ? 'Cette partie est gagnée : cliquez sur « Nouvelle partie » pour en commencer une autre.'
     : "L'ordinateur a gagné cette partie : cliquez sur « Nouvelle partie » pour prendre votre revanche."); return false; }
@@ -366,13 +367,15 @@ function tap(k, i) {
   const shot = B.fire(G, 1, i);
   told = shot.kind === 'eau' ? `${at} : à l'eau.` : shot.kind === 'touche' ? `${at} : touché !`
     : `${at} : touché, coulé ! C'était son ${shipName(shot.ship)}.`;
-  commit(shot.G);
+  const written = commit(shot.G);
   word(1, i, shot);
+  if (!G.result && !stale) say(told + " L'ordinateur vise…");
+  await written;
+  if (G !== shot.G) return false;
   if (G.result) { finish(!stale); return true; }
   // A stale window shows the kit's reload prompt. A move that could not be saved keeps the warning
   // of save() on the message line, and the game still goes on.
   if (stale) return true;
-  if (saved) say(told + " L'ordinateur vise…");
   later(answer, THINK);
   return true;
 }
@@ -433,15 +436,17 @@ function word(k, i, { kind, ship }) {
     square.classList.remove('firing');
   }, 1900);
 }
-function fireAt(i) {
+async function fireAt(i) {
   effects[0].querySelector('.scope')?.remove();
   if (G.result || G.turn !== 'them' || B.aim(G) !== i) return;
   const at = B.name(i), shot = B.fire(G, 0, i);
   const theirs = shot.kind === 'eau' ? `L'ordinateur tire en ${at} : à l'eau.`
     : shot.kind === 'touche' ? `L'ordinateur tire en ${at} : touché, votre ${shipName(shot.ship)}.`
     : `L'ordinateur tire en ${at} : coulé, votre ${shipName(shot.ship)} !`;
-  commit(shot.G);
+  const written = commit(shot.G);
   word(0, i, shot);
+  await written;
+  if (G !== shot.G) return;
   if (G.result) return finish(!stale);
   if (saved) say((told ? told + ' ' : '') + theirs + ' À vous.');
   told = '';
@@ -468,7 +473,7 @@ function finish(show) {
       [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', home]]);
   }
 }
-const home = () => { location.href = $('home').href; };
+const home = Kit.home;
 
 /* ---------- Buttons ---------- */
 function later(fn, ms) { const t = setTimeout(() => { timers = timers.filter(x => x !== t); fn(); }, ms); timers.push(t); return t; }
@@ -498,7 +503,7 @@ function moveShips() {
 function askNewGame() {
   Kit.chooseLevel(level, playing(), newGame);
 }
-function newGame(lv) {
+async function newGame(lv) {
   timers.forEach(clearTimeout); timers = [];
   if (lv) level = lv;
   Kit.showLevel(level);
@@ -506,9 +511,10 @@ function newGame(lv) {
   G = B.newGame(level, seed); hint = null; lastShot = null; wonNow = false; told = '';
   effects.forEach(layer => layer.replaceChildren());
   // A stale window cannot save, so it does not count a game either.
-  if (save()) GG.track('bataille-navale', 'start');
+  const written = save();
   render();
-  if (saved) say(startText());
+  if (!stale) say(startText());
+  if (await written) GG.track('bataille-navale', 'start');
 }
 const startText = () => `Cliquez sur une case de la mer de l'ordinateur, ${where()}, pour tirer.`;
 
@@ -649,7 +655,7 @@ table.addEventListener('pointerdown', e => {
   if (!at) return;
   press = { ...at, x: e.clientX, y: e.clientY, pointer: e.pointerId, moves: moves() };
 });
-addEventListener('pointerup', e => {
+addEventListener('pointerup', async e => {
   if (!press || e.pointerId !== press.pointer) return;
   const p = press; press = null;
   if (p.moves !== moves()) return;
@@ -658,7 +664,7 @@ addEventListener('pointerup', e => {
   if (!same && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 16) return;
   const t = performance.now();
   if (lastShot && lastShot.k === p.k && lastShot.i === p.i && t - lastShot.t < 500) return;
-  if (tap(p.k, p.i)) lastShot = { t, k: p.k, i: p.i };
+  if (await tap(p.k, p.i)) lastShot = { t, k: p.k, i: p.i };
 });
 addEventListener('pointercancel', () => { press = null; });
 

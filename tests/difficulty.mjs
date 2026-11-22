@@ -35,6 +35,7 @@ try {
       }
       const levelText = 'Niveau ' + label.toLowerCase();
       assert.equal(await page.locator('#level').innerText(), levelText);
+      await page.evaluate(() => GG.flush());
       await page.reload();
       assert.equal(await page.locator('#level').innerText(), levelText);
       await page.click('#newBtn');

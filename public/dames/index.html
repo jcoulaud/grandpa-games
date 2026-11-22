@@ -264,16 +264,14 @@ const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
 const mkey = m => m.from + '-' + m.to + ':' + m.caps.join(',');
 
 /* ---------- Saves ---------- */
-function save() {
+async function save() {
   const parts = [];
   if (started && !G.result) parts.push('Partie en cours');
   if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
   const keep = sel && sel.path.length ? sel : null;
-  for (const n of [Infinity, 200, 40, 0]) {
-    const data = { v: 1, G, last, undo: n ? undo.slice(-n) : [], level, stats, wonNow, started, sel: keep };
-    if (GG.save('dames', data, { summary: parts.join(' · ') })) return true;
-    if (stale) return false;
-  }
+  const data = { v: 1, G, last, undo, level, stats, wonNow, started, sel: keep };
+  if (await GG.save('dames', data, { summary: parts.join(' · '), undoLimits: [Infinity, 200, 40, 0] })) return true;
+  if (stale) return false;
   Kit.say("La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.");
   return false;
 }
@@ -383,7 +381,7 @@ function land(n) {
   commit(done.m, done.r);
 }
 
-function commit(m, r) {
+async function commit(m, r) {
   undo.push(JSON.stringify({ G, last }));
   const before = G;
   G = advance(G, m);
@@ -393,11 +391,12 @@ function commit(m, r) {
   // A win counts once, and only when it is saved: a stale window cannot count it a second time.
   const firstWin = G.result && G.result.winner === WHITE && !wonNow;
   if (firstWin) { wonNow = true; stats.won++; }
-  if (save()) { if (firstWin) GG.track('dames', 'won'); }
+  const my = gen;
+  if (await save()) { if (firstWin) GG.track('dames', 'won'); }
   else if (firstWin) { wonNow = false; stats.won--; }
+  if (my !== gen) return;
   // His piece slides to its last landing, then the pieces taken leave the board.
   render({ shown: before, moving: m.from, at: r.path.length > 1 ? r.path[r.path.length - 2] : m.from, taken: r.caps });
-  const my = gen;
   later(() => {
     if (my !== gen) return;
     render({ shown: before, moving: m.from, at: m.to, taken: r.caps, slide: true });
@@ -494,7 +493,7 @@ function finish(show) {
   say(title.replace(/ !$/, '') + ' : ' + resultText().charAt(0).toLowerCase() + resultText().slice(1));
   if (!show) return;
   const back = ['Annuler le dernier coup', doUndo];
-  const games = ['Retour aux jeux', () => { location.href = $('home').href; }];
+  const games = ['Retour aux jeux', Kit.home];
   if (r.winner === WHITE) {
     later(() => Kit.dialog(title, `${resultText()}${!wonNow ? '' : stats.won === 1 ? " C'est votre première victoire." : ` C'est votre ${stats.won}e victoire.`}`,
       [['Nouvelle partie', askNewGame, true], games], true), REDUCED ? 0 : 700);
@@ -550,15 +549,16 @@ function showHint() {
 function askNewGame() {
   Kit.chooseLevel(level, started && !G.result, newGame);
 }
-function newGame(lv) {
+async function newGame(lv) {
   cancelAll();
   if (lv) level = lv;
   Kit.showLevel(level);
   G = freshGame(); last = null; undo = []; sel = null; hint = null; wonNow = false; started = false; phase = 'player';
   // A stale window cannot save, so it does not count a game either.
-  if (save()) GG.track('dames', 'start');
+  const written = save();
   say(turnMessage());
   render();
+  if (await written) GG.track('dames', 'start');
 }
 
 /* ---------- Drawing ---------- */
@@ -621,6 +621,7 @@ const xy = n => [colOf(n) * S, rowOf(n) * S];
 // that travels and where it is; opts.taken: the pieces crossed out so far.
 function render(opts = {}) {
   if (!G) return;
+  $('drawNote').textContent = drawNote();
   layout();
   const b = opts.shown ? opts.shown.b : G.b;
   const mine = phase === 'player' && !opts.shown ? legal() : [];
@@ -676,7 +677,6 @@ function render(opts = {}) {
   $('levelB').textContent = 'Niveau ' + Kit.levelNames[level].toLowerCase();
   $('whoB').classList.toggle('turn', phase === 'thinking' || phase === 'anim');
   $('whoW').classList.toggle('turn', phase === 'player' && !G.result);
-  $('drawNote').textContent = drawNote();
   $('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
   $('undoBtn').disabled = !undo.length && !(sel && sel.path.length);
   $('hintBtn').disabled = phase !== 'player' || !!G.result;

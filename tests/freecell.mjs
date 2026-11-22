@@ -140,6 +140,7 @@ await page.waitForTimeout(2000);
 ok(await g(() => !document.querySelector('.landed')), 'a new deal has no card outlined from the last move');
 await page.waitForTimeout(600);
 await page.click('#hintBtn');
+await page.waitForFunction(() => !hintPending);
 const hint = await g(() => ({ sel, hintDst, msg: document.getElementById('msg').textContent, moves: S.moves }));
 console.log('     hint: ' + hint.msg);
 ok(hint.sel !== null && hint.msg.length > 10, 'the hint shows a sentence and a target');
@@ -154,7 +155,7 @@ await page.reload(); await page.waitForTimeout(800);
 ok(await g(() => JSON.stringify([S.tab, S.cells, S.found])) === before && !(await g(() => help.classList.contains('on'))), 'the game reopens where it was, without the rules');
 // Following the hints wins the game.
 for (let n = 0; n < 200 && !(await g(() => isWon())); n++) {
-  await g(() => { clearTimeout(autoT); const r = hintMove(); if (!r.move) return;
+  await g(async () => { clearTimeout(autoT); const r = await hintMove(); if (!r.move) return;
     const m = r.move, loc = locate(m.id);
     const dst = m.k === 'cf' || m.k === 'lf' ? { a: 'found', i: st(m.id) } : m.k === 'cl' ? { a: 'cell', i: S.cells.indexOf(null) } : { a: 'tab', i: m.dst };
     moveCards(loc, dst); clearTimeout(autoT); });
@@ -179,7 +180,7 @@ const loopStart = await g(() => {
   render({ instant: true });
   return JSON.stringify([S.tab, S.cells]);
 });
-const follow = () => g(() => { clearTimeout(autoT); showHint(); if (sel === null) return false; moveCards(locate(sel), hintDst); clearTimeout(autoT); return true; });
+const follow = () => g(async () => { clearTimeout(autoT); await showHint(); if (sel === null) return false; moveCards(locate(sel), hintDst); clearTimeout(autoT); return true; });
 const moved = [await follow(), await follow()];
 const back = await g(() => JSON.stringify([S.tab, S.cells])) === loopStart;
 ok(!(moved[0] && moved[1] && back), 'two hints in a row do not send a card back and forth: ' + await msg());

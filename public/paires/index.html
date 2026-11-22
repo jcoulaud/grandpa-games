@@ -184,11 +184,11 @@ const cap = s => s[0].toUpperCase() + s.slice(1);
 const FULL = "La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.";
 
 /* ---------- Saves ---------- */
-function save() {
+async function save() {
   const parts = [];
   if (playing()) parts.push('Partie en cours');
   if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
-  if (GG.save('paires', { v: 1, G, level, stats, wonNow }, { summary: parts.join(' · ') })) return (saved = true);
+  if (await GG.save('paires', { v: 1, G, level, stats, wonNow }, { summary: parts.join(' · ') })) return (saved = true);
   saved = false;
   if (!stale) Kit.say(FULL);
   return false;
@@ -258,7 +258,7 @@ function setBands(kind) {
 
 // A second click on the same card within half a second is a double-click: it counts as one click.
 let lastTap = null;
-function tap(i) {
+async function tap(i) {
   if (Kit.isOpen() || !G) return;
   const t = performance.now(), prev = lastTap;
   lastTap = { i, t };
@@ -285,8 +285,9 @@ function tap(i) {
     record = !best ? 'first' : G.turns < best ? 'better' : false;
     if (record) stats.best = { ...stats.best, [level]: G.turns };
   }
-  if (save()) { if (firstWin) GG.track('paires', 'won'); }
+  if (await save()) { if (firstWin) GG.track('paires', 'won'); }
   else if (firstWin) { wonNow = false; stats.won--; stats.best = before; record = false; }
+  if (G !== r.G) return;
   if (r.event === 'miss') {
     shown = { a: r.a, b: r.b, at: performance.now() };
     missTimer = setTimeout(() => { hideShown(); render(); }, motion(UP_MS) + SHOW_MS);
@@ -318,7 +319,7 @@ function finish(show, record) {
   later(() => G !== game || stale || Kit.isOpen() || Kit.dialog('Bravo, vous avez gagné !', `Vous avez trouvé les ${n} paires en ${plural(G.turns, 'coup', 'coups')}.${extra}`,
     [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', home]], true), motion(WIN_DIALOG_MS));
 }
-const home = () => { location.href = $('home').href; };
+const home = Kit.home;
 
 /* ---------- Buttons ---------- */
 function showHint() {
@@ -335,18 +336,19 @@ function showHint() {
 }
 
 function askNewGame() { stopAll(); render(); Kit.chooseLevel(level, playing(), newGame); }
-function newGame(lv) {
+async function newGame(lv) {
   stopAll(); clearTimeout(lineTimer); lastTap = null;
   if (lv) level = lv;
   Kit.showLevel(level);
   G = P.newGame(level, crypto.getRandomValues(new Uint32Array(1))[0]);
   shown = null; just = null; hint = null; wonNow = false;
   // A stale window cannot save, so it does not count a game either.
-  if (save()) GG.track('paires', 'start');
+  const written = save();
   built = ''; delete gridEl.dataset.board;
   render();
   boardEffect('deal');
-  if (saved) say(`Retrouvez les ${P.total(G)} paires. Cliquez sur une carte pour la retourner.`);
+  if (!stale) say(`Retrouvez les ${P.total(G)} paires. Cliquez sur une carte pour la retourner.`);
+  if (await written) GG.track('paires', 'start');
 }
 
 /* ---------- Drawing ---------- */
