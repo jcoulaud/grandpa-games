@@ -148,7 +148,7 @@ Windows Quick Assist is the easiest way to do this with him on the phone.
 ## Publish
 
 - The site lives at https://jeux-papi.fr only. `www.jeux-papi.fr` redirects there (a redirect rule on the zone), and the workers.dev address is off, because saves on a PC belong to one exact address.
-- `.github/workflows/deploy.yml` runs the typecheck and `bun run test` on each pull request and each push to `main`. On `main`, when they pass, it applies the database migrations and deploys. "Run workflow" in the Actions tab tests and deploys `main` again. If a test fails, the screenshots are attached to the run.
+- `.github/workflows/deploy.yml` runs the typecheck and `bun run test:rules` on each pull request and each push to `main`. On `main`, when they pass, it applies the database migrations and deploys. "Run workflow" in the Actions tab checks and deploys `main` again. Run the full browser suite locally with `bun run test`.
 - The workflow uses the `CLOUDFLARE_API_TOKEN` repository secret: the Cloudflare account token "grandpa-games GitHub deploy". It can edit Workers and D1 on the account, and routes, DNS and certificates on `jeux-papi.fr` only. To replace it, create a new account token with the same permissions under Manage Account, then Account API Tokens, and run `gh secret set CLOUDFLARE_API_TOKEN`.
 - `bun run deploy` does the same from a terminal logged in with `wrangler login`.
 
