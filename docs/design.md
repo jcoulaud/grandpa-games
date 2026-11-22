@@ -104,3 +104,16 @@ The dame de pique is Hearts for four, in the Windows rules that French players k
 - **Compared with other Hearts games.** The rules match regles-du-jeu.net and Windows Hearts. Speed settings and "claim the rest" buttons from other apps are left out: they add choices. His only legal card is not played for him.
 - **Levels.** Facile, Moyen and Difficile, chosen at "Nouvelle partie". In the tests, Moyen takes 2.7 points a hand fewer than Facile players, and Difficile 5.7 fewer than Moyen players. Difficile takes less than 60 ms a card.
 
+## Yams
+
+The yams is the French dice game, against one computer player. GPT-6.2 Sol and GPT-6.2 Astra checked the rules, the computer players, the undo and the saves.
+
+- **Its own look.** A terracotta table (#B8582E to #5E2410). The dice roll on a red baize piste (#9E2A22 to #4E0F0B) with a maple rim, the tray of French cafés. The points go on a cream score pad with a terracotta binding.
+- **The dice.** Ivory, with a soft light from the top left, a bright inner edge and pips sunk into the face. The ace is red. Before a throw, the piste shows the leather cup and "À vous de lancer"; a click on the cup also throws.
+- **A throw.** Each die flies in from the left, spins, bounces twice and settles, 70 ms after the one before. Its pips flicker on the way. With reduced motion, the dice appear at once.
+- **Keeping dice.** A kept die rises, gets a 5 px yellow frame and a yellow "Gardé" tag under it. The button names what it does: "Relancer 3 dés".
+- **The players.** The computer's card sits across the piste, his card in front of it. Each card has the face, the name, what the player does now ("Encore 2 lancers") and the total in 34 px figures, which count up after each box. The player whose turn it is has a yellow border.
+- **The pad.** Two halves side by side, so each row stays at least 34 px high: As to Six with a small die each and the bonus, then the bottom boxes. His column is pale yellow, the computer's pale blue in blue ink. The empty boxes he can write show their points in a dashed yellow frame and fill yellow under the mouse. A box crossed out for 0 shows a stroke. The bonus shows "41 / 63" over a green bar.
+- **Feedback.** A box just written is stamped in and keeps a frame, yellow for him and blue for the computer. Five dice alike show a gold "Yams !" ribbon and the dice hop in a wave, as they do after a win.
+- **Size.** Everything grows with the window, up to 1.4 times on a 1920 by 1080 monitor. A low window (his laptop at 125 %) seats the two players side by side above the piste, so the dice stay 60 px or more.
+- **Pace.** The computer waits 0.9 s, then shows each throw 1.3 s and each keep 1 s, and its box 1.1 s before his turn.
