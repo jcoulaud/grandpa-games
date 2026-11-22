@@ -21,6 +21,7 @@ const CORE = [
   'sudoku/', 'sudoku/engine.js', 'sudoku/icon.svg',
   'mots-meles/', 'mots-meles/engine.js', 'mots-meles/words.js', 'mots-meles/icon.svg',
   'petits-chevaux/', 'petits-chevaux/engine.js', 'petits-chevaux/icon.svg',   'morpion/', 'morpion/engine.js', 'morpion/icon.svg',
+  'belote/', 'belote/engine.js', 'belote/icon.svg',
   ...['coq', 'vache', 'cochon', 'chat', 'chien', 'mouton', 'canard', 'lapin', 'tournesol', 'pomme', 'cerises', 'poire', 'carotte', 'tracteur', 'arrosoir'].map(id => `paires/img/${id}.webp`),
   ...['vous', 'jeanne', 'louise', 'simone', 'odette', 'colette', 'yvonne', 'paul', 'marcel', 'rene', 'andre', 'henri', 'gaston'].map(id => `lib/avatars/${id}.webp`),
 ];
