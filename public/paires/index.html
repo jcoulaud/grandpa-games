@@ -74,7 +74,7 @@
   @keyframes glow { 50% { box-shadow: 0 0 22px 6px rgba(255,200,61,.75); } }
   .card.shake { animation: sh .3s; }
 
-  /* The turns and pairs: a chip beside the message line. */
+  /* The turns and pairs: a chip beside the win count, on the left of the message line. */
   #count { flex: none; height: 46px; padding: 0 18px; display: flex; align-items: center; gap: 10px;
     background: #fff; color: var(--text); font: 600 21px var(--ui); white-space: nowrap;
     border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,.25); font-variant-numeric: tabular-nums; }
@@ -127,10 +127,10 @@
   <button id="helpBtn" data-icon="help">Règles</button>
   <button id="newBtn" class="game">Nouvelle partie</button>
 </div>
+<div id="say"><div id="wins"></div><div id="count"></div><div id="msg" aria-live="polite"></div><div class="zoom"></div></div>
 <div id="table">
   <div id="grid" role="grid" aria-label="Cartes"></div>
 </div>
-<footer id="msgRail"><div id="msg" aria-live="polite"></div><div id="count"></div><div id="wins"></div><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
   <section class="page">
     <h3>Le but</h3>

@@ -74,6 +74,8 @@ ok(hinted.length === 1 && (!twinSeen || hinted[0] === twin(0)) && /encadrée/.te
 await click(twin(0));
 ok(/found/.test(await cls(0)) && /found/.test(await cls(twin(0))) && /Bravo, une paire/.test(await msg()), 'two same cards make a pair that stays up');
 ok(/Coups : 3 · Paires : 1 sur 6/.test(await g(() => document.getElementById('count').textContent)), 'the chip counts the turns and the pairs');
+const after = await card(0).boundingBox();
+ok(after.width === size.width && after.x === size.x, `the cards keep their size and place while he plays: ${Math.round(size.width)} then ${Math.round(after.width)} px`);
 await click(0);
 ok(/déjà trouvée/.test(await msg()), 'a click on a pair found is refused, with the reason');
 ok(await g(() => GG.meta('paires').summary === 'Partie en cours'), 'the tile says a game is in progress');
