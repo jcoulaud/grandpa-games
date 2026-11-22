@@ -39,34 +39,47 @@
 <footer id="rail"><div id="flags"></div><div id="wins"></div><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
   <section class="page">
-    <h3>Le but</h3>
-    <p>Des mines sont cachées sous les cases vertes. Pour gagner, ouvrez toutes les cases qui n'ont pas de mine.</p>
-    <h3>Ouvrir une case</h3>
-    <p>Cliquez sur une case verte pour l'ouvrir. La première case ne cache jamais de mine, et elle ouvre tout un coin du terrain.</p>
-    <p>Chaque partie se gagne sans deviner : il y a toujours une case dont on peut être sûr.</p>
+    <h3>Ouvrir une première case</h3>
+    <p>Cliquez sur une case verte. La première case est toujours sûre.</p>
+    <p>Pour gagner, ouvrez toutes les cases sans mine. Vous pouvez résoudre chaque grille sans deviner.</p>
+    <p>Si une case ouverte est vide, elle ne touche aucune mine. Ses voisines s'ouvrent toutes seules.</p>
   </section>
   <section class="page">
-    <h3>Les chiffres</h3>
-    <div class="demo">
-      <svg viewBox="0 0 3 3" aria-hidden="true"><rect width="3" height="3" fill="#F1E4C3"/><rect x="2" width="1" height="1" fill="#6AAE45"/><path d="M2.4.82V.2l.4.17-.4.18" fill="#C4122F" stroke="#7A0D0B" stroke-width=".03"/><path d="M2.4.84V.2" stroke="#2A1A0B" stroke-width=".06"/><g font-family="Segoe UI, sans-serif" font-weight="700" font-size=".66" fill="#1F4FB8" text-anchor="middle" dominant-baseline="central"><text x="1.5" y=".5">1</text><text x="1.5" y="1.5">1</text><text x="2.5" y="1.5">1</text></g><path d="M0 1h3M0 2h3M1 0v3M2 0v3" stroke="rgba(120,90,40,.35)" stroke-width=".03"/></svg>
-      <p>Un chiffre dit combien de mines touchent sa case, en comptant les huit cases autour, en diagonale aussi.</p>
+    <h3>Compter les mines autour d'un chiffre</h3>
+    <div class="guide-panel">
+      <figure class="guide-example">
+        <div class="guide-mine-grid" aria-hidden="true">
+          <span class="guide-cell o"></span><span class="guide-cell o n1">1</span><span class="guide-cell" data-help-mark="flag"></span>
+          <span class="guide-cell o"></span><span class="guide-cell o n1 ring">1</span><span class="guide-cell o n1">1</span>
+          <span class="guide-cell o"></span><span class="guide-cell o"></span><span class="guide-cell o"></span>
+        </div>
+        <figcaption><strong>Le 1 entouré indique une mine parmi ses huit voisines.</strong> Ici, la seule case encore fermée est en diagonale. Le drapeau y signale la mine.</figcaption>
+      </figure>
     </div>
-    <p>Une case ouverte sans chiffre ne touche aucune mine : les cases autour d'elle s'ouvrent toutes seules.</p>
   </section>
   <section class="page">
-    <h3>Le niveau Facile</h3>
-    <p>Au niveau Facile, le jeu vous guide. Une coche verte montre une case sûre : cliquez dessus pour l'ouvrir. Un point d'exclamation rouge montre une mine : cliquez dessus pour y poser un drapeau.</p>
-    <p>Le chiffre qui explique le coup est entouré en jaune, et la ligne du haut dit pourquoi. Une case sans marque peut cacher une mine : le jeu ne l'ouvre pas.</p>
+    <h3>Suivre les signes au niveau Facile</h3>
+    <div class="guide-panel">
+      <ul class="guide-key">
+        <li><span class="guide-cell" data-help-mark="safe" aria-hidden="true"></span><span><strong>Coche verte.</strong> Cliquez pour ouvrir la case sûre.</span></li>
+        <li><span class="guide-cell" data-help-mark="mine" aria-hidden="true"></span><span><strong>Point d'exclamation.</strong> Cliquez pour poser un drapeau sur la mine.</span></li>
+      </ul>
+    </div>
+    <p>Le jeu vous empêche d'ouvrir une case incertaine. Le chiffre entouré en jaune et le message du haut expliquent le coup.</p>
   </section>
   <section class="page">
-    <h3>Les drapeaux</h3>
-    <p>Quand une case cache une mine à coup sûr, posez-y un drapeau : cliquez sur « Drapeau », puis sur la case. Le clic droit de la souris pose aussi un drapeau. Un clic sur un drapeau le retire.</p>
-    <p>Quand un chiffre touche autant de drapeaux que sa valeur, un clic sur ce chiffre ouvre les autres cases autour de lui.</p>
+    <h3>Poser ou retirer un drapeau</h3>
+    <ol>
+      <li>Cliquez sur « Poser un drapeau » ou « Drapeau ».</li>
+      <li>Cliquez sur la case qui cache une mine.</li>
+    </ol>
+    <p>Vous pouvez aussi faire un clic droit sur la case. Cliquez de nouveau sur un drapeau pour le retirer.</p>
+    <p>Si tous les drapeaux autour d'un chiffre sont bien placés et que leur nombre correspond au chiffre, cliquez dessus pour ouvrir les autres cases voisines.</p>
   </section>
   <section class="page">
-    <h3>Les boutons</h3>
-    <p>« Que jouer maintenant ? » encadre une case sûre, ou une mine, et dit pourquoi.</p>
-    <p>Si une mine saute, « Annuler le dernier coup » reprend la partie juste avant. « Nouvelle partie » vous permet de choisir le niveau. La partie est enregistrée à chaque coup.</p>
+    <h3>Trouver une case sûre</h3>
+    <p>Cliquez sur « Que jouer maintenant ? » pour repérer une case sûre ou une mine. Le message du haut explique pourquoi.</p>
+    <p>Si une mine saute, cliquez sur « Annuler le dernier coup » pour reprendre la partie juste avant.</p>
   </section>
 </div>
 
@@ -84,6 +97,8 @@ const FLAG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 19V4.5l10 
 const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="#FFF8E6" stroke="#2A4A15" stroke-width="1.2"/><path d="M7.8 12.4l2.9 2.9 5.6-6.1" fill="none" stroke="#1C7128" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 // Facile marks what the numbers prove: a check on a safe square, a red "!" on a mine.
 const DANGER = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="#C4122F" stroke="#7A0D0B" stroke-width="1.2"/><path d="M12 7.2v6" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/><circle cx="12" cy="16.6" r="1.6" fill="#fff"/></svg>';
+const helpMarks = { flag: FLAG, safe: CHECK, mine: DANGER };
+for (const example of document.querySelectorAll('[data-help-mark]')) example.innerHTML = helpMarks[example.dataset.helpMark];
 const MINE = '<svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#141211" stroke-width="2.2" stroke-linecap="round"><path d="M12 2.5v19M2.5 12h19M5.3 5.3l13.4 13.4M18.7 5.3 5.3 18.7"/></g><circle cx="12" cy="12" r="6.6" fill="#141211"/><circle cx="9.7" cy="9.7" r="1.9" fill="#fff"/></svg>';
 
 /* ---------- State ----------

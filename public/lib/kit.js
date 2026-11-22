@@ -162,8 +162,9 @@
     const sections = help.innerHTML;
     help.innerHTML = `<div id="helpBox" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
       <div class="head"><h2 id="helpTitle"></h2><button id="helpClose">${icon('close')}Fermer</button></div>
-      <div id="helpText">${sections}</div>
-      <div class="end"><button id="helpPrev">Précédent</button><span id="helpPage"></span><button id="helpNext" class="primary">Suivant</button></div>
+      <div id="helpText" tabindex="-1" role="region" aria-labelledby="helpTopic">${sections}</div>
+      <div class="end"><button id="helpPrev">Précédent</button><span id="helpPage" aria-hidden="true"></span><button id="helpNext" class="primary">Suivant</button></div>
+      <span id="helpStatus" class="sr" role="status"></span>
     </div>`;
     $('helpTitle').textContent = help.dataset.title || 'Comment jouer';
     pages = [...help.querySelectorAll('#helpText .page')];
@@ -174,12 +175,19 @@
   }
   function showPage(n) {
     at = n;
-    pages.forEach((e, k) => e.classList.toggle('on', k === n));
-    $('helpPage').textContent = `Page ${n + 1} sur ${pages.length}`;
+    pages.forEach((page, k) => {
+      const active = k === n;
+      page.classList.toggle('on', active);
+      page.querySelector('h3').id = active ? 'helpTopic' : '';
+    });
+    const count = `Page ${n + 1} sur ${pages.length}`;
+    $('helpPage').textContent = count;
+    $('helpStatus').textContent = `${count}. ${$('helpTopic').textContent}`;
     $('helpPrev').hidden = n === 0;
     const next = $('helpNext');
     next.textContent = n === pages.length - 1 ? "J'ai compris" : 'Suivant';
     next.focus();
+    $('helpText').scrollTop = 0;
   }
   function openHelp() { if (!help) return; remember(); help.classList.add('on'); showPage(0); }
   let firstStart = null;
@@ -208,12 +216,12 @@
     return false;
   }
 
-  // While a dialog or the rules are open, Tab moves only between their buttons:
-  // the buttons of the bar behind them cannot be reached.
+  // Keep Tab inside the dialog. In a short window, include the scrollable rules.
   addEventListener('keydown', e => {
     if (e.key !== 'Tab' || !isOpen()) return;
     const box = over.classList.contains('on') ? $('box') : $('helpBox');
-    const items = [...box.querySelectorAll('button')].filter(b => !b.hidden && !b.disabled);
+    const items = [...box.querySelectorAll('button, #helpText')].filter(e =>
+      e.id === 'helpText' ? e.scrollHeight > e.clientHeight : !e.hidden && !e.disabled);
     if (!items.length) return;
     e.preventDefault();
     const i = items.indexOf(document.activeElement);

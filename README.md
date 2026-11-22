@@ -34,7 +34,7 @@ migrations/              the database tables
 7. Give the game its own look. Each game has its own felt colour: set `--felt-top`, `--felt`, `--shade` and `--accent` on `:root` in the game page, and the same felt in `GAMES`. Give its tile a different picture of cards. The solitaire is green with a fan of three cards. FreeCell is blue with four aces in a row. The dame de pique is plum, with the queen of spades in front of two hearts. The démineur is brown earth, with an island of turf blocks seen from above. The yams is terracotta, with five dice rolling in. The bataille navale is the only scene seen from the side: a warship in profile on the waves, a column of water where a shot fell, and a ship on fire on the horizon. The jeu des paires is olive green, with cards of red vichy and the two coqs of a pair found.
 8. Give the game three levels: Facile, Moyen and Difficile. Open the choice with `Kit.chooseLevel(level, playing, newGame)` at "Nouvelle partie", and show the level under the name with `Kit.showLevel(level)`. Save the level with the game. A save without a known level still loads, with a default level. Each level must be harder than the one below, and a test must prove it: for example, a computer that beats the level below, or deals that take the solver more steps.
 
-9. Follow the rules for every screen in `docs/design.md`, and check each screen of the game in the windows that section lists.
+9. Follow the [rules guide pattern](docs/design.md#write-a-rules-guide) and the [rules for every screen](docs/design.md#rules-for-every-screen). Check every screen, including each guide page, at the listed window and zoom sizes.
 
 When a game changes its save format, it must still read the old format. His saves are never deleted.
 

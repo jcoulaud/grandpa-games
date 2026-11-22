@@ -22,7 +22,7 @@
 #board.turned { grid-auto-flow: column; grid-template-columns: none; grid-template-rows: repeat(var(--cols), var(--s)); grid-auto-columns: var(--s); }
 
 /* A closed square: a raised tile of turf. */
-.c {
+.c, .guide-cell {
   position: relative; display: grid; place-items: center; cursor: pointer;
   background: linear-gradient(155deg, #8CCB63, #6AAE45 55%, #5B9C3A);
   box-shadow: inset 0 2px 0 rgba(255,255,255,.35), inset 0 -3px 0 rgba(0,0,0,.22), inset 0 0 0 1px rgba(30,60,15,.55);
@@ -30,12 +30,12 @@
 }
 .c:hover { background: linear-gradient(155deg, #A2DA7C, #7FC058 55%, #6AAE45); }
 /* An open square: flat sand, with its number in a strong colour. */
-.c.o { cursor: default; background: #F1E4C3; box-shadow: inset 0 0 0 1px rgba(120,90,40,.35); }
+.c.o, .guide-cell.o { cursor: default; background: #F1E4C3; box-shadow: inset 0 0 0 1px rgba(120,90,40,.35); }
 .c.o.n { cursor: pointer; }
 .c.o:hover { background: #F1E4C3; }
-.c.n1 { color: #1F4FB8; } .c.n2 { color: #1C7128; } .c.n3 { color: #C4122F; } .c.n4 { color: #182F7A; }
+.c.n1, .guide-cell.n1 { color: #1F4FB8; } .c.n2 { color: #1C7128; } .c.n3 { color: #C4122F; } .c.n4 { color: #182F7A; }
 .c.n5 { color: #7A1C1C; } .c.n6 { color: #0B6B6B; } .c.n7 { color: #1B1B1B; } .c.n8 { color: #5A5A5A; }
-.c svg { width: 72%; height: 72%; pointer-events: none; }
+.c svg, .guide-cell svg { width: 72%; height: 72%; pointer-events: none; }
 /* The mine that went off: red, with the mine drawn on it. */
 .c.boom { background: #E0322F; box-shadow: inset 0 0 0 3px #7A0D0B; }
 /* The hint: the squares it is about are framed in yellow, the numbers it uses get a yellow ring. */
@@ -43,7 +43,7 @@
   content: ""; position: absolute; inset: 2px; border: 5px solid var(--gold); border-radius: 6px; z-index: 2;
   box-shadow: inset 0 0 0 1.5px rgba(var(--shade),.8), 0 0 0 1.5px rgba(var(--shade),.8); animation: pulse 1.4s ease-in-out infinite;
 }
-.c.ring::after {
+.c.ring::after, .guide-cell.ring::after {
   content: ""; position: absolute; inset: 3px; border: 4px solid var(--gold); border-radius: 50%; z-index: 2;
   box-shadow: 0 0 0 1.5px rgba(var(--shade),.8), inset 0 0 0 1.5px rgba(var(--shade),.8);
 }
@@ -64,8 +64,9 @@
 /* A page 1340 px wide or less: the count goes, like the wins. The message after each flag still says it. */
 html.narrow #flags { display: none; }
 
-#helpText .demo { display: flex; gap: 24px; align-items: center; margin: 6px 0 10px; }
-#helpText .demo svg { width: 150px; height: 150px; flex: none; border-radius: 6px; }
+.guide-mine-grid { --s: 50px; display: grid; grid-template-columns: repeat(3, var(--s)); }
+.guide-cell { --s: 50px; width: var(--s); height: var(--s); flex: none; cursor: inherit; }
+.guide-key .guide-cell { border-radius: 6px; }
 
 @media (max-width: 700px) {
   #flagBtn { order: 1; flex: 1 1 0; min-width: 0; padding: 4px 8px; gap: 6px; justify-content: center;

@@ -156,10 +156,16 @@
   #sheet td.ink { animation: ink .5s cubic-bezier(.2,1.5,.4,1); }
   @keyframes ink { 0% { scale: 1.5; opacity: 0; } 60% { opacity: 1; } }
 
-  #helpText .boxes { display: grid; grid-template-columns: auto 1fr; gap: 2px 22px; margin: 4px 0 8px; }
-  #helpText .boxes b { white-space: nowrap; }
-  #helpText .demo { display: flex; gap: 10px; margin: 4px 0 10px; }
-  #helpText .demo svg { width: 54px; height: 54px; overflow: visible; }
+  .guide-dice { gap: 8px; }
+  .guide-dice svg { width: 44px; height: 44px; overflow: visible; }
+  .guide-scores { width: 100%; border-collapse: collapse; text-align: left; }
+  .guide-scores th, .guide-scores td { padding: 4px 8px; }
+  .guide-scores th { width: 24%; }
+  .guide-scores tr:nth-child(odd) { background: #F2F5F3; }
+  @media (max-width: 700px) {
+    .guide-dice svg { width: 36px; height: 36px; }
+    .guide-scores { font-size: 18px; }
+  }
 
   /* A low window (his laptop with the text at 125 %): the two players sit side by side above the
      piste, so the dice keep their size. */
@@ -242,37 +248,46 @@
 <footer id="rail"><div id="wins"></div><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
   <section class="page">
-    <h3>Le but</h3>
-    <p>Vous jouez contre un joueur de l'ordinateur, chacun à son tour. Chacun a sa colonne sur la feuille de marque, avec 13 cases. À chaque tour, on remplit une case.</p>
-    <p>Quand les deux colonnes sont pleines, le plus grand total gagne.</p>
-    <h3>Un tour</h3>
-    <p>Cliquez sur « Lancer les dés ». Cliquez ensuite sur les dés que vous voulez garder, puis relancez les autres. Vous avez trois lancers au plus.</p>
-    <p>Pour finir le tour, cliquez sur une case de votre colonne : elle montre déjà les points que vos dés y marquent.</p>
+    <h3>Lancer, garder, marquer</h3>
+    <ol>
+      <li>Cliquez sur « Lancer les dés ».</li>
+      <li>Cliquez sur les dés à garder. Relancez les autres si vous le souhaitez. Vous avez droit à trois lancers au total.</li>
+      <li>Cliquez sur une case libre dans la colonne « Vous » pour marquer les points affichés.</li>
+    </ol>
+    <p>Vous remplissez une case par tour. Quand les feuilles sont pleines, le plus grand total gagne.</p>
   </section>
   <section class="page">
-    <h3>Le haut de la feuille</h3>
-    <p>Les cases de l'As au Six comptent les dés de leur valeur. Par exemple, trois 5 marquent 15 points dans la case Cinq.</p>
-    <div class="demo" id="demo5"></div>
-    <h3>Le bonus</h3>
-    <p>Si vos six cases du haut font 63 points ou plus, vous gagnez 35 points de bonus. 63 points, c'est trois dés de chaque valeur. La ligne Bonus montre où vous en êtes.</p>
-  </section>
-  <section class="page">
-    <h3>Le bas de la feuille</h3>
-    <div class="boxes">
-      <b>Brelan</b><span>trois dés pareils : leur total</span>
-      <b>Carré</b><span>quatre dés pareils : leur total</span>
-      <b>Full</b><span>trois dés pareils et deux autres pareils : 25 points</span>
-      <b>Petite suite</b><span>quatre dés qui se suivent, comme 2 3 4 5 : 30 points</span>
-      <b>Grande suite</b><span>cinq dés qui se suivent : 40 points</span>
-      <b>Yams</b><span>cinq dés pareils : 50 points</span>
-      <b>Chance</b><span>n'importe quels dés : leur total</span>
+    <h3>Compter les dés de même valeur</h3>
+    <div class="guide-panel">
+      <figure class="guide-example">
+        <div class="guide-art guide-dice" id="demo5" aria-hidden="true"></div>
+        <figcaption><strong>Trois 5 donnent 15 points dans « Cinq ».</strong> Le 2 et le 6 ne comptent pas dans cette case.</figcaption>
+      </figure>
     </div>
+    <p>De « As » à « Six », chaque case compte seulement les dés de la valeur indiquée.</p>
+    <p><strong>Bonus.</strong> Avec au moins 63 points dans ces six cases, vous gagnez 35 points de plus.</p>
   </section>
   <section class="page">
-    <h3>Barrer une case</h3>
-    <p>Si vos dés ne vont dans aucune case, ou s'ils y marquent trop peu, vous pouvez barrer une case où ils ne marquent rien : elle marque 0 point, et vous gardez les autres cases pour plus tard. Ces cases disent « barrer ».</p>
-    <h3>Les boutons</h3>
-    <p>« Que jouer maintenant ? » encadre les dés à garder, ou la meilleure case. « Annuler le dernier coup » reprend la dernière case remplie. « Nouvelle partie » vous laisse choisir la force de l'ordinateur. La partie est enregistrée à chaque coup.</p>
+    <h3>Reconnaître les combinaisons</h3>
+    <table class="guide-scores" aria-label="Points des combinaisons">
+      <tbody>
+        <tr><th scope="row">Brelan</th><td>3 dés pareils. Additionnez ces 3 dés.</td></tr>
+        <tr><th scope="row">Carré</th><td>4 dés pareils. Additionnez ces 4 dés.</td></tr>
+        <tr><th scope="row">Full</th><td>3 dés pareils et une paire, comme 5-5-5-2-2. 25 points.</td></tr>
+        <tr><th scope="row">Petite suite</th><td>4 dés qui se suivent, comme 2-3-4-5. 30 points.</td></tr>
+        <tr><th scope="row">Grande suite</th><td>5 dés qui se suivent, comme 1-2-3-4-5. 40 points.</td></tr>
+        <tr><th scope="row">Yams</th><td>5 dés pareils. 50 points.</td></tr>
+        <tr><th scope="row">Chance</th><td>Additionnez les 5 dés.</td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="page">
+    <h3>Barrer une case ou demander de l'aide</h3>
+    <p>Une case qui affiche « barrer » rapporte 0 point. Si vous la choisissez, elle reste barrée pour la partie.</p>
+    <ul>
+      <li>« Que jouer maintenant ? » encadre les dés à garder ou une case à remplir.</li>
+      <li>« Annuler le dernier coup » reprend la dernière case remplie.</li>
+    </ul>
   </section>
 </div>
 

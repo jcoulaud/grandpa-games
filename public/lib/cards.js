@@ -100,6 +100,14 @@ function faceHtml(id) {
   const r = rk(id), ix = `${RANKS[r]}${suitHtml(st(id))}`;
   return `<div class="ix">${ix}</div><div class="c ${r > 1 && r < 11 ? 'pips' : 'pic'}">${faceSvg(id)}</div><div class="ix end">${ix}</div>`;
 }
+
+// Rules examples use the same faces and backs as the cards on the table.
+for (const example of document.querySelectorAll('#help [data-help-card]')) {
+  const value = example.dataset.helpCard;
+  const id = Number(value);
+  example.classList.add('card', value === 'dos' ? 'down' : rd(id) ? 'red' : 'black');
+  if (value !== 'dos') example.insertAdjacentHTML('afterbegin', faceHtml(id));
+}
 // Reproduce a verified deal when the bounded search has no match.
 function seededRandom(seed) {
   return () => {
