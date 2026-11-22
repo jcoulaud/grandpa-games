@@ -198,6 +198,17 @@ ok((await gauge()) === null && await g(() => document.querySelector('.ribbon')?.
 ok(await g(() => !document.getAnimations().length && !document.querySelector('.shimmer')), 'with reduced motion, the laid cards are on their trays at once');
 ok(await g(() => [...document.querySelectorAll('.mlab')].map(e => e.textContent).sort().join() === 'Brelan,Suite'), 'each tray says "Suite" or "Brelan"');
 ok(await g(() => document.querySelectorAll('#zone0 ~ .meld').length === 2 || document.querySelectorAll('.meld').length === 2), 'his two combinations lie in his zone');
+// The nudge never points at a wrong move: "Poser" only for cards that can be laid, "Jeter" only when nothing can be laid or added.
+ok(await g(() => {
+  const h = G.hands[0], ok3 = [];
+  for (let a = 0; a < h.length; a++) for (let b = a + 1; b < h.length; b++) for (let c = b + 1; c < h.length; c++) if (RA.layCheck(G, [h[a], h[b], h[c]]).why) ok3.push([h[a], h[b], h[c]]);
+  sel = new Set(ok3[0]); render();
+  const lay = document.getElementById('layBtn').hasAttribute('data-nudge');
+  sel = new Set([h[0]]); render();
+  const thr = document.getElementById('throwBtn').hasAttribute('data-nudge') === (RA.hint(G).type === 'throw');
+  sel = new Set(); render();
+  return ok3.length && !lay && thr;
+}), 'after he opens, "Poser" does not pulse for cards that make no combination, and "Jeter" pulses only when throwing is the best move');
 bad = await layoutCheck();
 ok(!bad.length, 'the table fits with his combinations ' + bad.join(', '));
 await page.screenshot({ path: `${OUT}/rami-opened.png` });

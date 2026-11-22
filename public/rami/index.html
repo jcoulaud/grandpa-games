@@ -932,9 +932,11 @@ function render(moving = false) {
   layB.classList.toggle('primary', !layB.disabled);
   thrB.classList.toggle('primary', !thrB.disabled);
   layB.classList.toggle('hint', !!(hint && hint.type === 'lay' && sel.size && hint.cards.every(c => sel.has(c)) && sel.size === hint.cards.length));
-  // Before he opens, "Poser" pulses only once the gauge is gold.
-  layB.toggleAttribute('data-nudge', !layB.disabled && (G.opened[0] || (pts >= RA.OPEN && !RA.layCheck(G, mySel()).why)));
-  thrB.toggleAttribute('data-nudge', !thrB.disabled);
+  // "Poser" pulses only when his selection can be laid (before he opens, with the gauge gold). "Jeter"
+  // pulses only when he has nothing left to lay or add, so a wait never pushes him to throw a useful card;
+  // otherwise the hint button pulses and shows the move.
+  layB.toggleAttribute('data-nudge', !layB.disabled && (G.opened[0] || pts >= RA.OPEN) && !RA.layCheck(G, mySel()).why);
+  thrB.toggleAttribute('data-nudge', !thrB.disabled && RA.hint(G).type === 'throw');
   if (L.narrow) {
     const bw = Math.floor((L.W - 2 * pad - 2 * gap) / 3);
     [layB, thrB, sortB].forEach((b, i) => { b.style.width = bw + 'px'; b.style.left = pad + i * (bw + gap) + 'px'; b.style.top = L.keys + 'px'; });
