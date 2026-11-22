@@ -123,39 +123,38 @@
     #hintBtn, #helpBtn { flex-direction: column; gap: 0; padding: 3px 2px; text-align: center; font-size: 18px; }
   }
 
-  /* ---------- Motion ----------
-     Each motion has its own class, set by the functions under "Motion" in the script. They are all off
-     with reduced motion: the colours and rings still say what happened. */
+  /* Keep the buttons still. Only the chalk, the rings and the light move. */
+  .cell:has(.travelling) { z-index: 6; }
+  .leaving { pointer-events: none; animation: chalkOut .36s ease-out both; }
+  .d.leaving { position: absolute; }
+  .block { background: rgba(255,207,100,.38); opacity: 0; }
+  .wobble { position: absolute; inset: 2px; border: 2px solid var(--gold); pointer-events: none; animation: nudge .36s ease-in-out; }
   @media (prefers-reduced-motion: no-preference) {
-    /* A digit written: the chalk draws it from left to right, in 0.34 s. */
-    .cell .d.wrote { animation: chalkIn .34s cubic-bezier(.3,.6,.3,1); }
-    /* A digit erased: it fades and blurs away, as under a sponge. */
-    .ghost { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 2;
-      font: 500 var(--fd)/1 var(--ui); animation: wipe .42s ease-in forwards; }
-    /* A digit that breaks a rule shakes once, and the digit it meets pulses red. */
-    .cell.shake { animation: sh .3s; }
-    .cell.blame { animation: blame .7s ease-in-out 3; }
-    .cell.hint { animation: hintGlow 1.4s ease-in-out infinite; }
-    /* A new grid: the blocks come in one after another. */
-    #grid[data-board="deal"] .cell.given .d { animation: dealIn .36s cubic-bezier(.22,.68,.32,1) var(--band) backwards; }
-    /* A key whose digit is complete: its check pops in. */
-    .key.just::after { animation: pop .45s cubic-bezier(.2,1.4,.4,1); }
-    /* The win: each block lights up after the one before, and its digits hop. */
+    .travelling { text-shadow: 0 1px 2px #232A31; animation: chalkLand .52s cubic-bezier(.22,.7,.32,1) both; }
+    .cell.blame::after, .cell.hint::after { content: ""; position: absolute; inset: 2px; pointer-events: none;
+      border: 2px solid currentColor; color: var(--wrong); animation: ring .95s ease-out both; }
+    .cell.hint::after { color: var(--gold); }
+    #grid[data-board="deal"] .given .d { animation: dealIn .4s ease-out var(--band) backwards; }
+    .key.just::after { animation: pop .45s ease-out; }
     #grid[data-board="win"] .block { animation: blockLit var(--lit-ms) ease-in-out var(--band) both; }
-    #grid[data-board="win"] .cell .d { animation: hop .5s ease-in-out var(--band); }
+    #grid[data-board="win"] .cell .d { animation: hop .62s ease-in-out var(--band); }
+    #grid[data-board="win"] .cell .d.travelling { animation: chalkLand .52s cubic-bezier(.22,.7,.32,1) both, hop .62s ease-in-out var(--band); }
   }
-  /* With reduced motion, the win still lights every block, without a wave. */
   @media (prefers-reduced-motion: reduce) {
-    #grid[data-board="win"] .block { background: rgba(255,200,61,.16); }
-    .cell.shake, .cell.blame, .cell.hint { animation: none; }
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    #grid[data-board="win"] .block { opacity: .4; }
   }
-  @keyframes chalkIn { from { clip-path: inset(0 100% 0 0); opacity: .4; } to { clip-path: inset(0 0 0 0); opacity: 1; } }
-  @keyframes wipe { to { opacity: 0; filter: blur(5px); translate: 6px 2px; scale: 1.06; } }
-  @keyframes blame { 50% { box-shadow: inset 0 0 0 3px var(--wrong), 0 0 14px 4px rgba(255,120,110,.6); } }
-  @keyframes hintGlow { 50% { box-shadow: inset 0 0 0 calc(var(--t) * .9) var(--gold), 0 0 22px 6px rgba(255,200,61,.7); } }
-  @keyframes dealIn { from { opacity: 0; scale: .7; } }
-  @keyframes blockLit { 0% { background: transparent; } 35% { background: rgba(255,200,61,.55); box-shadow: 0 0 26px 6px rgba(255,200,61,.5); } 100% { background: rgba(255,200,61,.16); } }
-  @keyframes hop { 40% { translate: 0 calc(var(--c) * -.12); } }
+  @keyframes chalkLand {
+    from { transform: translate(var(--dx), var(--dy)) scale(var(--start-scale)); opacity: .68; }
+    78% { transform: translateY(-2px) scale(1.05); opacity: 1; }
+    to { transform: none; }
+  }
+  @keyframes nudge { 30% { transform: translateX(-2px); } 70% { transform: translateX(2px); } }
+  @keyframes chalkOut { to { opacity: 0; transform: translate(5px,-4px) scale(.86); } }
+  @keyframes ring { from { opacity: .9; transform: scale(.85); } to { opacity: 0; transform: scale(1.12); } }
+  @keyframes dealIn { from { opacity: 0; transform: translateY(-6px); } 80% { transform: translateY(1px); } }
+  @keyframes blockLit { 0% { opacity: 0; } 42% { opacity: 1; } 100% { opacity: .4; } }
+  @keyframes hop { 45% { translate: 0 calc(var(--c) * -.10); } 78% { translate: 0 1px; } }
 </style>
 <script src="../lib/zoom.js"></script>
 </head>
@@ -231,11 +230,9 @@ const S = Sudoku;
 const $ = id => document.getElementById(id);
 // Read at each use: the setting can change while the page is open, and the style sheet follows it at once.
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-const motion = ms => reducedMotion.matches ? 0 : ms;
 // The timings of the motions, shared with the style sheet. The win lights one block every BLOCK_MS, each
 // for LIT_MS, and the win sheet opens after the last one. A new grid brings its blocks in over DEAL_MS.
-const BLOCK_MS = 170, LIT_MS = 700, DEAL_MS = 400, BLAME_MS = 2100;
-const WIN_DIALOG_MS = BLOCK_MS * 8 + LIT_MS + 300;
+const BLOCK_MS = 160, LIT_MS = 760, DEAL_MS = 400, BLAME_MS = 2100;
 document.documentElement.style.setProperty('--lit-ms', LIT_MS + 'ms');
 
 /* ---------- State ----------
@@ -244,7 +241,7 @@ document.documentElement.style.setProperty('--lit-ms', LIT_MS + 'ms');
    next move. stats: { won }. wonNow: this game is counted as won, so a win counts once. */
 let G = null, undo = [], level = 'facile', stats = { won: 0 }, wonNow = false;
 let sel = -1, notesOn = false, hint = null, making = 0, timers = [];
-let stale = false, saved = true;
+let stale = false, saved = true, pendingWin = null;
 addEventListener('gg-stale', () => { stale = true; });
 
 const UNIT_NAME = { row: 'cette ligne', col: 'cette colonne', box: 'ce carré' };
@@ -274,7 +271,7 @@ function load() {
 
 /* ---------- His moves ---------- */
 function later(fn, ms) { const t = setTimeout(() => { timers = timers.filter(x => x !== t); fn(); }, ms); timers.push(t); return t; }
-function stopAll() { timers.forEach(clearTimeout); timers = []; blame = -1; }
+function stopAll() { timers.forEach(clearTimeout); timers = []; blame = -1; pendingWin = null; clearMove(); delete gridEl.dataset.board; }
 const ready = () => !!G && !making && !Kit.isOpen();
 
 // A second click on the same thing within half a second is a double-click: it counts as one click.
@@ -328,15 +325,15 @@ async function digit(d) {
   if (refuse('place', d)) return;
   const i = sel, before = S.complete(G);
   const r = S.write(G, i, d);
+  const previous = G;
   const written = commit(r.G);
-  render();
-  animWrite(i);
+  drawMove(previous, i);
   const fresh = S.complete(G).filter(x => !before.includes(x));
   fresh.forEach(animKeyDone);
-  if (G.result) { await written; return finish(true); }
+  if (G.result) { finish(true); return written; }
   if (r.clash) {
     blameCell(r.clash.cell);
-    animClash(i);
+    shake(i);
     Kit.say(`Il y a déjà un ${d} dans ${UNIT_NAME[r.clash.unit]}.`);
   } else if (fresh.includes(d)) Kit.say(`Bravo, les neuf ${d} sont en place !`);
   else Kit.say(`Vous avez écrit un ${d}. Encore ${plural(empties(), 'case', 'cases')} à remplir.`);
@@ -345,8 +342,9 @@ async function digit(d) {
 async function toggleNote(d) {
   if (refuse('note', d)) return;
   const r = S.note(G, sel, d);
+  const previous = G;
   const written = commit(r.G);
-  render();
+  drawMove(previous, sel);
   Kit.say(r.on ? `Vous avez noté un petit ${d} dans cette case.` : `Le petit ${d} est retiré de cette case.`);
   await written;
 }
@@ -354,10 +352,9 @@ async function eraseCell() {
   if (!ready() || double('erase')) return;
   if (refuse('erase')) return;
   const i = sel, r = S.erase(G, i);
-  const mine = !S.conflicts(G).includes(i);
+  const previous = G;
   const written = commit(r.G);
-  render();
-  if (r.was) animErase(i, r.was, mine);
+  drawMove(previous);
   Kit.say(r.was ? `Le ${r.was} est effacé.` : 'Les notes de cette case sont effacées.');
   await written;
 }
@@ -370,10 +367,10 @@ function setNotes(on) {
 async function doUndo() {
   if (!ready() || !undo.length || G.result) return;
   stopAll();
+  const previous = G;
   G = S.back(G, undo.pop()); hint = null;
   const written = save();
-  delete gridEl.dataset.board;
-  render();
+  drawMove(previous);
   Kit.say(undo.length ? 'Le dernier coup est annulé.' : 'Le dernier coup est annulé. La grille est comme au départ.');
   await written;
 }
@@ -395,14 +392,13 @@ async function showHint() {
       : h.kind === 'hidden' ? `Dans ${UNIT_NAME[h.unit]}, le ${h.digit} ne peut aller que dans cette case.`
       : `Ici, il faut un raisonnement plus long : le ${h.digit} va dans cette case.`;
   }
-  const before = S.complete(G), wasBad = S.conflicts(G).includes(i);
+  const previous = G, before = S.complete(G);
   const written = commit(next);
   sel = i;
   hint = { cell: i, house: h.kind === 'hidden' ? houseOf(i, h.unit) : [] };
-  render();
-  if (h.kind === 'clash' || h.kind === 'wrong') animErase(i, h.digit, !wasBad);
-  else { animWrite(i); S.complete(G).filter(x => !before.includes(x)).forEach(animKeyDone); }
-  if (G.result) { await written; return finish(true); }
+  drawMove(previous, i);
+  S.complete(G).filter(x => !before.includes(x)).forEach(animKeyDone);
+  if (G.result) { finish(true); return written; }
   Kit.say(text);
   await written;
 }
@@ -416,9 +412,11 @@ function finish(show) {
   if (saved && !stale) Kit.say(text);
   animWin();
   const game = G;
-  later(() => G !== game || stale || Kit.isOpen() || Kit.dialog('Bravo, vous avez gagné !',
+  const open = () => G === game && !stale && !Kit.isOpen() && Kit.dialog('Bravo, vous avez gagné !',
     `Vous avez rempli toute la grille du niveau ${Kit.levelNames[level].toLowerCase()}.` + (stats.won > 1 ? ` C'est votre victoire numéro ${stats.won}.` : ''),
-    [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', Kit.home]], true), motion(WIN_DIALOG_MS));
+    [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', Kit.home]], true);
+  if (reducedMotion.matches) open();
+  else pendingWin = open;
 }
 
 /* ---------- A new grid ----------
@@ -568,8 +566,7 @@ function render() {
     else if (house.has(i)) cls += ' house';
     if (hint && hint.cell === i) cls += ' hint';
     if (i === blame) cls += ' blame';
-    const keep = e.className.includes(' shake') ? ' shake' : '';
-    if (e.className !== cls + keep) e.className = cls + keep;
+    if (e.className !== cls) e.className = cls;
     const k = d ? 'd' + d : 'n' + G.notes[i];
     if (e.dataset.k !== k) {
       e.dataset.k = k;
@@ -598,31 +595,76 @@ function render() {
   $('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
 }
 
-/* ---------- Motion ----------
-   Each motion is one function and one class of the style sheet. With reduced motion the classes are
-   still set, but the style sheet plays nothing. */
-// A digit written: the chalk draws it.
-function animWrite(i) {
-  const d = cells[i] && cells[i].querySelector('.d');
-  if (!d) return;
-  d.classList.remove('wrote'); void d.offsetWidth; d.classList.add('wrote');
+/* ---------- Motion ---------- */
+// Interrupting a move reveals the committed position immediately.
+function clearMove() {
+  gridEl.querySelectorAll('.leaving, .wobble').forEach(mark => mark.remove());
+  gridEl.querySelectorAll('.travelling').forEach(mark => mark.classList.remove('travelling'));
 }
-// A digit erased: a ghost of it fades under the sponge.
-function animErase(i, d, mine) {
-  if (reducedMotion.matches) return;
-  const e = cells[i];
-  const g = document.createElement('span');
-  g.className = 'ghost'; g.textContent = d; g.style.color = mine ? 'var(--mine)' : 'var(--wrong)';
-  e.appendChild(g);
-  setTimeout(() => g.remove(), 480);
+function drawMove(previous, padCell = -1) {
+  clearMove();
+  if (reducedMotion.matches) { render(); return; }
+  const changes = [];
+  cells.forEach((cell, i) => {
+    if (previous.cells[i] === G.cells[i] && previous.notes[i] === G.notes[i]) return;
+    changes.push({ cell, i, old: cell.firstElementChild, color: getComputedStyle(cell).color });
+  });
+  render();
+  for (const { cell, i, old, color } of changes) {
+    const current = cell.firstElementChild;
+    const added = G.notes[i] & ~previous.notes[i];
+    const removed = previous.notes[i] & ~G.notes[i];
+    if (old && (previous.cells[i] !== '0' || removed)) {
+      // Keep only the notes that left. The real cell already has its new accessible label.
+      old.querySelectorAll('i').forEach((mark, n) => {
+        if (!(removed & (1 << (n + 1)))) mark.textContent = '';
+      });
+      old.classList.add('leaving');
+      old.style.color = color;
+      old.setAttribute('aria-hidden', 'true');
+      cell.append(old);
+      old.addEventListener('animationend', () => old.remove(), { once: true });
+    }
+    if (!current) continue;
+    const marks = current.matches('.d') ? [current] : [...current.children].filter((_, n) => added & (1 << (n + 1)));
+    for (const mark of marks) {
+      // Undo restores nearby chalk in place. A played digit starts at its own number key.
+      let dx = 0, dy = -10, scale = 1;
+      if (i === padCell) {
+        const key = keys[Number(mark.textContent) - 1].getBoundingClientRect();
+        const dest = mark.getBoundingClientRect();
+        dx = (key.x + key.width / 2 - dest.x - dest.width / 2) / Zoom.z();
+        dy = (key.y + key.height / 2 - dest.y - dest.height / 2) / Zoom.z();
+        scale = current.matches('.notes') ? 2 : 1.15;
+      }
+      mark.style.setProperty('--dx', dx + 'px');
+      mark.style.setProperty('--dy', dy + 'px');
+      mark.style.setProperty('--start-scale', scale);
+      mark.classList.add('travelling');
+    }
+  }
 }
-// A digit that breaks a rule shakes once.
-function animClash(i) { shake(i); }
+gridEl.addEventListener('animationend', e => {
+  if (e.animationName === 'blockLit' && e.target === blocks[8]) showWinDialog();
+  if (e.animationName === 'chalkLand') e.target.classList.remove('travelling');
+});
+function showWinDialog() {
+  const open = pendingWin;
+  pendingWin = null;
+  if (open) open();
+}
+reducedMotion.addEventListener('change', () => {
+  clearMove();
+  if (reducedMotion.matches) showWinDialog();
+});
 function shake(i) {
-  const e = cells[i];
-  if (!e) return;
-  e.classList.remove('shake'); void e.offsetWidth; e.classList.add('shake');
-  setTimeout(() => e.classList.remove('shake'), 320);
+  if (reducedMotion.matches) return;
+  const rim = document.createElement('span');
+  rim.className = 'wobble';
+  rim.setAttribute('aria-hidden', 'true');
+  cells[i].querySelector('.wobble')?.remove();
+  cells[i].append(rim);
+  rim.addEventListener('animationend', () => rim.remove(), { once: true });
 }
 // The digit it meets has a red ring for a moment.
 function blameCell(j) {
@@ -647,8 +689,8 @@ function animDeal() {
 // The win: the blocks light up one after another, in reading order, and their digits hop.
 function animWin() {
   delete gridEl.dataset.board;
-  blocks.forEach((e, b) => e.style.setProperty('--band', b * BLOCK_MS + 'ms'));
-  cells.forEach((e, i) => e.style.setProperty('--band', S.BOX(i) * BLOCK_MS + 'ms'));
+  blocks.forEach((e, b) => e.style.setProperty('--band', (520 + b * BLOCK_MS) + 'ms'));
+  cells.forEach((e, i) => e.style.setProperty('--band', (520 + S.BOX(i) * BLOCK_MS) + 'ms'));
   void gridEl.offsetWidth;
   gridEl.dataset.board = 'win';
 }
@@ -677,7 +719,7 @@ addEventListener('keydown', e => {
     lastTap = null; choose(sel < 0 ? 40 : r * 9 + c);
   }
 });
-addEventListener('resize', render);
+addEventListener('resize', () => { clearMove(); render(); });
 
 // The rules open by themselves the first time the game is opened.
 if (load()) {
