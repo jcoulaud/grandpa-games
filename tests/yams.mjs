@@ -175,6 +175,12 @@ await page.getByRole('button', { name: 'Facile', exact: true }).click();
 await click(page.locator('#cup'));
 ok(await g(() => !showing && G.rolls === 1), "a new game during the computer's turn can be played at once");
 
+// A save without a known level still loads, at Facile.
+await g(() => { const v = GG.load('yams'); delete v.G.level; localStorage.setItem('gg:save:yams', JSON.stringify({ updatedAt: Date.now(), data: v })); });
+await page.reload();
+await wait(300);
+ok(await g(() => !Kit.isOpen() && G.level === 'facile' && level === 'facile'), 'a save without a level loads at Facile');
+
 // 9. The sizes: dice and rows large enough on his laptop and at 125 %, nothing outside the window.
 await page.click('#newBtn');
 await page.locator('#overBtns button', { hasText: 'Difficile' }).click();

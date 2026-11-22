@@ -360,6 +360,8 @@ function valid(g) {
 function load() {
   try {
     const v = GG.load('yams');
+    // A save without a known level still loads, at Facile.
+    if (v && v.G && !Object.hasOwn(Y.LEVELS, v.G.level)) v.G.level = 'facile';
     if (!v || !valid(v.G)) return false;
     G = view = v.G; wonNow = !!v.wonNow; level = G.level;
     // Undo steps that do not read back as a game are dropped.
