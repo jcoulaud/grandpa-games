@@ -226,6 +226,8 @@ const GAMES = [
     felt: ['#B5532A', '#6A2A12'], scene: diceArt },
   { id: 'bataille-navale', title: 'Bataille navale', text: 'Coulez les bateaux de l’ordinateur avant les vôtres.',
     felt: ['#8DB3CC', '#4F6D7A'], scene: seaArt },
+  { id: 'golf', title: 'Golf miniature', text: 'Neuf nouveaux trous à chaque partie : visez le drapeau à votre rythme.',
+    felt: ['#3f7d55', '#1d4634'], scene: () => '<img src="golf/icon.svg" alt="" style="width:100%;height:100%">' },
   { id: 'paires', title: 'Jeu des paires', text: 'Retournez les cartes deux par deux et retrouvez les paires.',
     felt: ['#7A8A30', '#3A4414'], scene: pairsArt },
   { id: 'sudoku', title: 'Sudoku', text: 'Remplissez la grille de chiffres, avec une aide qui explique.',
@@ -460,7 +462,8 @@ function render() {
     const parts = typeof meta?.summary === 'string' ? meta.summary.split(' · ') : [];
     const playing = parts.some(p => /en cours/i.test(p));
     // The button already says a game is in progress: the line under the text shows only the wins.
-    const wins = parts.filter(p => !/en cours/i.test(p)).join(' · ');
+    // A count of zero ("0 parcours finis") says nothing yet: it is left out.
+    const wins = parts.filter(p => !/en cours/i.test(p) && !/^0\s/.test(p)).join(' · ');
     return `<a class="tile" href="${g.id}/" data-id="${g.id}">
       <div class="art" style="background: radial-gradient(90% 120% at 50% 0%, ${g.felt[0]}, ${g.felt[1]})">${g.scene()}</div>
       <div class="body">
