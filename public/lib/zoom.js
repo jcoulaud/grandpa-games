@@ -47,10 +47,10 @@
   // Two keys like the other buttons, with a word each and a magnifying glass: no number to read.
   const css = `
   .zoom { flex: none; display: flex; align-items: center; gap: 10px; }
-  .zoom button { min-height: 46px; padding: 4px 16px 4px 12px; border-radius: 15px; cursor: pointer;
+  .zoom button { min-height: 44px; padding: 3px 14px 3px 10px; border-radius: 15px; cursor: pointer;
     display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
-    background: #fff; color: #1B2422; border: 2px solid #9AA6A1; box-shadow: 0 3px 0 #9AA6A1; font: 600 21px var(--ui, system-ui); }
-  .zoom button svg { width: 26px; height: 26px; flex: none; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+    background: #fff; color: #1B2422; border: 2px solid #9AA6A1; box-shadow: 0 3px 0 #9AA6A1; font: 600 20px var(--ui, system-ui); }
+  .zoom button svg { width: 24px; height: 24px; flex: none; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
   .zoom button:hover { background: #E8EEEB; }
   .zoom button:active { background: #D5DCD9; box-shadow: none; transform: translateY(3px); }
   .zoom button:focus-visible { outline: 4px solid #fff; outline-offset: 3px; box-shadow: 0 0 0 3px #1B2422; }

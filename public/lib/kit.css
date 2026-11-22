@@ -5,13 +5,12 @@
   /* Each game has its own felt: a game page may set these three. */
   --felt-top: #1A6A5F; --felt: #0F4F47; --shade: 6,28,25;
   --face: #FFFDF6; --ink: #14171A; --red: #C4122F; --back: #1F4470;
-  --ui: "Atkinson Hyperlegible Next", "Segoe UI", system-ui, sans-serif;
-  --title: "Fraunces", Georgia, serif;
+  --ui: "Lexend", "Segoe UI", system-ui, sans-serif;
+  --title: "Lexend", "Segoe UI", system-ui, sans-serif;
 }
-/* The fonts, kept on the site so they work offline. Atkinson Hyperlegible Next was drawn for readers
-   with low vision: letters that look alike (I l 1, O 0) differ. Fraunces, a soft serif, is for the titles. */
-@font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 400 800; font-display: swap; src: url("../fonts/atkinson-next.woff2") format("woff2"); }
-@font-face { font-family: "Fraunces"; font-weight: 600 700; font-display: swap; src: url("../fonts/fraunces.woff2") format("woff2"); }
+/* The font, kept on the site so it works offline. Lexend was drawn to make reading easier: wide letters
+   and open spacing. It is used for the text and the titles. */
+@font-face { font-family: "Lexend"; font-weight: 400 800; font-display: swap; src: url("../fonts/lexend.woff2") format("woff2"); }
 * { box-sizing: border-box; }
 /* Read by a screen reader, not shown. */
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -33,8 +32,10 @@ body {
 #home svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 #title { display: flex; align-items: center; gap: 10px; font: 700 28px var(--title); letter-spacing: -.01em;
   margin-right: 10px; padding-left: 16px; border-left: 2px solid #D5DCD9; }
-/* Groups in the bar: going back, playing, the game. A spacer pushes the game buttons to the right. */
-#bar .spacer { flex: 1; }
+/* Groups in the bar: going back on the left, playing in the middle, the game on the right. The free room is
+   split in two around the play buttons. */
+#bar .spacer { display: none; }
+#title + *, #bar .spacer + * { margin-left: auto; }
 /* Each label in one line. A button has up to three labels: <span class="long">…</span><span class="short">…</span>
    <span class="tiny">…</span>. Kit measures the bar and takes the longest labels that fit (see fitBar). */
 #bar > * { white-space: nowrap; }
@@ -114,14 +115,14 @@ button.game:active { background: #095A4E; }
 @media (prefers-reduced-motion: reduce) { #msg.flash { animation: none; } }
 /* Bottom bar, always at the foot of the window: who made the games and the counts on the left, the size
    buttons on the right. Kit adds the credit. */
-#rail { grid-row: 4; /* its own row, also while the table is hidden */ display: flex; align-items: center; gap: 10px; padding: 5px clamp(10px, 1.4vw, 18px); margin-top: clamp(0px, 4vh - 28px, 24px);
+#rail { grid-row: 4; /* its own row, also while the table is hidden */ display: flex; align-items: center; gap: 10px; padding: 7px clamp(14px, 2vw, 28px); margin-top: clamp(0px, 4vh - 28px, 24px);
   background: rgba(0,0,0,.18); border-top: 1px solid rgba(255,255,255,.08); }
 #rail .zoom { margin-left: auto; }
-.credit { flex: none; min-height: 46px; padding: 4px 20px 4px 4px; display: inline-flex; align-items: center; gap: 12px; border-radius: 999px;
+.credit { flex: none; min-height: 44px; padding: 4px 18px 4px 4px; display: inline-flex; align-items: center; gap: 10px; border-radius: 999px;
   background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.2); color: rgba(255,255,255,.78);
   font: 500 20px var(--ui); text-decoration: none; white-space: nowrap; transition: background-color .12s; }
 .credit b { color: #fff; font-weight: 700; }
-.credit img { width: 38px; height: 38px; flex: none; border-radius: 50%; box-shadow: 0 0 0 2px var(--gold, #FFC83D); }
+.credit img { width: 34px; height: 34px; flex: none; border-radius: 50%; box-shadow: 0 0 0 2px var(--gold, #FFC83D); }
 .credit:hover { background: rgba(255,255,255,.16); }
 .credit:focus-visible { outline: 4px solid #fff; outline-offset: 3px; }
 /* A page 1340 px wide or less (lib/zoom.js sets the class): the counts and the size buttons need the room. */

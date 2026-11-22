@@ -54,7 +54,7 @@
     home();
   });
   if ($('rail') && !$('rail').querySelector('.credit'))
-    $('rail').insertAdjacentHTML('afterbegin', `<a class="credit" href="https://x.com/JulienCoulaud" target="_blank" rel="noopener"><img src="${libRoot}icons/julien.webp" width="38" height="38" alt=""><span>Fait par <b>Julien Coulaud</b></span></a>`);
+    $('rail').insertAdjacentHTML('afterbegin', `<a class="credit" href="https://x.com/JulienCoulaud" target="_blank" rel="noopener"><img src="${libRoot}icons/julien.webp" width="34" height="34" alt=""><span>Fait par <b>Julien Coulaud</b></span></a>`);
   document.querySelectorAll('button[data-icon]').forEach(b => b.insertAdjacentHTML('afterbegin', icon(b.dataset.icon)));
 
   // Each label stays on one line: the bar takes the long labels if they fit, else the short ones, else one
