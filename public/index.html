@@ -104,8 +104,6 @@
      what a tile crops on the sides is only felt. */
   .art svg.field { position: absolute; left: 50%; top: 50%; width: calc(210px * var(--k)); height: calc(147px * var(--k)); translate: -50% -50%;
     filter: drop-shadow(0 10px 12px rgba(0,0,0,.4)); }
-  /* The morpion: the corner of a notebook page, 260 by 150, filling the tile. */
-  .art svg.notebook { position: absolute; inset: 0; width: 100%; height: 100%; }
   .art .scene { position: absolute; left: 50%; top: 0; width: 260px; height: 150px; margin-left: -130px; transform: scale(var(--k)); transform-origin: 50% 0; }
   .art .card { transition: none; }
   .art .card.lifted { box-shadow: 0 12px 22px rgba(0,0,0,.45); }
@@ -240,8 +238,8 @@ const GAMES = [
     felt: ['#C8576B', '#6E2234'], scene: wordsArt },
   { id: 'petits-chevaux', family: 'plateau', title: 'Petits chevaux', text: 'Sortez vos chevaux avec un 6 et menez-les au centre, contre l’ordinateur.',
     felt: ['#2BA3A8', '#0F5A60'], scene: horsesArt },
-  { id: 'morpion', family: 'plateau', title: 'Morpion', text: 'Alignez vos croix avant l’ordinateur, sur une feuille de cahier.',
-    felt: ['#B98AC9', '#6B4580'], scene: notebookArt },
+  { id: 'morpion', family: 'plateau', title: 'Morpion', text: 'Alignez vos croix avant l’ordinateur, sur une grille de neuf cases.',
+    felt: ['#B98AC9', '#6B4580'], scene: morpionArt },
   { id: 'belote', family: 'cartes', title: 'Belote', text: 'Jouez avec André contre Simone et Henri, en 501 points.',
     felt: ['#C08A2E', '#6B4A12'], scene: beloteArt },
   { id: 'huit-americain', family: 'cartes', title: 'Huit américain', text: 'Posez toutes vos cartes le premier, à quatre autour de la table.',
@@ -528,34 +526,30 @@ function horsesArt() {
   return `<svg class="field" viewBox="0 0 210 147" aria-hidden="true">${out}</svg>`;
 }
 
-// The morpion: the corner of a page of a school notebook (Seyès lines and a red margin), crosses in blue
-// ballpoint ink and rings in red, three crosses in a row struck through, and the pen lying on the page.
-function notebookArt() {
-  let lines = '';
-  for (let y = 4; y < 190; y += 4) lines += `<path d="M0 ${y}H260" stroke="${y % 16 ? '#E6DFF3' : '#9A8BCF'}" stroke-width="${y % 16 ? .8 : 1.2}"/>`;
-  for (let x = 36; x < 260; x += 16) lines += `<path d="M${x} 0V190" stroke="#9A8BCF" stroke-width="1.2"/>`;
-  const cross = (c, r) => { const x = 36 + c * 16 + 8, y = r * 16 + 8; return `<path d="M${x - 5} ${y - 5}l10 10M${x + 5} ${y - 5}l-10 10"/>`; };
-  const ring = (c, r) => `<circle cx="${36 + c * 16 + 8}" cy="${r * 16 + 8}" r="5.4"/>`;
-  return `<svg class="notebook" viewBox="0 0 260 150" preserveAspectRatio="xMidYMid meet" overflow="visible" aria-hidden="true">
-    <g transform="translate(34 30) rotate(-6)">
-      <rect x="3" y="7" width="260" height="190" rx="3" fill="rgba(40,20,52,.35)"/>
-      <rect width="260" height="190" rx="3" fill="#FFFEF8"/>
-      ${lines}
-      <path d="M30 0V190" stroke="#E0525E" stroke-width="1.8"/>
-      <g fill="none" stroke="#1F3FBF" stroke-width="2.4" stroke-linecap="round">${cross(1, 2) + cross(2, 2) + cross(3, 2) + cross(2, 4) + cross(5, 1)}</g>
-      <g fill="none" stroke="#C8102E" stroke-width="2.2">${ring(2, 3) + ring(3, 3) + ring(4, 1) + ring(1, 4)}</g>
-      <path d="M49 40.5H103" stroke="#1F3FBF" stroke-width="2.2" stroke-linecap="round"/>
-    </g>
-    <g transform="translate(176 108) rotate(-24)">
-      <rect x="-60" y="6" width="118" height="9" rx="4.5" fill="rgba(40,20,52,.22)"/>
-      <path d="M-62 -5.5H48a5.5 5.5 0 0 1 0 11H-62z" fill="#F2F5FA" stroke="#9AA6BD" stroke-width="1"/>
-      <path d="M-56 0H40" stroke="#1F3FBF" stroke-width="2.4" stroke-linecap="round" opacity=".75"/>
-      <path d="M24 -6H50a6 6 0 0 1 0 12H24z" fill="#1F3FBF"/>
-      <path d="M30 -6v-4h20v4" fill="none" stroke="#1F3FBF" stroke-width="3" stroke-linejoin="round"/>
-      <path d="M-62 -5.5L-76 -1.6V1.6L-62 5.5z" fill="#DDE3EC" stroke="#9AA6BD" stroke-width="1"/>
-      <path d="M-76 -1.6L-82 0L-76 1.6z" fill="#7B8494"/>
-      <path d="M-58 -3.2H36" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".9"/>
-    </g></svg>`;
+// The morpion: the board of the game, a dark tray of white tiles seen at a slant. Three blue crosses
+// on a diagonal are struck through, and the squares of the line are pale blue, as when he wins.
+function morpionArt() {
+  const S = 34, G = 4, x0 = 6, y0 = 6;
+  const at = (c, r) => [x0 + c * (S + G) + S / 2, y0 + r * (S + G) + S / 2];
+  const win = ['0,2', '1,1', '2,0'];
+  let tiles = '';
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+    const [x, y] = at(c, r);
+    tiles += `<rect x="${x - S / 2}" y="${y - S / 2}" width="${S}" height="${S}" rx="5" fill="${win.includes(c + ',' + r) ? '#DCE6FF' : '#FFFFFF'}"/>`;
+  }
+  const cross = (c, r) => { const [x, y] = at(c, r); return `<path d="M${x - 10} ${y - 10}l20 20M${x + 10} ${y - 10}l-20 20"/>`; };
+  const ring = (c, r) => { const [x, y] = at(c, r); return `<circle cx="${x}" cy="${y}" r="11"/>`; };
+  const [ax, ay] = at(0, 2), [bx, by] = at(2, 0);
+  const size = 3 * S + 2 * G + 12;
+  return `<svg class="field" viewBox="0 0 210 147" aria-hidden="true"><g transform="translate(105 76) rotate(-8) translate(${-size / 2} ${-size / 2})">
+    <rect x="3" y="7" width="${size}" height="${size}" rx="10" fill="rgba(30,12,40,.4)"/>
+    <rect width="${size}" height="${size}" rx="10" fill="#3B2748"/>
+    ${tiles}
+    <g fill="none" stroke="#1F3FBF" stroke-width="5" stroke-linecap="round">${cross(0, 2) + cross(1, 1) + cross(2, 0) + cross(0, 0)}</g>
+    <g fill="none" stroke="#C8102E" stroke-width="4.5">${ring(1, 0) + ring(2, 1) + ring(1, 2)}</g>
+    <path d="M${ax - 8} ${ay + 8}L${bx + 8} ${by - 8}" stroke="#fff" stroke-width="10" stroke-linecap="round"/>
+    <path d="M${ax - 8} ${ay + 8}L${bx + 8} ${by - 8}" stroke="#1F3FBF" stroke-width="5" stroke-linecap="round"/>
+  </g></svg>`;
 }
 
 // The belote: a café table seen from above. The roi and the dame de cœur lie side by side (belote,

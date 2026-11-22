@@ -104,21 +104,68 @@
   /* The words found, under the theme on the sheet. */
   #count { margin: 6px 0 0; font: 600 21px/1.2 var(--ui); color: #5E4B3C; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-  /* The rules: a small grid of five letters by five, with a word found. */
-  .mini { --c: 34px; position: relative; display: grid; grid-template-columns: repeat(5, var(--c)); grid-auto-rows: var(--c); flex: none;
-    border: 2px solid var(--rule); border-radius: 3px; background: #FFFDF6; color: var(--ink); font: 600 24px/1 var(--ui); }
-  .mini span { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; }
-  .mini i { --bh: calc(var(--c) * .82); position: absolute; left: calc(var(--c) * .5 - var(--bh) / 2); top: calc(var(--c) * 1.5 - var(--bh) / 2);
-    width: calc(var(--c) * 4 + var(--bh)); height: var(--bh); border-radius: calc(var(--bh) / 2); background: rgba(255,170,60,.45); box-shadow: inset 0 0 0 3px #D9822B; }
-  .dirs { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; align-items: center; margin: 10px 0; }
-  .dirs svg { width: 96px; height: 40px; }
-  .accent-example { font-weight: 700; letter-spacing: .06em; white-space: nowrap; }
+  /* ---------- The rules guide ----------
+     Each page: one picture on the coral felt, made of the same paper, letters and marks as the game, then
+     one or two short sentences. The grids of the guide use their own classes, so only the real letters play. */
+  .guide-pic { --gc: 36px; position: relative; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 16px 24px;
+    margin: 2px 0 12px; padding: 16px; border-radius: 18px; background: radial-gradient(120% 100% at 50% 0%, var(--felt-top), var(--felt) 80%); }
+  .gpaper { position: relative; flex: none; padding: 9px; border-radius: 6px; background: var(--paper); color: var(--ink);
+    box-shadow: 0 10px 24px rgba(0,0,0,.35), 0 2px 6px rgba(0,0,0,.25); }
+  .gw { position: relative; display: grid; grid-template-columns: repeat(var(--cols), var(--gc)); grid-auto-rows: var(--gc); padding: 2px;
+    border: 2px solid var(--rule); box-shadow: 0 0 0 3px var(--paper), 0 0 0 4px var(--rule); border-radius: 3px; background: #FFFDF6;
+    font: 600 max(20px, calc(var(--gc) * .62))/1 var(--ui); }
+  .gw > i { position: relative; z-index: 2; display: flex; align-items: center; justify-content: center; font-style: normal; }
+  .gw > i::before, .gw > i::after { content: ""; position: absolute; border-radius: 50%; z-index: -1; }
+  .gw > i.l::after { inset: 18%; background: rgba(255,200,61,.6); }
+  .gw > i.a::before { inset: 3%; background: #FFE08A; box-shadow: 0 0 0 4px var(--gold), 0 0 0 5.5px #5A4300, 0 0 14px 4px rgba(255,200,61,.8); }
+  .gw > i.t::before { inset: -2px; border: 5px solid var(--gold); box-shadow: 0 0 0 1.5px #5A4300, inset 0 0 0 1.5px #5A4300; }
+  /* "Click here": a yellow ring with a dark edge and a pointing hand. */
+  .gw > i.h::before { inset: 0; background: #FFF1C7; box-shadow: 0 0 0 5px var(--gold), 0 0 0 7px #2A1D33; }
+  .gw > i.h { z-index: 3; }
+  .gband { --h: calc(var(--gc) * .82); position: absolute; z-index: 1; height: var(--h); border-radius: calc(var(--h) / 2);
+    transform-origin: calc(var(--h) / 2) 50%; background: rgba(120,200,150,.5); box-shadow: inset 0 0 0 3px #3E9A63; }
+  .ghand { position: absolute; z-index: 4; width: 40px; height: 48px; left: 62%; top: 62%; pointer-events: none;
+    filter: drop-shadow(0 3px 3px rgba(0,0,0,.35)); }
+  /* The list of the guide, as on the sheet. */
+  .glist { display: flex; flex-direction: column; gap: 6px; text-align: left; }
+  .glist b { font: 700 24px/1.1 var(--ui); }
+  .glist hr { width: 100%; margin: 4px 0; border: 0; border-top: 3px double var(--rule); }
+  .glist span { display: flex; align-items: center; gap: 10px; font: 600 22px/1.25 var(--ui); }
+  .glist span::before { content: ""; flex: none; width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid #B9AE9C; background: #fff; }
+  .glist span.found { color: #6B605A; text-decoration: line-through 4px #3E9A63; }
+  .glist span.found::before { background: rgba(120,200,150,.5); border-color: #3E9A63; }
+  /* The directions of each level: arrows from the middle of a small sheet. */
+  .gdir { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 14px 8px; }
+  .gdir b { font: 700 22px/1.2 var(--ui); color: var(--accent); }
+  .gdir svg { width: calc(var(--gc) * 3.4); height: calc(var(--gc) * 3.4); }
+  .gdir path { fill: none; stroke: var(--ink); stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; }
+  .gdir circle { fill: var(--gold); stroke: #5A4300; stroke-width: 2; }
+  .garrow { flex: none; width: 54px; height: 40px; fill: none; stroke: #FFFDF6; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); }
+  .gbtn { position: relative; flex: none; display: inline-flex; align-items: center; gap: 10px; min-height: 54px; padding: 6px 48px 6px 22px; border-radius: 15px;
+    font: 600 21px var(--ui); background: var(--gold); color: #1F1A00; border: 2px solid #C9951A;
+    box-shadow: 0 3px 0 #C9951A, 0 0 0 6px #fff, 0 0 0 8px #2A1D33; white-space: nowrap; }
+  .gbtn > svg:not(.ghand) { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .gbtn > .ghand { left: auto; right: -14px; top: 36%; }
+  #helpText .page { text-align: center; }
+  #helpText .page h3 { text-align: left; }
+  #helpText .lead { margin: 0 0 4px; font: 700 24px/1.3 var(--ui); color: var(--text); }
+  #helpText .more { margin: 0; font: 500 21px/1.35 var(--ui); color: #4A3A3E; }
+  html.low .guide-pic { --gc: 31px; padding: 10px; }
+  html.low .gpaper { padding: 8px; }
 
   @media (max-width: 700px) {
     #hintBtn, #helpBtn { flex-direction: column; gap: 0; padding: 3px 2px; text-align: center; font-size: 18px; }
     #theme { font-size: 26px; white-space: normal; }
     #list { align-self: stretch; }
-    .mini { --c: 28px; font-size: 20px; }
+    .guide-pic, html.low .guide-pic { --gc: 36px; padding: 14px 8px; gap: 14px 12px; }
+    .gdir { padding: 8px 6px 6px; } .gdir b { font-size: 20px; } .gdir svg { width: 84px; height: 84px; }
+    .garrow { width: 40px; }
+    .guide-pic.to-grid { --gc: 32px; flex-direction: column; gap: 6px; } .to-grid .garrow { rotate: 90deg; }
+    .guide-pic.with-list { --gc: 29px; flex-wrap: nowrap; gap: 10px; }
+    .with-list .gpaper { padding: 7px; }
+    .glist b { font-size: 20px; } .glist span { font-size: 20px; gap: 6px; } .glist span::before { width: 12px; height: 12px; }
+    #helpText .lead { font-size: 22px; } #helpText .more { font-size: 20px; }
     #words { grid-auto-flow: row; grid-template-columns: 1fr 1fr; grid-template-rows: none; }
     /* On a phone the list is under the grid: the button comes first, right under the letters. */
     #drop { order: -1; margin: 0 0 12px; }
@@ -183,43 +230,49 @@
 <footer id="rail"><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
   <section class="page">
-    <h3>Trouver un mot</h3>
-    <p>Cliquez sur la première lettre d'un mot, puis sur sa dernière lettre.</p>
-    <div class="guide-panel">
-      <figure class="guide-example">
-        <div class="mini" aria-hidden="true">
-          <i></i>
-          <span>L</span><span>A</span><span>V</span><span>E</span><span>R</span>
-          <span>P</span><span>O</span><span>M</span><span>M</span><span>E</span>
-          <span>T</span><span>R</span><span>U</span><span>S</span><span>A</span>
-          <span>E</span><span>N</span><span>I</span><span>O</span><span>C</span>
-          <span>B</span><span>L</span><span>E</span><span>T</span><span>U</span>
-        </div>
-        <figcaption><strong>Le mot POMME est trouvé.</strong> Une bande de couleur l'entoure, et il est barré dans la liste.</figcaption>
-      </figure>
+    <h3>Choisir la première lettre</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="gpaper"><div class="gw" data-g="RAVIS|PECHE|LUNOT|AMIRE|GOBAC" data-h="5"></div></div>
     </div>
-    <p>Pour gagner, trouvez tous les mots de la liste.</p>
+    <p class="lead">Cliquez sur la première lettre d'un mot.</p>
+    <p class="more">Trouvez tous les mots de la liste pour gagner.</p>
+  </section>
+  <section class="page">
+    <h3>Cliquer sur la dernière lettre</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="gpaper"><div class="gw" data-g="RAVIS|PECHE|LUNOT|AMIRE|GOBAC" data-a="5" data-l="6 7 8 10 15 20" data-h="9"></div></div>
+    </div>
+    <p class="lead">Puis cliquez sur sa dernière lettre.</p>
+    <p class="more">Les points jaunes montrent où le mot peut aller.</p>
+  </section>
+  <section class="page">
+    <h3>Le mot est trouvé</h3>
+    <div class="guide-pic with-list" aria-hidden="true">
+      <div class="gpaper"><div class="gw" data-g="RAVIS|PECHE|LUNOT|AMIRE|GOBAC" data-band="5 9"></div></div>
+      <div class="gpaper glist"><b>Les fruits</b><hr><span class="found">PÊCHE</span><span>PRUNE</span><span>FIGUE</span></div>
+    </div>
+    <p class="lead">Le mot s'entoure de couleur et se barre.</p>
+    <p class="more">La grille n'a pas d'accents : PÊCHE s'y écrit PECHE.</p>
   </section>
   <section class="page">
     <h3>Dans quel sens lire ?</h3>
-    <div class="dirs">
-      <svg viewBox="0 0 96 40" aria-hidden="true"><g stroke="#A63A50" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20h30M28 12l8 8-8 8"/><path d="M66 4v30M58 26l8 8 8-8"/></g></svg>
-      <span><strong>Facile :</strong> vers la droite ou vers le bas.</span>
-      <svg viewBox="0 0 96 40" aria-hidden="true"><g stroke="#A63A50" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6l24 24M32 18v12H20"/><path d="M60 34l24-24M72 10h12v12"/></g></svg>
-      <span><strong>Moyen :</strong> aussi en biais.</span>
-      <svg viewBox="0 0 96 40" aria-hidden="true"><g stroke="#A63A50" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M36 20H6M14 12l-8 8 8 8"/><path d="M66 34V4M58 12l8-8 8 8"/></g></svg>
-      <span><strong>Difficile :</strong> dans les huit sens, même à l'envers.</span>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="gpaper gdir" data-dirs="0,1 1,0"><b>Facile</b></div>
+      <div class="gpaper gdir" data-dirs="0,1 1,0 1,1 -1,1"><b>Moyen</b></div>
+      <div class="gpaper gdir" data-dirs="0,1 1,0 1,1 -1,1 0,-1 -1,0 -1,-1 1,-1"><b>Difficile</b></div>
     </div>
-    <p>La grille n'a pas d'accents. Le mot <span class="accent-example">CHÂTEAU</span> s'y écrit <span class="accent-example">CHATEAU</span>.</p>
+    <p class="lead">Le niveau choisit les sens de lecture.</p>
+    <p class="more">Au niveau difficile, un mot peut aussi se lire à l'envers.</p>
   </section>
   <section class="page">
-    <h3>Se tromper, demander de l'aide</h3>
-    <ul>
-      <li>Pour changer de première lettre, cliquez sur le bouton « Enlever », ou encore sur la lettre jaune.</li>
-      <li>« Où chercher ? » entoure la première lettre d'un mot à trouver.</li>
-      <li>« Annuler le dernier coup » retire le dernier mot trouvé.</li>
-    </ul>
-    <p>Pour choisir le niveau, cliquez sur « Nouvelle partie ». Votre partie est gardée à chaque mot trouvé.</p>
+    <h3>Demander de l'aide</h3>
+    <div class="guide-pic to-grid" aria-hidden="true">
+      <span class="gbtn here" data-icon="bulb">Où chercher&nbsp;?</span>
+      <svg class="garrow" viewBox="0 0 54 40"><path d="M4 20h44M36 8l12 12-12 12"/></svg>
+      <div class="gpaper"><div class="gw" data-g="RAVIS|PECHE|LUNOT|AMIRE|GOBAC" data-t="5"></div></div>
+    </div>
+    <p class="lead">Un mot introuvable ? Cliquez sur «&nbsp;Où chercher&nbsp;?&nbsp;».</p>
+    <p class="more">Sa première lettre s'entoure de jaune.</p>
   </section>
 </div>
 
@@ -660,6 +713,41 @@ function render(just, start) {
 }
 
 $('undoBtn').onclick = undoClick;
+/* ---------- The pictures of the rules ----------
+   Each grid of the guide is written as rows of letters in data-g. The other data give places in the grid,
+   counted from 0 at the top left: h the letter to click (a yellow ring and a hand), a the first letter
+   chosen, l the yellow dots of its lines, t the ring of "Où chercher ?", band the first and last letter of
+   a word found. Each sheet of data-dirs draws the directions of a level, as row and column steps. */
+const HAND = '<svg class="ghand" viewBox="0 0 40 48"><path d="M15 27V7a4.5 4.5 0 0 1 9 0v12a4 4 0 0 1 7.5 1.6a4 4 0 0 1 7 2.4V33c0 8-5 13-12 13h-4c-5 0-8-2-11-6L4.5 32a4 4 0 0 1 6.3-4.6z" fill="#fff" stroke="#1B2422" stroke-width="2.6" stroke-linejoin="round"/></svg>';
+for (const b of document.querySelectorAll('#help .gw')) {
+  const rows = b.dataset.g.split('|'), n = rows[0].length, d = b.dataset;
+  const at = key => (d[key] || '').split(' ').filter(Boolean).map(Number);
+  const lanes = new Set(at('l'));
+  b.style.setProperty('--cols', n);
+  b.innerHTML = rows.join('').split('').map((ch, i) => {
+    const cls = (lanes.has(i) ? ' l' : '') + (at('a').includes(i) ? ' a' : '') + (at('t').includes(i) ? ' t' : '') + (at('h').includes(i) ? ' h' : '');
+    return `<i${cls ? ` class="${cls.trim()}"` : ''}>${ch}${cls.includes('h') ? HAND : ''}</i>`;
+  }).join('');
+  if (d.band) {
+    const [s, e] = at('band'), r0 = Math.floor(s / n), c0 = s % n, r1 = Math.floor(e / n), c1 = e % n;
+    const len = Math.hypot(r1 - r0, c1 - c0), deg = Math.atan2(r1 - r0, c1 - c0) * 180 / Math.PI;
+    b.insertAdjacentHTML('afterbegin', `<span class="gband" style="left: calc(2px + var(--gc) * ${c0 + .5} - var(--h) / 2); top: calc(2px + var(--gc) * ${r0 + .5} - var(--h) / 2); width: calc(var(--gc) * ${len} + var(--h)); rotate: ${deg}deg"></span>`);
+  }
+}
+for (const b of document.querySelectorAll('#help .gdir')) {
+  // The view is centred on the arrows, so a level with two arrows sits in the middle of its sheet too.
+  const ends = b.dataset.dirs.split(' ').map(p => { const [dr, dc] = p.split(',').map(Number), k = Math.hypot(dr, dc); return [dc / k, dr / k]; });
+  const mid = i => (Math.min(0, ...ends.map(e => e[i])) + Math.max(0, ...ends.map(e => e[i]))) / 2 * 42;
+  const arrows = ends.map(([x, y]) => {
+    const ex = 50 + x * 42, ey = 50 + y * 42;
+    const side = (sx, sy) => `${(ex + sx).toFixed(1)} ${(ey + sy).toFixed(1)}`;
+    return `<path d="M${50 + x * 12} ${50 + y * 12}L${ex} ${ey}M${side(-x * 10 - y * 7, -y * 10 + x * 7)}L${ex} ${ey}L${side(-x * 10 + y * 7, -y * 10 - x * 7)}"/>`;
+  }).join('');
+  b.insertAdjacentHTML('beforeend', `<svg viewBox="${mid(0).toFixed(1)} ${mid(1).toFixed(1)} 100 100">${arrows}<circle cx="50" cy="50" r="8"/></svg>`);
+}
+for (const e of document.querySelectorAll('#help .gbtn')) e.insertAdjacentHTML('afterbegin', Kit.icon(e.dataset.icon));
+for (const e of document.querySelectorAll('#help .gbtn.here')) e.insertAdjacentHTML('beforeend', HAND);
+
 $('hintBtn').onclick = showHint;
 // The rules during the win wave let it end. The win dialog comes once they close.
 $('helpBtn').onclick = () => { if (!pendingWin) stopAll(); Kit.openHelp(); };

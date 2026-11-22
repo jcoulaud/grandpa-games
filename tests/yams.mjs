@@ -23,7 +23,7 @@ const myTurn = () => page.waitForFunction(() => G.turn === 0 && !showing && !G.r
 await page.goto(URL);
 await wait(400);
 ok(await g(() => Kit.isOpen()), 'the rules open on the first visit');
-for (let n = 0; n < 4; n++) {
+for (let n = 0; n < 5; n++) {
   ok(await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }), `rules page ${n + 1} fits without scrolling`);
   await page.screenshot({ path: `${OUT}/yams-rules-${n + 1}.png` });
   await page.click('#helpNext');

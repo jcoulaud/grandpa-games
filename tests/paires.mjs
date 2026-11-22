@@ -23,7 +23,9 @@ const cls = i => card(i).getAttribute('class');
 await page.goto(URL);
 await wait(400);
 ok(await g(() => Kit.isOpen()), 'the rules open on the first visit');
-for (let n = 0; n < 3; n++) {
+const pages = await page.locator('#helpText .page').count();
+ok(pages >= 3 && pages <= 5, `the rules have ${pages} pages`);
+for (let n = 0; n < pages; n++) {
   ok(await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }), `rules page ${n + 1} fits without scrolling`);
   await page.screenshot({ path: `${OUT}/paires-rules-${n + 1}.png` });
   await page.click('#helpNext');

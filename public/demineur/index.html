@@ -41,46 +41,47 @@
 <div id="help" data-title="Comment jouer">
   <section class="page">
     <h3>Ouvrir une première case</h3>
-    <p>Cliquez sur une case verte. La première case est toujours sûre.</p>
-    <p>Pour gagner, ouvrez toutes les cases sans mine. Vous pouvez résoudre chaque grille sans deviner.</p>
-    <p>Si une case ouverte est vide, elle ne touche aucune mine. Ses voisines s'ouvrent toutes seules.</p>
-  </section>
-  <section class="page">
-    <h3>Compter les mines autour d'un chiffre</h3>
-    <div class="guide-panel">
-      <figure class="guide-example">
-        <div class="guide-mine-grid" aria-hidden="true">
-          <span class="guide-cell o"></span><span class="guide-cell o n1">1</span><span class="guide-cell" data-help-mark="flag"></span>
-          <span class="guide-cell o"></span><span class="guide-cell o n1 ring">1</span><span class="guide-cell o n1">1</span>
-          <span class="guide-cell o"></span><span class="guide-cell o"></span><span class="guide-cell o"></span>
-        </div>
-        <figcaption><strong>Le 1 entouré indique une mine parmi ses huit voisines.</strong> Ici, la seule case encore fermée est en diagonale. Le drapeau y signale la mine.</figcaption>
-      </figure>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="gfr"><div class="gf" data-f=".....|..+..|....."></div></div>
     </div>
+    <p class="lead">Cliquez sur une case verte.</p>
+    <p class="more">La première n'a jamais de mine. Ouvrez toutes les cases sans mine pour gagner.</p>
   </section>
   <section class="page">
-    <h3>Suivre les signes au niveau Facile</h3>
-    <div class="guide-panel">
-      <ul class="guide-key">
-        <li><span class="guide-cell" data-help-mark="safe" aria-hidden="true"></span><span><strong>Coche verte.</strong> Cliquez pour ouvrir la case sûre.</span></li>
-        <li><span class="guide-cell" data-help-mark="mine" aria-hidden="true"></span><span><strong>Point d'exclamation.</strong> Cliquez pour poser un drapeau sur la mine.</span></li>
-      </ul>
+    <h3>Lire un chiffre</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="gfr"><div class="gf" data-f="oo1..|oo111|ooooo" data-around="1 0"></div></div>
     </div>
-    <p>Le jeu vous empêche d'ouvrir une case incertaine. Le chiffre entouré en jaune et le message du haut expliquent le coup.</p>
+    <p class="lead">Ce 1 touche une seule mine.</p>
+    <p class="more">Une seule case verte le touche&nbsp;: la mine est dessous.</p>
   </section>
   <section class="page">
-    <h3>Poser ou retirer un drapeau</h3>
-    <ol>
-      <li>Cliquez sur « Poser un drapeau » ou « Drapeau ».</li>
-      <li>Cliquez sur la case qui cache une mine.</li>
-    </ol>
-    <p>Vous pouvez aussi faire un clic droit sur la case. Cliquez de nouveau sur un drapeau pour le retirer.</p>
-    <p>Si tous les drapeaux autour d'un chiffre sont bien placés et que leur nombre correspond au chiffre, cliquez dessus pour ouvrir les autres cases voisines.</p>
+    <h3>Poser un drapeau</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="gbtns"><span class="gbtn flagb here" data-icon="flag"><span class="long">Poser un drapeau</span><span class="short">Drapeau</span><span class="tiny">Drapeau</span></span></div>
+      <svg class="garrow" viewBox="0 0 54 40"><path d="M5 20h40M32 7l13 13-13 13"/></svg>
+      <div class="gfr"><div class="gf" data-f="oo1F.|oo111|ooooo"></div></div>
+    </div>
+    <p class="lead">Cliquez sur «&nbsp;<span class="long">Poser un drapeau</span><span class="short">Drapeau</span><span class="tiny">Drapeau</span>&nbsp;», puis sur la mine.</p>
+    <p class="more">Un clic droit sur la case pose aussi un drapeau.</p>
   </section>
   <section class="page">
-    <h3>Trouver une case sûre</h3>
-    <p>Cliquez sur « Que jouer maintenant ? » pour repérer une case sûre ou une mine. Le message du haut explique pourquoi.</p>
-    <p>Si une mine saute, cliquez sur « Annuler le dernier coup » pour reprendre la partie juste avant.</p>
+    <h3>Les signes du niveau facile</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="gfr"><div class="gf" data-f="oo1MS|oo111|ooooo"></div></div>
+    </div>
+    <p class="lead">Une coche verte&nbsp;: la case est sûre, cliquez dessus.</p>
+    <p class="more">Un rond rouge cache une mine&nbsp;: un clic y pose le drapeau.</p>
+  </section>
+  <section class="page">
+    <h3>Demander de l'aide</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="gbtns"><span class="gbtn hintb here" data-icon="bulb"><span class="long">Que jouer maintenant ?</span><span class="short">Que jouer ?</span><span class="tiny">Idée</span></span><span class="gbtn" data-icon="undo"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span><span class="tiny">Annuler</span></span></div>
+      <svg class="garrow" viewBox="0 0 54 40"><path d="M5 20h40M32 7l13 13-13 13"/></svg>
+      <div class="gfr"><div class="gf" data-f="oo1.H|oo111|ooooo"></div></div>
+    </div>
+    <p class="lead">Un doute&nbsp;? Cliquez sur «&nbsp;<span class="long">Que jouer maintenant&nbsp;?</span><span class="short">Que jouer&nbsp;?</span><span class="tiny">Idée</span>&nbsp;».</p>
+    <p class="more">Une case sûre s'encadre de jaune. «&nbsp;Annuler&nbsp;» reprend un coup.</p>
   </section>
 </div>
 
@@ -98,8 +99,6 @@ const FLAG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 19V4.5l10 
 const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="#FFF8E6" stroke="#2A4A15" stroke-width="1.2"/><path d="M7.8 12.4l2.9 2.9 5.6-6.1" fill="none" stroke="#1C7128" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 // Facile marks what the numbers prove: a check on a safe square, a red "!" on a mine.
 const DANGER = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="#C4122F" stroke="#7A0D0B" stroke-width="1.2"/><path d="M12 7.2v6" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/><circle cx="12" cy="16.6" r="1.6" fill="#fff"/></svg>';
-const helpMarks = { flag: FLAG, safe: CHECK, mine: DANGER };
-for (const example of document.querySelectorAll('[data-help-mark]')) example.innerHTML = helpMarks[example.dataset.helpMark];
 const MINE = '<svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#141211" stroke-width="2.2" stroke-linecap="round"><path d="M12 2.5v19M2.5 12h19M5.3 5.3l13.4 13.4M18.7 5.3 5.3 18.7"/></g><circle cx="12" cy="12" r="6.6" fill="#141211"/><circle cx="9.7" cy="9.7" r="1.9" fill="#fff"/></svg>';
 
 /* ---------- State ----------
@@ -308,6 +307,29 @@ async function newGame(lv) {
   render();
   if (!stale) say("Cliquez sur une case pour commencer : la première n'a jamais de mine.");
   if (await written) GG.track('demineur', 'start');
+}
+
+/* ---------- The pictures of the rules ----------
+   Each field of the guide is written as rows of letters: . a closed square, o an open one, 1 to 8 a number,
+   F a flag, S the check and M the red "!" of Facile, H a square framed by the hint, + the square to click
+   (a yellow ring and a hand).
+   data-around gives the corner, as column and row, of the frame around the eight neighbours of a number. */
+const HAND = '<svg class="ghand" viewBox="0 0 40 48"><path d="M15 27V7a4.5 4.5 0 0 1 9 0v12a4 4 0 0 1 7.5 1.6a4 4 0 0 1 7 2.4V33c0 8-5 13-12 13h-4c-5 0-8-2-11-6L4.5 32a4 4 0 0 1 6.3-4.6z" fill="#fff" stroke="#1B2422" stroke-width="2.6" stroke-linejoin="round"/></svg>';
+const FLAG_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 20V4.5l11 4.5-11 4.5"/><path d="M7 21V4M4 21h7"/></svg>';
+const GUIDE_MARK = { F: FLAG, S: CHECK, M: DANGER };
+for (const f of document.querySelectorAll('#help .gf')) {
+  const rows = f.dataset.f.split('|');
+  f.style.setProperty('--cols', rows[0].length);
+  f.innerHTML = rows.join('').split('').map(ch => ch === '.' ? '<i></i>' : ch === 'o' ? '<i class="o"></i>'
+    : ch === '+' ? `<i class="here">${HAND}</i>` : ch === 'H' ? '<i class="hint"></i>' : GUIDE_MARK[ch] ? `<i>${GUIDE_MARK[ch]}</i>` : `<i class="o n${ch}">${ch}</i>`).join('');
+  if (f.dataset.around) {
+    const [x, y] = f.dataset.around.split(' ');
+    f.insertAdjacentHTML('beforeend', `<b class="around" style="--x:${x};--y:${y}"></b>`);
+  }
+}
+for (const b of document.querySelectorAll('#help .gbtn')) {
+  b.insertAdjacentHTML('afterbegin', b.dataset.icon === 'flag' ? FLAG_ICON : Kit.icon(b.dataset.icon));
+  if (b.classList.contains('here')) b.insertAdjacentHTML('beforeend', HAND);
 }
 
 $('undoBtn').onclick = doUndo;

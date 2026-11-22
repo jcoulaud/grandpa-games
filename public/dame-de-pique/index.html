@@ -95,6 +95,20 @@
     /* The cards received: a white dot instead of the word, which would cover the next card. */
     body.phone .card.hand .got { font-size: 0; width: 16px; height: 16px; padding: 0; border-radius: 50%; }
   }
+  /* A low window: the three players in one row on top, each a face, a name and the points. His own strip
+     sits left of the trick, with one fact per line. */
+  #table.row .seat .where, #table.row .seat .backs { display: none; }
+  #table.row .seat:not(#seat0) { grid-template-columns: auto minmax(0, 1fr); min-width: 0; column-gap: 10px; padding: 6px 10px 6px 8px; }
+  #table.row .seat .ava { width: 44px; height: 44px; font-size: 22px; }
+  #table.row .seat b { line-height: 1.1; }
+  #table.row .seat .pts { margin-top: 0; }
+  /* "À vous" at the bottom of his place, below Paul's card, on two lines if the card is narrow. */
+  #table.row #mySlot { place-items: end center; padding-bottom: 8px; line-height: 1.1; }
+  #table.row .seat .pts, #table.row .seat .now { white-space: normal; }
+  #table.row #seat0 { padding: 6px 16px 6px 6px; }
+  #table.row #seat0 .txt { display: grid; justify-items: start; min-width: 8.6em; font-size: 20px; }
+  #table.row .seat .tot { margin-left: 6px; font: 600 20px var(--ui); color: #5A6461; white-space: nowrap; }
+  #table.row #seat0 b { display: block; }
   /* His own seat: a strip above the left end of his hand. Lilac, like the others, when it is his turn. */
   #seat0 { display: flex; align-items: center; gap: 12px; padding: 6px 18px 6px 6px; border-radius: 16px; z-index: 25; }
   #seat0 .ava { width: 40px; height: 40px; font-size: 20px; }
@@ -152,6 +166,20 @@
   #passSheet .where .arrow svg { width: 24px; height: 24px; }
   html.low #passSheet .where { display: none; }
   @media (max-width: 700px) { #passSheet h2 { white-space: normal; } }
+  /* Under the row of players, the pass sheet is wide and short: what to do on the left, the three places
+     and the line or the button on the right. */
+  #table.row #passSheet.on { display: grid; grid-template-areas: "t s" "w p"; column-gap: 32px; align-items: center; justify-items: center; }
+  html.low #table.row #passSheet.on { grid-template-areas: "t p"; }
+  #table.row #passTitle { grid-area: t; justify-self: start; } #table.row #passSheet .where { grid-area: w; justify-self: start; margin: 0; }
+  #table.row #passSlots { grid-area: s; } #table.row #passText, #table.row #passBtn { grid-area: p; }
+  /* In a low window the score sheet takes two columns, the words on the left and the points on the right,
+     so it fits without shrinking its text. */
+  #table.row #scoreSheet.on { display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto 1fr; gap: 10px 26px; align-items: center; text-align: left; }
+  #table.row #scoreSheet h2 { grid-area: 1 / 1; }
+  #table.row #scoreSheet .note { grid-area: 2 / 1; max-width: 340px; }
+  #table.row #scoreSheet button { grid-area: 3 / 1; justify-self: start; align-self: start; }
+  #table.row #scoreSheet table { grid-area: 1 / 2 / 4 / 3; }
+  #table.row #scoreSheet td { padding-block: 6px; }
   /* A low window: the line or the button alone, without the three places. */
   html.low #passSlots { display: none; }
   #passWhere { font: 600 21px var(--ui); color: #6A3F8C; }
@@ -435,9 +463,11 @@ addEventListener('gg-stale', () => { stale = true; cancelAll(); render(); });
 const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
 const ptsText = n => n === 0 ? 'aucun point' : plural(n, 'point', 'points');
 // The points of a seat in this hand, and its total when the score column is hidden. A phone has room
-// for the points of the hand only: the totals are on the score sheet at the end of each hand.
+// for the points of the hand only: the totals are on the score sheet at the end of each hand. A low
+// window puts the total by the name, so the seats stay narrow: see seatTotal().
 const seatPts = s => L.narrow ? String(G.pts[s])
-  : `${ptsText(G.pts[s])} pris${L.sideW ? '' : ` · total ${G.scores[s]}`}`;
+  : `${ptsText(G.pts[s])} pris${L.sideW || L.row ? '' : ` · total ${G.scores[s]}`}`;
+const seatTotal = s => L.row && !L.sideW ? `<span class="tot">· total ${G.scores[s]}</span>` : '';
 // "Paul", "Paul et Louise", "Vous et Paul": the players named, he first.
 const names = seats => {
   const n = seats.map(s => PLAYERS[s].name);
@@ -748,27 +778,44 @@ function cardEl(c) {
   return e;
 }
 
+// The frame of the table: a phone, a low window, and the score column on the right when there is room.
+// A phone and a low window seat the three players in one row on top.
+function frame() {
+  const W = table.clientWidth, H = table.clientHeight, narrow = W < 700;
+  return { W, H, narrow, row: !narrow && H < 450, sideW: W >= 1180 ? 300 : 0, pad: narrow ? 8 : 18 };
+}
 // The sizes come from the window: his hand along the bottom, the trick in the middle, the three
-// players around it, and the scores on the right when there is room.
-function layout() {
-  const W = table.clientWidth, H = table.clientHeight;
-  // A phone: the three players sit in one row on top, each in a third of the width.
-  const narrow = W < 700;
-  const sideW = W >= 1180 ? 300 : 0, pad = narrow ? 8 : 18;
+// players around it, and the scores on the right when there is room. In a low window the three players
+// sit in one row on top: the seats must hold their text before this runs, since their sizes set the rest.
+function layout({ W, H, narrow, row, sideW, pad }) {
   const PW = W - 2 * pad - (sideW ? sideW + 22 : 0);
+  const cx = pad + PW / 2;
   // Paul's seat on top, the trick (1.62 card heights), room for a card to rise, then his hand, whose
   // cards show their top 80%: the corner with the rank and the suit is always in view.
-  const topH = narrow ? 104 : 92;
+  let topH = narrow ? 104 : 92, byS0 = Infinity;
+  if (row) {
+    // Jeanne, Paul and Louise in one row, as they sit. The trick comes under them.
+    const ss = [1, 2, 3].map(s => $('seat' + s)), sw = Math.floor(Math.min(340, (PW - 32) / 3));
+    ss.forEach(e => { e.style.width = sw + 'px'; e.style.top = '8px'; });
+    topH = 8 + Math.max(...ss.map(e => e.offsetHeight));
+    // His strip sits left of the trick and its arrows: the cards are no wider than leaves it room.
+    byS0 = (PW / 2 - 18 - $('seat0').offsetWidth) / 1.77;
+  }
   const byW = (PW - 10) / 7.4, byH = (H - topH - 26) / (1.3 * (1.62 + .14 + .8));
-  const w = Math.floor(Math.max(56, Math.min(byW, byH, 170)));
+  const w = Math.floor(Math.max(56, Math.min(byW, byH, byS0, 170)));
   const h = Math.round(w * 1.3);
   document.documentElement.style.setProperty('--w', w + 'px');
   document.documentElement.style.setProperty('--h', h + 'px');
   const handTop = Math.round(H - h * .8);
-  const cx = pad + PW / 2;
   const bandTop = topH + 14, bandBot = handTop - Math.round(h * .14);
   const cy = Math.round((bandTop + bandBot) / 2);
-  return { W, H, w, h, pad, PW, sideW, handTop, cx, cy, topH, narrow };
+  if (row) {
+    const [s1, s2, s3] = [1, 2, 3].map(s => $('seat' + s)), sw = s2.offsetWidth, off = Math.max(sw + 16, 3.3 * w);
+    s2.style.left = Math.round(cx - sw / 2) + 'px';
+    s1.style.left = Math.round(Math.max(pad, cx - off - sw / 2)) + 'px';
+    s3.style.left = Math.round(Math.min(pad + PW - sw, cx + off - sw / 2)) + 'px';
+  }
+  return { W, H, w, h, pad, PW, sideW, handTop, cx, cy, topH, narrow, row };
 }
 // Where each seat's card lies in the trick: his below the middle, Jeanne's left, Paul's above, Louise's right.
 function trickXY(seat) {
@@ -787,8 +834,8 @@ function seatXY(seat) {
 
 function render() {
   if (!G) return;
-  L = layout();
-  const { w, h, pad, PW, handTop, cx, cy } = L;
+  // The seats are filled first: in a low window their sizes set the rest.
+  L = frame();
   const playing = G.phase === 'play' && G.turn === 0 && !busy && !stale;
   const ok = new Set(playing ? legal(G) : []);
 
@@ -798,18 +845,28 @@ function render() {
     const e = $('seat' + s), p = PLAYERS[s], n = G.hands[s].length;
     const backs = Array.from({ length: n }, (_, i) => `<i style="left:${i * 7}px"></i>`).join('');
     e.innerHTML = `${face(s, 'ava')}
-      <div><b>${p.name}${G.qsTo === s ? QS_CHIP : ''}</b>${s === 2 ? '' : `<span class="where">${cap(p.where)}</span>`}
+      <div><b>${p.name}${G.qsTo === s ? QS_CHIP : ''}${seatTotal(s)}</b>${s === 2 ? '' : `<span class="where">${cap(p.where)}</span>`}
       <span class="pts">${HEART}${seatPts(s)}</span>
       <span class="now"><span class="dots"><i></i><i></i><i></i></span>${p.name} joue</span></div>
       <div class="backs" style="width:${n ? 26 + (n - 1) * 7 : 0}px">${backs}</div>`;
     e.classList.toggle('turn', turnSeat === s || (busy && !shown && G.phase === 'play' && G.turn === s));
   }
-  const s1 = $('seat1'), s2 = $('seat2'), s3 = $('seat3');
+  // His own seat: his points, his total when the score column is hidden, and "À vous de jouer" on his
+  // turn. In a low window, one fact per line.
+  const s0 = $('seat0');
+  const own = `<b>Vous${G.qsTo === 0 ? QS_CHIP : ''}${seatTotal(0)}</b><span class="pts">${HEART}${seatPts(0)}</span><span class="now">À vous de jouer</span>`;
+  s0.innerHTML = `${face(0, 'ava')}${L.row ? `<div class="txt">${own}</div>` : own}`;
+  s0.classList.toggle('turn', playing);
+  s0.classList.toggle('narrow', !L.sideW);
   document.body.classList.toggle('phone', L.narrow);
+  table.classList.toggle('row', L.row);
+  L = layout(L);
+  const { w, h, pad, PW, handTop, cx, cy } = L;
+  const s1 = $('seat1'), s2 = $('seat2'), s3 = $('seat3');
   if (L.narrow) {
     const sw = Math.floor((PW - 16) / 3);
     [s1, s2, s3].forEach((e, i) => { e.style.width = sw + 'px'; e.style.left = pad + i * (sw + 8) + 'px'; e.style.top = '8px'; });
-  } else {
+  } else if (!L.row) {
   [s1, s2, s3].forEach(e => { e.style.width = ''; });
   // Paul sits just above the trick, as across a real table; on a low window, at the top.
   s2.style.left = Math.round(Math.max(pad, cx - s2.offsetWidth / 2)) + 'px';
@@ -819,13 +876,6 @@ function render() {
   s1.style.left = Math.round(Math.max(pad, cx - near - s1.offsetWidth)) + 'px'; s1.style.top = Math.round(cy - s1.offsetHeight / 2) + 'px';
   s3.style.left = Math.round(Math.min(pad + PW - s3.offsetWidth, cx + near)) + 'px'; s3.style.top = Math.round(cy - s3.offsetHeight / 2) + 'px';
   }
-  // His own seat, above the left end of his hand: his points, his total when the score column is
-  // hidden, and "À vous de jouer" on his turn.
-  const s0 = $('seat0');
-  s0.innerHTML = `${face(0, 'ava')}<b>Vous${G.qsTo === 0 ? QS_CHIP : ''}</b>
-    <span class="pts">${HEART}${seatPts(0)}</span><span class="now">À vous de jouer</span>`;
-  s0.classList.toggle('turn', playing);
-  s0.classList.toggle('narrow', !L.sideW);
   const mid = $('mid'), md = Math.round(w * 3.6);
   mid.style.left = cx - md / 2 + 'px'; mid.style.top = cy - md / 2 + 'px'; mid.style.width = mid.style.height = md + 'px';
   // The arrows of the way of play, while the cards are played.
@@ -843,12 +893,14 @@ function render() {
   const stepX = n > 1 ? Math.min(w * .64, (PW - w) / (n - 1)) : 0;
   const x0 = cx - (w + stepX * (n - 1)) / 2;
   L.stepX = stepX;
-  s0.style.left = Math.round(Math.max(pad, n ? x0 : cx - s0.offsetWidth / 2)) + 'px';
+  // His seat above the left end of his hand; in a low window, also left of the trick and its arrows.
+  const s0x = n ? x0 : cx - s0.offsetWidth / 2;
+  s0.style.left = Math.round(Math.max(pad, L.row ? Math.min(s0x, cx - w * 1.62 - Math.max(24, w * .3) / 2 - 6 - s0.offsetWidth) : s0x)) + 'px';
   // Above the "Reçue" tags of the cards just received, while they show.
   const tags = got.some(c => hand.includes(c)) ? h * .17 + 4 : playing ? h * .1 + 6 : 10;
   s0.style.top = Math.round(handTop - s0.offsetHeight - tags) + 'px';
   // Jeanne and Louise stay clear of his seat, in a low window.
-  if (!L.narrow) for (const e of [s1, s3]) e.style.top = Math.round(Math.max(pad, Math.min(parseFloat(e.style.top), s0.offsetTop - e.offsetHeight - 8))) + 'px';
+  if (!L.narrow && !L.row) for (const e of [s1, s3]) e.style.top = Math.round(Math.max(pad, Math.min(parseFloat(e.style.top), s0.offsetTop - e.offsetHeight - 8))) + 'px';
   // His place in the trick waits for his card.
   const slot = $('mySlot'), [sx, sy] = trickXY(0);
   slot.classList.toggle('on', playing);
@@ -910,8 +962,8 @@ function render() {
     ps.style.width = '';
     // Between the seat across and his hand, so it covers no other player. His own strip says nothing
     // useful during the pass, so the sheet takes its place.
-    const top = $('seat2').offsetTop + $('seat2').offsetHeight + 12, bottom = handTop - h * .24 - 8;
-    place(ps, cx, Math.max(top + ps.offsetHeight / 2, Math.min(cy, bottom - ps.offsetHeight / 2)), bottom);
+    const top = (L.row ? L.topH : $('seat2').offsetTop + $('seat2').offsetHeight) + 12, bottom = handTop - h * .24 - 8;
+    place(ps, cx, Math.max(top + ps.offsetHeight / 2, Math.min(cy, bottom - ps.offsetHeight / 2)), bottom, L.row ? top : 8);
   }
 
   // The score sheet at the end of a hand, and at the end of the game.
@@ -929,7 +981,9 @@ function render() {
     $('scoreTable').innerHTML = '<tr><th><span class="sr">Joueur</span></th><th>Cette manche</th><th>Total</th></tr>' + [0, 1, 2, 3].map(s =>
       `<tr class="${s === 0 ? 'me' : ''} ${G.scores[s] === low ? 'best' : ''}"><td><span class="who">${face(s)}${PLAYERS[s].name}</span></td><td class="n">+${G.handPts[s]}</td><td class="n"><b>${G.scores[s]}</b></td></tr>`).join('');
     $('nextBtn').textContent = over ? 'Nouvelle partie' : 'Manche suivante';
-    place(ss, cx, cy);
+    // In a low window, under the row of players when it fits, else as low as it can go.
+    if (L.row) { const top = Math.max(8, Math.min(L.topH + 8, L.H - 8 - ss.offsetHeight)); place(ss, cx, (top + L.H - 8) / 2, L.H - 8, top); }
+    else place(ss, cx, cy);
   }
 
   // The side column.
@@ -964,11 +1018,11 @@ function render() {
 }
 // A sheet stays inside the table, above `bottom`, so its button is always in view: in a short window
 // it is made smaller. The pass sheet stays above his raised cards, so it never hides one.
-function place(el, x, y, bottom = L.H - 8) {
-  const fit = Math.min(1, (bottom - 8) / el.offsetHeight), h = el.offsetHeight * fit;
+function place(el, x, y, bottom = L.H - 8, top = 8) {
+  const fit = Math.min(1, (bottom - top) / el.offsetHeight), h = el.offsetHeight * fit;
   el.style.transform = fit < 1 ? `scale(${fit})` : '';
   el.style.left = Math.round(x - el.offsetWidth / 2) + 'px';
-  el.style.top = Math.round(Math.max(8, Math.min(y - h / 2, bottom - h))) + 'px';
+  el.style.top = Math.round(Math.max(top, Math.min(y - h / 2, bottom - h))) + 'px';
 }
 function shake(c) {
   const e = els.get(c);

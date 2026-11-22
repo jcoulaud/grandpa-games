@@ -44,14 +44,14 @@ try {
   for (const [width, height, zoom] of sizes) {
     await setSize(width, height, zoom);
     await page.locator('#help.on').waitFor();
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 5; i++) {
       const fits = await page.evaluate(() => {
         const b = document.querySelector('#helpBox').getBoundingClientRect(),
           t = document.querySelector('#helpText');
         return b.left >= -1 && b.right <= innerWidth + 1 && b.bottom <= innerHeight + 1 && (innerHeight < 620 || t.scrollHeight <= t.clientHeight + 1);
       });
       assert.ok(fits, 'rules ' + [width, height, zoom, i]);
-      if (i < 2) await page.click('#helpNext');
+      if (i < 4) await page.click('#helpNext');
     }
   }
   await setSize(1366, 680, 1);

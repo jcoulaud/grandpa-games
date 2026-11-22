@@ -266,6 +266,30 @@ ok(await g(() => { const r = id => document.getElementById(id).getBoundingClient
   const hand = document.querySelector('.card.hand')?.getBoundingClientRect();
   return a.left >= 0 && b.right <= innerWidth && (!hand || v.bottom <= hand.top) && v.top >= a.bottom - 1; }), 'a narrow window keeps the players inside, his own above his hand');
 await page.screenshot({ path: `${OUT}/ddp-1024.png` });
+// A low window: the three players in one row on top. No seat covers another seat, the trick, his place in
+// it or the pass sheet, on his turn with three cards down and during the pass.
+const clear = () => g(() => {
+  const shows = e => getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden';
+  const boxes = [...['seat0', 'seat1', 'seat2', 'seat3', 'mySlot', 'passSheet'].map(id => document.getElementById(id)), ...document.querySelectorAll('.card.trick')]
+    .filter(shows).map(e => [e.id || 'trick', e.getBoundingClientRect()]);
+  const hits = [];
+  for (const [a, r] of boxes) for (const [b, q] of boxes) if (a < b && (a.startsWith('seat') || b.startsWith('seat'))
+    && Math.min(r.right, q.right) > Math.max(r.left, q.left) && Math.min(r.bottom, q.bottom) > Math.max(r.top, q.top)) hits.push(a + '/' + b);
+  return hits;
+});
+for (const [W, H] of [[1093, 530], [1280, 620]]) {
+  await page.setViewportSize({ width: W, height: H }); await wait(300);
+  await setHand(['2C 3D 4D 5D', '3C 6D 7D 8D', '4C 9D 10D JD', '5C QD KD AD'], { leader: 1, turn: 1 });
+  await myTurn(); await wait(600);
+  const turn = await clear();
+  ok(await g(() => L.row && G.trick.length === 3) && !turn.length, `at ${W}x${H} the players sit in one row, clear of each other and of the trick ${turn.join(' ')}`);
+  ok(await g(() => L.w) >= 66, `cards are ${await g(() => L.w)} px wide at ${W}x${H}`);
+  await page.screenshot({ path: `${OUT}/ddp-${W}-turn.png` });
+  await g(() => { newGame(); setCast(['jeanne', 'paul', 'louise']); render(); });
+  const pass = await clear();
+  ok(await g(() => G.phase === 'pass') && !pass.length, `at ${W}x${H} the pass sheet sits between the players and his hand ${pass.join(' ')}`);
+  await page.screenshot({ path: `${OUT}/ddp-${W}-pass.png` });
+}
 await page.setViewportSize({ width: 1920, height: 1000 }); await wait(300);
 ok(await g(() => L.w) >= 150, `cards are ${await g(() => L.w)} px wide at 1920x1000`);
 await page.screenshot({ path: `${OUT}/ddp-1920.png` });

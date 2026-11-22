@@ -138,13 +138,87 @@
   html.low #box:has(.scores) { padding: 12px 22px 14px; }
   html.low .scores th, html.low .scores td { height: 27px; }
 
-  /* The rules: small pictures of the lane. */
-  .guide-art svg { width: 230px; height: auto; display: block; }
-  .guide-key .mark { flex: none; display: inline-grid; place-items: center; width: 38px; height: 38px; font: 700 24px var(--ui); color: var(--ink); border: 2.5px solid var(--ink); background: var(--paper); }
-  .guide-key .mark.better { border-radius: 50%; }
-  .guide-key .mark.worse { border-radius: 5px; }
-  html.short .guide-panel { margin: 8px 0; padding-block: 8px; }
-  html.short .guide-art svg { width: 190px; }
+  /* ---------- The rules guide ----------
+     Each page: one picture on the green felt, drawn like the game: the lane in its wooden rails, the white
+     ball, the cup and its red flag, the card and the buttons. Then one or two short sentences. The pictures
+     use their own classes and cannot be clicked. */
+  #helpText .page { text-align: center; }
+  #helpText .page h3 { text-align: left; }
+  #helpText .lead { margin: 0 0 4px; font: 700 24px/1.3 var(--ui); color: var(--text); }
+  #helpText .more { margin: 0; font: 500 21px/1.35 var(--ui); color: #34403A; }
+  .gg-pic { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 16px 26px; margin: 2px 0 12px; padding: 14px;
+    border-radius: 18px; background: radial-gradient(120% 100% at 50% 0%, var(--felt-top), var(--felt) 80%); }
+  .gg-lane { display: block; width: 100%; max-width: 540px; height: auto; overflow: visible; }
+  .gg-lane.small { max-width: 400px; flex: 1 1 300px; }
+  .gg-lane text { font-family: var(--ui); font-weight: 800; }
+  .gg-col { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  /* Copies of the real buttons. "Click here": a yellow ring with a dark edge and a pointing hand. */
+  .gg-btn { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 54px; padding: 6px 22px;
+    border-radius: 15px; font: 700 22px var(--ui); color: #1F1A00; background: var(--gold); border: 2px solid #C9951A; box-shadow: 0 3px 0 #C9951A; white-space: nowrap; }
+  .gg-btn.plain { font-weight: 600; color: var(--text); background: #fff; border-color: #9AA6A1; box-shadow: 0 3px 0 #9AA6A1; }
+  .gg-btn > svg:not(.gg-hand) { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .gg-btn.here { box-shadow: 0 3px 0 #C9951A, 0 0 0 4px #fff, 0 0 0 9px var(--gold), 0 0 0 11px #1B2422; }
+  .gg-hand { position: absolute; z-index: 3; width: 46px; height: 54px; left: calc(100% - 18px); top: 34%; pointer-events: none; filter: drop-shadow(0 3px 3px rgba(0,0,0,.35)); }
+  /* The number of a click, 1 then 2, in a yellow disc. */
+  .gg-step { position: absolute; left: -18px; top: -18px; z-index: 3; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%;
+    background: var(--gold); color: #1F1A00; border: 2.5px solid #1B2422; font: 800 21px/1 var(--ui); }
+  .gg-force { display: flex; align-items: center; gap: 8px; width: 260px; padding: 8px; border-radius: 16px; background: var(--paper); }
+  .gg-force > span { flex: none; width: 46px; height: 46px; display: grid; place-items: center; border-radius: 13px; background: #fff; border: 2px solid #9AA6A1;
+    box-shadow: 0 3px 0 #9AA6A1; font: 700 28px/1 var(--ui); color: var(--text); }
+  .gg-force > i { position: relative; flex: 1; height: 46px; border-radius: 14px; overflow: hidden; background: #E3DCC6; box-shadow: inset 0 2px 4px rgba(0,0,0,.18);
+    display: grid; place-items: center; font: 700 20px var(--ui); font-style: normal; color: #1E2A22; }
+  .gg-force > i::before { content: ""; position: absolute; inset: 0 40% 0 0; border-radius: 14px; background: linear-gradient(90deg, #4FB35E, #FFC83D 70%, #F4A13A); }
+  .gg-force > i b { position: relative; font: inherit; }
+  /* A copy of the card of the hole. */
+  .gg-card { display: flex; flex-direction: column; gap: 12px; width: 330px; padding: 16px 16px 14px; border-radius: 20px; background: var(--paper); color: #1E2A22;
+    text-align: left; box-shadow: 0 12px 28px rgba(0,0,0,.35); }
+  .gg-head { display: flex; align-items: center; gap: 14px; }
+  .gg-no { flex: none; width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; color: #2B2000; font: 800 27px var(--ui);
+    background: radial-gradient(circle at 35% 30%, #FFE08A, var(--gold) 60%, #E9A915); box-shadow: 0 0 0 4px #fff, 0 0 0 6px #E5C979; }
+  .gg-head div span { display: block; font: 600 20px/1.2 var(--ui); color: #4F5E55; }
+  .gg-head b { display: block; font: 700 23px/1.2 var(--ui); color: var(--green); }
+  .gg-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .gg-stats div { padding: 4px 12px 6px; border-radius: 16px; background: #F2ECDA; text-align: center; }
+  .gg-stats span { display: block; font: 600 20px/1.2 var(--ui); color: #4F5E55; }
+  .gg-stats b { display: block; font: 800 34px/1.05 var(--ui); }
+  .gg-stats b.ink { color: var(--ink); }
+  .gg-stats div.par { background: #FFF1C2; box-shadow: inset 0 0 0 2.5px var(--green); }
+  /* A piece of the score card: the strokes in blue ink, circled under par and boxed over par. */
+  .gg-scores { border-collapse: separate; border-spacing: 0; background: var(--paper); color: #1E2A22; border: 2px solid var(--green); border-radius: 14px; overflow: hidden;
+    font: 600 21px/1 var(--ui); box-shadow: 0 12px 28px rgba(0,0,0,.35); }
+  .gg-scores th, .gg-scores td { height: 46px; padding: 0 16px; border-bottom: 1px solid #E5DCC2; text-align: center; white-space: nowrap; }
+  .gg-scores td + td { border-left: 1px solid #E5DCC2; }
+  .gg-scores thead th { height: 40px; background: var(--green); color: #fff; font-size: 20px; border: 0; }
+  .gg-scores tr:last-child td { border-bottom: 0; }
+  .gg-scores .par { color: #4F5E55; }
+  .gg-scores .ink { display: inline-grid; place-items: center; box-sizing: border-box; min-width: 36px; height: 36px; font: 700 25px/1 var(--ui); color: var(--ink); }
+  .gg-scores .better .ink { border: 2.5px solid var(--ink); border-radius: 50%; width: 36px; }
+  .gg-scores .worse .ink { border: 2.5px solid var(--ink); border-radius: 5px; }
+  .gg-scores .gap { text-align: left; }
+  .gg-scores .better .gap { color: #8A5A00; }
+  .gg-scores .even .gap { color: #1F5A33; }
+  .gg-scores .worse .gap { color: #8A2E14; }
+  /* A low window: smaller pictures, so the two sentences still show. */
+  html.low .gg-pic { padding: 8px; margin-bottom: 8px; gap: 10px 20px; }
+  html.low .gg-lane { max-width: 400px; }
+  html.low .gg-lane.small { max-width: 300px; }
+  html.low .gg-head div span { display: none; }
+  html.low .gg-card { gap: 8px; padding: 10px 14px; }
+  html.low .gg-scores th, html.low .gg-scores td { height: 36px; }
+  html.low .gg-scores thead th { height: 34px; }
+  html.low .gg-col { gap: 12px; }
+  @media (max-width: 699px) {
+    .gg-pic { padding: 12px 8px; gap: 14px; }
+    .gg-btn { font-size: 20px; padding-inline: 16px; }
+    .gg-pic:has(.gg-force) { gap: 10px; padding-block: 8px; }
+    .gg-col { gap: 12px; }
+    .gg-force { padding: 5px; }
+    .gg-force > span, .gg-force > i { height: 40px; }
+    .gg-card { width: 100%; max-width: 300px; }
+    .gg-scores th, .gg-scores td { height: 40px; padding: 0 8px; font-size: 18px; }
+    .gg-scores thead th { font-size: 18px; }
+    #helpText .lead { font-size: 22px; } #helpText .more { font-size: 20px; }
+  }
 
   /* A short window: the card closes up. */
   html.short #card { gap: 10px; padding: 14px 14px 12px; }
@@ -195,9 +269,6 @@
     #box:has(.scores) p { font-size: 17px; }
     #box:has(.scores) #overBtns { flex-direction: column; }
     #box:has(.scores) #overBtns button { max-width: none; }
-    .guide-art svg { width: 120px; }
-    .guide-example { flex-wrap: nowrap; gap: 10px; }
-    .guide-example figcaption { flex: 1 1 auto; font-size: 18px; line-height: 1.25; }
   }
 </style></head><body>
 <div id="bar"><div id="title">Golf miniature</div>
@@ -223,10 +294,97 @@
 </main>
 <footer id="rail"><div class="zoom"></div></footer>
 <div id="help" data-title="Golf miniature">
-<section class="page"><h3>Taper la balle</h3><p>Mettez la balle dans le trou en peu de coups.</p><ol><li>Appuyez sur la balle sans lâcher le bouton.</li><li>Tirez en arrière, comme un lance-pierre.</li><li>Lâchez. Plus vous tirez loin, plus la balle va loin.</li></ol>
-<div class="guide-panel"><figure class="guide-example"><div class="guide-art"><svg viewBox="0 0 230 110" aria-hidden="true"><rect x="3" y="3" width="224" height="104" rx="16" fill="#c98d52"/><rect x="11" y="11" width="208" height="88" rx="10" fill="#43a253"/><path d="M90 58 L188 38" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-dasharray="1 11"/><ellipse cx="196" cy="37" rx="11" ry="7" fill="#1b1f1c" stroke="#fff" stroke-width="3"/><path d="M196 37V8" stroke="#fff" stroke-width="3"/><path d="M196 9l20 6-20 6z" fill="#e23b2e"/><path d="M78 61 L30 72" stroke="#1F1A00" stroke-width="9" stroke-linecap="round"/><path d="M78 61 L30 72" stroke="#FFC83D" stroke-width="5" stroke-linecap="round"/><circle cx="30" cy="72" r="8" fill="#fff" stroke="#1F1A00" stroke-width="3"/><circle cx="80" cy="60" r="10" fill="#fff" stroke="#9aa6a1" stroke-width="1.5"/><path d="M42 84l-10-10M42 84h-9M42 84v-9" stroke="#1F1A00" stroke-width="3" stroke-linecap="round"/></svg></div><figcaption>Tirez à gauche, la balle part à droite. Pour annuler, revenez sur la balle avant de lâcher.</figcaption></figure></div></section>
-<section class="page"><h3>Ou bien, cliquer sur le gazon</h3><ol><li>Cliquez là où la balle doit s’arrêter.</li><li>Les points montrent son chemin. « − » et « + » changent la force.</li><li>Cliquez sur « Taper la balle ».</li></ol>
-<div class="guide-panel"><figure class="guide-example"><div class="guide-art"><svg viewBox="0 0 230 110" aria-hidden="true"><rect x="3" y="3" width="224" height="104" rx="16" fill="#c98d52"/><rect x="11" y="11" width="208" height="88" rx="10" fill="#43a253"/><circle cx="34" cy="70" r="10" fill="#fff" stroke="#9aa6a1" stroke-width="1.5"/><path d="M50 66 L150 44" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-dasharray="1 11"/><ellipse cx="156" cy="43" rx="13" ry="9" fill="none" stroke="#fff" stroke-width="4"/><ellipse cx="178" cy="38" rx="15" ry="10" fill="none" stroke="#FFC83D" stroke-width="5"/></svg></div><figcaption>Le cercle jaune est votre cible. Le cercle blanc montre où la balle s’arrêtera.</figcaption></figure></div>
-<p>En Moyen et en Difficile, les points s’effacent en route.</p></section>
-<section class="page"><h3>Le par et la carte de score</h3><p>Le par est le nombre de coups prévu pour un trou. Pour gagner, faites au total le par ou moins.</p><ul class="guide-key"><li><span class="mark better">2</span>Un nombre entouré : moins que le par.</li><li><span class="mark worse">4</span>Un nombre encadré : plus que le par.</li></ul><p>« Que jouer maintenant ? » montre un bon coup. « Annuler le dernier coup » reprend un coup raté.</p><p>Après huit coups, la balle est posée dans le trou. Chaque nouvelle partie a neuf nouveaux trous.</p></section>
-</div><script src="../lib/store.js"></script><script src="../lib/kit.js"></script><script type="module" src="game.js"></script></body></html>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <pattern id="ggMow" width="60" height="10" patternUnits="userSpaceOnUse"><rect width="30" height="10" fill="#4CAD5A"/><rect x="30" width="30" height="10" fill="#41A04F"/></pattern>
+  <marker id="ggArrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#1B2422"/></marker>
+  <g id="ggHand"><path d="M15 27V7a4.5 4.5 0 0 1 9 0v12a4 4 0 0 1 7.5 1.6a4 4 0 0 1 7 2.4V33c0 8-5 13-12 13h-4c-5 0-8-2-11-6L4.5 32a4 4 0 0 1 6.3-4.6z" fill="#fff" stroke="#1B2422" stroke-width="2.6" stroke-linejoin="round"/></g>
+  <g id="ggCup"><ellipse cx="0" cy="0" rx="16" ry="11" fill="#141714" stroke="#fff" stroke-width="3.5"/><path d="M0 0V-62" stroke="#F4F4F4" stroke-width="3.5" stroke-linecap="round"/><path d="M1 -61l34 11-34 11z" fill="#E23B2E"/></g>
+  <g id="ggBall"><circle r="12" fill="#fff" stroke="#8E9A95" stroke-width="1.5"/><circle cx="-3.5" cy="-3.5" r="4" fill="#fff" opacity=".9"/></g>
+</defs></svg>
+<section class="page">
+  <h3>Taper la balle</h3>
+  <div class="gg-pic" aria-hidden="true">
+    <svg class="gg-lane" viewBox="0 10 540 176">
+      <rect x="4" y="14" width="532" height="168" rx="36" fill="#B97A43" stroke="#7A4A22" stroke-width="3"/>
+      <rect x="18" y="28" width="504" height="140" rx="26" fill="url(#ggMow)"/>
+      <use href="#ggCup" x="456" y="108"/><text x="472" y="70" text-anchor="middle" font-size="18" fill="#fff">1</text>
+      <path d="M216 108H436" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-dasharray="0 17"/>
+      <path d="M170 64H96" fill="none" stroke="#1B2422" stroke-width="4" stroke-dasharray="9 7" marker-end="url(#ggArrow)"/>
+      <line x1="196" y1="108" x2="84" y2="108" stroke="#1F1A00" stroke-width="11" stroke-linecap="round"/>
+      <line x1="196" y1="108" x2="84" y2="108" stroke="#FFC83D" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="196" cy="108" r="22" fill="rgba(255,200,61,.25)" stroke="#FFC83D" stroke-width="5"/>
+      <use href="#ggBall" x="196" y="108"/>
+      <circle cx="84" cy="108" r="10" fill="#fff" stroke="#1F1A00" stroke-width="3"/>
+      <use href="#ggHand" transform="translate(61 106) scale(1.25)"/>
+    </svg>
+  </div>
+  <p class="lead">Appuyez sur la balle, tirez en arrière, puis lâchez.</p>
+  <p class="more">La balle part vers le trou. Plus vous tirez loin, plus elle va loin.</p>
+</section>
+<section class="page">
+  <h3>Ou bien, viser d'un clic</h3>
+  <div class="gg-pic" aria-hidden="true">
+    <svg class="gg-lane small" viewBox="0 10 400 176">
+      <rect x="4" y="14" width="392" height="168" rx="36" fill="#B97A43" stroke="#7A4A22" stroke-width="3"/>
+      <rect x="18" y="28" width="364" height="140" rx="26" fill="url(#ggMow)"/>
+      <use href="#ggCup" x="340" y="112"/><text x="356" y="74" text-anchor="middle" font-size="18" fill="#fff">1</text>
+      <path d="M86 108H252" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-dasharray="0 17"/>
+      <circle cx="270" cy="108" r="13" fill="none" stroke="#fff" stroke-width="4"/>
+      <circle cx="270" cy="108" r="22" fill="none" stroke="#1B2422" stroke-width="7"/>
+      <circle cx="270" cy="108" r="22" fill="none" stroke="#FFC83D" stroke-width="5"/>
+      <use href="#ggBall" x="62" y="108"/>
+      <circle cx="238" cy="70" r="17" fill="#FFC83D" stroke="#1B2422" stroke-width="2.5"/><text x="238" y="77" text-anchor="middle" font-size="20" fill="#1F1A00">1</text>
+      <use href="#ggHand" transform="translate(247 106) scale(1.25)"/>
+    </svg>
+    <div class="gg-col">
+      <span class="gg-btn here"><span class="gg-step">2</span>Taper la balle</span>
+      <div class="gg-force"><span>−</span><i><b>Force</b></i><span>+</span></div>
+    </div>
+  </div>
+  <p class="lead">Cliquez sur le gazon, puis sur «&nbsp;Taper la balle&nbsp;».</p>
+  <p class="more">Les points blancs montrent le chemin. «&nbsp;−&nbsp;» et «&nbsp;+&nbsp;» changent la force.</p>
+</section>
+<section class="page">
+  <h3>Le par</h3>
+  <div class="gg-pic" aria-hidden="true">
+    <div class="gg-card">
+      <div class="gg-head"><span class="gg-no">1</span><div><span>Trou 1 sur 9</span><b>Le petit pont</b></div></div>
+      <div class="gg-stats"><div class="par"><span>Par</span><b>2</b></div><div><span>Coups</span><b class="ink">0</b></div></div>
+    </div>
+  </div>
+  <p class="lead">Le par est le nombre de coups prévu pour le trou.</p>
+  <p class="more">Pour gagner, faites le par ou moins sur les neuf trous.</p>
+</section>
+<section class="page">
+  <h3>La carte de score</h3>
+  <div class="gg-pic" aria-hidden="true">
+    <table class="gg-scores">
+      <thead><tr><th>Trou</th><th>Par</th><th>Coups</th><th>Bilan</th></tr></thead>
+      <tbody>
+        <tr class="better"><td>1</td><td class="par">2</td><td><span class="ink">1</span></td><td class="gap">1 de moins</td></tr>
+        <tr class="even"><td>2</td><td class="par">3</td><td><span class="ink">3</span></td><td class="gap">Le par</td></tr>
+        <tr class="worse"><td>3</td><td class="par">2</td><td><span class="ink">4</span></td><td class="gap">2 de plus</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="lead">Entouré : moins que le par. Encadré : plus que le par.</p>
+  <p class="more">Après huit coups, la balle est posée dans le trou.</p>
+</section>
+<section class="page">
+  <h3>Demander de l'aide</h3>
+  <div class="gg-pic" aria-hidden="true">
+    <div class="gg-col">
+      <span class="gg-btn here" data-icon="bulb">Que jouer maintenant ?</span>
+      <span class="gg-btn plain" data-icon="undo">Annuler le dernier coup</span>
+    </div>
+  </div>
+  <p class="lead">Un doute ? Cliquez sur «&nbsp;Que jouer maintenant&nbsp;?&nbsp;».</p>
+  <p class="more">Le chemin d'un bon coup s'affiche. «&nbsp;Annuler&nbsp;» reprend un coup raté.</p>
+</section>
+</div><script src="../lib/store.js"></script><script src="../lib/kit.js"></script><script>
+// The rules guide: the icons and the pointing hand of the copied buttons.
+for (const b of document.querySelectorAll('#help .gg-btn')) {
+  if (b.dataset.icon) b.insertAdjacentHTML('afterbegin', Kit.icon(b.dataset.icon));
+  if (b.classList.contains('here')) b.insertAdjacentHTML('beforeend', '<svg class="gg-hand" viewBox="0 0 40 48"><use href="#ggHand"/></svg>');
+}
+</script><script type="module" src="game.js"></script></body></html>

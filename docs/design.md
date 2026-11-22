@@ -28,16 +28,23 @@ These rules hold for the library, every game, its rules pages and its dialogs. C
 
 ## Write a rules guide
 
-Teach the player enough to start on page one. Use the later pages to explain decisions that come up during play.
+The site owner found the old guides too long to read: paragraphs and lists of rules. Every guide now teaches with pictures.
 
-1. **Start with the first action.** Give the page a heading such as « Avancer un pion ». Say what to click and what the game does next. State how to win early in the guide.
-2. **Give each page one job.** Use short French sentences and the exact labels from the game. Use a numbered list when the player must follow steps in order. Put special rules on the page where they affect a move. Use a table for scores the player may need to look up.
-3. **Show one example when a rule is hard to picture.** Reuse the game's cards, pieces, dice, and symbols. Name the important part in the caption, such as « Posez le 7 de cœur sur le 8 de pique ». The caption must explain the rule even if the player cannot see the picture.
-4. **Check the guide against the game.** Try each example with the implemented rules. Verify that the button labels, scoring, and exceptions match what the player sees.
+1. **Three to five pages.** Each page has one job, a heading such as « Avancer un pion », one large picture, and under it one or two short sentences of about 25 words in all. The key sentence is 24 px bold, the second line 20 px or more. No lists and no paragraphs.
+2. **Start with the first action.** The first page shows what to click first and says how to win. The later pages explain the decisions that come up in play.
+3. **Draw with the game's own things.** Build each picture from the real cards, pieces, dice, grid or board, in HTML or SVG with `aria-hidden`, on a piece of the game's felt. Mark "click here" with a yellow ring and a pointing hand, since yellow means "press me". Draw copies of real buttons, such as the hint, the way the bar shows them. A score table becomes the items with their points under each one.
+4. **Check the guide against the game.** Try each example with the implemented rules. The labels, the scores and the exceptions must match what the player sees. The sentences must make sense without the picture.
 
-Use the shared `#help` dialog with one `<section class="page">` and an `<h3>` for each page. Wire the **Règles** button to `Kit.openHelp()` and use `Kit.firstVisit(newGame)` when there is no saved game. Use `.guide-panel` and `.guide-example` for an illustration with a caption. Use guide-specific classes for the illustration so the game treats only the real cards, pieces, and squares as playable.
+Use the shared `#help` dialog with one `<section class="page">` and an `<h3>` for each page. Wire the **Règles** button to `Kit.openHelp()` and use `Kit.firstVisit(newGame)` when there is no saved game. Use guide-specific classes for the pictures so the game treats only the real cards, pieces and squares as playable.
 
-Use [Solitaire](../public/solitaire/index.html) as the example for a move with a caption, [Démineur](../public/demineur/index.html) for a key to symbols, and [Yams](../public/yams/index.html) for a scoring table. Check every page at the window and zoom sizes above. Confirm that **Fermer** works on every page and that **Précédent** and **Suivant** stay in place.
+Use the [morpion](../public/morpion/index.html) as the example: a picture with a ring and a hand, a copy of a button, and the two sentences. The [yams](../public/yams/index.html) shows points under the items, and the [belote](../public/belote/index.html) a whole table. Check every page at the window and zoom sizes above. Confirm that **Fermer** works on every page and that **Précédent** and **Suivant** stay in place.
+
+## Rules guides of the other games
+
+- **Solitaire.** Five pages on the green felt: moving the 7 de cœur onto the 8 de pique, the order in the columns with the empty "Roi" place, the Rangement from the as to the roi, the pioche, and the "Que jouer maintenant ?" and "Annuler le dernier coup" buttons.
+- **Démineur.** Five pages on the real turf and sand. The same small corner of a field comes back on each page: a square to open, a white frame around the eight squares a 1 touches, the flag button and then the flag, the check and the red "!" of Facile, and the hint with the safe square framed in yellow. The guide names each button the way the bar shows it at this size.
+- **Bataille navale.** Five pages on the sea blue with the real squares, marks and ships: a shot on the computer's sea, his fleet with "Placer mes bateaux autrement", the splash and the explosion each with its name, a sunk ship with the pale squares around it, and the five ships with their lengths.
+- **Jeu des paires.** Four pages on the olive felt with the real vichy backs and farm pictures: turn a card, two coqs make a pair with green ticks, a coq and a vache in red frames turn back, and the yellow "Aide" button frames a card.
 
 ## What the research said
 
@@ -111,6 +118,7 @@ FreeCell uses the solitaire's cards, top bar, message line, clicks, drag, hints 
 - **One click.** The empty free cells count as one place, and so do the empty columns. A card that fits nowhere else goes to the first free cell with one click.
 - **Runs.** A click on a card in an ordered run takes the card and the cards on it. When the run is too long for the room, the message line gives the number of cards that can move now.
 - **Solver.** It searches best-first and wins about 98% of random deals in less than 30,000 positions, in about 20 ms. A deal is kept only if the solver wins it.
+- **The rules guide.** Five pages on the blue felt, in the solitaire's style: clicking the 7 de cœur and then its yellow place, the order in the columns where an empty column takes any card, putting a card aside in the four "Cases libres", the Rangement, and the hint and undo buttons. How many cards a run can move is left to the message line.
 
 ## Dames
 
@@ -125,6 +133,7 @@ The jeu de dames is international draughts on the 10x10 board, as the FMJD and t
 - **The computer's move.** It waits at least 0.7 s, so his own move is seen landing first. Its piece then travels one landing at a time, 0.52 s apart, crossing out what it takes. Its start and end squares stay lit until he chooses a piece, and the message line says what it took.
 - **Levels.** Facile searches 2 plies and, 40% of the time, picks a move that loses at most 0.9 of a man against the best one. It still never misses a compulsory capture. Moyen and Difficile search deeper with alpha-beta and follow every compulsory capture past the depth limit, so they do not give pieces away.
 - **No settings.** The level is the only choice, at "Nouvelle partie", and it is kept.
+- **The rules guide.** Five pages, each a piece of the real board on the wine felt: moving a man with the two clicks marked 1 and 2, a capture along the yellow path with the taken piece ringed in red, taking the most pieces, the king, and the "Que jouer maintenant ?" button.
 
 ## Dame de pique
 
@@ -142,6 +151,7 @@ The dame de pique is Hearts for four, in the Windows rules that French players k
 - **Compared with other Hearts games.** The rules match regles-du-jeu.net and Windows Hearts. Speed settings and "claim the rest" buttons from other apps are left out: they add choices. His only legal card is not played for him.
 - **Levels.** Facile, Moyen and Difficile, chosen at "Nouvelle partie". In the tests, Moyen takes 2.7 points a hand fewer than Facile players, and Difficile 5.7 fewer than Moyen players. Difficile takes less than 60 ms a card.
 - **The way of play.** Four curved white arrows around the trick turn clockwise: from his place to Jeanne, to Paul, to Louise and back to him, so the play goes to the left. The arrow that leads to the player who must play is bright, the others are faint. They show only while the cards are played. On his turn, the cards he may play stand up out of his hand by a tenth of their height, and the others lie under a plum veil, still readable. "Donner ces 3 cartes" pulses when he waits. The rules guide has four pages, each one picture of the table and two short sentences: give 3 cards (the clicks marked 1 and 2 in yellow), play in turn with the arrows, who takes the trick, and the points under each card.
+- **A low window.** When the table is less than 450 px high, the three other players sit in one row on top, in the order they sit, each with a face, the name with its total and the points of the hand. His strip sits left of the trick, one fact per line. The pass sheet lies between the row and his hand in two columns, and the score sheet takes two columns so its text stays at 20 px. At 1093 by 530 the cards are 68 px wide. During the pass, his strip hides and the sheet takes its place: three empty places fill with the cards he picks, and the yellow button shows only when the three are chosen.
 
 ## Yams
 
@@ -156,6 +166,7 @@ The yams is the French dice game, against one computer player. GPT-6.2 Sol and G
 - **Feedback.** A box just written is stamped in and keeps a frame, yellow for him and blue for the computer. Five dice alike show a gold "Yams !" ribbon and the dice hop in a wave, as they do after a win.
 - **Size.** Everything grows with the window, up to 1.4 times on a 1920 by 1080 monitor. A low window (his laptop at 125 %) seats the two players side by side above the piste, so the dice stay 60 px or more.
 - **Pace.** The computer waits 0.9 s, then shows each throw 1.3 s and each keep 1 s, and its box 1.1 s before his turn.
+- **The rules guide.** Five pages on the terracotta table with the real dice, piste and pad: "Lancer les dés" ringed with a hand, three kept 5s over "Relancer 2 dés", the Cinq box ringed on the pad, the six top boxes over "= 63" and a green "+35 Bonus", and the full, the two suites and the yams with their points.
 
 ## Sudoku
 
@@ -172,13 +183,15 @@ The sudoku is the classic 9 by 9 grid, alone, with one solution.
 - **Feedback.** A refused move nudges the outline of the chosen cell for 360 ms. A clash also rings the matching digit for 2.1 s. When all nine copies of a digit are in place, the check on its key grows over 450 ms.
 - **Starting and winning.** On a new slate the white digits settle in over 400 ms per block, starting 50 ms apart. When the last digit lands, a gold wave crosses the nine blocks in reading order. Each block lights for 760 ms and its digits lift together. The blocks start 160 ms apart. The win dialog opens 2.56 s after the last move. With reduced motion, marks change in place and the dialog opens immediately.
 - **Levels.** The level is the hardest technique a logical solver needs, never a guess: singles for Facile (38 to 42 givens), locked candidates, pairs and naked triples for Moyen, wings, fish, hidden triples and quads for Difficile. In the tests, the steps beyond singles average 0, 4 and 8, a step of Difficile counting twice. The grid is made in a Web Worker, so the page never freezes.
+- **The rules guide.** Five pages on the slate: an empty cell in a yellow ring, then the 5 key; a full line and a full block; a red 6 beside the 6 it meets, with « Effacer »; « Une aide ? » with the cell it fills; and the blue counts and the green check on the keys.
+
 ## Mots mêlés
 
 The mots mêlés are the French word search, alone, with one theme per grid.
 
 - **Its own look.** A coral rose felt (#C8576B to #6E2234) with a coral "Nouvelle partie" button (#A63A50). The grid and its list are printed on one cream newspaper sheet (#FBF6EA) with a soft fold down the middle. The grid has the double rule of a newspaper puzzle. Its library tile shows a folded newspaper page with a grid of letters, the word VAGUE in a blue felt-pen loop, a rounded rectangle tilted by 1.5 degrees with the same margin of 4.5 units on every side of the letters, and a flat yellow pencil lying across the left page with its tip at the grid and a soft shadow. The pencil has a six-sided body in three shades of yellow, a wooden cone, a graphite tip, a pink eraser and a metal band. It never crosses the circled word.
 - **Layout.** The grid on the left, the list on the right: "Mots mêlés" in small coral capitals, the theme as a headline, a double rule, then the words in capitals with their accents, each with a small round mark. The list takes one to three columns and words of 20 to 26 px, whichever leaves the largest squares. A short window, such as 1093 by 530, takes the third column so the list and its button fit in the height. A phone puts the list under the grid, in two columns.
-- **Letters.** Lexend semibold, dark ink #211A17, 90 % of their square on his laptop and 62 % on a large monitor, never under 30 px while the squares allow it: 30 px at every level at 1366 by 680, at 100 % and at 130 %. They have no accents, as in a printed grid; the second rules page says so with CHÂTEAU and CHATEAU.
+- **Letters.** Lexend semibold, dark ink #211A17, 90 % of their square on his laptop and 62 % on a large monitor, never under 30 px while the squares allow it: 30 px at every level at 1366 by 680, at 100 % and at 130 %. They have no accents, as in a printed grid; the third rules page says so with PÊCHE and PECHE.
 - **Two clicks.** He clicks the first letter, then the last. The first letter gets a yellow disc in a dark hairline, and soft yellow dots mark the lines a word can take from it at this level. The message line says both actions: "Vous avez choisi le A. Cliquez sur la dernière lettre du mot, ou encore sur le A pour l'enlever." This is the longest message, and it fits the message line in every window. A 54 px coral-edged button "Enlever le A" with a small cross shows under the word list while a letter is chosen, and takes it back. Its place is kept when it is hidden, so the grid and the list never move. A phone shows it between the grid and the list. A click on the chosen letter and Escape also take it back. A drag of more than 16 px also works, and a double-click counts as one click. A word is found from either end, so a word read backwards needs no special order.
 - **Feedback.** A word found gets a rounded band of its own soft felt-pen colour, from the middle of its first letter to the middle of its last, and the letters show through it. Twelve colours turn in order. The list strikes the word in the same colour and fills its mark. The message line says "Vous avez trouvé CHÂTEAU."
 - **Refusals.** Each says why in one sentence, and the first letter stays chosen for another try: "Ces deux lettres ne sont pas sur une même ligne : un mot se lit tout droit.", "Au niveau facile, les mots se lisent seulement vers la droite ou vers le bas.", "Presque : FOURCHETTE commence bien ici, mais sa dernière lettre est ailleurs." or "« TRAPE » n'est pas un mot de la liste : essayez une autre dernière lettre." The red rings around the two letters move gently from side to side for 420 ms. A dashed red band shows the line he chose and fades over 1.4 s.
@@ -188,6 +201,7 @@ The mots mêlés are the French word search, alone, with one theme per grid.
 - **Finishing the sheet.** After the last stroke, each coloured band swells and settles for 520 ms, in the order he found the words, 90 ms apart. A coral "Bravo !" stamp lands in the middle of the grid in 560 ms. The win dialog opens 2.24 to 2.78 s after the last word, depending on the level. The sheet says "3 mots trouvés sur 12" under the theme, and the level line says "4 victoires". With reduced motion, the marks appear in place and the win dialog opens immediately.
 - **Levels.** Facile: 6 words of 4 to 6 letters in 8 by 8 or 9 by 9, to the right and down. Moyen: 9 words of 4 to 8 letters in 11 by 11, plus the two diagonals that read from left to right. Difficile: 12 words of 5 to 10 letters in 11 by 11, in all eight directions. Its grid is no larger than Moyen's, so its letters stay 30 px on his laptop at 130 %. A test proves each level asks more reading than the one below, in total and per word.
 - **The words.** 21 themes he enjoys, such as le jardin, la ferme, les fromages, la boulangerie or les villes de France, with no sad or rude word. A grid never holds a word inside another one, and the filler letters never make a second copy of a word of the list or spell a rude word.
+- **The rules guide.** Five pages, each a small newspaper grid on the coral felt with the game's marks: click the first letter, click the last letter, the word found with PÊCHE struck in the list and written PECHE in the grid, the directions of each level as arrows, and the "Où chercher ?" button.
 
 ## Golf miniature
 
@@ -202,6 +216,8 @@ Nine holes of miniature golf, new at each game, on small floating islands in a s
 - **The holes.** A seed saved with the game builds the course. Each hole joins a lane shape and its obstacles, with random sizes, angles, mirror, tee, cup and scenery. The solver plays each hole before it is kept. The par is the worse of two playthroughs with slips of the hand: 4° and 24 % in Facile, 3° and 17 % in Moyen, 2° and 12 % in Difficile. So a harder level also asks for a steadier hand. Most holes have par 2, some 3, a few 4.
 - **The score card.** A paper card with a green header and fine rules. The strokes are in blue ink, circled under par and boxed over par, as golfers mark them. A « Bilan » column says « 1 de moins », « Le par » or « 2 de plus », and the hole in play is yellow. It fits without scrolling at 1366 by 680, 1093 by 530 and on a phone.
 - **Saves.** The save keeps the seed and every target. A save from the first version, or one that no longer replays, starts a fresh course at its level. Eight strokes finish a hole. A completed course at par or better counts as one win, even if the last stroke is played again.
+- **The rules guide.** Five pages on the green felt: the ball pulled back with the yellow band to the hand, a click on the turf marked 1 and « Taper la balle » marked 2 beside the « Force » row, the card with the par, three rows of the score card, and « Que jouer maintenant ? » ringed with a hand.
+
 ## Petits chevaux
 
 The petits chevaux are the French race game on the cross-shaped board, for four players. He plays blue against three computer players. Each player has two horses, as in the French short game, and the first to bring both to the centre wins. With four horses a game took 41 to 64 minutes; with two it takes 22 minutes in the middle, with 2 s for each of his clicks, and 30 minutes for one game in ten. A save from before, with four horses, plays on with four. Blue and not yellow, so his horses never take the yellow of the frames that mean "you can move this one".
@@ -262,5 +278,4 @@ The huit américain is the French crazy eights for four, with the special cards 
 - **Special cards and wins.** A change of suit brings up the colour disc in 600 ms. An as turns the ring of arrows in 700 ms. A 2 or a valet puts a yellow label over the player who misses a turn, or under a player at the top of the table. The last card lands before the score appears. A round win sends a small fan of suits from the défausse for 1.7 s. A game win sends a wider fan of four suits across the felt for 2.4 s, then opens the win dialog. If he is reading the rules or choosing a new game, the result waits until he closes that window. With reduced motion the cards and result appear at once.
 - **The end of a round.** A score sheet over the table, with the cards left, the points of the round and the totals. Escape does not close it. It stays after a reload until "Manche suivante".
 - **Levels.** On 1000 games each, a player who plays like Moyen wins about 32 % of the games against Facile, 23 % against Moyen and 16 % against Difficile. A look-ahead on imagined deals, as in the dame de pique, did not play better than the Moyen rules, so Difficile plays by rules.
-
 - **The rules guide.** Five pages, each one picture on a piece of the fuchsia felt made from the real cards, with one or two sentences under it: the table with a raised card ringed in yellow and a pointing hand, "Piocher" ringed when no card fits, the 8 and the four colour keys, the as, the 2 and the valet beside a small ring of the four places, and the points under each card.

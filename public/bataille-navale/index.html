@@ -200,13 +200,59 @@
   /* At the end of a lost game, the computer's ships left afloat show, pale. */
   .boat.reveal { opacity: .55; }
 
-  .guide-shot { width: 52px; height: 52px; flex: none; border-radius: 6px; }
-  #shipList svg { height: 30px; width: auto; display: block; }
-  #shipList .guide-ship { width: 150px; flex: none; }
-  #shipList li + li { margin-top: 2px; }
+  /* ---------- The rules guide ----------
+     Each page: one picture on the sea blue, made of the game's squares, marks and ships, then one or two
+     short sentences. The guide has its own classes (bn-*, guide-shot), so the game and its tests see only
+     the squares of the two real seas. A yellow ring and the pointing hand show where to click. */
+  #help { --gh: 214px; }
+  html.low #help { --gh: 160px; }
+  .bn-pic { display: flex; align-items: center; justify-content: center; gap: 18px 34px; flex-wrap: wrap; margin: 2px 0 10px;
+    padding: 14px; border-radius: 18px; background: radial-gradient(120% 100% at 50% 0%, var(--felt-top), var(--felt) 80%); }
+  .bn-col { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  /* A piece of a sea: the letters on top, the numbers on the left, as on the real grids. */
+  .bn { --s: min(calc((var(--gh) - var(--hd, 0px)) / (var(--rows) + 1)), calc((100vw - 90px) / (var(--cols) + 1))); display: grid; flex: none;
+    grid-template-columns: repeat(calc(var(--cols) + 1), var(--s)); grid-auto-rows: var(--s); }
+  .bn > b { display: grid; place-items: center; font: 600 20px/1 var(--ui); color: #E4ECF0; }
+  .bn > .guide-shot { width: auto; height: auto; border-radius: 0; }
+  .guide-shot.wreck > svg { width: 50%; height: 50%; }
+  .guide-shot.here { background: linear-gradient(160deg, #FFE08A, #F2C14A); z-index: 3; }
+  .guide-shot.here::before { content: ""; position: absolute; inset: -3px; border-radius: 4px; pointer-events: none;
+    box-shadow: inset 0 0 0 5px var(--gold), inset 0 0 0 7px rgba(var(--shade),.85), 0 0 18px 4px rgba(255,200,61,.6); }
+  .bn-boat { position: relative; z-index: 2; padding: 2px; filter: drop-shadow(0 3px 3px rgba(0,0,0,.35)); }
+  .bn-boat svg { width: 100%; height: 100%; display: block; }
+  .bn-boat.sunk { filter: grayscale(.7) brightness(.55); }
+  .bn-hand { position: absolute; z-index: 6; width: 44px; height: 52px; left: 52%; top: 50%; pointer-events: none;
+    filter: drop-shadow(0 3px 3px rgba(0,0,0,.4)); }
+  /* Above a sea: its name, and the tag of his turn, as in the game. */
+  .bn-cap { display: flex; align-items: center; gap: 12px; height: 40px; font: 700 23px var(--ui); color: #fff; white-space: nowrap; }
+  .bn-tag { height: 38px; padding: 0 14px; display: inline-flex; align-items: center; border-radius: 19px; font: 700 20px var(--ui);
+    background: var(--gold); color: #1F1A00; box-shadow: 0 0 0 3px rgba(var(--shade),.5), 0 0 18px rgba(255,200,61,.5); }
+  .bn-word { padding: 2px 14px; border-radius: 12px; font: 800 24px var(--ui); color: #fff; background: #A9192F; box-shadow: 0 3px 8px rgba(0,0,0,.4); }
+  /* One large square with its name under it. */
+  .bn-big { width: calc(var(--gh) * .64); height: calc(var(--gh) * .64); border-radius: 8px; }
+  .bn-name { font: 700 22px var(--ui); color: #fff; }
+  /* The five ships, each over as many squares as it takes, and its length. */
+  .bn-fleet { display: grid; grid-template-columns: auto auto; align-items: center; gap: calc(var(--gh) * .035) 16px; }
+  .bn-ship { --q: calc(var(--gh) * .17); position: relative; justify-self: end; height: var(--q); width: calc(var(--q) * var(--n)); border-radius: 3px;
+    background: linear-gradient(160deg, #2F80B5, #1D5F8E); }
+  .bn-ship svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .bn-ship::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: repeating-linear-gradient(90deg, transparent 0 calc(var(--q) - 2px), rgba(10,40,70,.85) 0 var(--q));
+    box-shadow: inset 0 0 0 1.5px rgba(10,40,70,.85); }
+  .bn-fleet span { font: 700 21px var(--ui); color: #fff; white-space: nowrap; text-align: left; }
+  /* A copy of the button that places his ships again. */
+  .bn-btn { display: inline-flex; align-items: center; gap: 10px; min-height: 54px; padding: 6px 18px; border-radius: 15px;
+    font: 600 21px var(--ui); color: var(--text); background: #fff; border: 2px solid #9AA6A1; box-shadow: 0 3px 0 #9AA6A1; white-space: nowrap; }
+  .bn-btn svg { width: 26px; height: 26px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  #helpText .page { text-align: center; }
+  #helpText .page h3 { text-align: left; }
+  #helpText .lead { margin: 0 0 4px; font: 700 24px/1.3 var(--ui); color: var(--text); }
+  #helpText .more { margin: 0; font: 500 21px/1.35 var(--ui); color: #3F3A4A; }
   @media (max-width: 700px) {
-    #shipList .guide-ship { width: 90px; }
-    #shipList svg { max-width: 100%; }
+    #help { --gh: 210px; }
+    .bn-pic { padding: 12px 8px; gap: 14px; }
+    .bn-btn { font-size: 20px; padding-inline: 12px; white-space: normal; text-align: left; max-width: 100%; }
+    #helpText .lead { font-size: 22px; } #helpText .more { font-size: 20px; }
   }
 
   /* The key of the marks, under the computer's ships. */
@@ -275,34 +321,53 @@
 <footer id="rail"><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
   <section class="page">
-    <h3>Tirer sur la flotte adverse</h3>
-    <p>Pour gagner, coulez les cinq bateaux de l'ordinateur.</p>
-    <div class="guide-panel">
-      <ol>
-        <li>Attendez « À vous de tirer ».</li>
-        <li>Cliquez sur une case de la grille « L'ordinateur ».</li>
-      </ol>
+    <h3>Tirer</h3>
+    <div class="bn-pic" aria-hidden="true">
+      <div class="bn-col">
+        <div class="bn-cap">L'ordinateur <span class="bn-tag">À vous de tirer</span></div>
+        <div class="bn" style="--hd: 48px" data-b=".o....|...+..|o..x.o"></div>
+      </div>
     </div>
-    <p>L'ordinateur tire ensuite sur « Votre flotte ». Le cadre jaune montre le dernier tir sur chaque grille.</p>
+    <p class="lead">Cliquez sur une case de la grille «&nbsp;L'ordinateur&nbsp;».</p>
+    <p class="more">Coulez ses cinq bateaux avant qu'il coule les vôtres.</p>
   </section>
   <section class="page">
-    <h3>Lire le résultat du tir</h3>
-    <ul class="guide-key">
-      <li><span id="helpSplash" class="guide-shot" aria-hidden="true"></span><span><strong>À l'eau.</strong> La gerbe blanche signale un tir manqué.</span></li>
-      <li><span id="helpHit" class="guide-shot burn" aria-hidden="true"></span><span><strong>Touché.</strong> L'explosion signale une case de bateau.</span></li>
-      <li><span class="guide-shot clear" aria-hidden="true"></span><span><strong>Aucun bateau.</strong> Le point signale une case vide autour d'un bateau coulé.</span></li>
-    </ul>
-    <p>Quand vous touchez toutes les cases d'un bateau, il apparaît sur la grille. Il est coulé.</p>
+    <h3>Votre flotte</h3>
+    <div class="bn-pic" aria-hidden="true">
+      <div class="bn-col">
+        <div class="bn-cap">Votre flotte</div>
+        <div class="bn" style="--hd: 48px" data-b="......|......|......" data-ships="1 0 0|4 5 0 down|3 1 2"></div>
+      </div>
+      <span class="bn-btn" id="helpMove">Placer mes bateaux autrement</span>
+    </div>
+    <p class="lead">Vos bateaux sont déjà placés.</p>
+    <p class="more">Avant le premier tir, ce bouton les place autrement.</p>
   </section>
   <section class="page">
-    <h3>Reconnaître les bateaux</h3>
-    <ul class="guide-key" id="shipList"></ul>
-    <p>Les bateaux sont droits. Ils ne se touchent jamais, même en diagonale.</p>
+    <h3>À l'eau ou touché</h3>
+    <div class="bn-pic" aria-hidden="true">
+      <div class="bn-col"><span class="guide-shot bn-big" data-mark="o"></span><span class="bn-name">À l'eau</span></div>
+      <div class="bn-col"><span class="guide-shot bn-big burn" data-mark="x"></span><span class="bn-name">Touché</span></div>
+    </div>
+    <p class="lead">Une gerbe blanche&nbsp;: à l'eau. Une explosion&nbsp;: touché.</p>
+    <p class="more">Après chaque tir, c'est à l'autre de tirer.</p>
   </section>
   <section class="page">
-    <h3>Choisir une case ou déplacer sa flotte</h3>
-    <p>« Que jouer maintenant ? » encadre une case où tirer et explique son choix.</p>
-    <p>Si vous voulez changer la position de vos bateaux, cliquez sur « Placer mes bateaux autrement » avant le premier tir.</p>
+    <h3>Coulé</h3>
+    <div class="bn-pic" aria-hidden="true">
+      <div class="bn" data-b="ccccc.|cwwwc.|ccccc." data-ships="2 1 1 sunk"></div>
+      <span class="bn-word">Coulé !</span>
+    </div>
+    <p class="lead">Toutes ses cases touchées&nbsp;: le bateau est coulé.</p>
+    <p class="more">Les cases pâles autour sont vides&nbsp;: les bateaux ne se touchent jamais.</p>
+  </section>
+  <section class="page">
+    <h3>Les cinq bateaux</h3>
+    <div class="bn-pic" aria-hidden="true">
+      <div class="bn-fleet" id="helpFleet"></div>
+    </div>
+    <p class="lead">Chaque bateau a sa longueur, de 2 à 5 cases.</p>
+    <p class="more">L'ordinateur a les mêmes bateaux que vous.</p>
   </section>
 </div>
 
@@ -686,11 +751,32 @@ addEventListener('pointercancel', () => { press = null; });
 // The key of the marks, beside the computer's sea.
 $('legend').innerHTML = `<li><i>${Ships.splash}</i>À l'eau</li><li><i class="burn">${Ships.hit}</i>Touché</li><li><i class="clear"></i>Aucun bateau</li>`;
 
-// The guide uses the same shot marks and ships as the two grids.
-$('helpSplash').innerHTML = Ships.splash;
-$('helpHit').innerHTML = Ships.hit;
-$('shipList').innerHTML = B.FLEET.map((f, s) =>
-  `<li><span class="guide-ship" aria-hidden="true">${Ships.ship(s, false)}</span><span>${SHIP_NAMES[s]} · ${f.size} cases</span></li>`).join('');
+/* ---------- The pictures of the rules ----------
+   They use the same squares, marks and ships as the two seas. Each piece of sea is written as rows of
+   letters: . water, o a shot in the water, x a hit, w a hit on a sunk ship, c water beside a sunk ship,
+   + the square to click (yellow, with the hand). data-ships lists "ship column row", then "down" for a
+   ship along a column and "sunk" for a sunk ship. */
+const HAND = '<svg class="bn-hand" viewBox="0 0 40 48"><path d="M15 27V7a4.5 4.5 0 0 1 9 0v12a4 4 0 0 1 7.5 1.6a4 4 0 0 1 7 2.4V33c0 8-5 13-12 13h-4c-5 0-8-2-11-6L4.5 32a4 4 0 0 1 6.3-4.6z" fill="#fff" stroke="#1B2422" stroke-width="2.6" stroke-linejoin="round"/></svg>';
+const MARK = { o: Ships.splash, x: Ships.hit, w: Ships.hit };
+for (const d of document.querySelectorAll('#help .bn')) {
+  const rows = d.dataset.b.split('|');
+  d.style.setProperty('--cols', rows[0].length);
+  d.style.setProperty('--rows', rows.length);
+  let html = [...rows[0]].map((_, c) => `<b style="grid-area: 1 / ${c + 2}">${'ABCDEFGHIJ'[c]}</b>`).join('');
+  rows.forEach((row, r) => {
+    html += `<b style="grid-area: ${r + 2} / 1">${r + 1}</b>`;
+    html += [...row].map((ch, c) => `<span class="guide-shot${{ x: ' burn', w: ' wreck', c: ' clear', '+': ' here' }[ch] || ''}" style="grid-area: ${r + 2} / ${c + 2}">`
+      + (MARK[ch] || '') + (ch === '+' ? HAND : '') + '</span>').join('');
+  });
+  for (const item of (d.dataset.ships || '').split('|').filter(Boolean)) {
+    const [s, c, r, ...how] = item.split(' '), n = B.FLEET[+s].size, down = how.includes('down');
+    html += `<span class="bn-boat${how.includes('sunk') ? ' sunk' : ''}" style="grid-area: ${+r + 2} / ${+c + 2} / span ${down ? n : 1} / span ${down ? 1 : n}">${Ships.ship(+s, down)}</span>`;
+  }
+  d.innerHTML = html;
+}
+for (const e of document.querySelectorAll('#help [data-mark]')) e.innerHTML = MARK[e.dataset.mark];
+$('helpMove').insertAdjacentHTML('afterbegin', $('moveBtn').querySelector('svg').outerHTML);
+$('helpFleet').innerHTML = B.FLEET.map((f, s) => `<span class="bn-ship" style="--n: ${f.size}">${Ships.ship(s, false)}</span><span>${f.size} cases</span>`).join('');
 
 $('hintBtn').onclick = showHint;
 $('moveBtn').onclick = moveShips;

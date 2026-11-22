@@ -112,10 +112,10 @@
   .pc b { position: absolute; inset: 3%; border-radius: 50%; translate: 0 var(--lift); display: none; }
   .pc.can { pointer-events: auto; cursor: pointer; }
   .pc.can:hover b { display: block; border: 3px solid #fff; }
-  .pc.must b, .guide-board.capture .pc.w b { display: block; border: 4px dashed var(--gold); box-shadow: 0 0 0 1.5px rgba(var(--shade),.7); }
-  .pc.sel b, .pc.hint b { display: block; border: 5px solid var(--gold); box-shadow: 0 0 0 2px rgba(var(--shade),.8), 0 0 22px 8px rgba(255,200,61,.6); }
+  .pc.must b, .pc.g-must b { display: block; border: 4px dashed var(--gold); box-shadow: 0 0 0 1.5px rgba(var(--shade),.7); }
+  .pc.sel b, .pc.hint b, .pc.g-sel b { display: block; border: 5px solid var(--gold); box-shadow: 0 0 0 2px rgba(var(--shade),.8), 0 0 22px 8px rgba(255,200,61,.6); }
   /* A piece the chosen piece will take: a red ring. */
-  .pc.prey b { display: block; border: 5px solid #E0313F; box-shadow: 0 0 0 2px #fff, 0 0 14px 4px rgba(224,49,63,.55); }
+  .pc.prey b, .pc.g-prey b { display: block; border: 5px solid #E0313F; box-shadow: 0 0 0 2px #fff, 0 0 14px 4px rgba(224,49,63,.55); }
   .pc.hint b { animation: glow 1.4s ease-in-out infinite; }
   @keyframes glow { 50% { box-shadow: 0 0 0 2px rgba(var(--shade),.8), 0 0 30px 14px rgba(255,200,61,.85); } }
   .pc.moving { z-index: 50; transition: left .38s ease-in-out, top .38s ease-in-out; }
@@ -162,19 +162,59 @@
   #drawNote { background: #FFF4D6; color: var(--text); border-radius: 16px; padding: 12px 16px; font: 600 21px/1.3 var(--ui); box-shadow: 0 2px 10px rgba(0,0,0,.25); }
   #drawNote:empty { display: none; }
 
-  .guide-board, .guide-crown { --s: 46px; position: relative; flex: none; }
-  .guide-board {
-    display: grid; grid-template-columns: repeat(3, var(--s)); grid-auto-rows: var(--s);
-    background: conic-gradient(#EEDCB6 25%, #8F5B39 0 50%, #EEDCB6 0 75%, #8F5B39 0) 0 0 / calc(2 * var(--s)) calc(2 * var(--s));
-    border-radius: 6px; overflow: hidden;
+  /* ---------- The rules guide ----------
+     Each page: one picture on the wine felt, a piece of the real board with the real pieces, then one or
+     two short sentences. The guide has its own classes (dg-*, g-sel, g-must, g-prey), so the game and its
+     tests see only the pieces of the real board. A yellow ring and the pointing hand show where to click. */
+  #help { --gh: 214px; }
+  html.low #help { --gh: 160px; }
+  .dg-pic { display: flex; align-items: center; justify-content: center; gap: 28px; flex-wrap: wrap; margin: 2px 0 10px;
+    padding: 14px; border-radius: 18px; background: radial-gradient(120% 100% at 50% 0%, var(--felt-top), var(--felt) 80%); }
+  .dg { --s: calc(var(--gh) / var(--rows)); position: relative; flex: none; display: grid;
+    grid-template-columns: repeat(var(--cols), var(--s)); grid-auto-rows: var(--s);
+    box-shadow: 0 0 0 2px #2E1B0F, 0 0 0 4px #C9A35B, 0 0 0 5px #2E1B0F, 0 0 0 11px #6A4127, 0 10px 24px 11px rgba(0,0,0,.45); }
+  .dg > i { position: relative; background: repeating-linear-gradient(95deg, rgba(150,105,55,.07) 0 3px, transparent 3px 12px), #EEDCB6; }
+  .dg > i.d { background: linear-gradient(135deg, rgba(255,255,255,.08), rgba(0,0,0,.1)), repeating-linear-gradient(78deg, rgba(0,0,0,.06) 0 2px, transparent 2px 8px), #8F5B39; }
+  .dg .pc { left: 0; top: 0; }
+  /* A place to go: the dashed yellow frame of the game. */
+  .dg > i.go::before { content: ""; position: absolute; inset: 4px; z-index: 3; border: 4px dashed var(--gold); border-radius: 7px;
+    background: rgba(255,200,61,.32); box-shadow: inset 0 0 0 1.5px rgba(var(--shade),.7); }
+  .dg-ways { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; pointer-events: none; overflow: visible; }
+  .dg-ways .edge { fill: none; stroke: rgba(var(--shade),.75); stroke-width: .26; stroke-linecap: round; stroke-linejoin: round; }
+  .dg-ways .line { fill: none; stroke: var(--gold); stroke-width: .13; stroke-linecap: round; stroke-linejoin: round; }
+  .dg-ways circle { fill: var(--gold); stroke: rgba(var(--shade),.85); stroke-width: .05; }
+  .dg-ways .arrow { fill: none; stroke: #fff; stroke-width: .12; stroke-linecap: round; stroke-linejoin: round; }
+  /* The order of the clicks: a yellow disc with its number, in the corner of the square. */
+  .dg-step { position: absolute; z-index: 8; top: 50%; width: 46%; height: 46%; min-width: 28px; min-height: 28px; translate: 0 -50%;
+    border-radius: 50%; display: grid; place-items: center; background: var(--gold); color: #1F1A00; font: 800 20px/1 var(--ui);
+    box-shadow: 0 0 0 2.5px #2A1A12, 0 2px 4px rgba(0,0,0,.4); }
+  .dg-step.l { right: 100%; margin-right: 6%; }
+  .dg-step.r { left: 100%; margin-left: 6%; }
+  .dg-hand { position: absolute; z-index: 9; width: 46px; height: 54px; left: 52%; top: 50%; pointer-events: none;
+    filter: drop-shadow(0 3px 3px rgba(0,0,0,.4)); }
+  .dg-hand.left { left: auto; right: 52%; transform: scaleX(-1); }
+  /* A man that reaches the far row becomes a king: a man, an arrow, a king, on two dark squares. */
+  .dg-crown { display: flex; align-items: center; gap: 10px; }
+  .dg-crown .dg { --rows: 1; --cols: 1; --s: calc(var(--gh) / 4); }
+  .dg-crown svg.to { width: 44px; height: 44px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  /* Copies of the real buttons. */
+  .dg-btns { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 8px 0; }
+  .dg-btn { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 54px; padding: 6px 20px; border-radius: 15px;
+    font: 600 21px var(--ui); color: var(--text); background: #fff; border: 2px solid #9AA6A1; box-shadow: 0 3px 0 #9AA6A1; white-space: nowrap; }
+  .dg-btn.hintb { background: var(--gold); color: #1F1A00; border-color: #C9951A; box-shadow: 0 3px 0 #C9951A, 0 0 0 5px #fff, 0 0 0 7px #2A1A12; }
+  .dg-btn > svg:not(.dg-hand) { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .dg-btn > .dg-hand { left: calc(100% - 26px); top: 50%; }
+  #helpText .page { text-align: center; }
+  #helpText .page h3 { text-align: left; }
+  #helpText .lead { margin: 0 0 4px; font: 700 24px/1.3 var(--ui); color: var(--text); }
+  #helpText .more { margin: 0; font: 500 21px/1.35 var(--ui); color: #3F3A4A; }
+  @media (max-width: 700px) {
+    #help { --gh: 196px; }
+    .dg-pic { padding: 16px 10px; gap: 20px; }
+    .dg-crown .dg { --s: calc(var(--gh) / 6); }
+    #helpText .lead { font-size: 22px; } #helpText .more { font-size: 20px; }
+    .dg-btn { font-size: 20px; padding-inline: 14px; }
   }
-  .guide-board .pc { position: relative; }
-  .guide-board .guide-landing { margin: 4px; border: 4px dashed var(--gold); border-radius: 7px;
-    background: rgba(255,200,61,.28); box-shadow: inset 0 0 0 1.5px rgba(var(--shade),.7); }
-  .guide-board.advance .guide-landing:nth-child(2), .guide-board.capture .guide-landing { grid-area: 1 / 3; }
-  .guide-board.advance .pc, .guide-board.capture .pc.b { grid-area: 2 / 2; }
-  .guide-board.capture .pc.w { grid-area: 3 / 1; }
-  .guide-crown { width: var(--s); height: var(--s); }
 
   @media (prefers-reduced-motion: reduce) {
     .pc, .pc.moving { transition: none; }
@@ -218,49 +258,44 @@
 <div id="help" data-title="Comment jouer">
   <section class="page">
     <h3>Avancer un pion</h3>
-    <p>Vous jouez les blancs. Pour gagner, prenez toutes les pièces noires ou bloquez-les.</p>
-    <div class="guide-panel">
-      <figure class="guide-example">
-        <div class="guide-board advance" aria-hidden="true">
-          <span class="guide-landing"></span><span class="guide-landing"></span>
-          <span class="pc w"><i></i><b></b></span>
-        </div>
-        <figcaption>Cliquez sur votre pion. Puis cliquez sur une case encadrée en jaune. Un pion avance d'une case en diagonale vers le haut.</figcaption>
-      </figure>
+    <div class="dg-pic" aria-hidden="true">
+      <div class="dg" data-b=".....b.|.......|.o.o...|..S....|.w....." data-steps="2 3 1 l|3 2 2 r" data-hand="2 3"></div>
     </div>
+    <p class="lead">Cliquez sur votre pion, puis sur une case jaune.</p>
+    <p class="more">Vous avez les blancs. Prenez ou bloquez les pièces noires pour gagner.</p>
   </section>
   <section class="page">
     <h3>Prendre une pièce</h3>
-    <div class="guide-panel">
-      <figure class="guide-example">
-        <div class="guide-board capture" aria-hidden="true">
-          <span class="guide-landing"></span><span class="pc b"><i></i></span>
-          <span class="pc w"><i></i><b></b></span>
-        </div>
-        <figcaption><strong>Sautez par-dessus le pion noir.</strong> Cliquez sur la case vide juste derrière lui. Vous pouvez sauter en avant ou en arrière.</figcaption>
-      </figure>
+    <div class="dg-pic" aria-hidden="true">
+      <div class="dg" data-b="......|....o.|...p..|..S...|.w.w.." data-path="2 3,4 1" data-hand="4 1"></div>
     </div>
-    <p>Si vous pouvez prendre, vous devez le faire. Choisissez le trajet qui prend le plus de pièces.</p>
-    <p>Pour prendre plusieurs pièces d'un coup, cliquez sur la dernière case du chemin jaune.</p>
+    <p class="lead">Sautez par-dessus la pièce noire pour la prendre.</p>
+    <p class="more">Prendre est obligatoire. Un pion prend aussi en arrière.</p>
   </section>
   <section class="page">
-    <h3>Jouer une dame</h3>
-    <div class="guide-panel">
-      <figure class="guide-example">
-        <div class="guide-crown" aria-hidden="true"></div>
-        <figcaption>Si un pion termine son coup sur la dernière rangée, il reçoit une couronne et devient une dame.</figcaption>
-      </figure>
+    <h3>Prendre le plus de pièces</h3>
+    <div class="dg-pic" aria-hidden="true">
+      <div class="dg" data-b="...o...|....p..|.......|..b.p..|...S...|w......" data-path="3 4,5 2,3 0" data-hand="3 0 left"></div>
     </div>
-    <p>Une dame peut avancer ou reculer de plusieurs cases en diagonale.</p>
-    <p>Pour prendre, sautez une pièce adverse sur cette diagonale. Choisissez une case vide derrière elle.</p>
+    <p class="lead">Prenez toujours le plus de pièces possible.</p>
+    <p class="more">Le jeu trace le chemin jaune&nbsp;: cliquez sur sa dernière case.</p>
   </section>
   <section class="page">
-    <h3>Trouver de l'aide pendant la partie</h3>
-    <ul>
-      <li>« Que jouer maintenant ? » montre un coup possible.</li>
-      <li>« Annuler le dernier coup » reprend votre coup et la réponse de l'ordinateur.</li>
-    </ul>
-    <p><strong>Partie nulle.</strong> Si la même position revient trois fois, la partie s'arrête sans gagnant. Dans certaines longues fins de partie, le jeu affiche le nombre de coups restants.</p>
+    <h3>La dame</h3>
+    <div class="dg-pic" aria-hidden="true">
+      <div class="dg-crown"><div class="dg" data-b="w"></div><svg class="to" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg><div class="dg" data-b="k"></div></div>
+      <div class="dg" data-b=".b...|o...o|.o.o.|..k..|.o.o." data-hand="4 1"></div>
+    </div>
+    <p class="lead">Un pion qui finit sur la dernière rangée devient une dame.</p>
+    <p class="more">La dame va loin en diagonale, en avant comme en arrière.</p>
+  </section>
+  <section class="page">
+    <h3>Demander de l'aide</h3>
+    <div class="dg-pic" aria-hidden="true">
+      <div class="dg-btns"><span class="dg-btn hintb" data-icon="bulb">Que jouer maintenant ?</span><span class="dg-btn" data-icon="undo">Annuler le dernier coup</span></div>
+    </div>
+    <p class="lead">Un doute&nbsp;? Cliquez sur «&nbsp;Que jouer maintenant&nbsp;?&nbsp;».</p>
+    <p class="more">Le jeu entoure de jaune un bon coup. «&nbsp;Annuler&nbsp;» reprend votre coup.</p>
   </section>
 </div>
 
@@ -275,7 +310,39 @@ const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const HOP_MS = 520;        // between two landings of the computer's piece
 const THINK_MS = 700;      // the computer never answers faster, so his own move is seen landing first
 const CROWN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 8.5l4.2 3.6L12 5l4.3 7.1 4.2-3.6-1.8 10H5.3z"/><circle cx="12" cy="15" r="1.6"/></svg>';
-document.querySelector('.guide-crown').innerHTML = `<span class="pc w k"><i>${CROWN}</i></span>`;
+
+/* ---------- The pictures of the rules ----------
+   Each board of the guide is written as rows of letters, top row first: w a white man, k a white king,
+   S the chosen white man (yellow ring), b a black man, p a black man that will be taken (red ring), o a
+   square to go to (dashed yellow frame). data-path is the yellow way of a capture, as "column row"
+   points; data-hand the square to click ("left": the hand comes from the left); data-steps the clicks in order,
+   as "column row number side", the number on the left (l) or the right (r) of the square. */
+const HAND = '<svg class="dg-hand" viewBox="0 0 40 48"><path d="M15 27V7a4.5 4.5 0 0 1 9 0v12a4 4 0 0 1 7.5 1.6a4 4 0 0 1 7 2.4V33c0 8-5 13-12 13h-4c-5 0-8-2-11-6L4.5 32a4 4 0 0 1 6.3-4.6z" fill="#fff" stroke="#1B2422" stroke-width="2.6" stroke-linejoin="round"/></svg>';
+const PIECE = { w: 'pc w', k: 'pc w k', S: 'pc w g-sel', b: 'pc b', p: 'pc b g-prey' };
+for (const d of document.querySelectorAll('#help .dg')) {
+  const rows = d.dataset.b.split('|'), one = rows.length === 1 && rows[0].length === 1;
+  const pts = s => (s || '').split(/[|,]/).filter(Boolean).map(x => x.trim().split(' ').map(v => isNaN(v) ? v : +v));
+  const hand = pts(d.dataset.hand)[0], steps = pts(d.dataset.steps), left = hand && hand[2] === 'left';
+  d.style.setProperty('--cols', rows[0].length);
+  d.style.setProperty('--rows', rows.length);
+  d.innerHTML = rows.map((row, r) => [...row].map((ch, c) => {
+    const step = steps.find(([x, y]) => x === c && y === r);
+    const pc = PIECE[ch] ? `<span class="${PIECE[ch]}"><i>${ch === 'k' ? CROWN : ''}</i><b></b></span>` : '';
+    return `<i class="${one || (r + c) % 2 ? 'd' : ''}${ch === 'o' ? ' go' : ''}">${pc}`
+      + (step ? `<span class="dg-step ${step[3]}">${step[2]}</span>` : '') + (hand && hand[0] === c && hand[1] === r ? (left ? HAND.replace('dg-hand', 'dg-hand left') : HAND) : '') + '</i>';
+  }).join('')).join('');
+  const path = pts(d.dataset.path);
+  if (path.length) {
+    const line = 'M' + path.map(([c, r]) => `${c + .5} ${r + .5}`).join('L');
+    d.insertAdjacentHTML('beforeend', `<svg class="dg-ways" viewBox="0 0 ${rows[0].length} ${rows.length}" preserveAspectRatio="none">`
+      + `<path class="edge" d="${line}"/><path class="line" d="${line}"/>`
+      + path.slice(1, -1).map(([c, r]) => `<circle cx="${c + .5}" cy="${r + .5}" r=".17"/>`).join('') + '</svg>');
+  }
+}
+for (const b of document.querySelectorAll('#help .dg-btn')) {
+  b.insertAdjacentHTML('afterbegin', Kit.icon(b.dataset.icon));
+  if (b.classList.contains('hintb')) b.insertAdjacentHTML('beforeend', HAND);
+}
 
 // The levels of the computer. Facile searches two plies and sometimes picks a weaker move, but never
 // one that loses much more. Moyen and Fort search deeper. The hint always plays its best.

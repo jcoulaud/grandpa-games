@@ -35,7 +35,7 @@ const start = async (p, label) => {
 await page.goto(URL);
 await wait(300);
 ok(await g(() => Kit.isOpen()), 'the rules open on the first visit');
-for (let n = 0; n < 3; n++) {
+for (let n = 0; n < 5; n++) {
   ok(await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }), `rules page ${n + 1} fits without scrolling`);
   await page.screenshot({ path: `${OUT}/sudoku-rules-${n + 1}.png` });
   await page.click('#helpNext');
@@ -354,7 +354,7 @@ for (const [w, h, z] of WINDOWS) {
   await p.goto(URL);
   await p.waitForTimeout(200);
   let rulesFit = true;
-  for (let n = 0; n < 3; n++) {
+  for (let n = 0; n < 5; n++) {
     const r = await p.evaluate(() => { const t = document.getElementById('helpText'), b = document.getElementById('helpBox').getBoundingClientRect();
       return { fit: t.scrollHeight <= t.clientHeight + 1, inside: b.left >= 0 && b.top >= 0 && b.right <= innerWidth + 1 && b.bottom <= innerHeight + 1, wide: t.scrollWidth <= t.clientWidth + 1 }; });
     if (!r.inside || !r.wide || (h >= 620 && !phone && !r.fit)) rulesFit = false;
