@@ -20,6 +20,15 @@ await page.getByRole('button', { name: 'Facile', exact: true }).click();
 await page.waitForTimeout(1800);
 ok(!(await g(() => dialogOpen())), '"J\'ai compris" closes the rules');
 
+// The close cross asks first: "Continuer la partie" stays, "Fermer le jeu" goes back to the library.
+await page.click('#quit');
+await page.waitForTimeout(300);
+ok((await g(() => document.getElementById('overTitle').textContent)) === 'Fermer le jeu ?', 'the cross asks before it closes the game');
+ok((await g(() => [...document.querySelectorAll('#overBtns button')].map(b => b.textContent.trim()).join())) === 'Continuer la partie,Fermer le jeu', 'the cross offers to stay or to close');
+await page.getByRole('button', { name: 'Continuer la partie' }).click();
+await page.waitForTimeout(300);
+ok(!(await g(() => dialogOpen())) && page.url().includes('solitaire'), '"Continuer la partie" stays in the game');
+
 // Labels under the stock and the waste
 const labels = await g(() => [...document.querySelectorAll('.plabel')].map(e => e.textContent));
 ok(['Pioche', 'Défausse', 'Rangement'].every(t => labels.includes(t)), 'labels: ' + labels.join(', '));
@@ -171,6 +180,19 @@ ok(concurrent.filter(Boolean).length === 1
   'two concurrent saves commit exactly one version and its matching tile summary');
 
 await ctx.close();
+
+// The cross, then "Fermer le jeu": back to the library.
+const quit = await browser.newPage({ viewport: { width: 1366, height: 680 } });
+await quit.goto(URL); await quit.waitForTimeout(1500);
+if (await quit.locator('#help.on').count()) await quit.click('#helpClose');
+await quit.waitForTimeout(300);
+const facile = quit.getByRole('button', { name: 'Facile', exact: true });
+if (await facile.count()) await facile.click();
+await quit.waitForTimeout(800);
+await quit.click('#quit');
+await Promise.all([quit.waitForURL((u) => !u.pathname.includes('solitaire')), quit.click('#overBtns .leave')]);
+ok(!quit.url().includes('solitaire'), '"Fermer le jeu" in the confirmation goes back to the library');
+await quit.close();
 
 ok(errors.length === 0, 'no page errors ' + errors.join(' | '));
 await browser.close();

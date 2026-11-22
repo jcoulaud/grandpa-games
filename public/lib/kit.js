@@ -60,10 +60,15 @@
     home();
   });
   // A cross at the right end of the bar, where a window has its own: some players close the whole app
-  // to leave a game. This one closes the game and goes back to the library. The game is already saved.
+  // to leave a game. This one asks first, because a slip of the hand on it must not end a game by
+  // surprise; staying is the yellow choice. The game is already saved either way.
   if (bar && !$('quit')) {
     bar.insertAdjacentHTML('beforeend', '<button id="quit" data-icon="close" aria-label="Fermer le jeu" title="Fermer le jeu et revenir à la liste des jeux"></button>');
-    $('quit').addEventListener('click', home);
+    $('quit').addEventListener('click', () =>
+      dialog('Fermer le jeu ?', 'Votre partie est enregistrée : vous la retrouverez telle quelle.', [
+        ['Continuer la partie', null, true],
+        ['Retour aux jeux', home]
+      ]));
   }
   if ($('rail') && !$('rail').querySelector('.credit'))
     $('rail').insertAdjacentHTML('afterbegin', `<a class="credit" href="https://x.com/JulienCoulaud" target="_blank" rel="noopener"><img src="${libRoot}icons/julien.webp" width="34" height="34" alt=""><span>Par <b>Julien Coulaud</b></span></a>`);

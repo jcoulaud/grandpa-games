@@ -29,7 +29,7 @@ const blocked = () => busy || stale || !game || Kit.isOpen() || sheet(game).done
 async function save() {
   const s = sheet(game),
     summary =
-      (s.done ? 'Partie terminée' : 'Tour ' + (s.next + 1) + ' sur 10') +
+      (s.done ? 'Partie terminée' : 'Partie en cours, tour ' + (s.next + 1) + ' sur 10') +
       ' · ' +
       game.wins +
       (game.wins === 1 ? ' victoire' : ' victoires');
