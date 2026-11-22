@@ -113,7 +113,7 @@ await g(() => clearTimeout(autoT));
 await setup([[12, 8, 20, 6], [25, 35], [38], [51], [], [], [], []], [5, 7, 7, 12], true);
 await page.waitForTimeout(500);
 await page.mouse.click(...await cardPt(8));
-ok(await g(() => sel) === null && (await msg()).includes('nulle part'), 'three cards with room for one cannot move: ' + await msg());
+ok(await g(() => sel) === null && (await msg()).includes('une seule carte à la fois'), 'three cards with room for one cannot move: ' + await msg());
 await page.waitForTimeout(600);
 // A card under cards out of order cannot be taken, and the line says why.
 await setup([[12, 8, 7], [25], [38], [51], [], [], [], []], [0, 0, 0, 0]);

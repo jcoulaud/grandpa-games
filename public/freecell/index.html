@@ -77,10 +77,13 @@
     <section class="page">
       <h3>Les cases libres</h3>
       <p>En haut à gauche, les quatre « Cases libres » gardent chacune une carte de côté. Une carte d'une case peut revenir sur une colonne ou aller au rangement.</p>
-      <h3>Plusieurs cartes à la fois</h3>
-      <p>Vous pouvez déplacer une suite de cartes qui se suivent, avec ses couleurs alternées. Plus vous avez de cases libres et de colonnes vides, plus la suite peut être longue. Le jeu fait le compte pour vous.</p>
       <h3>Déplacer une carte</h3>
       <p>Cliquez sur la carte. Si elle n'a qu'une place possible, elle y va toute seule. Sinon, les places possibles sont entourées de jaune : cliquez sur celle que vous voulez. Vous pouvez aussi faire glisser la carte avec la souris.</p>
+    </section>
+    <section class="page">
+      <h3>Plusieurs cartes à la fois</h3>
+      <p>Vous pouvez déplacer d'un coup une suite de cartes qui se suivent, avec ses couleurs alternées. Le jeu la déplace carte par carte en passant par les cases libres et les colonnes vides, donc la suite a une longueur limite.</p>
+      <p>Chaque case libre vide permet une carte de plus. Chaque colonne vide double ce nombre, sauf la colonne où vous posez la suite. Par exemple, avec 3 cases libres vides, vous déplacez 4 cartes. Avec en plus une colonne vide, vous en déplacez 8.</p>
     </section>
     <section class="page">
       <h3>Les boutons</h3>
@@ -260,6 +263,9 @@ function chosenMsg(loc) {
 function stuckMsg(id) {
   const loc = locate(id);
   if (!ordered(loc)) return `Les cartes posées sur ${cardName(id)} ne se suivent pas. Déplacez d'abord celles du dessus.`;
+  // A column that would take the cards if fewer of them moved: say how many can move.
+  const i = S.tab.findIndex((p, j) => !(loc.a === 'tab' && loc.i === j) && (!p.length || sFits(id, last(p))));
+  if (i >= 0) return why(loc, { a: 'tab', i });
   return `${cap(cardName(id))} ne peut aller nulle part pour le moment.`;
 }
 
