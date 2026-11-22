@@ -50,7 +50,7 @@ ok(!/anchor/.test(await cls(s0)) && await page.locator('.cell.lane').count() ===
 await click(s0); await click(e0);
 ok(await page.locator('.band:not(.try)').count() === 1 && /found/.test(await page.locator('#words li').nth(0).getAttribute('class')), 'the first and last letter circle the word and strike it in the list');
 ok(await msg() === `Vous avez trouvé ${caps[0]}.`, `the message says "Vous avez trouvé ${caps[0]}."`);
-ok(await g(() => document.getElementById('count').textContent) === 'Mots trouvés : 1 sur 6', 'the bottom bar counts the words found');
+ok(await g(() => document.getElementById('count').textContent) === '1 mot trouvé sur 6', 'the sheet counts the words found');
 ok(await g(() => GG.meta('mots-meles').summary === 'Partie en cours'), 'the tile says a game is in progress');
 await page.screenshot({ path: `${OUT}/mots-meles-found.png` });
 
@@ -186,7 +186,7 @@ await page.waitForSelector('#over.on', { timeout: 4000 });
 ok(/Bravo, vous avez gagné/.test(await g(() => document.getElementById('overTitle').textContent)), 'the win dialog says bravo');
 await page.screenshot({ path: `${OUT}/mots-meles-won.png` });
 ok(sent.won === 1 && await g(() => stats.won === 1 && GG.meta('mots-meles').summary === '1 grille finie'), 'the win is counted once, and the tile says so');
-ok(await g(() => document.getElementById('wins').textContent) === 'Grilles finies : 1', 'the bottom bar shows the grids finished');
+ok(await g(() => document.getElementById('wins').textContent) === '1 victoire', 'the level line shows the grids finished');
 await page.keyboard.press('Escape');
 await click(0);
 ok(/Cette grille est finie/.test(await msg()), 'a click after the win says to start a new grid');

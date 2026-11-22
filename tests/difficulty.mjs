@@ -22,7 +22,7 @@ try {
       if (first) assert.equal(await page.locator('#overBtns button.primary').textContent(), 'Facile');
       if (texts[0] === back) assert.equal(await page.locator('#overBtns button.primary').textContent(), back);
       const choice = choices.getByText(label, { exact: true });
-      if (game === 'dames' || game === 'dame-de-pique' || game === 'demineur' || game === 'yams' || game === 'bataille-navale' || game === 'paires' || game === 'mots-meles') { || game === 'sudoku') {
+      if (game === 'dames' || game === 'dame-de-pique' || game === 'demineur' || game === 'yams' || game === 'bataille-navale' || game === 'paires' || game === 'mots-meles' || game === 'sudoku') {
         await choice.click();
         // The sudoku makes its grid in a worker: the save comes after it.
         if (game === 'sudoku') await page.waitForFunction(() => G && !making);
