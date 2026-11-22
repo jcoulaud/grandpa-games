@@ -33,15 +33,17 @@ ok(await g(() => G.dice === null && G.turn === 0 && /Vous jouez contre/.test(doc
 await g(() => { G = view = Yams.newGame('facile', 12345); save(); render(); });
 
 // 2. Before the throw: the piste shows the cup, and a box is refused, with the reason.
-ok(await g(() => document.getElementById('piste').classList.contains('empty')), 'before the throw the piste shows the cup');
+ok(await g(() => document.getElementById('piste').classList.contains('empty')), 'before the throw the piste shows five empty slots');
+ok(await page.locator('.die.blank').count() === 5 && await page.locator('#tip.on').count() === 1, 'the empty slots have a tip that points to the button');
 await click(box(0, 12));
 ok(/Lancez d'abord les dés/.test(await msg()) && await g(() => G.sheets[0][12] === null), 'a box before the throw is refused');
 await page.click('#hintBtn');
 ok(/Lancer les dés/.test(await msg()), 'the hint before the throw says to throw');
 
 // 3. A throw, then keeping dice; the button counts the dice it throws again.
-await click(page.locator('#cup'));
-ok(await g(() => G.rolls === 1 && G.dice.every(d => d >= 1 && d <= 6)), 'a click on the cup throws the five dice');
+await click(page.locator('#rollBtn'));
+ok(await g(() => G.rolls === 1 && G.dice.every(d => d >= 1 && d <= 6)), 'the button throws the five dice');
+ok(await page.locator('#tip').textContent() === 'Cliquez sur les dés à garder, puis relancez', 'after the throw the tip says to keep dice');
 ok(await page.locator('#sheet td.can').count() === 13, 'his 13 boxes show what the dice would score');
 await click(die(1));
 ok(await g(() => G.kept[1]) && /Vous gardez le/.test(await msg()), 'a click keeps a die and says so');
@@ -172,7 +174,7 @@ await click(box(0, 7));
 ok(await g(() => showing), "the computer's turn is being shown");
 await page.click('#newBtn');
 await page.getByRole('button', { name: 'Facile', exact: true }).click();
-await click(page.locator('#cup'));
+await click(page.locator('#rollBtn'));
 ok(await g(() => !showing && G.rolls === 1), "a new game during the computer's turn can be played at once");
 
 // A save without a known level still loads, at Facile.
