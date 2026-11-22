@@ -13,7 +13,7 @@ const CORE = [
   'freecell/', 'freecell/solver.js', 'freecell/icon.svg',
   'dames/', 'dames/engine.js', 'dames/icon.svg',
   'dame-de-pique/', 'dame-de-pique/engine.js', 'dame-de-pique/icon.svg',
-  'demineur/', 'demineur/engine.js', 'demineur/icon.svg',
+  'demineur/', 'demineur/engine.js', 'demineur/board.js', 'demineur/style.css', 'demineur/icon.svg',
   'yams/', 'yams/engine.js', 'yams/icon.svg',
   'bataille-navale/', 'bataille-navale/engine.js', 'bataille-navale/ships.js', 'bataille-navale/icon.svg',
   'paires/', 'paires/engine.js', 'paires/icon.svg',

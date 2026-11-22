@@ -94,8 +94,11 @@ await page.screenshot({ path: `${OUT}/ddp-received.png` });
 await myTurn();
 ok(await g(() => document.getElementById('mySlot').classList.contains('on') && document.getElementById('seat0').classList.contains('turn')
   && document.getElementById('seat0').textContent.includes('À vous de jouer')), 'his turn shows on the table: his place in the trick and his seat');
-// The leftmost card of his hand: the cards he received are sorted in, so it is not always the first in the page.
-ok(await g(() => { const v = document.getElementById('seat0').getBoundingClientRect(), c = [...document.querySelectorAll('.card.hand')].map(e => e.getBoundingClientRect()).sort((p, q) => p.left - q.left)[0]; return v.bottom <= c.top && v.left >= c.left - 1; }),
+// His seat against the leftmost card of his hand (the cards he received are sorted in, so it is not always the
+// first in the page), at the places the game gives them: the cards may still be sliding.
+ok(await g(() => { const v = document.getElementById('seat0'), cs = [...document.querySelectorAll('.card.hand')];
+  const x = e => parseFloat(e.style.left), y = e => parseFloat(e.style.top);
+  return v.offsetParent === cs[0].offsetParent && y(v) + v.offsetHeight <= Math.min(...cs.map(y)) && x(v) >= Math.min(...cs.map(x)) - 1; }),
   'his seat sits above the left end of his hand');
 const bad = await g(() => G.hands[0].find(c => DDP.refusal(G, c)));
 if (bad !== undefined) {

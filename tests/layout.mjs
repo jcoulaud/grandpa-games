@@ -17,7 +17,7 @@
 // A screenshot of each screen goes to tests/screenshots/layout (or SHOTS/layout).
 import { readFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { launch, gameUrl, OUT } from './harness.mjs';
+import { launch, useFont, gameUrl, OUT } from './harness.mjs';
 
 const font = file => readFileSync(new URL(`fonts/${file}.woff2`, import.meta.url)).toString('base64');
 const FONTS = {
@@ -42,14 +42,6 @@ const LONG = 'Vous pouvez déplacer 3 cartes à la fois pour le moment. Videz un
 const shots = join(OUT, 'layout');
 mkdirSync(shots, { recursive: true });
 
-// Runs in the page before its own scripts: the test font takes the names of Segoe UI.
-function useFont(faces) {
-  const names = ['Segoe UI Variable Display', 'Segoe UI Variable Text', 'Segoe UI'];
-  for (const [weight, b64] of Object.entries(faces)) {
-    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-    for (const name of names) document.fonts.add(new FontFace(name, bytes, { weight }));
-  }
-}
 
 // Runs in the page: the list of what breaks the rules on the screen as it is now.
 function audit({ minText, rulesFit }) {
@@ -125,7 +117,7 @@ function audit({ minText, rulesFit }) {
   return [...new Set(bad)];
 }
 
-const browser = await launch();
+const browser = await launch({ segoe: false });
 let failed = 0, screens = 0;
 try {
   for (const [fontName, faces] of Object.entries(FONTS)) for (const win of WINDOWS) {
