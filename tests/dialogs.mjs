@@ -136,7 +136,8 @@ for (let n = 0; n < 40 && !hops; n++) {
 ok(hops >= 1, `finished piles hop (${hops} animating)`);
 await page.waitForTimeout(2500);
 ok(await g(() => dialogOpen() && document.getElementById('overTitle').textContent.includes('Bravo')), 'win dialog shows after the hop');
-ok(await g(() => document.getElementById('wins').textContent).then(t => /Victoires/.test(t)), 'the win count shows next to the message line');
+ok(await g(() => /^\d+ victoires?$/.test(document.getElementById('wins').textContent) && !!document.getElementById('wins').closest('#title') && !document.getElementById('rail').querySelector('#wins')),
+  'the win count shows on the level line, not in the bottom bar');
 await page.screenshot({ path: `${OUT}/d-win.png` });
 
 // Tab stays inside an open dialog, and closing it gives the focus back to the button that opened it.

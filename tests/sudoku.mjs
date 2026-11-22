@@ -63,6 +63,10 @@ const right = await sol(empty);
 await key(right).click();
 ok(/mine/.test(await cls(empty)) && await cell(empty).textContent() === String(right) && /Vous avez écrit un/.test(await msg()), 'a digit key writes his digit in the cell');
 ok(await page.locator('.cell.same').count() >= 1, 'the cells with the same digit are lit');
+ok(await g(d => document.querySelector(`.key[data-d="${d}"] .left`).textContent === String(9 - Sudoku.board(G).filter(x => x === d).length), right),
+  'its key says how many of the digit are still to place');
+ok(await g(() => document.getElementById('count').textContent === `Encore ${Sudoku.board(G).filter(x => !x).length} cases` && !!document.getElementById('count').closest('#table')
+  && !document.querySelector('#rail #count, #rail #wins')), 'the cells left show on a slate above the pad, not in the bottom bar');
 ok(!(await page.locator('#undoBtn').isDisabled()), 'undo is ready');
 
 // 3. A given cannot change.
@@ -382,6 +386,10 @@ for (const [w, h, z] of WINDOWS) {
       wide: document.scrollingElement.scrollWidth <= document.scrollingElement.clientWidth,
       whole: phone ? f.left >= tr.left - 1 && f.right <= tr.right + 1 : t.scrollHeight <= t.clientHeight + 1 && t.scrollWidth <= t.clientWidth + 1,
       padIn: pad.right <= tr.right + 1 && pad.left >= tr.left - 1,
+      // Beside the grid: level with its top, about as tall, about one cell away.
+      under: document.getElementById('stage').classList.contains('under'),
+      beside: (Math.abs(pad.top - document.getElementById('grid').getBoundingClientRect().top) <= 2
+        && pad.height >= f.height * .9 && pad.height <= f.height + 2 && pad.left - f.right <= 1.6 * document.querySelector('.cell').getBoundingClientRect().width),
       small, tiny, cell: Math.round(cell),
       digit: parseFloat(getComputedStyle(document.querySelector('.cell .d')).fontSize),
       key: parseFloat(getComputedStyle(document.querySelector('.key')).fontSize),
@@ -389,6 +397,7 @@ for (const [w, h, z] of WINDOWS) {
     };
   }, { phone });
   ok(m.wide && m.whole && m.padIn, `${name}: the grid and the pad fit without scrolling${phone ? ' sideways' : ''}`);
+  ok(phone ? m.under : !m.under && m.beside, `${name}: ` + (phone ? 'the pad stands under the grid' : 'the pad stands beside the grid, level with its top and about as tall'));
   ok(!m.small.length, `${name}: every button is 44 px or more` + (m.small.length ? ': ' + m.small.join(', ') : ''));
   ok(!m.tiny.length, `${name}: every text is ${phone ? 13 : 20} px or more` + (m.tiny.length ? ': ' + m.tiny.join(', ') : ''));
   ok(m.digit >= 30 && m.key >= 26 && m.cell >= 32, `${name}: cells of ${m.cell} px with digits of ${m.digit} px`);

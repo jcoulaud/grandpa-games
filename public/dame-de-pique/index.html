@@ -226,7 +226,7 @@
     <div class="box" id="lastBox"><h3>Le dernier pli</h3><div id="lastCards"></div><p id="lastText"></p></div>
   </aside>
 </div>
-<footer id="rail"><div id="wins"></div><div class="zoom"></div></footer>
+<footer id="rail"><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
   <section class="page">
     <h3>Donner trois cartes</h3>
@@ -834,7 +834,7 @@ function render() {
     if (side.offsetHeight > L.H - 14) side.classList.add('tight');
   }
 
-  $('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
+  Kit.showWins(stats.won);
   $('undoBtn').disabled = stale || (G.phase === 'pass' ? !picks.length : !undo.length);
   $('hintBtn').disabled = stale || busy || !(G.phase === 'pass' || (G.phase === 'play' && G.turn === 0));
 }

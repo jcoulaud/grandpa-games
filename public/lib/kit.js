@@ -8,13 +8,14 @@
 //   </div>
 //   <div id="say"><div id="msg" aria-live="polite"></div></div>
 //   <div id="table"></div>
-//   <footer id="rail"><div id="wins"></div><div class="zoom"></div></footer>
+//   <footer id="rail"><div class="zoom"></div></footer>   the credit and the size keys only: never a count of the game
 //   <div id="help" data-title="Comment jouer"><section class="page">…</section>…</div>
 //
 // This file adds the "Jeux" button that goes back to the library, the credit in the bottom bar, the button icons, the frame and
 // the page buttons of the rules guide, and the dialog. The game then calls:
 //
 //   Kit.say(text)                           the message line
+//   Kit.showLevel(level), Kit.showWins(n)   the level line under the name: "Niveau facile · 3 victoires"
 //   Kit.dialog(title, text, [[label, fn, primary]], soft)   soft: the win sheet, with a light backdrop
 //   Kit.closeDialog(), Kit.openHelp(), Kit.closeHelp()
 //   Kit.isOpen()                            true while the rules or a dialog are open
@@ -58,15 +59,19 @@
   document.querySelectorAll('button[data-icon]').forEach(b => b.insertAdjacentHTML('afterbegin', icon(b.dataset.icon)));
 
   // Each label stays on one line: the bar takes the long labels if they fit, else the short ones, else one
-  // word each, and last, without the name of the game (its felt still tells it). A phone puts its buttons
-  // on two rows instead (kit.css).
+  // word each, and last, without the name of the game (its felt still tells it). At each step the win count
+  // on the level line goes first, so it never makes a label shorter. A phone puts its buttons on two rows
+  // instead (kit.css).
+  const FITS = [[], ['fit-short'], ['fit-tiny'], ['fit-tiny', 'fit-bare']];
   function fitBar() {
     if (!bar || innerWidth < 700) return;
-    bar.classList.remove('fit-short', 'fit-tiny', 'fit-bare');
     const over = () => bar.scrollWidth > bar.clientWidth;
-    if (over()) bar.classList.add('fit-short');
-    if (over()) { bar.classList.remove('fit-short'); bar.classList.add('fit-tiny'); }
-    if (over()) bar.classList.add('fit-bare');
+    for (const fit of FITS) for (const nowins of [false, true]) {
+      bar.classList.remove('fit-nowins', 'fit-short', 'fit-tiny', 'fit-bare');
+      bar.classList.add(...fit);
+      if (nowins) bar.classList.add('fit-nowins');
+      if (!over()) return;
+    }
   }
   fitBar();
   addEventListener('resize', fitBar);
@@ -124,21 +129,31 @@
   // The key 'fort' shows as "Difficile". Keep the key: the saves on his PC hold it.
   const levelNames = { facile: 'Facile', moyen: 'Moyen', fort: 'Difficile' };
   const levelNotes = { facile: 'Pour commencer en douceur', moyen: 'Un peu plus de réflexion', fort: 'Pour les joueurs habitués' };
-  // The level is said under the name of the game, on the left of the bar: the "Nouvelle partie" button
-  // only says what it does.
-  function showLevel(level) {
-    const title = $('title');
-    let e = $('level');
-    if (!e) {
+  // The level is said under the name of the game, on the left of the bar, with the count of wins after it:
+  // "Niveau facile · 3 victoires". The "Nouvelle partie" button only says what it does.
+  function levelLine() {
+    if (!$('level')) {
+      const title = $('title');
       const name = [...title.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim());
       const box = document.createElement('span'); box.className = 'name';
-      box.innerHTML = '<span></span><small id="level"></small>';
+      box.innerHTML = '<span></span><small id="level"><span id="levelName"></span><span id="wins"></span></small>';
       box.firstChild.textContent = name.map(n => n.textContent.trim()).join(' ');
       name.forEach(n => n.remove());
       title.appendChild(box);
-      e = $('level');
     }
-    e.textContent = 'Niveau ' + levelNames[level].toLowerCase();
+    return $('level');
+  }
+  function showLevel(level) {
+    levelLine();
+    $('levelName').textContent = 'Niveau ' + levelNames[level].toLowerCase();
+    fitBar();
+  }
+  // n: the games won at any level. Nothing shows for 0.
+  function showWins(n) {
+    levelLine();
+    const text = n > 0 ? (n === 1 ? '1 victoire' : `${n} victoires`) : '';
+    if ($('wins').textContent === text) return;
+    $('wins').textContent = text;
     fitBar();
   }
   // The levels, one under the other, each with a line that says what it means. During a game the safe
@@ -236,5 +251,5 @@
       [['Recharger le jeu', () => location.reload(), true]]);
   });
 
-  window.Kit = { home, firstVisit, levelNames, showLevel, chooseLevel, say, dialog, closeDialog, openHelp, closeHelp, isOpen, escape, icon };
+  window.Kit = { home, firstVisit, levelNames, showLevel, showWins, chooseLevel, say, dialog, closeDialog, openHelp, closeHelp, isOpen, escape, icon };
 })();

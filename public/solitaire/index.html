@@ -85,7 +85,7 @@
 </div>
 <div id="say"><div id="msg" aria-live="polite"></div></div>
 <div id="table"></div>
-<footer id="rail"><div id="wins"></div><div class="zoom"></div></footer>
+<footer id="rail"><div class="zoom"></div></footer>
 <div id="help" data-title="Comment jouer">
   <section class="page">
     <h3>Déplacer une carte</h3>
@@ -654,7 +654,7 @@ function render(opts = {}) {
   slotStock.classList.toggle('can', recycle);
   put(stockCount, bankX(0), L.top);
   stockCount.innerHTML = S.stock.length ? `<span>${S.stock.length}</span>` : '';
-  document.getElementById('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
+  Kit.showWins(stats.won);
   put(stockLabel, bankX(0), L.top + L.h + 4); put(wasteLabel, bankX(1), L.top + L.h + 4);
   // Cards too narrow for their name under them (a phone): the stock shows its count, the names go.
   stockLabel.hidden = wasteLabel.hidden = L.w + L.gap < 88;
