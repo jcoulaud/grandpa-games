@@ -193,8 +193,7 @@ function load() {
 }
 
 /* ---------- His moves ---------- */
-// While a move cannot be saved, the warning stays on the message line.
-const say = text => { if (saved) Kit.say(text); };
+const say = Kit.say;
 const nb = i => D.neighbours(G.w, G.h)[i];
 const flagsLeft = () => G.mines - D.flags(G);
 
@@ -209,7 +208,8 @@ function play(next, text) {
   render();
   // A stale window shows the kit's reload prompt, not the result.
   if (G.result) return finish(!stale);
-  say(text);
+  // A move that could not be saved leaves the warning of save() on the message line.
+  if (saved) say(text);
 }
 
 // A click on square i. how: 'open' (the left button) or 'flag' (the right button, or after "Drapeau").
@@ -283,7 +283,7 @@ function doUndo() {
   Kit.closeDialog();
   G = JSON.parse(undo.pop()); hint = null; lastTap = null; setArming(false);
   save(); render();
-  say(G.first < 0 ? 'Coup annulé. Cliquez sur une case pour commencer.' : 'Coup annulé. ' + nextText());
+  if (saved) say(G.first < 0 ? 'Coup annulé. Cliquez sur une case pour commencer.' : 'Coup annulé. ' + nextText());
 }
 
 // One sentence for each step of the reasoning (engine.js): the numbers it uses get a yellow ring,
@@ -336,7 +336,7 @@ function newGame(lv) {
   // A stale window cannot save, so it does not count a game either.
   if (save()) GG.track('demineur', 'start');
   render();
-  say("Cliquez sur une case pour commencer : la première n'a jamais de mine.");
+  if (saved) say("Cliquez sur une case pour commencer : la première n'a jamais de mine.");
 }
 
 /* ---------- Drawing ---------- */

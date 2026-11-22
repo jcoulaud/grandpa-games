@@ -104,9 +104,10 @@ for (const level of Object.keys(D.LEVELS)) {
 // A flag taken off next to an open blank: the blank shows the square is safe, without a peek.
 {
   let G = D.open(D.newGame('facile', 45), 0);
-  G = D.flag(G, 14); G = D.open(G, 4); G = D.flag(G, 14);
-  let h = D.hint(G);
-  ok(h && h.rule !== 'peek', 'an open blank next to a closed square gives the hint its reason', JSON.stringify(h));
+  G = D.flag(G, 14); G = D.open(G, 4); G = D.flag(G, 14); G = D.flag(G, 2);
+  const h = D.hint(G);
+  ok(G.cells[4] === 'o' && D.number(G, 4) === 0 && h && h.kind === 'safe' && h.a === 4 && h.cells.includes(14),
+    'an open blank next to a closed square shows that square is safe', JSON.stringify(h));
 }
 
 // 7. Undo of the first click: the same square gives the same board again.
