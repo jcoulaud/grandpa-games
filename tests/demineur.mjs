@@ -182,12 +182,13 @@ await big.locator('#overBtns button', { hasText: 'Facile' }).click();
 await big.evaluate(() => { G = Demineur.newGame('facile', 12345); save(); render(); });
 await big.locator('.c[data-i="40"]').click();
 await big.mouse.move(5, 5); await big.waitForTimeout(520);
-await big.locator(`.c[data-i="${await big.evaluate(() => G.layout.find(i => G.cells[i] === '.'))}"]`).click();
-const off = await big.evaluate(() => {
-  const mid = e => { const r = e.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
-  const [a, b] = [mid(document.querySelector('.c.boom')), mid(document.querySelector('.blast'))];
-  return { z: Zoom.z(), d: Math.round(Math.hypot(a[0] - b[0], a[1] - b[1])) };
-});
+// The mine is measured before the click: the board shakes during the explosion.
+const mid = el => el.evaluate(e => { const r = e.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+const bomb = big.locator(`.c[data-i="${await big.evaluate(() => G.layout.find(i => G.cells[i] === '.'))}"]`);
+const a = await mid(bomb);
+await bomb.click();
+const b = await mid(big.locator('.blast'));
+const off = { z: await big.evaluate(() => Zoom.z()), d: Math.round(Math.hypot(a[0] - b[0], a[1] - b[1])) };
 ok(off.z === 1.3 && off.d <= 2, `at 130 %, the explosion is centred on the mine (${off.d} px off)`);
 await big.close();
 
