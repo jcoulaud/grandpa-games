@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jeu des paires · Jeux de Papi</title>
+<meta name="description" content="Le jeu des paires en grand, pour les grands-parents : de grandes cartes illustrées de la ferme et du jardin, trois niveaux, pour exercer sa mémoire. Gratuit, sans publicité, sans compte.">
+<link rel="canonical" href="https://jeux-papi.fr/paires/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Jeux de Papi">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://jeux-papi.fr/paires/">
+<meta property="og:title" content="Jeu des paires · Jeux de Papi">
+<meta property="og:description" content="Le jeu des paires en grand, pour exercer sa mémoire. Gratuit, sans publicité, sans compte.">
+<meta property="og:image" content="https://jeux-papi.fr/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../lib/kit.css">
+<style>
+  /* The jeu des paires plays on an olive green felt, the colour of a garden. The cards have a red and
+     white vichy back, the cloth of a country table, and a picture of the farm on their face. */
+  :root {
+    --felt-top: #7A8A30; --felt: #3A4414; --shade: 30,36,8; --accent: #5C6B1E;
+    --s: 120px; --gap: 16px;
+  }
+  #title svg { width: 32px; height: 32px; }
+  button.game { --accent: #5C6B1E; }
+  button.game:hover { background: #6C7D24; }
+  button.game:active { background: #4C5918; }
+
+  #table { position: relative; overflow: hidden; display: grid; place-items: center; touch-action: pan-y; }
+  #grid { display: grid; gap: var(--gap); grid-template-columns: repeat(var(--cols), var(--s)); grid-auto-rows: var(--s); }
+
+  /* A card: a button that turns over. Its back and its face are the two sides of .flip. */
+  .card { position: relative; width: var(--s); height: var(--s); min-height: 0; padding: 0; border: 0; border-radius: calc(var(--s) * .1);
+    background: none; box-shadow: none; display: block; perspective: calc(var(--s) * 6); cursor: pointer; }
+  .card:hover, .card:active { background: none; box-shadow: none; transform: none; }
+  .card:focus-visible { outline: 4px solid #fff; outline-offset: 4px; box-shadow: none; }
+  .flip { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .38s cubic-bezier(.3,.7,.3,1); }
+  .card.up .flip, .card.found .flip { transform: rotateY(180deg); }
+  .side { position: absolute; inset: 0; border-radius: inherit; backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden; }
+  /* The back: red vichy in a white frame. */
+  .back { border-radius: calc(var(--s) * .1); background: #FFFDF6; padding: calc(var(--s) * .07);
+    box-shadow: 0 1px 0 rgba(255,255,255,.4) inset, 0 6px 14px rgba(0,0,0,.35), 0 2px 0 #C9BFA6; }
+  .back::before { content: ""; position: absolute; inset: calc(var(--s) * .07); border-radius: calc(var(--s) * .05);
+    background:
+      linear-gradient(90deg, rgba(200,30,40,.55) 50%, transparent 50%) 0 0 / calc(var(--s) * .18) 100%,
+      linear-gradient(rgba(200,30,40,.55) 50%, transparent 50%) 0 0 / 100% calc(var(--s) * .18),
+      #FFF6F0;
+    box-shadow: inset 0 0 0 2px rgba(120,10,20,.35); }
+  .card:not(.up):not(.found):hover .back { background: #FFF3C4; box-shadow: 0 0 0 4px var(--gold), 0 10px 20px rgba(0,0,0,.4); }
+  .card:not(.up):not(.found):hover .flip { transform: translateY(-3px); }
+  /* The face: the picture on cream. */
+  .face { transform: rotateY(180deg); border-radius: calc(var(--s) * .1); background: #F6EFE0;
+    box-shadow: 0 6px 14px rgba(0,0,0,.35), inset 0 0 0 2px rgba(0,0,0,.08); }
+  .face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+  /* A pair found: a green frame and a tick. */
+  .card.found .face { box-shadow: 0 0 0 calc(var(--s) * .035) #3E8E4A, 0 4px 10px rgba(0,0,0,.3); }
+  .card.found::after { content: ""; position: absolute; right: -6px; top: -6px; width: calc(var(--s) * .26); height: calc(var(--s) * .26); min-width: 26px; min-height: 26px; z-index: 2;
+    border-radius: 50%; background: #3E8E4A url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 70% no-repeat;
+    box-shadow: 0 0 0 3px #fff, 0 2px 6px rgba(0,0,0,.35); }
+  .card.found { cursor: default; }
+  .card.just .flip { animation: pop .5s cubic-bezier(.3,1.6,.5,1) .3s; }
+  @keyframes pop { 50% { transform: rotateY(180deg) scale(1.1); } }
+  /* Two cards that do not match: a red frame while they show. */
+  .card.miss .face { box-shadow: 0 0 0 calc(var(--s) * .035) #C4122F, 0 6px 14px rgba(0,0,0,.35); }
+  /* The hint: a yellow frame that glows. */
+  .card.hint::before { content: ""; position: absolute; inset: -9px; border: 5px solid var(--gold); border-radius: calc(var(--s) * .14); z-index: 3; pointer-events: none;
+    box-shadow: 0 0 0 1.5px rgba(var(--shade),.8), inset 0 0 0 1.5px rgba(var(--shade),.8); animation: glow 1.4s ease-in-out infinite; }
+  @keyframes glow { 50% { box-shadow: 0 0 22px 6px rgba(255,200,61,.75); } }
+  .card.shake { animation: sh .3s; }
+
+  /* The turns and pairs: a chip beside the message line. */
+  #count { flex: none; height: 46px; padding: 0 18px; display: flex; align-items: center; gap: 10px;
+    background: #fff; color: var(--text); font: 600 21px var(--ui); white-space: nowrap;
+    border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,.25); font-variant-numeric: tabular-nums; }
+  #count:empty { display: none; }
+  html.narrow #count { display: none; }
+
+  #helpText .demo { display: flex; gap: 14px; align-items: center; margin: 6px 0 10px; }
+  #helpText .demo .mini { width: 92px; height: 92px; flex: none; border-radius: 10px; background: #F6EFE0; box-shadow: 0 0 0 2px rgba(0,0,0,.15); position: relative; }
+  #helpText .demo .mini img { width: 100%; height: 100%; object-fit: contain; }
+  #helpText .demo .mini.cloth { background: #FFFDF6; padding: 7px; }
+  #helpText .demo .mini.cloth::before { content: ""; display: block; width: 100%; height: 100%; border-radius: 5px;
+    background: linear-gradient(90deg, rgba(200,30,40,.55) 50%, transparent 50%) 0 0 / 16px 100%, linear-gradient(rgba(200,30,40,.55) 50%, transparent 50%) 0 0 / 100% 16px, #FFF6F0; }
+
+  @media (max-width: 700px) {
+    #hintBtn, #helpBtn { flex-direction: column; gap: 0; padding: 3px 2px; text-align: center; font-size: 18px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .flip { transition: none; } .card.just .flip, .card.hint::before, .card.shake { animation: none; } }
+</style>
+<script src="../lib/zoom.js"></script>
+</head>
+<body>
+<div id="bar">
+  <div id="title"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="11" height="15" rx="2" fill="#F6EFE0" stroke="#5C6B1E" stroke-width="1.6" transform="rotate(-10 7.5 12.5)"/><rect x="11" y="4" width="11" height="15" rx="2" fill="#F6EFE0" stroke="#5C6B1E" stroke-width="1.6" transform="rotate(8 16.5 11.5)"/><circle cx="7.6" cy="12.6" r="2.6" fill="#D2232A"/><circle cx="16.4" cy="11.6" r="2.6" fill="#D2232A"/></svg>Jeu des paires</div>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre une carte à retourner">Aide</button>
+  <span class="spacer"></span>
+  <button id="helpBtn" data-icon="help">Règles</button>
+  <button id="newBtn" class="game">Nouvelle partie</button>
+</div>
+<div id="table">
+  <div id="grid" role="grid" aria-label="Cartes"></div>
+</div>
+<footer id="msgRail"><div id="msg" aria-live="polite"></div><div id="count"></div><div id="wins"></div><div class="zoom"></div></footer>
+<div id="help" data-title="Comment jouer">
+  <section class="page">
+    <h3>Le but</h3>
+    <p>Les cartes sont posées à l'envers. Chaque image est sur deux cartes. Pour gagner, retrouvez toutes les paires.</p>
+    <div class="demo"><div class="mini cloth"></div><div class="mini"><img src="img/coq.webp" alt=""></div><div class="mini"><img src="img/coq.webp" alt=""></div></div>
+    <p>Une partie se gagne toujours. Le défi est d'y arriver en peu de coups.</p>
+  </section>
+  <section class="page">
+    <h3>Retourner deux cartes</h3>
+    <p>Cliquez sur une carte pour la retourner, puis sur une deuxième.</p>
+    <p>Si les deux images sont pareilles, c'est une paire : les cartes restent visibles, avec une coche verte.</p>
+    <p>Sinon, elles se retournent au bout de quelques secondes, ou dès votre clic suivant. Retenez bien leur place.</p>
+  </section>
+  <section class="page">
+    <h3>Les boutons</h3>
+    <p>« Aide » encadre une carte à retourner. Si vous avez déjà vu deux images pareilles, il vous les montre.</p>
+    <p>« Nouvelle partie » vous permet de choisir le niveau : 6, 10 ou 15 paires. La partie est enregistrée à chaque carte.</p>
+  </section>
+</div>
+
+<script src="../lib/store.js"></script>
+<script src="../lib/kit.js"></script>
+<script src="engine.js"></script>
+<script>
+'use strict';
+const P = Paires;
+const $ = id => document.getElementById(id);
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Two cards that do not match stay up this long, or until his next click.
+const SHOW_MS = 2600;
+
+/* ---------- State ----------
+   G: the game (see engine.js). shown: the two cards of a miss, face up for a moment. just: the pair
+   just found, for its little jump. hint: the places framed by "Aide", until his next card.
+   stats: { won, best: { level: fewest turns } }. wonNow: this game is counted as won. */
+let G, level = 'facile', stats = { won: 0, best: {} }, wonNow = false, shown = null, just = null, hint = null, timers = [];
+let stale = false, saved = true;
+addEventListener('gg-stale', () => { stale = true; });
+
+const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
+const playing = () => !!G && !G.result && G.seen.includes('1');
+const pic = i => P.PICTURES[G.cards[i]];
+const cap = s => s[0].toUpperCase() + s.slice(1);
+
+/* ---------- Saves ---------- */
+function save() {
+  const parts = [];
+  if (playing()) parts.push('Partie en cours');
+  if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
+  if (GG.save('paires', { v: 1, G, level, stats, wonNow }, { summary: parts.join(' · ') })) return (saved = true);
+  saved = false;
+  if (!stale) Kit.say("La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.");
+  return false;
+}
+function load() {
+  try {
+    const v = GG.load('paires');
+    if (!v || !P.valid(v.G)) return false;
+    G = v.G; level = G.level; wonNow = !!v.wonNow;
+    if (v.stats && Number.isInteger(v.stats.won)) stats = { won: v.stats.won, best: v.stats.best && typeof v.stats.best === 'object' ? v.stats.best : {} };
+    return true;
+  } catch (e) { return false; }
+}
+
+/* ---------- His cards ---------- */
+const say = Kit.say;
+const left = () => P.total(G) - P.pairs(G);
+
+function later(fn, ms) { const t = setTimeout(() => { timers = timers.filter(x => x !== t); fn(); }, ms); timers.push(t); return t; }
+function hideShown() {
+  if (!shown) return;
+  shown = null;
+  timers.forEach(clearTimeout); timers = [];
+}
+
+function tap(i) {
+  if (Kit.isOpen() || !G) return;
+  hideShown();
+  const why = P.refusal(G, i);
+  if (why === 'won') return say('Cette partie est gagnée : cliquez sur « Nouvelle partie » pour en commencer une autre.');
+  if (why === 'found') { shake(i); render(); return say(`Cette paire de ${pic(i).many} est déjà trouvée : choisissez une carte à l'envers.`); }
+  if (why === 'up') { shake(i); render(); return say('Cette carte est déjà retournée : choisissez une deuxième carte.'); }
+  const r = P.flip(G, i);
+  G = r.G; hint = null; just = null;
+  const firstWin = G.result === 'won' && !wonNow;
+  let record = false;
+  if (firstWin) {
+    wonNow = true; stats.won++;
+    const best = stats.best[level];
+    // 'first': the first win at this level; 'better': fewer turns than the best before.
+    record = !best ? 'first' : G.turns < best ? 'better' : false;
+    if (record) stats.best = { ...stats.best, [level]: G.turns };
+  }
+  if (save()) { if (firstWin) GG.track('paires', 'won'); }
+  else if (firstWin) { wonNow = false; stats.won--; }
+  if (r.event === 'miss') {
+    shown = { a: r.a, b: r.b };
+    later(() => { shown = null; render(); }, REDUCED ? SHOW_MS : SHOW_MS + 380);
+  }
+  if (r.event === 'pair') just = [r.a, r.b];
+  render();
+  if (G.result) return finish(!stale, record);
+  if (!saved) return;
+  const A = pic(i);
+  if (r.event === 'first') say(`${cap(A.one)}. Où se cache l'autre carte ?`);
+  else if (r.event === 'pair') say(`Bravo, une paire de ${A.many} ! Encore ${plural(left(), 'paire', 'paires')} à trouver.`);
+  else say(`${cap(pic(r.a).one)} et ${A.one} : ce n'est pas une paire. Retenez bien leur place.`);
+}
+
+/* ---------- End of the game ---------- */
+function finish(show, record) {
+  hint = null; render();
+  const n = P.total(G);
+  say(`Bravo, vous avez trouvé les ${n} paires en ${plural(G.turns, 'coup', 'coups')}.`);
+  if (!show) return;
+  const best = stats.best[level];
+  const lv = Kit.levelNames[level].toLowerCase();
+  const extra = !wonNow || record === 'first' ? '' : record === 'better' ? ` C'est votre meilleur score au niveau ${lv}.`
+    : ` Votre meilleur score au niveau ${lv} : ${plural(best, 'coup', 'coups')}.`;
+  later(() => Kit.dialog('Bravo, vous avez gagné !', `Vous avez trouvé les ${n} paires en ${plural(G.turns, 'coup', 'coups')}.${extra}`,
+    [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', home]], true), REDUCED ? 0 : 900);
+}
+const home = () => { location.href = $('home').href; };
+
+/* ---------- Buttons ---------- */
+function showHint() {
+  if (!G || G.result || Kit.isOpen()) return;
+  hideShown();
+  const h = P.hint(G);
+  if (!h) return;
+  hint = h.cells;
+  render();
+  if (h.kind === 'match') say(`Vous avez déjà vu la deuxième carte ${pic(G.up).one.replace(/^(un|une|des) /, '')} : c'est la carte encadrée.`);
+  else if (h.kind === 'known') say(`Vous avez déjà vu ces deux cartes : c'est une paire de ${pic(h.cells[0]).many}. Retournez-les.`);
+  else if (G.up >= 0) say("Vous n'avez pas encore vu la deuxième carte : essayez la carte encadrée, jamais retournée.");
+  else say("Aucune paire n'est connue pour le moment : retournez la carte encadrée, jamais retournée.");
+}
+
+function askNewGame() { Kit.chooseLevel(level, playing(), newGame); }
+function newGame(lv) {
+  timers.forEach(clearTimeout); timers = [];
+  if (lv) level = lv;
+  Kit.showLevel(level);
+  G = P.newGame(level, crypto.getRandomValues(new Uint32Array(1))[0]);
+  shown = null; just = null; hint = null; wonNow = false;
+  // A stale window cannot save, so it does not count a game either.
+  if (save()) GG.track('paires', 'start');
+  render();
+  if (saved) say(`Retrouvez les ${P.total(G)} paires. Cliquez sur une carte pour la retourner.`);
+}
+
+/* ---------- Drawing ---------- */
+const table = $('table'), gridEl = $('grid');
+let cards = [], built = '';
+function build() {
+  const key = G.cols + 'x' + G.rows + ':' + G.cards.join(',');
+  if (built === key) return;
+  built = key; gridEl.innerHTML = ''; cards = [];
+  G.cards.forEach((c, i) => {
+    const e = document.createElement('button');
+    e.className = 'card'; e.dataset.i = i; e.setAttribute('role', 'gridcell');
+    e.innerHTML = `<div class="flip"><div class="side back"></div><div class="side face"><img src="img/${P.PICTURES[c].id}.webp" alt="" draggable="false"></div></div>`;
+    e.addEventListener('click', () => tap(i));
+    gridEl.appendChild(e); cards.push(e);
+  });
+}
+// The cards are as large as fit, 190 px at most. The grid takes the number of columns that gives the
+// largest cards: 10 by 3 on a wide window, 5 by 6 on a phone. It changes only with the window.
+let cols = 4;
+function layout() {
+  const W = table.clientWidth, H = table.clientHeight, n = G.cards.length, k = .14;
+  const fit = (len, m, pad) => (len - pad) / (m + (m - 1) * k);
+  let best = 0;
+  for (let c = 2; c <= n / 2; c++) {
+    if (n % c) continue;
+    const S = Math.min(fit(W, c, Math.min(64, W * .06)), fit(H, n / c, 24), 190);
+    // A tie keeps the grid closest to a square.
+    if (S > best + 2 || (S > best - 2 && Math.abs(c - n / c) < Math.abs(cols - n / cols))) { best = Math.max(best, S); cols = c; }
+  }
+  const S = Math.floor(Math.max(40, Math.min(fit(W, cols, Math.min(64, W * .06)), fit(H, n / cols, 24), 190)));
+  gridEl.style.setProperty('--s', S + 'px');
+  gridEl.style.setProperty('--gap', Math.round(S * k) + 'px');
+  gridEl.style.setProperty('--cols', String(cols));
+}
+function render() {
+  if (!G) return;
+  build(); layout();
+  const framed = new Set(hint || []);
+  cards.forEach((e, i) => {
+    const found = G.found[i] === '1';
+    const up = !found && (G.up === i || (shown && (shown.a === i || shown.b === i)));
+    const cls = 'card' + (found ? ' found' : '') + (up ? ' up' : '') + (up && shown && G.up !== i ? ' miss' : '')
+      + (just && just.includes(i) ? ' just' : '') + (framed.has(i) ? ' hint' : '');
+    if (e.className.replace(' shake', '') !== cls) e.className = cls;
+    const r = Math.floor(i / cols) + 1, k = i % cols + 1;
+    e.setAttribute('aria-label', `Ligne ${r}, colonne ${k} : ${found ? pic(i).one + ', paire trouvée' : up ? pic(i).one : 'carte à l\'envers'}`);
+  });
+  $('count').textContent = `Coups : ${G.turns} · Paires : ${P.pairs(G)} sur ${P.total(G)}`;
+  $('wins').textContent = stats.won ? `Victoires : ${stats.won}` : '';
+  $('hintBtn').disabled = !!G.result;
+}
+function shake(i) {
+  const e = cards[i];
+  if (!e) return;
+  e.classList.remove('shake'); void e.offsetWidth; e.classList.add('shake');
+}
+
+$('hintBtn').onclick = showHint;
+$('helpBtn').onclick = () => Kit.openHelp();
+$('newBtn').onclick = askNewGame;
+addEventListener('keydown', e => { if (e.key === 'Escape') Kit.escape(); });
+addEventListener('resize', render);
+
+// The rules open by themselves the first time the game is opened.
+if (load()) {
+  Kit.showLevel(level);
+  render();
+  if (G.result) finish(false);
+  else if (G.up >= 0) say(`${cap(pic(G.up).one)}. Où se cache l'autre carte ?`);
+  else say(G.seen.includes('1') ? 'À vous : retournez une carte.' : `Retrouvez les ${P.total(G)} paires. Cliquez sur une carte pour la retourner.`);
+} else {
+  Kit.firstVisit(newGame);
+}
+</script>
+</body>
+</html>
