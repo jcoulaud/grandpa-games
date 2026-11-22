@@ -32,13 +32,14 @@ migrations/              the database tables
 5. Add the game to `GAMES` in `public/index.html` and in `src/worker.ts`, its folder and icon to `CORE` in `public/sw.js`, and its address to `public/sitemap.xml`. Copy the description, canonical and `og:` tags from the solitaire page.
 6. Count its games with `GG.track('<id>', 'start')` when a game begins and `GG.track('<id>', 'won')` when it is won.
 7. Give the game its own look. Each game has its own felt colour: set `--felt-top`, `--felt`, `--shade` and `--accent` on `:root` in the game page, and the same felt in `GAMES`. Give its tile a different picture of cards. The solitaire is green with a fan of three cards. FreeCell is blue with four aces in a row. The dame de pique is plum, with the queen of spades in front of two hearts. The démineur is brown earth, with an island of turf blocks seen from above.
+8. Give the game three levels: Facile, Moyen and Difficile. Open the choice with `Kit.chooseLevel(level, playing, newGame)` at "Nouvelle partie", and show the level under the name with `Kit.showLevel(level)`. Save the level with the game. A save without a known level still loads, with a default level. Each level must be harder than the one below, and a test must prove it: for example, a computer that beats the level below, or deals that take the solver more steps.
 
 When a game changes its save format, it must still read the old format. His saves are never deleted.
 
 ## Games
 
 - `public/solitaire/`: draw-one Klondike.
-  - A solver deals only games that it has won.
+  - A solver deals only games that it has won. The level is how many steps the solver needed: at most 40 for Facile, 55 to 85 for Moyen, 180 to 2500 for Difficile.
   - Click a card. With one legal place, it goes there at once. With several, click one of the places framed in yellow. Dragging also works.
   - The game says where the card went, and the card keeps a yellow outline for 1 s.
   - A double-click counts as one click.
@@ -54,7 +55,7 @@ When a game changes its save format, it must still read the old format. His save
   - The card size depends only on the window, so the board does not move during a game.
 
 - `public/freecell/`: FreeCell, with four free cells and eight columns.
-  - All the cards are face up from the start. The solver in `solver.js` deals only games that it has won.
+  - All the cards are face up from the start. The solver in `solver.js` deals only games that it has won. The level is how many steps it needed: at most 65 for Facile, 120 to 300 for Moyen, 650 to 2500 for Difficile.
   - The clicks, drag, hint, undo, automatic cards, saves and statistics work as in the solitaire.
   - The empty free cells count as one place, and so do the empty columns. So a card that fits nowhere else goes to a free cell with one click. The game frames only the first empty free cell and the first empty column, but a click or a drop on another one also works.
   - A run of cards moves in one go when there is room: one card more per empty free cell, doubled by each empty column. When the run is too long, the message line gives the number of cards that can move.
@@ -64,7 +65,7 @@ When a game changes its save format, it must still read the old format. His save
   - Taking is compulsory, and the player must take the most pieces. Kings fly. A man that passes over the last row during a capture and goes on stays a man.
   - Click a piece, then a square framed in yellow. During a capture, click each landing square. The pieces taken are crossed out and leave the board at the end of the move. When several routes take the same pieces, every route is allowed.
   - A refused click keeps the piece chosen and says why in one sentence.
-  - The computer has three levels, chosen at "Nouvelle partie": Facile (2 plies, sometimes a slightly weaker move), Moyen (6 plies, 0.6 s) and Fort (1.5 s). Its move is saved before it is shown, then shown one landing at a time.
+  - The computer has three levels, chosen at "Nouvelle partie": Facile (2 plies, sometimes a slightly weaker move), Moyen (6 plies, 0.6 s) and Difficile (1.5 s). Its move is saved before it is shown, then shown one landing at a time.
   - "Annuler le dernier coup" takes back his move and the computer's answer, also while the computer thinks. During a capture, it takes back the landings clicked so far.
   - The game is drawn after the same position three times, after 25 king moves each without a capture or a man move, and at the end of the FMJD limits for endings with few pieces. The side column says how many moves are left.
   - A capture half done is saved too, so it comes back after the window is closed.

@@ -103,6 +103,7 @@
     (first || b.firstChild).focus();
   }
 
+  // The key 'fort' shows as "Difficile". Keep the key: the saves on his PC hold it.
   const levelNames = { facile: 'Facile', moyen: 'Moyen', fort: 'Difficile' };
   const levelNotes = { facile: 'Pour commencer en douceur', moyen: 'Un peu plus de réflexion', fort: 'Pour les joueurs habitués' };
   // The level is said under the name of the game, on the left of the bar: the "Nouvelle partie" button

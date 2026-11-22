@@ -85,7 +85,7 @@ The jeu de dames is international draughts on the 10x10 board, as the FMJD and t
 - **Two clicks, always.** He clicks a piece, then a framed square, even when there is one move. A slip on a piece only chooses it. During a capture he clicks each landing, so the route is always his choice. The game never guesses between two routes.
 - **Captures.** The pieces that must take have a dashed yellow ring. A taken piece gets a red cross and stays until the end of the move, as on a real board.
 - **The computer's move.** It waits at least 0.7 s, so his own move is seen landing first. Its piece then travels one landing at a time, 0.52 s apart, crossing out what it takes. Its start and end squares stay lit until he chooses a piece, and the message line says what it took.
-- **Levels.** Facile searches 2 plies and, 40% of the time, picks a move that loses at most 0.9 of a man against the best one. It still never misses a compulsory capture. Moyen and Fort search deeper with alpha-beta and follow every compulsory capture past the depth limit, so they do not give pieces away.
+- **Levels.** Facile searches 2 plies and, 40% of the time, picks a move that loses at most 0.9 of a man against the best one. It still never misses a compulsory capture. Moyen and Difficile search deeper with alpha-beta and follow every compulsory capture past the depth limit, so they do not give pieces away.
 - **No settings.** The level is the only choice, at "Nouvelle partie", and it is kept.
 
 ## Dame de pique
