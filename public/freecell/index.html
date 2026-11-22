@@ -29,7 +29,7 @@
     position: absolute; width: var(--w); height: var(--h); border-radius: calc(var(--w) * .09);
     background: rgba(255,255,255,.09); color: rgba(255,255,255,.82);
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(var(--w) * .04);
-    font: 600 max(min(20px, calc(var(--w) * .34)), calc(var(--w) * .2))/1 var(--ui); text-align: center;
+    font: 600 max(min(20px, calc(var(--w) * .4)), calc(var(--w) * .2))/1 var(--ui); text-align: center;
     transform: scale(.96); /* stays hidden under a card */
   }
   .slot .s { width: calc(var(--w) * .4); height: calc(var(--w) * .4); opacity: .75; }
@@ -612,7 +612,8 @@ function render(opts = {}) {
     pos[id] = [x, y];
     el.dataset.z = z;
     el.style.zIndex = moved && !opts.instant ? 1000 + z : z;
-    el.classList.toggle('can', selectable(id));
+    // Only a card with a place to go is outlined under the mouse.
+    el.classList.toggle('can', selectable(id) && destinations(locate(id)).length > 0);
     el.classList.toggle('auto', id === autoId);
     if (wasDown && !opts.instant && !REDUCED) el.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }],
       { duration: 220, delay: opts.deal ? order * 25 : 0, easing: 'ease-out', fill: 'backwards' });
