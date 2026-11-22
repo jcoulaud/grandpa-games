@@ -332,15 +332,13 @@ let showing = false;
 const busy = () => showing;   // the computer's turn is being shown
 
 /* ---------- Saves ---------- */
-function save() {
+async function save() {
   const parts = [];
   if (playing()) parts.push('Partie en cours');
   if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
-  for (const n of [Infinity, 13, 3, 1, 0]) {
-    const data = { v: 1, G, who, undo: n ? undo.slice(-n) : [], level, stats, wonNow };
-    if (GG.save('yams', data, { summary: parts.join(' · ') })) return (saved = true);
-    if (stale) return (saved = false);
-  }
+  const data = { v: 1, G, who, undo, level, stats, wonNow };
+  if (await GG.save('yams', data, { summary: parts.join(' · '), undoLimits: [Infinity, 13, 3, 1, 0] })) return (saved = true);
+  if (stale) return (saved = false);
   saved = false;
   say("La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.");
   return false;
@@ -426,18 +424,20 @@ function rollDice() {
   if (p && G.sheets[0][11] === null) return say('Yams ! Les cinq dés sont pareils : cliquez sur la case Yams pour marquer 50 points.');
   say(turnText());
 }
-function tapDie(i) {
+async function tapDie(i) {
   if (Kit.isOpen() || refuseBusy()) return;
   if (!G.dice) return say("Lancez d'abord les dés avec le bouton « Lancer les dés ».");
   if (G.rolls >= 3) return shakeDie(i), say('Vous avez lancé trois fois : cliquez sur une case de votre colonne pour marquer vos points.');
   G = view = Y.keep(G, i); hint = null;
-  save(); render();
-  if (!saved) return;
+  const current = G;
+  const written = save();
+  render();
+  if (!(await written) || G !== current) return;
   const d = G.dice[i], n = G.kept.filter(k => k).length;
   say(G.kept[i] ? (n === 5 ? `Vous gardez le ${d}. Les cinq dés sont gardés : cliquez sur une case pour marquer.` : `Vous gardez le ${d}. Cliquez encore dessus pour le relancer.`)
     : `Le ${d} sera relancé.`);
 }
-function tapBox(player, box) {
+async function tapBox(player, box) {
   if (Kit.isOpen() || refuseBusy()) return;
   if (player !== 0) return shakeBox(player, box), say(`Cette colonne est celle de ${them()} : marquez dans la colonne « Vous ».`);
   if (!G.dice) return shakeBox(player, box), say("Lancez d'abord les dés avec le bouton « Lancer les dés ».");
@@ -445,25 +445,29 @@ function tapBox(player, box) {
   stopParty();
   undo.push(JSON.stringify(G));
   G = Y.write(G, box); view = G; hint = null; fresh = { player: 0, box, at: performance.now() };
-  afterWrite(writeText(G, 0, box));
+  const current = G;
+  await afterWrite(writeText(G, 0, box));
+  if (G !== current) return;
   // A save that failed leaves its warning on the message line, and the game goes on in this window.
   if (G.result || stale) return;
   computerPlays();
 }
 // Counts a win once and saves. Returns the best score before this game ended, for the record.
-function commit() {
+async function commit() {
   const firstWin = G.result && G.result !== 'lost' && !wonNow;
   const oldBest = stats.best;
   if (firstWin) { wonNow = true; stats.won++; }
   if (G.result) stats.best = Math.max(stats.best, Y.totals(G.sheets[0]).total);
-  if (save()) { if (firstWin) GG.track('yams', 'won'); }
+  if (await save()) { if (firstWin) GG.track('yams', 'won'); }
   else { if (firstWin) { wonNow = false; stats.won--; } stats.best = oldBest; }
   return oldBest;
 }
 const record = oldBest => oldBest > 0 && Y.totals(G.sheets[0]).total > oldBest;
 // After he writes a box: save, then show the end or his box.
-function afterWrite(text) {
-  const oldBest = commit();
+async function afterWrite(text) {
+  const current = G;
+  const oldBest = await commit();
+  if (G !== current) return;
   render();
   // A stale window shows the kit's reload prompt, not the result.
   if (G.result) return finish(!stale, record(oldBest));
@@ -501,10 +505,11 @@ function computerPlays() {
     if (at < steps.length) return later(show, REDUCED ? 300 : s.did === 'keep' ? KEEP_MS : STEP_MS);
     later(() => done(s, prev), REDUCED ? 300 : END_MS);
   };
-  const done = (s, prev) => {
+  const done = async (s, prev) => {
     showing = false;
     G = s.G;
-    const oldBest = commit();
+    const oldBest = await commit();
+    if (G !== s.G) return;
     // A stale window shows the kit's reload prompt, and a failed save leaves its warning.
     if (stale) { view = G; return render(); }
     if (G.result) { view = { ...G, dice: prev ? prev.dice : null }; return finish(true, record(oldBest)); }
@@ -541,7 +546,7 @@ function finish(show, record) {
       [['Nouvelle partie', askNewGame, true], ['Annuler le dernier coup', doUndo], ['Retour aux jeux', home]]), REDUCED ? 0 : 900);
   }
 }
-const home = () => { location.href = $('home').href; };
+const home = Kit.home;
 
 /* ---------- Buttons ---------- */
 function later(fn, ms) { const t = setTimeout(() => { timers = timers.filter(x => x !== t); fn(); }, ms); timers.push(t); return t; }
@@ -582,7 +587,7 @@ function showHint() {
     : `Aucune bonne case pour ces dés : barrez la case ${boxName(a.box)}, encadrée. C'est celle qui vous coûte le moins.`);
 }
 function askNewGame() { Kit.chooseLevel(level, playing(), newGame); }
-function newGame(lv) {
+async function newGame(lv) {
   calm();
   if (lv) level = lv;
   Kit.showLevel(level);
@@ -590,9 +595,10 @@ function newGame(lv) {
   const seed = crypto.getRandomValues(new Uint32Array(1))[0];
   G = view = Y.newGame(level, seed); undo = []; hint = null; fresh = null; wonNow = false;
   // A stale window cannot save, so it does not count a game either.
-  if (save()) GG.track('yams', 'start');
+  const written = save();
   render();
-  if (saved) say(`Vous jouez contre ${them()}. À vous : lancez les dés.`);
+  if (!stale) say(`Vous jouez contre ${them()}. À vous : lancez les dés.`);
+  if (await written) GG.track('yams', 'start');
 }
 
 /* ---------- Drawing ---------- */

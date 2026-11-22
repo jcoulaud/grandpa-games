@@ -26,13 +26,13 @@ for (const game of ['solitaire', 'freecell', 'dames', 'dame-de-pique', 'demineur
 
   // The solitaire and FreeCell count a win in save(): a stale window does not count it.
   if (game === 'solitaire' || game === 'freecell') {
-    const won = await a.evaluate(() => {
+    const won = await a.evaluate(async () => {
       const all = [...Array(52).keys()];
       S.found = [0, 1, 2, 3].map(s => all.filter(c => Cards.st(c) === s).sort((x, y) => Cards.rk(x) - Cards.rk(y)));
       S.stock = []; S.waste = []; S.tab = S.tab.map(() => []); if (S.cells) S.cells = S.cells.map(() => null);
       S.won = false;
       const before = stats.won;
-      const saved = save();
+      const saved = await save();
       return { saved, counted: stats.won - before, flag: S.won, sent: sent.includes('won') };
     });
     ok(!won.saved && !won.counted && !won.flag && !won.sent, `${game}: a stale window does not count a win`);

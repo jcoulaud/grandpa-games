@@ -158,6 +158,16 @@ const first = await a.evaluate(() => GG.save('twotabs', { won: 7 }));
 const second = await b.evaluate(() => GG.save('twotabs', { won: 0 }));
 ok(first && !second && (await a.evaluate(() => GG.load('twotabs'))).won === 7, 'an older window does not save over a newer game');
 ok(await b.evaluate(() => dialogOpen() && document.getElementById('overTitle').textContent.includes('changé')), 'the older window asks to reload');
+await Promise.all([a, b].map(tab => tab.evaluate(() => GG.load('simultaneous'))));
+const concurrent = await Promise.all([a, b].map((tab, won) => tab.evaluate(won => (
+  GG.save('simultaneous', { won }, { summary: String(won) })
+), won)));
+const record = await a.evaluate(() => ({ data: GG.load('simultaneous'), tile: GG.meta('simultaneous') }));
+ok(concurrent.filter(Boolean).length === 1
+  && record.data.won === concurrent.indexOf(true)
+  && record.tile.summary === String(record.data.won),
+  'two concurrent saves commit exactly one version and its matching tile summary');
+
 await ctx.close();
 
 ok(errors.length === 0, 'no page errors ' + errors.join(' | '));

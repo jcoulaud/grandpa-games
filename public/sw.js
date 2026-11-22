@@ -2,14 +2,14 @@
 //
 // Each deploy writes version.js (see scripts/stamp.mjs). When the app opens, a new version downloads
 // all CORE files into a new cache in the background. The library page then asks it to start, and it
-// starts if every open window of the app shows the library. A game window keeps its version until it
+// starts when no window is playing a game. A game window keeps its version until it
 // is closed. So the files of one version are always served together, and nothing changes during a game.
 try { importScripts('version.js'); } catch (e) { self.VERSION = 'dev'; }
 const CACHE = 'grandpa-games-' + self.VERSION;
 const CORE = [
-  './', 'lib/store.js', 'lib/kit.js', 'lib/kit.css', 'lib/zoom.js', 'lib/cards.js', 'lib/cards.css', 'manifest.webmanifest', 'fonts/atkinson-next.woff2', 'fonts/fraunces.woff2',
+  './', 'lib/store.js', 'lib/kit.js', 'lib/kit.css', 'lib/zoom.js', 'lib/cards.js', 'lib/cards.css', 'lib/solver-worker.js', 'manifest.webmanifest', 'fonts/atkinson-next.woff2', 'fonts/fraunces.woff2',
   'icons/icon.svg', 'icons/logo.webp', 'icons/julien.webp', 'icons/icon-192.png', 'icons/icon-512.png',
-  'solitaire/', 'solitaire/icon.svg',
+  'solitaire/', 'solitaire/solver.js', 'solitaire/icon.svg',
   'freecell/', 'freecell/solver.js', 'freecell/icon.svg',
   'dames/', 'dames/engine.js', 'dames/icon.svg',
   'dame-de-pique/', 'dame-de-pique/engine.js', 'dame-de-pique/icon.svg',
@@ -28,11 +28,11 @@ self.addEventListener('message', e => {
   if (e.data !== 'start') return;
   const home = new URL(self.registration.scope).pathname;
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(all => {
-    if (all.every(c => new URL(c.url).pathname === home)) return self.skipWaiting();
+    if (all.every(c => [home, home + 'admin/'].includes(new URL(c.url).pathname))) return self.skipWaiting();
   }));
 });
 self.addEventListener('activate', e => e.waitUntil((async () => {
-  for (const name of await caches.keys()) if (name !== CACHE) await caches.delete(name);
+  for (const name of await caches.keys()) if (name.startsWith('grandpa-games-') && name !== CACHE) await caches.delete(name);
   await self.clients.claim();
 })()));
 

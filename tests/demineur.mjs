@@ -89,6 +89,7 @@ ok(await g(() => G.result === null && G.layout.some(i => G.cells[i] === '.')), '
 const before = await cells();
 const mine = await g(() => G.layout.find(i => G.cells[i] === '.'));
 await cell(mine).click();
+await page.locator('.blast').waitFor();
 ok(await page.locator('.blast').count() === 1 && !(await g(() => Kit.isOpen())), 'the mine explodes before the dialog opens');
 await page.waitForFunction(() => Kit.isOpen());
 ok(await page.locator('.blast').count() === 0, 'the explosion clears itself before the dialog');

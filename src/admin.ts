@@ -20,6 +20,9 @@ async function sameSecret(given: string, expected: string): Promise<boolean> {
 }
 
 export async function admin(request: Request, env: AdminEnv, path: string): Promise<Response> {
+  const overview = path === 'overview' && request.method === 'GET';
+  const clear = path === 'errors/clear' && request.method === 'POST';
+  if (!overview && !clear) return json({ error: 'not found' }, 404);
   if (!env.ADMIN_TOKEN) return json({ error: 'admin off' }, 503);
   const db = env.DB;
   const auth = request.headers.get('Authorization') ?? '';
@@ -40,7 +43,7 @@ export async function admin(request: Request, env: AdminEnv, path: string): Prom
   if (!(await sameSecret(given, env.ADMIN_TOKEN))) return json({ error: 'password' }, 401);
   await forget();
 
-  if (path === 'overview' && request.method === 'GET') {
+  if (overview) {
     const today = utcDay(now), d7 = utcDay(now, 6), d14 = utcDay(now, 13), d30 = utcDay(now, 29), first = utcDay(now, VISIT_DAYS - 1);
     const [totals, days, games, errors] = await db.batch([
       db.prepare(`SELECT
@@ -72,9 +75,6 @@ export async function admin(request: Request, env: AdminEnv, path: string): Prom
     return json({ totals: totals.results[0], days: days.results, games: games.results, errors: errors.results });
   }
 
-  if (path === 'errors/clear' && request.method === 'POST') {
-    await db.prepare('DELETE FROM errors').run();
-    return json({ ok: true });
-  }
-  return json({ error: 'not found' }, 404);
+  await db.prepare('DELETE FROM errors').run();
+  return json({ ok: true });
 }

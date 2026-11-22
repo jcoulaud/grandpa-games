@@ -106,7 +106,7 @@ await page.reload();
 ok(await g(() => G.result === 'won' && !Kit.isOpen()) && /Bravo, vous avez trouvé/.test(await msg()), 'a reload after the win shows it without the dialog');
 
 // 9. A broken save starts a new game with the rules.
-await g(() => { const v = GG.load('paires'); v.G.found = '1' + v.G.found.slice(1, -1) + '0'; GG.save('paires', v); });
+await g(() => { const v = GG.load('paires'); v.G.found = '1' + v.G.found.slice(1, -1) + '0'; return GG.save('paires', v); });
 await page.reload();
 await wait(300);
 ok(await g(() => Kit.isOpen()), 'a broken save is not loaded');

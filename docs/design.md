@@ -9,7 +9,7 @@ These rules hold for the library, every game, its rules pages and its dialogs. C
 - **Text.** 20 px or more, 13 px or more on a phone. The cards and the pictures of the library are the only exceptions. No text is cut: a long message takes two lines in the same height.
 - **Buttons.** 44 px high or more, and no two buttons overlap. The top bar uses 54 px and the dialogs 58 px.
 - **The window.** Nothing goes past its sides. A dialog fits in it. Each rules page fits without scrolling in a window 620 px high or more.
-- **The fonts.** The pages use Segoe UI, the font of his PC. A wider font may make a rules page scroll, but must not cut text or push a button off the window.
+- **The fonts.** The pages use Atkinson Hyperlegible Next for text and Fraunces for titles. The cards use Segoe UI. A wider font may make a rules page scroll, but must not cut text or push a button off the window.
 - **The windows to check:**
   - his laptop in Edge, 1366 by 680 px;
   - the same laptop with the text at 125 %, 1093 by 530 px;

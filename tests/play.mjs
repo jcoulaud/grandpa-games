@@ -109,6 +109,7 @@ ok(await g(() => S.moves) === moves1 + 1, 'drag and drop moves the card');
 // 5. Hint, then follow it with one click
 await page.waitForTimeout(1500);
 await page.click('#hintBtn');
+await page.waitForFunction(() => !hintPending);
 const hint = await g(() => ({ sel, hintDst, hintStock, msg: document.getElementById('msg').textContent }));
 console.log('     hint: ' + hint.msg);
 ok(hint.msg.length > 10 && (hint.sel !== null || hint.hintStock), 'hint shows a sentence and a target');
@@ -126,6 +127,7 @@ await page.keyboard.press('Control+z'); await page.waitForTimeout(200);
 ok(await g(() => S.moves) < moves2, 'Ctrl+Z goes back one more move');
 // A hint is also followed by a click on the ringed card.
 await page.click('#hintBtn');
+await page.waitForFunction(() => !hintPending);
 const h2 = await g(() => ({ sel, hintStock, moves: S.moves }));
 if (h2.sel !== null) {
   await page.mouse.click(...await cardPt(h2.sel)); await page.waitForTimeout(300);

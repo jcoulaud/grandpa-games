@@ -100,15 +100,13 @@ const playing = () => G.first >= 0 && !G.result;
 const guided = () => !!D.LEVELS[G.level].guided;
 
 /* ---------- Saves ---------- */
-function save() {
+async function save() {
   const parts = [];
   if (playing()) parts.push('Partie en cours');
   if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
-  for (const n of [Infinity, 200, 40, 0]) {
-    const data = { v: 1, G, undo: n ? undo.slice(-n) : [], level, stats, wonNow };
-    if (GG.save('demineur', data, { summary: parts.join(' · ') })) return (saved = true);
-    if (stale) return (saved = false);
-  }
+  const data = { v: 1, G, undo, level, stats, wonNow };
+  if (await GG.save('demineur', data, { summary: parts.join(' · '), undoLimits: [Infinity, 200, 40, 0] })) return (saved = true);
+  if (stale) return (saved = false);
   saved = false;
   Kit.say("La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.");
   return false;
@@ -133,15 +131,16 @@ const say = Kit.say;
 const nb = i => D.neighbours(G.w, G.h)[i];
 const flagsLeft = () => G.mines - D.flags(G);
 
-function play(next, text) {
+async function play(next, text) {
   undo.push(JSON.stringify(G));
   const first = G.first < 0;
   G = next; hint = null;
   // A win counts once, and only when it is saved: a stale window cannot count it a second time.
   const firstWin = G.result === 'won' && !wonNow;
   if (firstWin) { wonNow = true; stats.won++; }
-  if (save()) { if (firstWin) GG.track('demineur', 'won'); }
+  if (await save()) { if (firstWin) GG.track('demineur', 'won'); }
   else if (firstWin) { wonNow = false; stats.won--; }
+  if (G !== next) return;
   render();
   // A stale window shows the kit's reload prompt, not the result.
   if (G.result) return finish(!stale);
@@ -225,7 +224,7 @@ function finish(show) {
       [['Annuler le dernier coup', doUndo, true], ['Nouvelle partie', askNewGame], ['Retour aux jeux', home]]), 1400);
   }
 }
-const home = () => { location.href = $('home').href; };
+const home = Kit.home;
 
 /* ---------- Buttons ---------- */
 function later(fn, ms) { const t = setTimeout(() => { timers = timers.filter(x => x !== t); fn(); }, ms); timers.push(t); return t; }
@@ -282,16 +281,17 @@ function showHint(lead = '') {
 function askNewGame() {
   Kit.chooseLevel(level, playing(), newGame);
 }
-function newGame(lv) {
+async function newGame(lv) {
   timers.forEach(clearTimeout); timers = []; clearBlast();
   if (lv) level = lv;
   Kit.showLevel(level);
   const seed = crypto.getRandomValues(new Uint32Array(1))[0];
   G = D.newGame(level, seed); undo = []; hint = null; lastTap = null; wonNow = false; setArming(false);
   // A stale window cannot save, so it does not count a game either.
-  if (save()) GG.track('demineur', 'start');
+  const written = save();
   render();
-  if (saved) say("Cliquez sur une case pour commencer : la première n'a jamais de mine.");
+  if (!stale) say("Cliquez sur une case pour commencer : la première n'a jamais de mine.");
+  if (await written) GG.track('demineur', 'start');
 }
 
 $('undoBtn').onclick = doUndo;

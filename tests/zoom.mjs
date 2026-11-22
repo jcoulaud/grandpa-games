@@ -38,6 +38,13 @@ try {
   await page.waitForFunction(() => !document.querySelector('[data-dir="1"]').disabled);
   while (await plus.isEnabled()) await plus.click();
   ok(await zoomText() === '200 %' && await footerFits(), 'all footer buttons fit at 200 %');
+  await page.setViewportSize({ width: 760, height: 680 });
+  await page.waitForFunction(() => Zoom.z() === 1);
+  ok(await g(() => [...document.querySelectorAll('footer a, footer button')].every(el => {
+    const r = el.getBoundingClientRect();
+    return r.left >= 0 && r.right <= innerWidth;
+  })), 'the visible install, credit and display controls fit at tablet width');
+
   await page.setViewportSize({ width: 1366, height: 680 });
   await page.waitForFunction(() => Zoom.z() === 1.3);
   await page.screenshot({ path: `${OUT}/zoom-library-130.png` });

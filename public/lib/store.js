@@ -1,7 +1,7 @@
 // Saves for every game in the library. They stay in the browser of the PC (localStorage).
 //
 //   GG.load(game)                     -> the saved data, or null
-//   GG.save(game, data, { summary })  -> true if the save was written
+//   GG.save(game, data, { summary })  -> Promise<boolean> that resolves when the save is written
 //       summary: one short line for the library tile, for example "12 victoires".
 //   GG.meta(game)                     -> { summary, updatedAt } or null
 //   GG.track(game, 'start' | 'won')   -> counts a game started or won, for the admin page
@@ -28,11 +28,19 @@
     const updating = !!sw.controller;
     sw.register(new URL('../sw.js', SRC)).then(reg => {
       if (!home) return;
-      const start = w => { if (w && w.state === 'installed') w.postMessage('start'); };
-      start(reg.waiting);
+      let retryTimer;
+      const retry = () => {
+        clearTimeout(retryTimer);
+        if (document.hidden || !reg.waiting) return;
+        reg.waiting.postMessage('start');
+        // Closing a game in a different window might not refocus this library.
+        retryTimer = setTimeout(retry, 2000);
+      };
+      retry();
+      addEventListener('focus', retry);
+      document.addEventListener('visibilitychange', retry);
       reg.addEventListener('updatefound', () => {
-        const w = reg.installing;
-        w.addEventListener('statechange', () => start(w));
+        reg.installing?.addEventListener('statechange', retry);
       });
       sw.addEventListener('controllerchange', () => { if (updating) location.reload(); });
     }).catch(() => {});
@@ -80,26 +88,61 @@
   const known = {};
   function load(game) {
     const r = get('save:' + game);
-    known[game] = r ? r.updatedAt : null;
+    known[game] = r?.updatedAt ?? null;
     return r ? r.data : null;
   }
-  function save(game, data, opts = {}) {
-    if (game in known && ((get('save:' + game) || {}).updatedAt ?? null) !== known[game]) {
-      dispatchEvent(new Event('gg-stale'));
+  async function writeSave(game, data, { summary, undoLimits = [Infinity] } = {}) {
+    // Take a snapshot before waiting for another window to release the lock.
+    const snapshot = structuredClone(data);
+    const key = 'save:' + game;
+    const write = () => {
+      const previous = get(key);
+      if ((previous?.updatedAt ?? null) !== (known[game] ?? null)) {
+        dispatchEvent(new Event('gg-stale'));
+        return false;
+      }
+      const updatedAt = Math.max(Date.now(), (previous?.updatedAt ?? 0) + 1);
+      const label = summary ?? previous?.summary ?? get('meta:' + game)?.summary ?? '';
+      for (const n of undoLimits) {
+        const data = snapshot.undo && n !== Infinity
+          ? { ...snapshot, undo: n ? snapshot.undo.slice(-n) : [] } : snapshot;
+        if (!set(key, { updatedAt, summary: label, data })) continue;
+        known[game] = updatedAt;
+        return true;
+      }
+      return false;
+    };
+    try {
+      return navigator.locks ? await navigator.locks.request(P + key, write) : write();
+    } catch {
       return false;
     }
-    const updatedAt = Math.max(Date.now(), (known[game] || 0) + 1);
-    if (!set('save:' + game, { updatedAt, data })) return false;
-    known[game] = updatedAt;
-    const summary = opts.summary !== undefined ? opts.summary : (get('meta:' + game) || {}).summary || '';
-    set('meta:' + game, { summary, updatedAt });
-    return true;
+  }
+
+  const pending = new Set();
+  function save(game, data, options) {
+    const write = writeSave(game, data, options);
+    pending.add(write);
+    const done = () => pending.delete(write);
+    write.then(done, done);
+    return write;
+  }
+
+  async function flush() {
+    while (pending.size) await Promise.allSettled(pending);
+  }
+
+  function meta(game) {
+    const save = get('save:' + game);
+    return typeof save?.summary === 'string'
+      ? { summary: save.summary, updatedAt: save.updatedAt }
+      : get('meta:' + game);
   }
 
   window.GG = {
     load,
-    meta: game => get('meta:' + game),
-    save,
+    meta,
+    save, flush,
     track: (game, kind) => send('/stats', { game, kind }),
     get, set, // small per-PC flags for the library
   };
