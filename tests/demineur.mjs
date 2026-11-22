@@ -1,4 +1,4 @@
-// Plays the démineur with a real mouse: the first click, flags with the right button and with the
+// Plays the démineur with a real mouse: the guided Facile, the first click, flags with the right button and with the
 // "Drapeau" button, refusals, opening around a number, the hint followed to a win, a mine and its undo,
 // undo of the first click, double-clicks, saves across a reload, the sizes of the squares and a phone.
 import { launch, gameUrl, OUT } from './harness.mjs';
@@ -26,15 +26,15 @@ const start = async level => {
 await page.goto(URL);
 await wait(400);
 ok(await g(() => Kit.isOpen()), 'the rules open on the first visit');
-for (let n = 0; n < 4; n++) {
+for (let n = 0; n < 5; n++) {
   ok(await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }), `rules page ${n + 1} fits without scrolling`);
   await page.screenshot({ path: `${OUT}/demineur-rules-${n + 1}.png` });
   await page.click('#helpNext');
 }
 await page.getByRole('button', { name: 'Facile', exact: true }).click();
-// A fixed seed, so the steps below meet the same board each time.
-await g(() => { G = Demineur.newGame('facile', 12345); save(); render(); });
-ok(await page.locator('.c').count() === 81, 'Facile has 9 by 9 squares');
+// A fixed seed, so the steps below meet the same board each time. Moyen, because Facile refuses a guess.
+await g(() => { G = Demineur.newGame('moyen', 12345); save(); render(); });
+ok(await page.locator('.c').count() === 140, 'Moyen has 14 by 10 squares');
 ok(await g(() => G.first === -1 && G.layout === null), 'no mine is placed before the first click');
 
 // 2. Before the first click: a flag is refused, the hint says to click anywhere.
@@ -54,7 +54,7 @@ const closed = async () => (await cells()).indexOf('.');
 let c = await closed();
 await click(c, 'right');
 ok((await cells())[c] === 'f', 'the right button puts a flag');
-ok(/Drapeaux : 1 sur 10/.test(await g(() => document.getElementById('flags').textContent)), 'the chip counts the flag');
+ok(/Drapeaux : 1 sur 22/.test(await g(() => document.getElementById('flags').textContent)), 'the chip counts the flag');
 await click(c);
 ok((await cells())[c] === '.' && /Drapeau retiré/.test(await msg()), 'a left click on a flag takes it off and does not open the square');
 await page.click('#flagBtn');
@@ -163,7 +163,33 @@ const small = await g(() => S);
 ok(small >= 26 && await g(() => { const f = document.getElementById('frame').getBoundingClientRect(); return f.bottom <= innerHeight && f.right <= innerWidth; }),
   `Difficile fits a 1093 by 530 window, with squares of ${small} px`);
 
-// 12. A phone: the wide board turns a quarter, so its squares stay large.
+// 12. Facile guides him: the marks are right, the reason comes after each move, a guess is refused,
+// a click on a red "!" puts a flag, and clicking only the marks wins.
+await start('facile');
+await g(() => { G = Demineur.newGame('facile', 4242); save(); render(); });
+ok(await page.locator('.c').count() === 81, 'Facile has 9 by 9 squares');
+await click(40);
+const marks = () => g(() => ({ safe: [...document.querySelectorAll('.c.safe')].map(e => +e.dataset.i), mine: [...document.querySelectorAll('.c.danger')].map(e => +e.dataset.i) }));
+let m = await marks();
+ok(m.safe.length + m.mine.length > 0 && /^Bien joué ! /.test(await msg()), `the first click marks ${m.safe.length} safe squares and ${m.mine.length} mines, and gives the reason: ${await msg()}`);
+ok(await page.locator('.c.ring').count() > 0, 'the number behind the reason has a yellow ring');
+await page.screenshot({ path: `${OUT}/demineur-guided.png` });
+const guess = await g(() => { const s = Demineur.sure(G); return [...G.cells].findIndex((x, i) => x === '.' && !s.safe.includes(i) && !s.mine.includes(i)); });
+await click(guess);
+ok(await g(() => G.result === null) && /n'est pas sûre/.test(await msg()), 'a click on a square without a mark is refused, with the reason');
+let wrongMark = 0, clicks = 0;
+for (; clicks < 120 && await g(() => !G.result); clicks++) {
+  m = await marks();
+  if (await g(s => s.safe.some(i => Demineur.isMine(G, i)) || s.mine.some(i => !Demineur.isMine(G, i)), m)) wrongMark++;
+  const danger = m.mine[0];
+  await click(danger >= 0 ? danger : m.safe[0]);
+  if (danger >= 0 && (await cells())[danger] !== 'f') wrongMark++;
+}
+await wait(800);
+ok(!wrongMark && await g(() => G.result === 'won'), `left clicks on the marks alone win, in ${clicks} clicks, with no wrong mark`);
+await page.keyboard.press('Escape');
+
+// 13. A phone: the wide board turns a quarter, so its squares stay large.
 const phone = await browser.newPage({ viewport: { width: 390, height: 760 }, isMobile: true, hasTouch: true });
 await phone.goto(URL);
 await phone.evaluate(() => { Kit.closeHelp(); });
@@ -173,13 +199,13 @@ const turned = await phone.evaluate(() => ({ turned: document.getElementById('bo
 ok(turned.turned && turned.S >= 30 && turned.fits, `a phone turns Difficile, with squares of ${turned.S} px`);
 await phone.screenshot({ path: `${OUT}/demineur-phone.png` });
 
-// 13. At 130 %, the explosion is still centred on the mine that went off.
+// 14. At 130 %, the explosion is still centred on the mine that went off. Moyen, because Facile refuses the click.
 const big = await browser.newPage({ viewport: { width: 1366, height: 680 } });
 await big.addInitScript(() => localStorage.setItem('gg:zoom', '1.3'));
 await big.goto(URL);
 await big.evaluate(() => { Kit.closeHelp(); });
-await big.locator('#overBtns button', { hasText: 'Facile' }).click();
-await big.evaluate(() => { G = Demineur.newGame('facile', 12345); save(); render(); });
+await big.locator('#overBtns button', { hasText: 'Moyen' }).click();
+await big.evaluate(() => { G = Demineur.newGame('moyen', 12345); save(); render(); });
 await big.locator('.c[data-i="40"]').click();
 await big.mouse.move(5, 5); await big.waitForTimeout(520);
 // The mine is measured before the click: the board shakes during the explosion.

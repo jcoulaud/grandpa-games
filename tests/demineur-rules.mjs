@@ -116,5 +116,28 @@ for (const level of Object.keys(D.LEVELS)) {
   ok(same(D.open(G, 30).layout, D.open(G, 30).layout), 'the same first square gives the same board after an undo');
 }
 
+// 8. What is sure, on Facile: from any first square, with a wrong flag on the board, every square it
+// marks safe has no mine, every square it marks a mine has one, and opening the safe ones and
+// flagging the mines wins every game.
+{
+  let bad = 0, won = 0;
+  for (let seed = 1; seed <= 100; seed++) {
+    let G = D.open(D.newGame('facile', seed), seed % 81);
+    const wrong = G.cells.split('').findIndex((c, i) => c === '.' && !D.isMine(G, i));
+    G = D.flag(G, wrong);
+    for (let n = 0; n < 200 && !G.result; n++) {
+      const s = D.sure(G);
+      if (s.safe.some(i => D.isMine(G, i)) || s.mine.some(i => !D.isMine(G, i))) bad++;
+      if (G.cells[wrong] === 'f') { G = D.flag(G, wrong); continue; }
+      if (s.mine.length) G = D.flag(G, s.mine[0]);
+      else if (s.safe.length) G = D.open(G, s.safe[0]);
+      else break;
+    }
+    if (G.result === 'won') won++;
+  }
+  ok(!bad && won === 100, 'Facile: the marks are always right, and following them wins 100 games of 100', `bad ${bad}, won ${won}`);
+  ok(!D.sure(D.newGame('facile', 1)).safe.length, 'nothing is sure before the first click');
+}
+
 console.log(fails ? `\n${fails} FAILED` : '\nALL PASSED');
 process.exit(fails ? 1 : 0);

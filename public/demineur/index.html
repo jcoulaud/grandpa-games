@@ -53,6 +53,11 @@
     <p>Une case ouverte sans chiffre ne touche aucune mine : les cases autour d'elle s'ouvrent toutes seules.</p>
   </section>
   <section class="page">
+    <h3>Le niveau Facile</h3>
+    <p>Au niveau Facile, le jeu vous guide. Une coche verte montre une case sûre : cliquez dessus pour l'ouvrir. Un point d'exclamation rouge montre une mine : cliquez dessus pour y poser un drapeau.</p>
+    <p>Le chiffre qui explique le coup est entouré en jaune, et la ligne du haut dit pourquoi. Une case sans marque peut cacher une mine : le jeu ne l'ouvre pas.</p>
+  </section>
+  <section class="page">
     <h3>Les drapeaux</h3>
     <p>Quand une case cache une mine à coup sûr, posez-y un drapeau : cliquez sur « Drapeau », puis sur la case. Le clic droit de la souris pose aussi un drapeau. Un clic sur un drapeau le retire.</p>
     <p>Quand un chiffre touche autant de drapeaux que sa valeur, un clic sur ce chiffre ouvre les autres cases autour de lui.</p>
@@ -75,6 +80,9 @@ const $ = id => document.getElementById(id);
 // Read at each end of a game, so a change of the setting counts at once.
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const FLAG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 19V4.5l10 4.2-10 4.2" fill="#C4122F" stroke="#7A0D0B" stroke-width="1.2" stroke-linejoin="round"/><path d="M8 20V4" stroke="#2A1A0B" stroke-width="2" stroke-linecap="round"/><path d="M4.5 20.5h7" stroke="#2A1A0B" stroke-width="2" stroke-linecap="round"/></svg>';
+const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="#FFF8E6" stroke="#2A4A15" stroke-width="1.2"/><path d="M7.8 12.4l2.9 2.9 5.6-6.1" fill="none" stroke="#1C7128" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+// Facile marks what the numbers prove: a check on a safe square, a red "!" on a mine.
+const DANGER = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="#C4122F" stroke="#7A0D0B" stroke-width="1.2"/><path d="M12 7.2v6" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/><circle cx="12" cy="16.6" r="1.6" fill="#fff"/></svg>';
 const MINE = '<svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="#141211" stroke-width="2.2" stroke-linecap="round"><path d="M12 2.5v19M2.5 12h19M5.3 5.3l13.4 13.4M18.7 5.3 5.3 18.7"/></g><circle cx="12" cy="12" r="6.6" fill="#141211"/><circle cx="9.7" cy="9.7" r="1.9" fill="#fff"/></svg>';
 
 /* ---------- State ----------
@@ -87,6 +95,8 @@ addEventListener('gg-stale', () => { stale = true; });
 
 const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
 const playing = () => G.first >= 0 && !G.result;
+// Facile guides him: the squares the numbers prove are marked, the reason is shown after each move, and a guess is refused.
+const guided = () => !!D.LEVELS[G.level].guided;
 
 /* ---------- Saves ---------- */
 function save() {
@@ -124,6 +134,7 @@ const flagsLeft = () => G.mines - D.flags(G);
 
 function play(next, text) {
   undo.push(JSON.stringify(G));
+  const first = G.first < 0;
   G = next; hint = null;
   // A win counts once, and only when it is saved: a stale window cannot count it a second time.
   const firstWin = G.result === 'won' && !wonNow;
@@ -134,7 +145,9 @@ function play(next, text) {
   // A stale window shows the kit's reload prompt, not the result.
   if (G.result) return finish(!stale);
   // A move that could not be saved leaves the warning of save() on the message line.
-  if (saved) say(text);
+  if (!saved) return;
+  if (guided()) showHint(first ? 'Bien joué ! ' : '');
+  else say(text);
 }
 
 // A click on square i. how: 'open' (the left button) or 'flag' (the right button, or after "Drapeau").
@@ -159,8 +172,17 @@ function tap(i, how) {
     const closed = nb(i).filter(j => G.cells[j] === '.').length, flags = nb(i).filter(j => G.cells[j] === 'f').length;
     if (!closed) return say(`Les cases autour de ce ${n} sont déjà toutes ouvertes ou marquées.`);
     if (flags !== n) return refuse(i, `Ce ${n} ${flags ? 'touche ' + plural(flags, 'drapeau', 'drapeaux') : 'ne touche aucun drapeau'} : il en faut ${n} pour ouvrir d'un clic les cases autour.`);
+    if (guided() && nb(i).some(j => G.cells[j] === '.' && D.isMine(G, j))) return refuse(i, `Un drapeau autour de ce ${n} n'est pas sur une mine : retirez-le d'abord.`);
     const next = D.openAround(G, i);
     return play(next, 'Les cases autour du ' + n + ' sont ouvertes. ' + nextText());
+  }
+  if (guided() && G.first >= 0) {
+    const s = D.sure(G);
+    if (s.mine.includes(i)) {
+      if (!flagsLeft()) return refuse(i, `Vous avez posé ${G.mines} drapeaux, autant que de mines : retirez-en un d'abord.`);
+      return play(D.flag(G, i), 'Drapeau posé.');
+    }
+    if (!s.safe.includes(i)) return refuse(i, "Cette case n'est pas sûre : elle peut cacher une mine. Cliquez sur une case cochée ou sur un point d'exclamation rouge.");
   }
   const first = G.first < 0;
   const next = D.open(G, i);
@@ -212,7 +234,9 @@ function doUndo() {
   Kit.closeDialog();
   G = JSON.parse(undo.pop()); hint = null; lastTap = null; setArming(false);
   save(); render();
-  if (saved) say(G.first < 0 ? 'Coup annulé. Cliquez sur une case pour commencer.' : 'Coup annulé. ' + nextText());
+  if (!saved) return;
+  if (guided() && G.first >= 0) showHint('Coup annulé. ');
+  else say(G.first < 0 ? 'Coup annulé. Cliquez sur une case pour commencer.' : 'Coup annulé. ' + nextText());
 }
 
 // One sentence for each step of the reasoning (engine.js): the numbers it uses get a yellow ring,
@@ -241,16 +265,17 @@ function hintText(h) {
     default: return `La case encadrée est sûre : ouvrez-la.`;
   }
 }
-function showHint() {
+// lead: the words said before the reason, after a move of Facile.
+function showHint(lead = '') {
   if (G.result || Kit.isOpen()) return;
   setArming(false);
   const h = D.hint(G);
   if (!h) return;
   if (h.kind === 'start') { hint = null; render(); return say("Cliquez sur n'importe quelle case : la première ne cache jamais de mine."); }
-  if (h.kind === 'wrong') { hint = { cells: [h.cell] }; render(); return say("Il n'y a pas de mine sous le drapeau encadré : cliquez dessus pour le retirer."); }
+  if (h.kind === 'wrong') { hint = { cells: [h.cell] }; render(); return say(lead + "Il n'y a pas de mine sous le drapeau encadré : cliquez dessus pour le retirer."); }
   hint = { cells: h.cells, ring: [h.a, h.b].filter(x => x >= 0) };
   render();
-  say(hintText(h));
+  say(lead + hintText(h));
 }
 
 function askNewGame() {
@@ -283,6 +308,7 @@ addEventListener('resize', render);
 if (load()) {
   Kit.showLevel(level);
   if (G.result) finish(false);
+  else if (guided() && G.first >= 0) showHint();
   else { render(); say(G.first < 0 ? "Cliquez sur une case pour commencer : la première n'a jamais de mine." : nextText()); }
 } else {
   Kit.firstVisit(newGame);

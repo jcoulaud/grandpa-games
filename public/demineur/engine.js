@@ -26,10 +26,12 @@
 //   Demineur.flag(G, i)             -> the game with a flag put on, or taken off, closed square i
 //   Demineur.number(G, i)           -> the mines around square i
 //   Demineur.hint(G)                -> the next step, see hint() below
+//   Demineur.sure(G)                -> { safe, mine }: every closed square the numbers prove, see sure() below
 (function (root) {
   'use strict';
+  // guided: the page marks on the board every square the numbers prove, and refuses a guess.
   const LEVELS = {
-    facile: { w: 9, h: 9, mines: 10, pairs: false },
+    facile: { w: 9, h: 9, mines: 10, pairs: false, guided: true },
     moyen: { w: 14, h: 10, mines: 22, pairs: true },
     fort: { w: 20, h: 10, mines: 36, pairs: true },
   };
@@ -218,18 +220,42 @@
                                             of its cells that he has not dealt with yet.
      A board made after TRIES failed boards can need a guess: the hint then shows a safe square
      ({ kind: 'safe', rule: 'peek' }). */
+  // What he knows: the open numbers, and his flags that are right. A wrong flag counts as closed.
+  function known(G, nums) {
+    return G.cells.split('').map((c, i) => c === 'o' ? nums[i] : c === 'f' && nums[i] === MINE ? MINE : UNKNOWN);
+  }
   function hint(G) {
     if (G.result) return null;
     if (G.first < 0) return { kind: 'start' };
     for (let i = 0; i < G.cells.length; i++) if (G.cells[i] === 'f' && !isMine(G, i)) return { kind: 'wrong', cell: i };
     const { pairs } = LEVELS[G.level];
     const nums = numbers(G.w, G.h, G.layout);
-    const K = G.cells.split('').map((c, i) => c === 'o' ? nums[i] : c === 'f' ? MINE : UNKNOWN);
-    const s = step(K, G.w, G.h, G.mines, pairs);
+    const s = step(known(G, nums), G.w, G.h, G.mines, pairs);
     if (s) return { ...s, cell: s.cells[0] };
     const cell = G.cells.split('').findIndex((c, i) => c === '.' && nums[i] !== MINE);
     return cell < 0 ? null : { kind: 'safe', cells: [cell], cell, rule: 'peek' };
   }
 
-  root.Demineur = { LEVELS, TRIES, random, neighbours, newGame, open, openAround, flag, flags, number, isMine, hint, makeLayout, clears, step };
+  /* ---------- What is sure ----------
+     The closed squares the reasoning proves from what he knows, step after step: { safe, mine },
+     each sorted. A proved safe square tells nothing more until it is opened. Before the first click,
+     after the end, or when nothing follows, safe holds the square of the "peek" hint, if any. */
+  const SAFE = -3;
+  function sure(G) {
+    if (G.first < 0 || G.result) return { safe: [], mine: [] };
+    const { pairs } = LEVELS[G.level];
+    const nums = numbers(G.w, G.h, G.layout);
+    const K = known(G, nums);
+    const safe = [], mine = [];
+    for (let s; (s = step(K, G.w, G.h, G.mines, pairs));) {
+      for (const j of s.cells) { K[j] = s.kind === 'mine' ? MINE : SAFE; (s.kind === 'mine' ? mine : safe).push(j); }
+    }
+    if (!safe.length && !mine.length) {
+      const h = hint(G);
+      if (h && h.rule === 'peek') safe.push(h.cell);
+    }
+    return { safe: safe.sort((a, b) => a - b), mine: mine.sort((a, b) => a - b) };
+  }
+
+  root.Demineur = { LEVELS, TRIES, random, neighbours, newGame, open, openAround, flag, flags, number, isMine, hint, sure, makeLayout, clears, step };
 })(typeof self !== 'undefined' ? self : globalThis);
