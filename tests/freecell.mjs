@@ -52,7 +52,8 @@ await page.getByRole('button', { name: 'Facile', exact: true }).click();
 
 const g = fn => page.evaluate(fn);
 const L = await g(() => L);
-ok(L.w >= 100, `card width at 1366x680 is ${L.w}px, height ${L.h}px`);
+// The space above and below the board (row-gap in lib/kit.css) takes some height on a 680px window.
+ok(L.w >= 96, `card width at 1366x680 is ${L.w}px, height ${L.h}px`);
 ok(await g(() => S.tab.flat().length === 52 && S.tab.map(p => p.length).join() === '7,7,7,7,6,6,6,6'), 'the deal has 8 columns of 7 and 6 cards');
 const deepest = await g(() => Math.max(...S.tab.map(p => last(colY(p)) + L.h)) - L.H);
 ok(deepest <= 0, `the dealt columns fit in the table (${deepest}px past it)`);
@@ -114,6 +115,7 @@ await setup([[12, 8, 20, 6], [25, 35], [38], [51], [], [], [], []], [5, 7, 7, 12
 await page.waitForTimeout(500);
 await page.mouse.click(...await cardPt(8));
 ok(await g(() => sel) === null && (await msg()).includes('une seule carte à la fois'), 'three cards with room for one cannot move: ' + await msg());
+ok(await g(() => !E[8].classList.contains('can') && E.every((el, id) => el.classList.contains('can') === (selectable(id) && destinations(locate(id)).length > 0))), 'only a card with a place to go is outlined under the mouse');
 await page.waitForTimeout(600);
 // A card under cards out of order cannot be taken, and the line says why.
 await setup([[12, 8, 7], [25], [38], [51], [], [], [], []], [0, 0, 0, 0]);
