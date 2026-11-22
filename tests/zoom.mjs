@@ -4,7 +4,7 @@
 // at a larger size moves the wrong card or nothing.
 import { launch, gameUrl, OUT } from './harness.mjs';
 
-const browser = await launch();
+const browser = await launch({ zoom: false });
 let fails = 0;
 const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails++; };
 const errors = [];
@@ -18,11 +18,11 @@ try {
   const center = r => [r.x + r.width / 2, r.y + r.height / 2];
   const zoomText = () => g(() => Math.round(Zoom.z() * 100) + ' %');
 
-  // 1. The library: 100 % at first, "+" up to what a 1366 by 680 window holds, kept after a reload.
+  // 1. The library: 80 % at first, "+" up to what a 1366 by 680 window holds, kept after a reload.
   await page.goto(gameUrl('.'));
   await g(() => localStorage.clear());
   await page.reload();
-  ok(await zoomText() === '100 %', 'the library starts at 100 %');
+  ok(await zoomText() === '80 %', 'the library starts at the smallest size, 80 %');
   const plus = page.locator('.zoom button', { hasText: 'Agrandir' }), minus = page.locator('.zoom button', { hasText: 'Réduire' });
   for (let n = 0; n < 8 && await plus.isEnabled(); n++) await plus.click();
   ok(await zoomText() === '130 %', 'on a 1366 by 680 window, "Agrandir" stops at 130 %: ' + await zoomText());
@@ -52,7 +52,7 @@ try {
   ok(await zoomText() === '130 %', 'the size is kept after a reload');
   await minus.click(); await minus.click(); await minus.click(); await minus.click();
   ok(await zoomText() === '90 %', '"Réduire" makes the page smaller');
-  const columns = () => g(() => getComputedStyle(document.querySelector('#games')).gridTemplateColumns.split(' ').length);
+  const columns = () => g(() => getComputedStyle(document.querySelector('#games .grid')).gridTemplateColumns.split(' ').length);
   ok(await columns() === 4, 'reducing the library fits four games across the window');
   await plus.click();
   ok(await columns() === 3, 'enlarging the tiles returns the library to three columns');

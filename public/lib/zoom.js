@@ -11,12 +11,12 @@
 //
 // The size is kept on the PC and shared by every window: a change in the library reaches an open game.
 // It is never larger than the window can hold: 1050 by 520 px of page at least, so every game still
-// fits. A phone always stays at 100 %.
+// fits. A page starts at the smallest size, 80 %. A phone always stays at 100 %.
 (() => {
   'use strict';
   const KEY = 'gg:zoom';
   const STEPS = [0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.5, 1.75, 2];
-  const read = () => { try { const v = +JSON.parse(localStorage.getItem(KEY)); return STEPS.includes(v) ? v : 1; } catch (e) { return 1; } };
+  const read = () => { try { const v = +JSON.parse(localStorage.getItem(KEY)); return STEPS.includes(v) ? v : STEPS[0]; } catch (e) { return STEPS[0]; } };
   const write = v => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} };
   const phone = () => innerWidth < 700;
   const max = () => phone() ? 1 : Math.max(1, ...STEPS.filter(s => innerWidth / s >= 1050 && innerHeight / s >= 520));

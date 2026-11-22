@@ -35,11 +35,20 @@ export function useFont({ everywhere = false, ...faces }) {
   }
 }
 
+// A page starts at 80 % (lib/zoom.js), but the layout checks were written for 100 %: a page with no size saved
+// gets 100 %. tests/zoom.mjs passes { zoom: false } to see the real default.
+const atFullSize = () => { if (localStorage.getItem('gg:zoom') === null) localStorage.setItem('gg:zoom', '1'); };
+
 // CHROMIUM can name a browser binary when Playwright's own download is missing.
-export async function launch() {
+export async function launch({ zoom = true } = {}) {
   const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
   const newContext = browser.newContext.bind(browser);
-  browser.newContext = async options => { const ctx = await newContext(options); await ctx.addInitScript(useFont, SEGOE); return ctx; };
+  browser.newContext = async options => {
+    const ctx = await newContext(options);
+    await ctx.addInitScript(useFont, SEGOE);
+    if (zoom) await ctx.addInitScript(atFullSize);
+    return ctx;
+  };
   // A page of its own, in a context of its own that closes with it, like Playwright's browser.newPage.
   browser.newPage = async options => {
     const ctx = await browser.newContext(options), page = await ctx.newPage();
