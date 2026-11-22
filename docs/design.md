@@ -1,6 +1,22 @@
-# Solitaire design
+# Design
 
 For one elderly French speaker with weak eyes and an unsteady mouse hand, in Edge on a 1366x768 laptop or a 1920x1080 monitor.
+
+## Rules for every screen
+
+These rules hold for the library, every game, its rules pages and its dialogs. Check them by hand after a change to the page, the CSS or a text he reads.
+
+- **Text.** 20 px or more, 13 px or more on a phone. The cards and the pictures of the library are the only exceptions. No text is cut: a long message takes two lines in the same height.
+- **Buttons.** 44 px high or more, and no two buttons overlap. The top bar uses 54 px and the dialogs 58 px.
+- **The window.** Nothing goes past its sides. A dialog fits in it. Each rules page fits without scrolling in a window 620 px high or more.
+- **The fonts.** The pages use Segoe UI, the font of his PC. A wider font may make a rules page scroll, but must not cut text or push a button off the window.
+- **The windows to check:**
+  - his laptop in Edge, 1366 by 680 px;
+  - the same laptop with the text at 125 %, 1093 by 530 px;
+  - a 1920 by 1000 monitor, and the same monitor at 150 %, 1280 by 620 px;
+  - a phone, 390 by 760 px;
+  - the laptop and the monitor at the largest size of the size buttons, 130 % and 175 %.
+- **The longest message.** Try the longest kind of sentence the game says, for example "Vous pouvez déplacer 3 cartes à la fois pour le moment. Videz une case libre ou une colonne pour en déplacer plus."
 
 ## What the research said
 
