@@ -8,11 +8,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch: # "Run workflow" in the Actions tab tests and deploys main again
-# One run of main at a time, from the tests to the deploy, so an older commit never deploys after a newer one.
-# A new push to a pull request stops the run of the previous one.
+# One run per branch or pull request at a time. On main, a run waits for the one before it, so an older
+# commit never deploys after a newer one. Elsewhere, a new push stops the run of the previous one.
 concurrency:
-  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.ref) || 'main' }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
   test:
     runs-on: ubuntu-latest
