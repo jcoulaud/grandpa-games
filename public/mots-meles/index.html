@@ -97,6 +97,8 @@
     background: #fff; color: var(--text); font: 600 21px var(--ui); white-space: nowrap;
     border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,.25); font-variant-numeric: tabular-nums; }
   #count:empty { display: none; }
+  /* The counts and the size buttons take two rows when they do not fit in one. */
+  #rail { flex-wrap: wrap; }
 
   /* The rules: a small grid of five letters by five, with a word found. */
   .mini { --c: 34px; position: relative; display: grid; grid-template-columns: repeat(5, var(--c)); grid-auto-rows: var(--c); flex: none;
@@ -114,8 +116,6 @@
     #list { align-self: stretch; }
     .mini { --c: 28px; font-size: 20px; }
     #words { grid-auto-flow: row; grid-template-columns: 1fr 1fr; grid-template-rows: none; }
-    /* The two counts take two rows when they do not fit side by side. */
-    #rail { flex-wrap: wrap; }
   }
   @media (prefers-reduced-motion: no-preference) {
     .cell.hint::before { animation: ringIn .48s ease-out; }
@@ -254,15 +254,23 @@ const name = w => M.caps(G.words[w].word);
 const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
 const FULL = "La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.";
 
-/* ---------- Saves ---------- */
-async function save() {
-  const parts = [];
-  if (playing()) parts.push('Partie en cours');
-  if (stats.won) parts.push(plural(stats.won, 'grille finie', 'grilles finies'));
-  if (await GG.save('mots-meles', { v: 1, G, level, stats, recent, wonNow }, { summary: parts.join(' · ') })) return (saved = true);
-  saved = false;
-  if (!stale) Kit.say(FULL);
-  return false;
+/* ---------- Saves ----------
+   One save at a time, in order. Each one takes the state when its turn comes, so a save that follows a
+   failed win save never stores the win: onFail takes it back first. */
+let saving = Promise.resolve();
+function save(onFail) {
+  const run = saving.then(async () => {
+    const parts = [];
+    if (playing()) parts.push('Partie en cours');
+    if (stats.won) parts.push(plural(stats.won, 'grille finie', 'grilles finies'));
+    if (await GG.save('mots-meles', { v: 1, G, level, stats, recent, wonNow }, { summary: parts.join(' · ') })) return (saved = true);
+    saved = false;
+    onFail?.();
+    if (!stale) Kit.say(FULL);
+    return false;
+  });
+  saving = run.catch(() => false);
+  return run;
 }
 function load() {
   try {
@@ -290,7 +298,8 @@ function tap(i, x, y) {
   if (Kit.isOpen() || !G) return;
   const t = performance.now(), prev = lastTap;
   lastTap = { i, t, x, y };
-  if (prev && t - prev.t < 500 && (prev.i === i || Math.hypot(x - prev.x, y - prev.y) < 24)) return;
+  // Within 24 px, but less than half a square, so a tap on the next square of a small grid still counts.
+  if (prev && t - prev.t < 500 && (prev.i === i || Math.hypot(x - prev.x, y - prev.y) < Math.min(24, cell * Zoom.z() / 2))) return;
   if (G.result) return Kit.say('Cette grille est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.');
   if (anchor < 0) {
     anchor = i; render();
@@ -312,9 +321,9 @@ async function pair(a, b) {
     if (hintW === r.w) hintW = -1;
     const firstWin = G.result === 'won' && !wonNow;
     if (firstWin) { wonNow = true; stats.won++; }
-    const ok = await save();
+    // A win that could not be saved is not counted.
+    const ok = await save(firstWin ? () => { if (G === mine) wonNow = false; stats.won--; } : null);
     if (ok && firstWin) GG.track('mots-meles', 'won');
-    else if (!ok && firstWin) { wonNow = false; stats.won--; }
     if (G !== mine) return;
     render(r.w, a);
     if (G.result) return finish(!stale);
@@ -353,11 +362,14 @@ addEventListener('pointermove', e => {
 addEventListener('pointerup', e => {
   if (!press) return;
   const p = press, end = cellOf(e); press = null;
-  if (!p.moved) return tap(p.i, p.x, p.y);
+  // A press let go on its letter, or less than 16 px away, is a click. Farther, it is a drag, even when
+  // it crossed no other letter.
+  if (!p.moved && (end === p.i || Math.hypot(e.clientX - p.x, e.clientY - p.y) < 16)) return tap(p.i, p.x, p.y);
   lastTap = null;
   if (Kit.isOpen() || !G || G.result) return;
   if (end >= 0 && end !== p.i) return pair(p.i, end);
   // Let go outside the grid or back on the first letter: the first letter stays chosen.
+  if (anchor !== p.i) { anchor = p.i; render(); }
   Kit.say(`Vous avez choisi le ${G.grid[p.i]}. Cliquez maintenant sur la dernière lettre du mot.`);
 });
 addEventListener('pointercancel', () => { press = null; });
@@ -393,6 +405,7 @@ function showHint() {
 
 function askNewGame() { stopAll(); Kit.chooseLevel(level, playing(), newGame); }
 async function newGame(lv) {
+  pendingWin = null; clearTimeout(winTimer);
   stopAll(); lastTap = null; press = null;
   if (lv) level = lv;
   Kit.showLevel(level);
@@ -414,39 +427,45 @@ function finish(show) {
   if (!show) return;
   const wait = showWin();
   const game = G;
-  const open = () => {
+  pendingWin = () => {
     if (G !== game || stale) return;
-    // The rules opened during the wave: the win dialog waits until they close.
-    if (Kit.isOpen()) { later(open, 300); return; }
     // A grid that could not be saved is not counted: the dialog says why, as the message line did.
     Kit.dialog('Bravo, vous avez gagné !',
       `Vous avez trouvé les ${G.words.length} mots. ` + (saved ? `Grilles finies : ${stats.won}.` : FULL),
       [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', Kit.home]], true);
   };
-  if (!wait) return open();
-  pendingWin = open;
+  if (!wait) return openWin();
   later(endWave, wait);
 }
 
 /* ---------- Motions ----------
    Each motion is one function and one class of the style sheet. */
 function later(fn, ms) { const t = setTimeout(() => { timers = timers.filter(x => x !== t); fn(); }, ms); timers.push(t); return t; }
-let pendingWin;
+// The win dialog waits for the end of the wave and for the rules or another dialog to close. It stays
+// due until it opens or a new grid starts, because it carries the warning of a save that failed.
+let pendingWin = null, winTimer;
 function endWave() {
   sheet.classList.remove('wave');
+  openWin();
+}
+function openWin() {
+  clearTimeout(winTimer);
+  if (!pendingWin) return;
+  if (Kit.isOpen()) { winTimer = setTimeout(openWin, 300); return; }
   const open = pendingWin;
   pendingWin = null;
-  open?.();
+  open();
 }
 reducedMotion.addEventListener('change', () => {
   if (reducedMotion.matches && pendingWin) endWave();
 });
 function stopAll() {
-  pendingWin = null;
   clearWrong();
   bandsEl.querySelector('.try')?.remove();
   timers.forEach(clearTimeout); timers = [];
   sheet.classList.remove('wave', 'deal');
+  // A dialog opened during the wave cuts it short: the win dialog comes once it closes.
+  if (pendingWin) { clearTimeout(winTimer); winTimer = setTimeout(openWin, 300); }
 }
 // A new grid: the letters come in row by row.
 function showDeal() {
@@ -539,8 +558,9 @@ function layout() {
     sheet.style.setProperty('--lf', best.lf + 'px');
     wordsEl.style.setProperty('--rows', String(Math.ceil(G.words.length / best.cols)));
   }
-  // Letters large in their squares: 30 px at least while the squares allow it.
-  const f = Math.round(Math.min(cell * .9, Math.max(30, cell * .62)));
+  // Letters large in their squares: 30 px at least while the squares allow it. Not rounded down, so
+  // "Agrandir" never makes them smaller on the screen.
+  const f = Math.min(cell * .9, Math.max(30, cell * .62));
   sheet.style.setProperty('--c', cell + 'px');
   sheet.style.setProperty('--f', f + 'px');
   sheet.style.setProperty('--h', Math.round(cell * .8) + 'px');
@@ -593,7 +613,11 @@ function lanes() {
 }
 function render(just, start) {
   if (!G) return;
-  build(); layout();
+  build();
+  // The counts first: on two rows, the bottom bar leaves the grid less height.
+  $('count').textContent = `Mots trouvés : ${G.found.length} sur ${G.words.length}`;
+  $('wins').textContent = stats.won ? `Grilles finies : ${stats.won}` : '';
+  layout();
   const lane = lanes(), hintCell = hintW >= 0 ? M.cells(G, hintW)[0] : -1;
   cellEls.forEach((e, i) => {
     e.classList.toggle('anchor', i === anchor);
@@ -615,15 +639,13 @@ function render(just, start) {
     li.classList.toggle('hinted', w === hintW);
     if (k >= 0) { li.style.setProperty('--fill', pen(k)[0]); li.style.setProperty('--edge', pen(k)[1]); }
   });
-  $('count').textContent = `Mots trouvés : ${G.found.length} sur ${G.words.length}`;
-  $('wins').textContent = stats.won ? `Grilles finies : ${stats.won}` : '';
   $('undoBtn').disabled = !G.found.length || !!G.result;
   $('hintBtn').disabled = !!G.result;
 }
 
 $('undoBtn').onclick = undoClick;
 $('hintBtn').onclick = showHint;
-// The rules during the win wave let it end, so the win dialog still comes once they close.
+// The rules during the win wave let it end. The win dialog comes once they close.
 $('helpBtn').onclick = () => { if (!pendingWin) stopAll(); Kit.openHelp(); };
 $('newBtn').onclick = askNewGame;
 addEventListener('keydown', e => {

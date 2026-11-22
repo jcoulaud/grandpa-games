@@ -222,7 +222,7 @@ await wait(300);
 ok(await g(() => !Kit.isOpen() && G.level === 'moyen' && G.found.length === 1 && document.getElementById('level').textContent === 'Niveau moyen'), 'an old save without its level loads at the level of its size');
 
 // 13. The levels: their sizes, and the letters stay 30 px on his laptop.
-for (const [label, size, count] of [['Moyen', 11, 9], ['Difficile', 13, 12]]) {
+for (const [label, size, count] of [['Moyen', 11, 9], ['Difficile', 11, 12]]) {
   await page.click('#newBtn');
   await page.locator('#overBtns button', { hasText: label }).click();
   await wait(200);
@@ -243,10 +243,11 @@ const undoAcross = await g(async () => {
   await GG.flush?.();
   G = MotsMeles.find(G, 11); render();
   const real = GG.save;
-  let release;
-  GG.save = (...a) => new Promise(r => { release = () => r(real.apply(GG, a)); });
+  let release, called;
+  const reached = new Promise(r => { called = r; });
+  GG.save = (...a) => { GG.save = real; called(); return new Promise(r => { release = () => r(real.apply(GG, a)); }); };
   const u = undo();
-  GG.save = real;
+  await reached;
   newGame('facile');
   release();
   try { await u; } catch (e) { return e.message; }
@@ -265,7 +266,10 @@ await page.close();
 
 // 14. The layout at every window: nothing past the sides, no text under 20 px, buttons of 44 px, the rules
 // without scrolling in a window 620 px high or more.
-const WINDOWS = [[1366, 680, 1], [1093, 530, 1], [1920, 1000, 1], [1280, 620, 1], [390, 760, 1], [1366, 680, 1.3], [1920, 1000, 1.75]];
+// A 768 px window too, where the two counts and the size buttons need two rows.
+const WINDOWS = [[1366, 680, 1], [1093, 530, 1], [1920, 1000, 1], [1280, 620, 1], [390, 760, 1], [1366, 680, 1.3], [1920, 1000, 1.75], [768, 680, 1]];
+// The letters on his laptop, in pixels of the screen, at each level and size: "Agrandir" never makes them smaller.
+const laptop = {};
 for (const [w, h, z] of WINDOWS) {
   const phone = w < 700;
   const p = await browser.newPage(phone ? { viewport: { width: w, height: h }, isMobile: true, hasTouch: true } : { viewport: { width: w, height: h } });
@@ -292,7 +296,7 @@ for (const [w, h, z] of WINDOWS) {
     const r = await p.evaluate(phone => {
       const inside = (e, box) => { const a = e.getBoundingClientRect(), b = box.getBoundingClientRect(); return a.left >= b.left - 1 && a.right <= b.right + 1 && a.top >= b.top - 1 && a.bottom <= b.bottom + 1; };
       const sheet = document.getElementById('sheet'), table = document.getElementById('table');
-      const wide = document.scrollingElement.scrollWidth <= document.scrollingElement.clientWidth + 1 && [...document.querySelectorAll('#bar, #say, #table, #rail, #sheet, #wins, #count')].filter(e => e.getClientRects().length).every(e => e.getBoundingClientRect().right <= innerWidth + 1);
+      const wide = document.scrollingElement.scrollWidth <= document.scrollingElement.clientWidth + 1 && [...document.querySelectorAll('#bar, #say, #table, #rail, #sheet, #wins, #count, .zoom button')].filter(e => e.getClientRects().length).every(e => e.getBoundingClientRect().right <= innerWidth + 1);
       const fits = phone ? sheet.getBoundingClientRect().right <= table.getBoundingClientRect().right + 1 : inside(sheet, table);
       const listApart = (() => { const a = document.getElementById('board').getBoundingClientRect(), b = document.getElementById('list').getBoundingClientRect(); return a.right <= b.left + 1 || a.bottom <= b.top + 1; })();
       const small = [];
@@ -316,12 +320,87 @@ for (const [w, h, z] of WINDOWS) {
     }, phone);
     const good = r.wide && r.fits && r.listApart && !r.small.length && !r.cut.length && !r.lowButton && !r.overlap && r.msg && r.f >= 20;
     ok(good, `${tag} ${label}: fits, letters ${r.f} px` + (good ? '' : ' ' + JSON.stringify(r)));
+    if (w === 1366) (laptop[label] ??= {})[z] = r.f * z;
     await p.screenshot({ path: `${OUT}/mots-meles-${w}x${h}-${z}-${label.toLowerCase()}.png` });
   }
   // The dialogs fit in the window.
   await p.click('#newBtn');
   ok(await p.evaluate(() => { const b = document.getElementById('box').getBoundingClientRect(); return b.top >= 0 && b.bottom <= innerHeight + 1 && b.left >= 0 && b.right <= innerWidth + 1; }), `${tag}: the level dialog fits`);
   await p.close();
+}
+
+for (const [label, at] of Object.entries(laptop))
+  ok(at[1] >= 30 && at[1.3] >= at[1], `${label} on his laptop: letters of ${at[1].toFixed(1)} px at 100 % and ${at[1.3].toFixed(1)} px at 130 % of the screen`);
+
+// 14b. Slips found in the second review.
+{
+  const p = await browser.newPage({ viewport: { width: 1366, height: 680 } });
+  p.on('pageerror', e => errors.push(e.message));
+  await p.goto(URL);
+  await p.evaluate(() => Kit.closeHelp());
+  await p.getByRole('button', { name: 'Facile', exact: true }).click();
+  const at = async i => { const b = await p.locator(`.cell[data-i="${i}"]`).boundingBox(); return [b.x + b.width / 2, b.y + b.height / 2]; };
+  const pmsg = () => p.evaluate(() => document.getElementById('msg').textContent);
+  // A press on the last letter, dragged straight out of the grid without crossing a letter, is not a click.
+  const [a, b] = await p.evaluate(() => { const c = MotsMeles.cells(G, 0); return [c[0], c[c.length - 1]]; });
+  await p.locator(`.cell[data-i="${a}"]`).click(); await p.mouse.move(5, 5); await p.waitForTimeout(560);
+  const board = await p.locator('#board').boundingBox();
+  await p.mouse.move(...await at(b)); await p.mouse.down();
+  await p.mouse.move(board.x + board.width + 80, board.y - 40, { steps: 1 }); await p.mouse.up();
+  await p.mouse.move(5, 5); await p.waitForTimeout(560);
+  ok(await p.evaluate(b => !G.found.includes(0) && anchor === b, b) && /Vous avez choisi/.test(await pmsg()), 'a press dragged out of the grid finds nothing: its letter becomes the first letter');
+  await p.locator(`.cell[data-i="${b}"]`).click(); await p.mouse.move(5, 5); await p.waitForTimeout(560);
+
+  // A save that waits while a new grid starts: when the win cannot be saved, the next grid does not keep it.
+  const won = await p.evaluate(async () => {
+    newGame('fort');
+    await saving;
+    const before = stats.won;
+    for (let k = 0; k < G.words.length - 1; k++) G = MotsMeles.find(G, k);
+    render();
+    const real = GG.save;
+    let release, called;
+    const reached = new Promise(r => { called = r; });
+    GG.save = () => { GG.save = real; called(); return new Promise(r => { release = () => r(false); }); };
+    const c = MotsMeles.cells(G, G.words.length - 1);
+    const done = pair(c[0], c[c.length - 1]);
+    await reached;
+    newGame('facile');
+    release();
+    await done; await saving; await GG.flush();
+    return { before, now: stats.won, stored: GG.load('mots-meles').stats?.won ?? 0 };
+  });
+  ok(won.now === won.before && won.stored === won.before, 'a win whose save failed is not stored by the next grid: ' + JSON.stringify(won));
+
+  // The level dialog opened during the win wave and closed: the win dialog still comes.
+  const winNow = () => p.evaluate(() => { for (let k = 0; k < G.words.length - 1; k++) G = MotsMeles.find(G, k); render(); const c = MotsMeles.cells(G, G.words.length - 1); return pair(c[0], c[c.length - 1]); });
+  const bravo = () => p.waitForFunction(() => document.getElementById('over').classList.contains('on') && /Bravo, vous avez gagné/.test(document.getElementById('overTitle').textContent), null, { timeout: 4000 }).then(() => true, () => false);
+  await winNow();
+  await p.click('#newBtn');
+  await p.keyboard.press('Escape');
+  ok(await bravo(), 'the level dialog closed during the win wave does not lose the win dialog');
+  await p.keyboard.press('Escape');
+  // The rules opened during the wave, then closed and opened again at once once it ended: the win dialog still comes.
+  await p.evaluate(() => newGame('facile'));
+  await winNow();
+  await p.click('#helpBtn');
+  await p.waitForFunction(() => !document.getElementById('sheet').classList.contains('wave'));
+  await p.evaluate(() => { Kit.closeHelp(); document.getElementById('helpBtn').click(); });
+  await p.click('#helpClose');
+  ok(await bravo(), 'the rules closed and opened again after the wave do not lose the win dialog');
+  await p.close();
+
+  // On a small phone, a tap on the next square within half a second is a new tap, not a double-click.
+  const ph = await browser.newPage({ viewport: { width: 280, height: 640 }, isMobile: true, hasTouch: true });
+  ph.on('pageerror', e => errors.push(e.message));
+  await ph.goto(URL);
+  await ph.evaluate(() => { Kit.closeHelp(); Kit.closeDialog(); newGame('fort'); });
+  const tapAt = async i => { const r = await ph.locator(`.cell[data-i="${i}"]`).boundingBox(); await ph.touchscreen.tap(r.x + r.width / 2, r.y + r.height / 2); return r.width; };
+  const width = await tapAt(0);
+  await ph.waitForTimeout(150);
+  await tapAt(1);
+  ok(width < 24 && await ph.evaluate(() => !/Vous avez choisi/.test(document.getElementById('msg').textContent)), `on a 280 px phone, squares of ${width.toFixed(0)} px: a tap on the next square within half a second counts`);
+  await ph.close();
 }
 
 // 15. With reduced motion, the win still comes, at once.

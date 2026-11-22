@@ -17,7 +17,7 @@
   const LEVELS = {
     facile: { sizes: [8, 9], words: 6, min: 4, max: 6, dirs: [RIGHT, DOWN] },
     moyen: { sizes: [11], words: 9, min: 4, max: 8, dirs: [RIGHT, DOWN, DOWN_RIGHT, UP_RIGHT] },
-    fort: { sizes: [13], words: 12, min: 5, max: 10, dirs: ALL },
+    fort: { sizes: [11], words: 12, min: 5, max: 10, dirs: ALL },
   };
 
   // A word as the grid writes it: capitals without accents. "Châtaigne" becomes CHATAIGNE.
@@ -263,10 +263,10 @@
     return total;
   }
 
-  // A save without its level, or with a level this file does not know, takes the level of its size.
+  // A save without its level, or with a level this file does not know, takes the level of its size and its number of words.
   function withLevel(G) {
     if (!G || typeof G !== 'object' || Object.hasOwn(LEVELS, G.level)) return G;
-    const level = Object.keys(LEVELS).find(k => LEVELS[k].sizes.includes(G.size));
+    const level = Object.keys(LEVELS).find(k => LEVELS[k].sizes.includes(G.size) && G.words?.length === LEVELS[k].words);
     return level ? { ...G, level } : G;
   }
 
