@@ -94,7 +94,8 @@ await page.screenshot({ path: `${OUT}/ddp-received.png` });
 await myTurn();
 ok(await g(() => document.getElementById('mySlot').classList.contains('on') && document.getElementById('seat0').classList.contains('turn')
   && document.getElementById('seat0').textContent.includes('À vous de jouer')), 'his turn shows on the table: his place in the trick and his seat');
-ok(await g(() => { const v = document.getElementById('seat0').getBoundingClientRect(), c = document.querySelector('.card.hand').getBoundingClientRect(); return v.bottom <= c.top && v.left >= c.left - 1; }),
+// The leftmost card of his hand: the cards he received are sorted in, so it is not always the first in the page.
+ok(await g(() => { const v = document.getElementById('seat0').getBoundingClientRect(), c = [...document.querySelectorAll('.card.hand')].map(e => e.getBoundingClientRect()).sort((p, q) => p.left - q.left)[0]; return v.bottom <= c.top && v.left >= c.left - 1; }),
   'his seat sits above the left end of his hand');
 const bad = await g(() => G.hands[0].find(c => DDP.refusal(G, c)));
 if (bad !== undefined) {
