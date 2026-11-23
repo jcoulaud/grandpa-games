@@ -423,7 +423,7 @@ const LONG = "Ici, vous alignez quatre croix libres aux deux bouts : l’ordinat
 for (const [w, h, z] of WINDOWS) {
   const p = await browser.newPage({ viewport: { width: w, height: h }, ...(w < 700 ? { isMobile: true, hasTouch: true } : {}) });
   p.on('pageerror', e => errors.push(e.message));
-  await p.addInitScript(z => localStorage.setItem('gg:zoom', JSON.stringify(z)), z);
+  await p.addInitScript(z => localStorage.setItem('gg:size', JSON.stringify(z)), z);
   await p.goto(URL);
   await p.waitForTimeout(300);
   const label = `${w}x${h}${z !== 1 ? ' at ' + z * 100 + ' %' : ''}`;

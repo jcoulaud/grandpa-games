@@ -36,7 +36,7 @@ try {
   ];
   const setSize = async (width, height, zoom) => {
     await page.setViewportSize({ width, height });
-    await page.evaluate((z) => localStorage.setItem('gg:zoom', JSON.stringify(z)), zoom);
+    await page.evaluate((z) => localStorage.setItem('gg:size', JSON.stringify(z)), zoom);
     await page.reload();
   };
   await page.goto('http://localhost/golf/');

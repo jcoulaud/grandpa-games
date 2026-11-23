@@ -14,7 +14,8 @@
 // fits. A page starts at the smallest size, 80 %. A phone always stays at 100 %.
 (() => {
   'use strict';
-  const KEY = 'gg:zoom';
+  // A new name, so a size kept under 'gg:zoom' before the 80 % start is forgotten once.
+  const KEY = 'gg:size';
   const STEPS = [0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.5, 1.75, 2];
   const read = () => { try { const v = +JSON.parse(localStorage.getItem(KEY)); return STEPS.includes(v) ? v : STEPS[0]; } catch (e) { return STEPS[0]; } };
   const write = v => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} };

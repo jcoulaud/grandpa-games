@@ -424,7 +424,7 @@ for (const [w, h, z] of sizes) {
   const phone = w < 700;
   const p = await browser.newPage({ viewport: { width: w, height: h }, reducedMotion: 'reduce', ...(phone ? { isMobile: true, hasTouch: true } : {}) });
   await p.goto(URL);
-  await p.evaluate(z => { localStorage.setItem('gg:zoom', String(z)); }, z);
+  await p.evaluate(z => { localStorage.setItem('gg:size', String(z)); }, z);
   await p.reload();
   await p.waitForTimeout(300);
   const name = `${w}x${h}${z !== 1 ? ' at ' + z * 100 + ' %' : ''}`;
@@ -520,7 +520,7 @@ for (const [w, h, z] of sizes) {
 }
 const cellAt = await (async () => {
   const p = await browser.newPage({ viewport: { width: 1920, height: 1000 }, reducedMotion: 'reduce' });
-  await p.goto(URL); await p.evaluate(() => { localStorage.setItem('gg:zoom', '1'); Kit.closeHelp(); });
+  await p.goto(URL); await p.evaluate(() => { localStorage.setItem('gg:size', '1'); Kit.closeHelp(); });
   await p.getByRole('button', { name: 'Facile', exact: true }).click();
   const c = await p.evaluate(() => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell')));
   await p.close();

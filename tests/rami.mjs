@@ -330,7 +330,7 @@ const sizes = [[1366, 680, 1], [1093, 530, 1], [1920, 1000, 1], [1280, 620, 1], 
 for (const [w, h, z] of sizes) {
   const p = await browser.newPage({ viewport: { width: w, height: h }, reducedMotion: 'reduce' });
   watch(p);
-  await p.addInitScript(z => localStorage.setItem('gg:zoom', JSON.stringify(z)), z);
+  await p.addInitScript(z => localStorage.setItem('gg:size', JSON.stringify(z)), z);
   page = p;
   await p.goto(URL); await wait(300);
   const name = `${w}x${h}${z > 1 ? ' at ' + z * 100 + ' %' : ''}`;

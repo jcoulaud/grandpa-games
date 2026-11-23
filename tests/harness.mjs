@@ -37,7 +37,7 @@ export function useFont({ everywhere = false, ...faces }) {
 
 // A page starts at 80 % (lib/zoom.js), but the layout checks were written for 100 %: a page with no size saved
 // gets 100 %. tests/zoom.mjs passes { zoom: false } to see the real default.
-const atFullSize = () => { if (localStorage.getItem('gg:zoom') === null) localStorage.setItem('gg:zoom', '1'); };
+const atFullSize = () => { if (localStorage.getItem('gg:size') === null) localStorage.setItem('gg:size', '1'); };
 
 // CHROMIUM can name a browser binary when Playwright's own download is missing.
 export async function launch({ zoom = true } = {}) {
