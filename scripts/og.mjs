@@ -47,8 +47,8 @@ body { position: relative; font-family: Lexend, sans-serif; color: #fff;
 .brand img { width: 52px; height: 52px; border-radius: 50%; box-shadow: 0 4px 12px rgb(0 0 0 / .3); }
 h1 { margin: auto 0 0; font: 700 66px/1.06 Lexend; letter-spacing: -.02em; text-wrap: balance; }
 h1 em { font-style: normal; color: #FFC83D; }
-p { margin: 22px 0 auto; max-width: 500px; padding-bottom: 40px; font: 500 30px/1.33 Lexend; color: rgb(255 255 255 / .9); }
-.site { position: absolute; right: 40px; bottom: 34px; padding: 8px 20px; border-radius: 999px; background: #0F4F47; box-shadow: 0 6px 18px rgb(0 0 0 / .35); font: 700 26px Lexend; color: rgb(255 244 214 / .95); }
+p { margin: 24px 0 auto; max-width: 500px; font: 500 36px/1.3 Lexend; color: rgb(255 255 255 / .9); }
+.site { font: 700 28px Lexend; color: rgb(255 244 214 / .85); }
 .wall { position: absolute; left: 650px; top: 50%; display: grid; grid-template-columns: repeat(3, 176px); gap: 16px; translate: 0 -50%; rotate: -8deg; }
 .wall img { width: 176px; border-radius: 16px; box-shadow: 0 2px 4px rgb(0 0 0 / .2), 0 12px 26px rgb(0 0 0 / .35); }
 .wall img:nth-child(3n + 2) { translate: 0 46px; }
@@ -56,9 +56,8 @@ p { margin: 22px 0 auto; max-width: 500px; padding-bottom: 40px; font: 500 30px/
 <div class="wall">${art.map((src) => `<img src="${src}" alt="">`).join('')}</div>
 <div class="text"><div class="brand"><img src="${new URL('icons/logo.webp', root).href}" alt="">Jeux de Papi</div>
 <h1>Des jeux classiques <em>à votre rythme</em></h1>
-<p>Belote, solitaire, dames, billard et bien d’autres. Simples et sans publicité.</p>
-</div>
-<div class="site">jeux-papi.fr</div>
+<p>Simples et sans publicité.</p>
+<div class="site">jeux-papi.fr</div></div>
 </body></html>`;
 
 mkdirSync(new URL('og/jeux/', root), { recursive: true });
