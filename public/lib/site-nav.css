@@ -48,7 +48,7 @@
 .site-nav-links > a:hover, .site-menu > summary:hover, .site-menu[open] > summary { opacity: 1; text-decoration-line: underline; }
 .site-nav-links > a[aria-current="page"], .site-menu.is-current > summary { opacity: 1; font-weight: 700; text-decoration-line: underline; }
 
-/* The rules menu uses a two-column grid when there is room for the game names. */
+/* The rules menu uses more columns when there is room for the game names. */
 .site-menu { position: relative; }
 .site-menu > summary { list-style: none; cursor: pointer; }
 .site-menu > summary::-webkit-details-marker { display: none; }
@@ -104,6 +104,11 @@
 .site-menu-panel a:focus-visible { outline-color: #1b2422; outline-offset: -3px; }
 .site-menu-panel a[aria-current="page"] { background: #f3efe4; }
 .site-menu-panel img { flex: none; width: 40px; height: 40px; border-radius: 9px; }
+
+@media (min-width: 900px) {
+  .site-menu-panel { width: 700px; }
+  .site-menu[open] .site-menu-panel { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 
 /* A phone: smaller words. The name may take two lines, never the links. */
 @media (max-width: 699px) {

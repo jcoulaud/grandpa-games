@@ -102,6 +102,8 @@ li + li { margin-top: .55rem; }
   object-fit: contain;
 }
 
+.rules-art-icon img { width: min(100%, 15rem); margin-inline: auto; }
+
 /* "Jouer": one word on one line, a flat yellow key. Its label names the game for a screen reader. */
 .play {
   display: inline-flex;
@@ -431,3 +433,13 @@ figcaption { padding: 1rem 1.25rem 1.15rem; color: #2c3633; font-size: 19px; lin
   font: clamp(2.4rem, 8vw, 4.25rem)/1 system-ui, sans-serif;
 }
 .example-table.huit-example { background: #682047; }
+
+.worked-example dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: 1px;
+  margin: 0;
+}
+.worked-example dl > div { padding: .85rem 1rem; background: var(--card); }
+.worked-example dt { font-weight: 500; }
+.worked-example dd { margin: .25rem 0 0; color: var(--guide-ink); font-weight: 700; }
