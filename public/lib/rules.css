@@ -102,6 +102,8 @@ li + li { margin-top: .55rem; }
   object-fit: contain;
 }
 
+.rules-art-icon img { width: min(100%, 15rem); margin-inline: auto; }
+
 /* "Jouer": one word on one line, a flat yellow key. Its label names the game for a screen reader. */
 .play {
   display: inline-flex;
