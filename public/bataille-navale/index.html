@@ -288,6 +288,7 @@
   }
 </style>
 <script src="../lib/zoom.js"></script>
+<script src="../lib/sound.js"></script>
 <script src="../lib/ph.js"></script>
 </head>
 <body>
@@ -485,6 +486,7 @@ const SCOPE = '<svg viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="3
 // The first blast is on the square shot. A sinking sets off up to two more along the ship.
 const WORDS = { eau: 'Plouf !', touche: 'Touché !', coule: 'Coulé !' };
 function word(k, i, { kind, ship }) {
+  later(() => window.Sound?.play(kind === 'eau' ? 'splash' : 'boom'), REDUCED ? 0 : 450);
   if (REDUCED) return;
   const layer = effects[k], square = squares[k][i];
   layer.querySelectorAll('.word, .impact').forEach(e => e.remove());
@@ -526,7 +528,7 @@ async function fireAt(i) {
   if (saved) say((told ? told + ' ' : '') + theirs + ' À vous.');
   told = '';
 }
-function refuse(k, i, text) { shake(k, i); say(text); return false; }
+function refuse(k, i, text) { shake(k, i); window.Sound?.play('bad'); say(text); return false; }
 
 /* ---------- End of the game ---------- */
 function finish(show) {
@@ -537,6 +539,7 @@ function finish(show) {
   // A result that could not be saved keeps the warning on the message line, and the dialog says it.
   const lost = saved ? '' : " Attention : la partie n'a pas pu être enregistrée, la mémoire de l'ordinateur est pleine.";
   const tell = text => { if (saved) say(text); };
+  if (show) later(() => window.Sound?.play(G.result === 'won' ? 'win' : 'lose'), REDUCED ? 300 : 1200);
   if (G.result === 'won') {
     tell(`Bravo, vous avez gagné : les cinq bateaux de l'ordinateur sont coulés, en ${fired(1)} tirs.`);
     if (show) dialog('Bravo, vous avez gagné !', `Vous avez coulé les cinq bateaux de l'ordinateur en ${fired(1)} tirs.${!wonNow ? '' : stats.won === 1 ? " C'est votre première victoire." : ` C'est votre ${stats.won}e victoire.`}${lost}`,

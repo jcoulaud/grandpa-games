@@ -104,6 +104,7 @@
   @media (prefers-reduced-motion: reduce) { .mark.hint { animation: none; } }
 </style>
 <script src="../lib/zoom.js"></script>
+<script src="../lib/sound.js"></script>
 <script src="../lib/ph.js"></script>
 </head>
 <body>
@@ -376,6 +377,7 @@ function moveCards(loc, dst) {
     if (dst.a === 'cell') S.cells[dst.i] = cards[0];
     else (dst.a === 'found' ? S.found[dst.i] : S.tab[dst.i]).push(...cards);
   }, text);
+  window.Sound?.play('card');
   flash(ids);
 }
 let landT = 0;
@@ -390,6 +392,7 @@ function choose(id) {
   if (!destinations(loc).length) {
     clearSel(); render();
     setMsg(stuckMsg(id));
+    window.Sound?.play('bad');
     return shake(E[id]);
   }
   clearSel(); sel = id;
@@ -418,7 +421,7 @@ function onTap(id, pile) {
   // Another card that can move: play it instead. Otherwise explain the refusal.
   if (id !== null && selectable(id) && destinations(locate(id)).length) return take(id);
   if (samePile(pile, pileAt(loc))) return unchoose();
-  setMsg(why(loc, pile));
+  setMsg(why(loc, pile)); window.Sound?.play('bad');
 }
 
 // Sends safe cards home one by one, and finishes the game once every column is in order.
@@ -446,6 +449,7 @@ function autoStep() {
       autoId = null;
       S.found[st(id)].push(lift(loc)[0]);
       autoCount++;
+      window.Sound?.play('card');
       if (!finishing && !REDUCED) { E[id].classList.add('slow'); setTimeout(() => E[id].classList.remove('slow'), FLY_MS); }
       render({ slow: !finishing }); save();
       if (!finishing) flash([id]);
@@ -464,6 +468,7 @@ function checkStuck() {
   if (S.stuckShown || isWon()) return;
   if (sMoves(toSolver()).length) return;
   S.stuckShown = true; save();
+  window.Sound?.play('lose');
   dialog('Plus aucun coup possible', 'Aucune carte ne peut plus bouger.',
     [['Revenir en arrière', backToWinnable, true], ['Nouvelle partie', askNewGame]]);
 }
@@ -477,6 +482,7 @@ function checkLost() {
   lostDialog();
 }
 function lostDialog() {
+  window.Sound?.play('lose');
   dialog('Partie perdue', 'Cette partie ne peut plus être gagnée. « Revenir en arrière » annule vos derniers coups.',
     [['Revenir en arrière', backToWinnable, true], ['Nouvelle partie', askNewGame]]);
 }
@@ -495,6 +501,7 @@ async function newGame(nextLevel = level) {
   // A stale window cannot save, so it does not count a game either.
   const written = save();
   setMsg(HELLO);
+  window.Sound?.play('deal');
   render({ deal: true });
   dealT = setTimeout(() => { busy = false; autoStep(); }, REDUCED ? 100 : 2200);
   if (await written) GG.track('freecell', 'start');
@@ -511,7 +518,7 @@ function doUndo() {
   clearTimeout(autoT); clearTimeout(winT);
   restore(undo.pop());
   lastTap = null; flash([]);
-  clearSel(); setMsg('Coup annulé.'); render(); save();
+  clearSel(); setMsg('Coup annulé.'); render(); save(); window.Sound?.play('card');
   if (isWon()) autoStep();
 }
 // Undo until the solver finds a way to win again.
@@ -738,7 +745,7 @@ function shake(el) { el.classList.remove('shake'); void el.offsetWidth; el.class
 function celebrate() {
   if (S.done) return;
   S.done = true;
-  save(); render();
+  save(); render(); window.Sound?.play('win');
   setMsg('Bravo, vous avez gagné !');
   // The four finished piles hop one after the other, twice.
   if (!REDUCED) S.found.forEach((f, s) => E[last(f)].animate(
@@ -808,7 +815,7 @@ addEventListener('pointerup', e => {
   if (hit && destinations(d.loc).some(t => samePile(t, hit))) return moveCards(d.loc, hit);
   // A missed drop puts the cards back and keeps them chosen.
   render();
-  if (hit && !samePile(hit, pileAt(d.loc))) setMsg(why(d.loc, hit));
+  if (hit && !samePile(hit, pileAt(d.loc))) { setMsg(why(d.loc, hit)); window.Sound?.play('bad'); }
 });
 addEventListener('pointercancel', e => {
   if (!drag || e.pointerId !== drag.pointer) return;

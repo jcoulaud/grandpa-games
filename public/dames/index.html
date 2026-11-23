@@ -214,6 +214,7 @@
   }
 </style>
 <script src="../lib/zoom.js"></script>
+<script src="../lib/sound.js"></script>
 <script src="../lib/ph.js"></script>
 </head>
 <body>
@@ -430,6 +431,7 @@ function select(n) {
   const ms = legal(), mine = ms.filter(m => m.from === n);
   if (!mine.length) {
     shake(n);
+    window.Sound?.play('bad');
     if (ms.length && ms[0].caps.length) {
       const where = mustTake().length > 1 ? 'sur une des pièces entourées' : 'sur la pièce entourée';
       return say(Dames.capturesFrom(G.b, n).length ? `Il faut prendre le plus de pièces possible : cliquez ${where}.`
@@ -459,14 +461,14 @@ function tap(n) {
     if (n === sel.from) { sel = null; hint = null; say(turnMessage()); return render(); }
     if (v > 0) return select(n);
     if (v < 0 && routesFrom(sel.from, []).some(x => x.r.caps[0] === n)) return say('Cliquez sur une case entourée de jaune, derrière la pièce à prendre.');
-    if (v < 0) return say("Cette pièce est à l'ordinateur : vous jouez les blancs.");
-    if (legal()[0].caps.length) return say('Vous devez prendre : cliquez sur une case entourée de jaune.');
+    if (v < 0) { window.Sound?.play('bad'); return say("Cette pièce est à l'ordinateur : vous jouez les blancs."); }
+    if (legal()[0].caps.length) { window.Sound?.play('bad'); return say('Vous devez prendre : cliquez sur une case entourée de jaune.'); }
     return say(Math.abs(G.b[sel.from]) === 1 ? "Un pion avance d'une case en diagonale vers l'avant : cliquez sur une case entourée de jaune." : 'Cliquez sur une case entourée de jaune.');
   }
   if (v > 0) return select(n);
-  if (v < 0) return say("Cette pièce est à l'ordinateur : vous jouez les blancs.");
+  if (v < 0) { window.Sound?.play('bad'); return say("Cette pièce est à l'ordinateur : vous jouez les blancs."); }
   const must = mustTake();
-  if (must.length) return say(must.length > 1 ? 'Vous devez prendre : cliquez d\'abord sur une pièce entourée.' : "Vous devez prendre : cliquez d'abord sur la pièce entourée.");
+  if (must.length) { window.Sound?.play('bad'); return say(must.length > 1 ? 'Vous devez prendre : cliquez d\'abord sur une pièce entourée.' : "Vous devez prendre : cliquez d'abord sur la pièce entourée."); }
   say("Cliquez d'abord sur une de vos pièces.");
 }
 
@@ -485,6 +487,7 @@ function reach(n) {
   if (hint && !(hint.r.path.slice(0, sel.path.length).every((s, i) => s === sel.path[i]))) hint = null;
   const done = routesFrom(sel.from, sel.path).find(x => x.r.path.length === sel.path.length);
   if (done) { commit(done.m, done.r, k0); return true; }
+  window.Sound?.play('piece');
   say(chosenMessage()); render(); save();
   return true;
 }
@@ -498,6 +501,7 @@ function showHops(before, m, r, k, o, done) {
   const hop = () => {
     if (my !== gen) return;
     render({ shown: before, moving: m.from, at: steps[k], taken: r.caps.slice(0, k), slide: k > k0, from: o.from });
+    if (k > k0) { const c = r.caps[k - 1]; later(() => window.Sound?.play(c ? 'capture' : 'piece'), REDUCED ? 0 : 380); }
     if (k++ < r.path.length) return later(hop, k === k0 + 1 ? o.first : o.each);
     later(() => { if (my === gen) done(); }, o.end);
   };
@@ -603,6 +607,8 @@ function finish(show) {
   const title = r.winner === WHITE ? 'Bravo, vous avez gagné !' : r.winner === BLACK ? "L'ordinateur a gagné" : 'Partie nulle';
   say(title.replace(/ !$/, '') + ' : ' + resultText().charAt(0).toLowerCase() + resultText().slice(1));
   if (!show) return;
+  // After the last landing's sound.
+  if (r.winner) later(() => window.Sound?.play(r.winner === WHITE ? 'win' : 'lose'), 450);
   const back = ['Annuler le dernier coup', doUndo];
   const games = ['Retour aux jeux', Kit.home];
   if (r.winner === WHITE) {

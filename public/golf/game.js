@@ -81,6 +81,7 @@ function render(message) {
 function aim(p, advice = false) {
   if (blocked()) return;
   if (!p) {
+    window.Sound?.play('bad');
     Kit.say('Cliquez sur le gazon, à l’intérieur des bords.');
     return;
   }
@@ -103,6 +104,7 @@ function aim(p, advice = false) {
 function step(by) {
   if (blocked()) return;
   if (!target) {
+    window.Sound?.play('bad');
     Kit.say('Visez d’abord : tirez la balle en arrière, ou cliquez sur le gazon.');
     return;
   }
@@ -309,6 +311,7 @@ async function shoot() {
   if (!target) return;
   busy = true;
   const shot = play(game, target);
+  window.Sound?.play('hit');
   target = null;
   $('shoot').disabled = true;
   $('undoBtn').disabled = $('hintBtn').disabled = true;
@@ -348,6 +351,7 @@ async function shoot() {
           ' du trou.'
   );
   if (written) {
+    if (end && sum() <= totalPar()) window.Sound?.play('win');
     if (end) card(true);
   } else if (!stale) Kit.say('La partie ne peut pas être enregistrée sur cet appareil.');
   busy = false;

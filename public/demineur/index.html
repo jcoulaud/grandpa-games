@@ -21,6 +21,7 @@
 <link rel="stylesheet" href="../lib/kit.css">
 <link rel="stylesheet" href="style.css">
 <script src="../lib/zoom.js"></script>
+<script src="../lib/sound.js"></script>
 <script src="../lib/ph.js"></script>
 </head>
 <body>
@@ -151,6 +152,7 @@ const flagsLeft = () => G.mines - D.flags(G);
 async function play(next, text) {
   undo.push(JSON.stringify(G));
   const first = G.first < 0;
+  window.Sound?.play(next.result === 'lost' ? 'boom' : !next.result && D.flags(next) !== D.flags(G) ? 'piece' : 'flip');
   G = next; hint = null;
   // A win counts once, and only when it is saved: a stale window cannot count it a second time.
   const firstWin = G.result === 'won' && !wonNow;
@@ -208,7 +210,7 @@ function tap(i, how) {
     : opened > 1 ? 'Plusieurs cases se sont ouvertes : une case sans chiffre ne touche aucune mine. ' + nextText() : nextText());
 }
 const nextText = () => 'À vous : ouvrez une case sûre, ou posez un drapeau sur une mine.';
-function refuse(i, text) { shake(i); say(text); }
+function refuse(i, text) { shake(i); window.Sound?.play('bad'); say(text); }
 
 function setArming(on) {
   arming = on;
@@ -230,6 +232,7 @@ function finish(show) {
   const still = reduced();
   // The dialog waits for the end of the animation, and does not replace the rules or the level choice opened meanwhile.
   const after = (open, ms) => later(() => { if (!Kit.isOpen()) open(); }, still ? 0 : ms);
+  if (show) later(() => window.Sound?.play(G.result === 'won' ? 'win' : 'lose'), G.result === 'won' ? 300 : 900);
   if (G.result === 'won') {
     say(`Bravo, vous avez gagné : les ${G.mines} mines sont trouvées.`);
     if (show) after(() => Kit.dialog('Bravo, vous avez gagné !', `Vous avez trouvé les ${G.mines} mines sans en toucher une.${!wonNow ? '' : stats.won === 1 ? " C'est votre première victoire." : ` C'est votre ${stats.won}e victoire.`}`,

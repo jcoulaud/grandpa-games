@@ -852,6 +852,7 @@ export function createScene(canvas) {
   }
   function animate(result, settled, nextRack, replace) {
     if (reduced()) {
+      if (result.count) setTimeout(() => window.Sound?.play('pins'), 600);
       settled();
       return Promise.resolve();
     }
@@ -865,6 +866,9 @@ export function createScene(canvas) {
       end = back + 0.8;
     const keep = new Set(result.standing.map((p) => p.id));
     const last = frames.at(-1);
+    // The pins sound once, at the first frame where a pin has moved.
+    const hit = frames.findIndex((fr) => fr.pins.some((q, k) => Math.hypot(q.x - frames[0].pins[k].x, q.z - frames[0].pins[k].z) > 0.002));
+    let knocked = hit < 0;
     const ease = (time, from, to) => {
       const k = T.MathUtils.clamp((time - from) / (to - from), 0, 1);
       return k * k * (3 - 2 * k);
@@ -911,6 +915,10 @@ export function createScene(canvas) {
         } else cameraAt(deckEye, deckLook, 1);
         canvas.dataset.phase = t < impact ? 'roll' : t < hold ? 'impact' : 'hold';
         if (t >= impact) showPins(frame.pins, next.pins, f);
+        if (!knocked && u >= hit) {
+          knocked = true;
+          window.Sound?.play('pins');
+        }
         if (t >= hold && !announced) {
           announced = true;
           settled();

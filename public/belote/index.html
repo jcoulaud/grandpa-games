@@ -333,6 +333,7 @@
   }
 </style>
 <script src="../lib/zoom.js"></script>
+<script src="../lib/sound.js"></script>
 <script src="../lib/ph.js"></script>
 </head>
 <body>
@@ -563,6 +564,7 @@ function bidLine(seat, choice) {
 // message line says it too, with a short flash, so he sees that his click was heard.
 let bubbleT = 0;
 function refuse(c, text) {
+  window.Sound?.play('bad');
   shake(c);
   say(text);
   const m = $('msg'); m.classList.remove('flash'); void m.offsetWidth; m.classList.add('flash');
@@ -619,7 +621,7 @@ function afterBid(before, seat, choice) {
     say(`Personne ne prend : ${G.dealer === 0 ? 'vous distribuez' : PLAYERS[G.dealer].name + ' distribue'} de nouveau.`);
     save();
     dealing = { from: G.dealer, cards: G.hands[0].slice() };
-    render();
+    render(); window.Sound?.play('deal');
     return later(step, 1800);
   }
   if (G.phase === 'play') {
@@ -630,7 +632,7 @@ function afterBid(before, seat, choice) {
     if (G.taker !== 0) retFly = { c: G.turnup, seat: G.taker };
     // His cards are not played while they fly in: a click then says to wait.
     busy = true;
-    render();
+    render(); window.Sound?.play('deal');
     return later(() => { busy = false; step(); }, motion.matches ? 900 : 1700);
   }
   say(bidLine(seat, choice));
@@ -653,6 +655,7 @@ function afterCard(before, seat, card) {
     callout(seat, word);
   }
   say(line);
+  window.Sound?.play('card');
   if (!full) { render(); return later(step, seat === 0 ? FIRST_MS : STEP_MS); }
   shown = { leader: before.leader, cards: [...before.trick, card], winner: G.last.winner };
   busy = true;
@@ -666,6 +669,7 @@ function afterCard(before, seat, card) {
       note = w === 0 ? `Vous ramassez le pli : ${ptsText(p)}${der}.` : `${PLAYERS[w].name} ramasse le pli : ${ptsText(p)}${der}.`;
       say(note);
       tookAnimation(w);
+      if (team(w) === 0) window.Sound?.play('good');
       render();
       later(step, G.phase === 'play' && G.turn !== 0 ? STEP_MS : 700);
     }, motion.matches ? 0 : AWAY_MS + 3 * 55);
@@ -676,6 +680,7 @@ function step() {
   if (stale || busy) return;
   if (G.phase === 'done' || G.phase === 'over') return handOver(true);
   if (G.turn === 0) {
+    window.Sound?.play('turn');
     say((note ? note + ' ' : '') + turnMessage());
     note = '';
     render();
@@ -716,6 +721,7 @@ function handOver(fresh) {
   render();
   if (G.phase === 'over') {
     const won = G.result.winner === 0;
+    if (fresh) window.Sound?.play(won ? 'win' : 'lose');
     say(won ? 'Bravo, André et vous avez gagné la partie !' : 'Simone et Henri ont gagné la partie.');
     const games = ['Retour aux jeux', Kit.home];
     const totals = `\nLes points : ${US} ${G.scores[0]}, ${THEM} ${G.scores[1]}.`;
@@ -750,7 +756,7 @@ function nextHandNow() {
   commit(nextHand(G));
   dealing = { from: G.dealer, cards: G.hands[0].slice() };
   say(`${G.dealer === 0 ? 'Vous distribuez' : PLAYERS[G.dealer].name + ' distribue'} les cartes.`);
-  render();
+  render(); window.Sound?.play('deal');
   later(step, 1400);
 }
 
@@ -787,7 +793,7 @@ function doUndo() {
       if (seat !== 0 && els.has(c)) flyToSeat(c, seat);
     }
   }
-  save();
+  save(); window.Sound?.play('card');
   say('Coup annulé. ' + turnMessage());
   render();
 }
@@ -827,7 +833,7 @@ async function newGame(lv) {
   const written = save();
   dealing = { from: G.dealer, cards: G.hands[0].slice() };
   say('Simone distribue les cartes.');
-  render();
+  render(); window.Sound?.play('deal');
   later(step, 1400);
   if (await written && id === gameId && !stale) GG.track('belote', 'start');
 }

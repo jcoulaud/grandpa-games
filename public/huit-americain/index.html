@@ -309,6 +309,7 @@
   }
 </style>
 <script src="../lib/zoom.js"></script>
+<script src="../lib/sound.js"></script>
 <script src="../lib/ph.js"></script>
 </head>
 <body>
@@ -553,6 +554,7 @@ const say = Kit.say;
 // message line says it too, with a short flash, so he sees that his click was heard.
 let bubbleT = 0;
 function refuse(el, text) {
+  window.Sound?.play('bad');
   shake(el);
   say(text);
   const m = $('msg'); m.classList.remove('flash'); void m.offsetWidth; m.classList.add('flash');
@@ -646,8 +648,10 @@ function after(before) {
   holdingScore = G.phase === 'done' || G.phase === 'over';
   render(true);
   showEffect(e, before);
+  if (e.kind === 'play' || e.kind === 'draw') window.Sound?.play(e.shuffled ? 'shuffle' : 'card');
   if (G.phase === 'done' || G.phase === 'over') return later(() => roundOver(true), motion.matches ? 0 : 560);
-  if (G.turn === 0 && e.seat !== 0) return;
+  // His turn rings once the other player's card has landed.
+  if (G.turn === 0 && e.seat !== 0) return later(() => window.Sound?.play('turn'), 600);
   const special = e.kind === 'play' && e.effect;
   later(step, e.seat === 0 && G.turn === 0 ? 50 : special ? EFFECT_MS : e.seat === 0 ? FIRST_MS : STEP_MS);
 }
@@ -674,6 +678,7 @@ function roundOver(fresh) {
     say(won ? (mates.length ? `Bravo, vous partagez la victoire avec ${names(mates)} !` : 'Bravo, vous avez gagné la partie !')
       : `${names(ws)} ${verb(ws, 'a', 'ont')} gagné la partie.`);
     if (!fresh) return;
+    window.Sound?.play(won ? 'win' : 'lose');
     const why = reachedText() + ' : la partie est finie.\n';
     const totals = '\nLes points : ' + [0, 1, 2, 3].map(s => `${PLAYERS[s].name} ${G.scores[s]}`).join(', ') + '.';
     const games = ['Retour aux jeux', Kit.home];
@@ -688,7 +693,7 @@ function roundOver(fresh) {
       [['Nouvelle partie', askNewGame, true], games]), motion.matches ? 0 : 600);
     return;
   }
-  if (fresh && G.out === 0) celebrate(false);
+  if (fresh && G.out === 0) { celebrate(false); window.Sound?.play('good'); }
   say(G.out === 0 ? 'Bravo, vous gagnez la manche ! Vous marquez 0 point.'
     : `${PLAYERS[G.out].name} gagne la manche. Vous marquez ${ptsText(G.roundPts[0])}.`);
 }
@@ -717,6 +722,7 @@ function nextRoundNow() {
   undo = []; hint = null;
   clearCards();
   commit(HA.nextRound(G));
+  window.Sound?.play('deal');
   dealing = true;
   say(G.turn === 0 ? turnMessage() : `Nouvelle manche : ${PLAYERS[G.turn].name} commence.`);
   render();
@@ -748,7 +754,7 @@ function doUndo() {
     cancelAll();
     Kit.closeDialog();
     G = g; hint = null;
-    save();
+    save(); window.Sound?.play('card');
     say('Coup annulé. ' + turnMessage());
     render(true);
     return;
@@ -781,6 +787,7 @@ async function newGame(lv) {
   // A stale window cannot save, so it does not count a game either.
   const id = ++gameId;
   const written = save();
+  window.Sound?.play('deal');
   dealing = true;
   say(G.turn === 0 ? turnMessage() : `${PLAYERS[G.turn].name} commence.`);
   render();

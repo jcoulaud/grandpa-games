@@ -236,6 +236,7 @@
   }
 </style>
 <script src="../lib/zoom.js"></script>
+<script src="../lib/sound.js"></script>
 <script src="../lib/ph.js"></script>
 </head>
 <body>
@@ -533,11 +534,11 @@ async function passTurn() {
 }
 async function tapHorse(p, h) {
   if (Kit.isOpen()) return;
-  if (p !== 0 && !showing && G.turn === 0 && G.result === null) return shake(horseEl(p, h)), tell(`Ce cheval est à ${NAMES[p]} : vos chevaux sont les bleus.`);
+  if (p !== 0 && !showing && G.turn === 0 && G.result === null) return shake(horseEl(p, h)), window.Sound?.play('bad'), tell(`Ce cheval est à ${NAMES[p]} : vos chevaux sont les bleus.`);
   if (refuseBusy()) return;
   if (anim) return;
-  if (G.die === null) return shake(horseEl(p, h)), tell("Lancez d'abord le dé : cliquez sur le dé.");
-  if (!PC.moves(G).some(m => m.horse === h)) return shake(horseEl(p, h)), tell(blockedText(G, h));
+  if (G.die === null) return shake(horseEl(p, h)), window.Sound?.play('bad'), tell("Lancez d'abord le dé : cliquez sur le dé.");
+  if (!PC.moves(G).some(m => m.horse === h)) return shake(horseEl(p, h)), window.Sound?.play('bad'), tell(blockedText(G, h));
   undo.push(JSON.stringify(G));
   $('undoBtn').disabled = false;
   hint = null;
@@ -659,6 +660,7 @@ function finish(fresh) {
   if (G.result === 0) {
     tell(`Bravo, vos ${all} chevaux sont au centre : vous avez gagné !`);
     if (!fresh) return;
+    later(() => window.Sound?.play('win'), 400);
     party();
     const nth = !wonNow ? '' : stats.won === 1 ? " C'est votre première victoire." : ` C'est votre ${stats.won}e victoire.`;
     later(() => dialog('Bravo, vous avez gagné !', `Vos ${all} chevaux sont arrivés au centre les premiers.` + nth + lost,
@@ -667,6 +669,7 @@ function finish(fresh) {
     const w = G.result, mine = G.horses[0].filter(x => x === ARRIVED).length;
     tell(`${NAMES[w]} a gagné : ses ${all} chevaux sont au centre.`);
     if (!fresh) return;
+    later(() => window.Sound?.play('lose'), 400);
     const had = mine === 0 ? "Vous n'aviez encore aucun cheval au centre." : `Vous en aviez ${plural(mine, 'au centre', 'au centre')}.`;
     // Undo is offered only when there is a move of his to take back.
     const back = undo.length ? ' « Annuler le dernier coup » reprend votre dernier cheval.' : '';
@@ -959,6 +962,7 @@ async function rollAnim(value) {
   d.classList.remove('blank');
   // The face changes while the die rolls: a redraw after an undo must draw the face again.
   delete d.dataset.face;
+  window.Sound?.play('dice');
   if (!reducedMotion.matches) {
     d.innerHTML = dieSvg(1 + Math.floor(Math.random() * 6));
     d.classList.add('rolling');
@@ -978,7 +982,7 @@ async function rollAnim(value) {
 async function moveAnim(l, after) {
   if (!l || l.pass) return;
   const e = horseEl(l.player, l.horse);
-  if (reducedMotion.matches) return;
+  if (reducedMotion.matches) return window.Sound?.play(l.captured.length ? 'capture' : 'piece');
   anim = true;
   hideGhost();
   for (const pawn of horseEls) pawn.classList.remove('can', 'hover', 'hint', 'moved');
@@ -997,6 +1001,7 @@ async function moveAnim(l, after) {
     place(e, x, y, i === route.length - 1 ? landing.s : 1);
     e.style.zIndex = '2400';
     await tick(HOP_MS);
+    window.Sound?.play(i === route.length - 1 && l.to === ARRIVED && l.player === 0 ? 'good' : 'piece');
     if (!reducedMotion.matches) trail(x, y, l.player);
   }
   if (l.to === ARRIVED) { e.classList.add('arrive'); burst(...route[route.length - 1]); await tick(ARRIVE_MS); e.classList.remove('arrive'); }
@@ -1005,6 +1010,7 @@ async function moveAnim(l, after) {
 }
 async function captureAnim(captured, [x, y]) {
   burst(x, y, true);
+  window.Sound?.play('capture');
   for (const [q, h] of captured) horseEl(q, h).classList.add('hit');
   await tick(HIT_MS);
   const n = count();
