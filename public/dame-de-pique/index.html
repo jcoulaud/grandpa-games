@@ -110,6 +110,8 @@
   #table.row .seat .pts, #table.row .seat .now { white-space: normal; }
   #table.row #seat0 { padding: 6px 16px 6px 6px; }
   #table.row #seat0 .txt { display: grid; justify-items: start; min-width: 8.6em; font-size: 20px; }
+  /* The reason his dark cards are dark wraps, so it never makes his strip wider than "À vous de jouer". */
+  #table.row #seat0 .now { max-width: 8.6em; }
   #table.row .seat .tot { margin-left: 6px; font: 600 20px var(--ui); color: #5A6461; white-space: nowrap; }
   #table.row #seat0 b { display: block; }
   /* His own seat: a strip above the left end of his hand. Lilac, like the others, when it is his turn. */
@@ -521,13 +523,15 @@ async function commit(next) {
 /* ---------- Messages ---------- */
 const REFUSE = {
   two: 'Le premier pli commence par le 2 de trèfle : cliquez dessus.',
-  first: 'Au premier pli, on ne donne pas de point : ni cœur, ni dame de pique.',
+  first: 'Au premier pli, pas de point : ni cœur, ni dame de pique. Posez une autre carte.',
   hearts: "Personne n'a encore joué de cœur : commencez par une autre couleur.",
 };
 function turnMessage() {
   if (G.phase === 'pass') {
     const left = 3 - picks.length;
-    return left ? `Choisissez ${left === 3 ? '3 cartes' : left === 1 ? 'encore 1 carte' : 'encore 2 cartes'} à donner ${TO[passTarget(G, 0)]}.`
+    // What to give: his strongest cards, the ones that would make him take points.
+    if (left === 3) return `Donnez vos cartes les plus fortes, comme la dame de pique ou les gros cœurs : cliquez sur 3 cartes.`;
+    return left ? `Choisissez ${left === 1 ? 'encore 1 carte' : 'encore 2 cartes'} à donner ${TO[passTarget(G, 0)]}.`
       : 'Cliquez sur « Donner ces 3 cartes », ou sur une carte pour la reprendre.';
   }
   if (G.phase !== 'play' || G.turn !== 0) return '';
@@ -543,6 +547,26 @@ function turnMessage() {
   return `Vous n'avez pas de ${SUIT_NAMES[led]} : posez la carte de votre choix.`;
 }
 const say = Kit.say;
+// Who the others wait for: the player of the computer whose turn it is, or the one taking the trick.
+const waitText = () => shown ? `Attendez, ${shown.winner ? PLAYERS[shown.winner].name + ' ramasse le pli' : 'vous ramassez le pli'}.`
+  : G.turn ? `Attendez, ${PLAYERS[G.turn].name} joue.` : 'Attendez un instant.';
+// The short line on his seat, next to his hand, that says why some of his cards are dark.
+const DARK = { two: 'Commencez par le 2 de trèfle', first: 'Pas de point au premier pli', hearts: 'Pas de cœur pour commencer' };
+function darkWhy() {
+  const no = G.hands[0].find(c => refusal(G, c));
+  const why = no === undefined ? null : refusal(G, no);
+  return !why ? '' : why === 'suit' ? `Suivez la couleur : ${SUIT_NAMES[suit(G.trick[0])]}` : DARK[why];
+}
+// The coach of his first game: the hand points at a card to give, then at the button, then at a card to play.
+function coach() {
+  if (!Kit.coaching() || busy || stale || Kit.isOpen()) return;
+  if (G.phase === 'pass') {
+    if (picks.length === 3) return Kit.point($('passBtn'));
+    const c = choosePass(G, 0, 'moyen').find(c => !picks.includes(c)) ?? G.hands[0].find(c => !picks.includes(c));
+    return Kit.point(els.get(c));
+  }
+  if (G.phase === 'play' && G.turn === 0) Kit.point(els.get(hint[0] ?? choosePlay(G, 'moyen')));
+}
 
 // A refused click: the card shakes, the reason shows in a bubble just above it for 3 s, and the
 // message line says it too, with a short flash, so he sees that his click was heard.
@@ -572,14 +596,14 @@ function hideBubble() { clearTimeout(bubbleT); $('bubble').classList.remove('on'
 function tapCard(c) {
   if (stale) return;
   hideBubble();
-  if (busy || (G.phase === 'play' && G.turn !== 0)) return refuse(c, 'Attendez un instant : les autres joueurs posent leurs cartes.');
+  if (busy || (G.phase === 'play' && G.turn !== 0)) return refuse(c, G.phase === 'play' ? waitText() : 'Attendez un instant.');
   if (G.phase === 'pass') {
     hint = [];
     if (picks.includes(c)) picks = picks.filter(x => x !== c);
     else if (picks.length < 3) picks.push(c);
     else return refuse(c, 'Vous avez déjà choisi 3 cartes : cliquez sur une carte entourée de jaune pour la reprendre.');
     window.Sound?.play('tap');
-    say(turnMessage()); render(); save();
+    say(turnMessage()); render(); save(); coach();
     return;
   }
   if (G.phase !== 'play') return;
@@ -645,7 +669,7 @@ function step() {
     window.Sound?.play('turn');
     say((note ? note + ' ' : '') + turnMessage());
     note = '';
-    render();
+    render(); coach();
     return;
   }
   // A computer player: it chooses, the card is saved, then shown.
@@ -666,8 +690,9 @@ function handOver(fresh) {
   const lowest = Math.min(...G.scores);
   if (G.phase === 'over') {
     const ws = G.result.winners, won = ws.includes(0), mates = ws.filter(s => s !== 0);
-    say(won ? (mates.length ? `Bravo, vous partagez la victoire avec ${names(mates)} !` : 'Bravo, vous avez gagné la partie !')
-      : `${names(ws)} ${verb(ws, 'a', 'ont')} gagné la partie.`);
+    say((won ? (mates.length ? `Bravo, vous partagez la victoire avec ${names(mates)} !` : 'Bravo, vous avez gagné la partie !')
+      : `${names(ws)} ${verb(ws, 'a', 'ont')} gagné la partie.`) + ' Cliquez sur « Nouvelle partie » pour rejouer.');
+    Kit.gameOver(true);
     if (!fresh) return;
     window.Sound?.play(won ? 'win' : 'lose');
     const games = ['Retour aux jeux', Kit.home];
@@ -686,9 +711,9 @@ function handOver(fresh) {
     return;
   }
   const me = G.handPts[0];
-  say(G.moon === 0 ? 'Grand chelem ! Vous avez pris tous les points : chacun des autres marque 26 points.'
+  say((G.moon === 0 ? 'Grand chelem ! Chacun des autres marque 26 points.'
     : G.moon !== null ? `${PLAYERS[G.moon].name} a pris tous les points : vous marquez 26 points.`
-    : `Fin de la manche : vous marquez ${ptsText(me)}.`);
+    : `Fin de la manche : vous marquez ${ptsText(me)}.`) + ' Cliquez sur « Manche suivante ».');
 }
 function nextHandNow() {
   if (busy || stale || G.phase !== 'done') return;
@@ -696,7 +721,7 @@ function nextHandNow() {
   undo = []; picks = []; got = []; hint = [];
   commit(nextHand(G));
   window.Sound?.play('deal');
-  if (G.phase === 'pass') { say(turnMessage()); render(); }
+  if (G.phase === 'pass') { say(turnMessage()); render(); coach(); }
   else { say('Cette manche, on garde ses cartes.'); render(); later(step, 1200); }
 }
 
@@ -707,7 +732,7 @@ function later(fn, ms) { const my = gen; const t = setTimeout(() => { timers = t
 // Takes back his last card and every card played after it, even while the others are playing.
 function doUndo() {
   if (stale) return;
-  if (G.phase === 'pass') { if (picks.length) { picks.pop(); hint = []; say(turnMessage()); render(); save(); } return; }
+  if (G.phase === 'pass') { if (picks.length) { picks.pop(); hint = []; say(turnMessage()); render(); save(); coach(); } return; }
   if (!undo.length) return;
   cancelAll();
   Kit.closeDialog();
@@ -715,7 +740,7 @@ function doUndo() {
   G = u.G; got = u.got || []; hint = [];
   save(); window.Sound?.play('card');
   say('Coup annulé. ' + turnMessage());
-  render();
+  render(); coach();
 }
 
 function showHint() {
@@ -723,7 +748,7 @@ function showHint() {
   if (G.phase === 'pass') {
     picks = choosePass(G, 0, 'moyen'); hint = picks.slice();
     say('Voici 3 cartes à donner : cliquez sur « Donner ces 3 cartes ».');
-    render(); save();
+    render(); save(); coach();
     return;
   }
   if (G.phase !== 'play' || G.turn !== 0) return;
@@ -734,8 +759,8 @@ function showHint() {
     if (my !== gen) return;
     const c = choosePlay(G, 'fort', DDP.seeded(G.seed ^ 0x5bd1e995 ^ G.log.length), { trials: 80 });
     busy = false; hint = [c];
-    say(`Posez ${cardName(c)} : la carte entourée de jaune.`);
-    render();
+    say(`Posez ${cardName(c)} : cliquez sur la carte entourée de jaune.`);
+    render(); coach();
   }, 40);
 }
 
@@ -748,10 +773,11 @@ async function newGame(lv) {
   Kit.showLevel(level);
   newCast();
   G = DDP.newGame(); picks = []; got = []; undo = []; hint = []; wonNow = false; started = false;
+  Kit.gameOver(false);
   // A stale window cannot save, so it does not count a game either.
   const written = save();
   if (G.phase === 'pass') say(turnMessage());
-  render(); window.Sound?.play('deal');
+  render(); coach(); window.Sound?.play('deal');
   if (await written) GG.track('dame-de-pique', 'start');
 }
 
@@ -864,7 +890,7 @@ function render() {
   // His own seat: his points, his total when the score column is hidden, and "À vous de jouer" on his
   // turn. In a low window, one fact per line.
   const s0 = $('seat0');
-  const own = `<b>Vous${G.qsTo === 0 ? QS_CHIP : ''}${seatTotal(0)}</b><span class="pts">${HEART}${seatPts(0)}</span><span class="now">À vous de jouer</span>`;
+  const own = `<b>Vous${G.qsTo === 0 ? QS_CHIP : ''}${seatTotal(0)}</b><span class="pts">${HEART}${seatPts(0)}</span><span class="now">${playing && darkWhy() || 'À vous de jouer'}</span>`;
   s0.innerHTML = `${face(0, 'ava')}${L.row ? `<div class="txt">${own}</div>` : own}`;
   s0.classList.toggle('turn', playing);
   s0.classList.toggle('narrow', !L.sideW);
@@ -969,6 +995,7 @@ function render() {
     const b = $('passBtn');
     b.textContent = picks.length === 3 ? `Donner ces 3 cartes à ${PLAYERS[to].name}` : `Encore ${plural(3 - picks.length, 'carte', 'cartes')} à choisir`;
     b.disabled = picks.length !== 3 || stale;
+    b.toggleAttribute('data-nudge', !b.disabled);
     ps.style.width = '';
     // Between the seat across and his hand, so it covers no other player. His own strip says nothing
     // useful during the pass, so the sheet takes its place.
@@ -1023,8 +1050,17 @@ function render() {
   }
 
   Kit.showWins(stats.won);
-  $('undoBtn').disabled = stale || (G.phase === 'pass' ? !picks.length : !undo.length);
-  $('hintBtn').disabled = stale || busy || !(G.phase === 'pass' || (G.phase === 'play' && G.turn === 0));
+  const undoBtn = $('undoBtn'), hintBtn = $('hintBtn'), RELOAD = 'Rechargez le jeu pour continuer la partie.';
+  undoBtn.disabled = stale || (G.phase === 'pass' ? !picks.length : !undo.length);
+  undoBtn.dataset.why = stale ? RELOAD : G.phase === 'pass' ? "Vous n'avez pas encore choisi de carte : cliquez sur une carte de votre jeu."
+    : "Il n'y a pas encore de coup à annuler.";
+  hintBtn.disabled = stale || busy || !(G.phase === 'pass' || (G.phase === 'play' && G.turn === 0));
+  hintBtn.dataset.why = stale ? RELOAD : G.phase === 'done' ? 'La manche est finie : cliquez sur « Manche suivante ».'
+    : G.phase === 'over' ? 'La partie est finie : cliquez sur « Nouvelle partie ».'
+    : G.phase === 'play' ? waitText() : 'Attendez un instant.';
+  // The automatic hint of Facile would choose his 3 cards for him: not during the pass.
+  if (G.phase === 'pass') hintBtn.dataset.auto = 'no'; else delete hintBtn.dataset.auto;
+  $('passBtn').dataset.why = stale ? RELOAD : `Choisissez encore ${plural(3 - picks.length, 'carte', 'cartes')} : cliquez dans votre jeu.`;
 }
 // A sheet stays inside the table, above `bottom`, so its button is always in view: in a short window
 // it is made smaller. The pass sheet stays above his raised cards, so it never hides one.
@@ -1061,6 +1097,12 @@ addEventListener('pointerup', e => {
   tapCard(p.c);
 });
 addEventListener('pointercancel', () => { press = null; });
+// A click on the felt, away from his cards and the sheets: say what is going on, and what to click.
+table.addEventListener('click', e => {
+  if (stale || Kit.isOpen() || e.target.closest('.card.hand, .sheet, #side')) return;
+  if (G.phase === 'play' && (busy || G.turn !== 0)) Kit.tell(waitText());
+  else if (G.phase === 'pass' || (G.phase === 'play' && G.turn === 0)) Kit.tell(turnMessage());
+});
 table.addEventListener('keydown', e => {
   const el = e.target.closest && e.target.closest('.card.hand');
   if (!el || (e.key !== 'Enter' && e.key !== ' ')) return;

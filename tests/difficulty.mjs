@@ -7,19 +7,17 @@ try {
   for (const game of ['solitaire', 'freecell', 'dames', 'dame-de-pique', 'demineur', 'yams', 'bataille-navale', 'paires', 'huit-americain', 'rami', 'belote', 'morpion', 'petits-chevaux', 'mots-meles', 'sudoku']) {
     const page = await browser.newPage({ reducedMotion: 'reduce' });
     await page.goto(gameUrl(game));
-    assert.equal(await page.evaluate(id => GG.load(id), game), null);
-    await page.click('#helpClose');
-    await page.keyboard.press('Escape');
+    // The first visit starts a game at Facile at once, with no guide and no dialog.
+    if (game === 'sudoku') await page.waitForFunction(() => G && !making);
+    assert.equal(await page.evaluate(() => Kit.isOpen()), false, game + ' opens on the table');
+    assert.equal(await page.locator('#level').innerText(), 'Niveau facile');
     const choices = page.locator('#overBtns button');
     for (const label of ['Facile', 'Moyen', 'Difficile']) {
-      const first = label === 'Facile';
-      if (!first) await page.click('#newBtn');
-      // During a game "Continuer la partie" comes first; otherwise the levels come first.
+      await page.click('#newBtn');
+      // During a game "Continuer la partie" comes first, and it is the yellow one.
       const texts = await choices.allTextContents();
-      const back = first ? 'Fermer le jeu' : 'Continuer la partie';
+      const back = 'Continuer la partie';
       assert.ok([['Facile', 'Moyen', 'Difficile', back], [back, 'Facile', 'Moyen', 'Difficile']].some(o => o.join() === texts.join()), texts.join());
-      // The yellow button: Facile the first time, "Continuer la partie" during a game.
-      if (first) assert.equal(await page.locator('#overBtns button.primary').textContent(), 'Facile');
       if (texts[0] === back) assert.equal(await page.locator('#overBtns button.primary').textContent(), back);
       const choice = choices.getByText(label, { exact: true });
       if (game === 'dames' || game === 'dame-de-pique' || game === 'demineur' || game === 'yams' || game === 'bataille-navale' || game === 'paires' || game === 'huit-americain' || game === 'rami' || game === 'belote' || game === 'morpion' || game === 'petits-chevaux' || game === 'mots-meles' || game === 'sudoku') {

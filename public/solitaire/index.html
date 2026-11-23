@@ -69,6 +69,8 @@
   /* A card about to go home by itself: framed in yellow first, then a slow flight the eye can follow. */
   .card.auto, .card.auto:hover { outline: 5px solid var(--gold); outline-offset: 0; box-shadow: 0 0 24px 6px rgba(255,200,61,.55); }
   .card.slow { transition-duration: .8s; transition-timing-function: ease-in-out; }
+  /* Facile: each card that can move now has a soft gold edge, before any click. */
+  .card.play { box-shadow: 0 0 0 3px var(--gold), 0 0 14px 4px rgba(255,200,61,.5), 0 3px 8px rgba(0,0,0,.22); }
 
 
   /* ---------- The rules guide ----------
@@ -336,12 +338,38 @@ function why(loc, dst) {
 
 /* ---------- Messages ---------- */
 const setMsg = Kit.say;
+// The cards that can move now and change something: the top of the waste and the face-up cards of the columns.
+function movable() {
+  const out = [];
+  if (S.waste.length && destinations({ a: 'waste', k: S.waste.length - 1 }).length) out.push(last(S.waste).id);
+  S.tab.forEach((p, i) => p.forEach((c, k) => { if (c.up && useful({ a: 'tab', i, k }).length) out.push(c.id); }));
+  return out;
+}
+// No card can move, but the stock can still bring one.
+const stockOnly = () => !movable().length && anyMove();
+const marked = () => level === 'facile' && movable().length > 0;
+// The end of each line: what to click next.
+function next() {
+  if (stockOnly()) return S.stock.length ? ' Cliquez sur la pioche.' : ' Cliquez sur la pioche pour la retourner.';
+  return marked() ? ' Cliquez sur une carte au bord doré.' : ' Cliquez sur la carte à déplacer.';
+}
+function hello() {
+  if (stockOnly()) return `Aucune carte ne peut bouger.${next()}`;
+  return marked() ? "Les cartes au bord doré peuvent bouger. Cliquez sur l'une d'elles." : HELLO;
+}
+// A click that cannot take a card says why.
+function refuse(id) {
+  const loc = id === null ? null : locate(id), c = loc && pileOf(loc)[loc.k];
+  Kit.tell(c && !c.up ? "Cette carte est cachée : déplacez d'abord celles du dessus."
+    : c ? `Seule la carte du dessus peut bouger.${next()}` : `Il n'y a pas de carte ici.${next()}`);
+}
 function chosenMsg(loc) {
   const p = pileOf(loc), n = p.length - 1 - loc.k;
   const name = cardName(p[loc.k].id);
   const extra = n === 1 ? ' et la carte posée dessus' : n > 1 ? ` et les ${n} cartes posées dessus` : '';
-  return `Vous avez pris ${name}${extra}. Cliquez sur une place entourée de jaune.`;
+  return `Vous avez pris ${name}${extra}.${PICK}`;
 }
+const PICK = ' Cliquez sur une place entourée de jaune.';
 
 /* ---------- Actions ---------- */
 function act(fn, text) {
@@ -356,7 +384,7 @@ function flipTops() { S.tab.forEach(p => { const t = last(p); if (t) t.up = true
 let autoId = null; // the card shown before it goes home by itself
 function clearSel() { sel = null; hintDst = null; hintStock = false; autoId = null; }
 function changed(text) {
-  flipTops(); clearSel(); setMsg(text || HELLO); render(); save();
+  flipTops(); clearSel(); noSafe = false; setMsg(text ? text + next() : hello()); render(); save();
   autoCount = 0;
   clearTimeout(autoT); autoT = setTimeout(autoStep, AUTO_DELAY);
 }
@@ -384,7 +412,7 @@ function flash(ids) {
   landT = setTimeout(() => ids.forEach(id => E[id].classList.remove('landed')), LAND_MS);
 }
 function clickStock() {
-  if (!S.stock.length && !S.waste.length) return;
+  if (!S.stock.length && !S.waste.length) return Kit.tell(`La pioche est vide : toutes ses cartes sont sur la table.${next()}`);
   window.Sound?.play(S.stock.length ? 'flip' : 'card');
   act(() => {
     if (S.stock.length) { const c = S.stock.pop(); c.up = true; S.waste.push(c); }
@@ -395,14 +423,15 @@ function choose(id) {
   const loc = locate(id);
   if (!destinations(loc).length) {
     clearSel(); render();
-    setMsg(`${cap(cardName(id))} ne peut aller nulle part pour le moment.`);
+    setMsg(`${cap(cardName(id))} ne peut aller nulle part pour le moment.${next()}`);
     window.Sound?.play('bad');
     return shake(E[id]);
   }
   clearSel(); sel = id;
   setMsg(chosenMsg(loc)); render();
+  if (coachMove && coachMove.id === id) Kit.point(dstEl(coachMove.dst));
 }
-function unchoose() { clearSel(); setMsg(HELLO); render(); }
+function unchoose() { clearSel(); setMsg(hello()); render(); coach(); }
 // The places that change something: a king at the bottom of a column gains nothing on an empty column.
 const useful = loc => destinations(loc).filter(d => !(loc.a === 'tab' && loc.k === 0 && d.a === 'tab' && !S.tab[d.i].length));
 // A click on a card. With one legal place, the card goes there at once.
@@ -420,6 +449,7 @@ function onTap(id, pile) {
   if (sel === null) {
     if (id !== null && selectable(id)) take(id);
     else if (hintStock) unchoose();
+    else refuse(id);
     return;
   }
   const loc = locate(sel);
@@ -430,7 +460,7 @@ function onTap(id, pile) {
   // Another card that can move: play it instead. Otherwise explain the refusal.
   if (id !== null && selectable(id) && useful(locate(id)).length) return take(id);
   if (samePile(pile, pileAt(loc))) return unchoose();
-  setMsg(why(loc, pile)); window.Sound?.play('bad');
+  setMsg(why(loc, pile) + PICK); window.Sound?.play('bad');
 }
 
 // Sends safe cards home one by one, and finishes the game once everything is face up.
@@ -477,11 +507,12 @@ function autoStep() {
   }
   turns = 0;
   if (autoCount) {
-    setMsg(autoCount === 1 ? '1 carte rangée automatiquement.' : `${autoCount} cartes rangées automatiquement.`);
+    setMsg((autoCount === 1 ? '1 carte rangée automatiquement.' : `${autoCount} cartes rangées automatiquement.`) + next());
     autoCount = 0;
   }
   checkStuck();
   checkLost();
+  coach();
 }
 function checkStuck() {
   if (S.stuckShown || isWon()) return;
@@ -489,7 +520,7 @@ function checkStuck() {
   // from the foundation and that can go home again still counts as a move.
   if (anyMove()) return;
   S.stuckShown = true; save();
-  window.Sound?.play('lose');
+  window.Sound?.play('lose'); Kit.gameOver(true);
   dialog('Plus aucun coup possible', 'Aucune carte ne peut plus bouger.',
     [['Revenir en arrière', backToWinnable, true], ['Nouvelle partie', askNewGame]]);
 }
@@ -514,7 +545,7 @@ function checkLost() {
   lostDialog();
 }
 function lostDialog() {
-  window.Sound?.play('lose');
+  window.Sound?.play('lose'); Kit.gameOver(true);
   dialog('Partie perdue', 'Cette partie ne peut plus être gagnée. « Revenir en arrière » annule vos derniers coups.',
     [['Revenir en arrière', backToWinnable, true], ['Nouvelle partie', askNewGame]]);
 }
@@ -532,7 +563,8 @@ async function newGame(nextLevel = level) {
   flash([]); // the outline of the last move does not carry over to the new deal
   // A stale window cannot save, so it does not count a game either.
   const written = save();
-  setMsg(HELLO);
+  noSafe = false; coachMove = null;
+  setMsg(hello());
   window.Sound?.play('deal');
   render({ deal: true });
   dealT = setTimeout(() => { busy = false; autoStep(); }, REDUCED ? 100 : 1600);
@@ -550,8 +582,9 @@ function doUndo() {
   clearTimeout(autoT); clearTimeout(winT);
   restore(undo.pop());
   lastTap = null; flash([]);
-  clearSel(); setMsg('Coup annulé.'); render(); save(); window.Sound?.play('card');
-  if (isWon()) autoStep();
+  noSafe = false; Kit.gameOver(false);
+  clearSel(); setMsg(`Coup annulé.${next()}`); render(); save(); window.Sound?.play('card');
+  if (isWon()) autoStep(); else coach();
 }
 // Undo until the solver finds a way to win again.
 // A game restored from the backup has no undo steps: then only a new game is offered.
@@ -562,8 +595,8 @@ function backToWinnable() {
   while (k >= 0 && !wins(undo[k])) k--;
   if (k >= 0) {
     restore(undo[k]); undo.length = k;
-    S.stuckShown = false; lastTap = null; flash([]);
-    clearSel(); setMsg('Vous êtes revenu à une position gagnante.'); render(); save();
+    S.stuckShown = false; lastTap = null; flash([]); noSafe = false; Kit.gameOver(false);
+    clearSel(); setMsg(`Vous êtes revenu à une position gagnante.${next()}`); render(); save(); coach();
   } else dialog('Impossible de revenir en arrière', "Aucune position gagnante n'a été trouvée. Commencez une nouvelle partie.", [['Nouvelle partie', askNewGame, true]]);
 }
 
@@ -600,10 +633,30 @@ function hintDraw() {
   setMsg(S.stock.length ? 'Cliquez sur la pioche pour tourner une carte.' : 'Cliquez sur la pioche pour la retourner.');
   render();
 }
-let hintPending = false;
+let hintPending = false, noSafe = false; // noSafe: the hint found no safe move, so "Annuler" is the next button
+// The hint's place for a move, as a pile.
+const hintDstOf = m => m.k === 'tf' || m.k === 'xf' ? { a: 'found', i: st(m.id) } : { a: 'tab', i: m.dst };
+// The coach of his first game points at the hint's card, then at its place, each time the game waits for him.
+let coachMove = null;
+async function coach() {
+  coachMove = null;
+  if (!Kit.coaching() || busy || drag || hintPending || sel !== null || hintStock || dialogOpen() || isWon()) return;
+  const game = S, moves = S.moves;
+  const r = await hintMove();
+  const m = r && r.move;
+  if (!m || !Kit.coaching() || game !== S || S.moves !== moves || busy || drag || hintPending || sel !== null || hintStock || dialogOpen()) return;
+  if ((m.k === 'xf' || m.k === 'xt') && last(S.waste)?.id !== m.id) return Kit.point(S.stock.length ? E[last(S.stock).id] : slotStock);
+  coachMove = { id: m.id, dst: hintDstOf(m) };
+  Kit.point(E[m.id]);
+}
+// The element of a pile: its top card, or its empty place.
+function dstEl(d) {
+  const q = d.a === 'found' ? S.found[d.i] : S.tab[d.i];
+  return q.length ? E[last(q).id] : d.a === 'found' ? slotFound[d.i] : slotTab[d.i];
+}
 async function showHint() {
   if (hintPending || busy || drag || isWon()) return;
-  hintPending = true;
+  hintPending = true; noSafe = false; coachMove = null;
   const game = S, selected = sel;
   setMsg("Recherche d’un bon coup…");
   const r = await hintMove();
@@ -613,9 +666,14 @@ async function showHint() {
   if (!m && r.win === false) return lostDialog();
   // The solver ran out of time. The game does not guess: a guessed move can lose a winnable game.
   // The safe cards already go home by themselves.
-  if (!m) { clearSel(); render(); return setMsg('Je ne trouve pas de coup sûr pour le moment. Vous pouvez annuler vos derniers coups.'); }
+  if (!m) {
+    clearSel(); noSafe = undo.length > 0; render();
+    if (noSafe) Kit.point(document.getElementById('undoBtn'));
+    return setMsg(noSafe ? 'Je ne trouve pas de coup sûr pour le moment. Cliquez sur « Annuler le dernier coup ».'
+      : `Je ne trouve pas de coup sûr pour le moment.${next()}`);
+  }
   if ((m.k === 'xf' || m.k === 'xt') && last(S.waste)?.id !== m.id) return hintDraw();
-  const dst = m.k === 'tf' || m.k === 'xf' ? { a: 'found', i: st(m.id) } : { a: 'tab', i: m.dst };
+  const dst = hintDstOf(m);
   clearSel(); sel = m.id; hintDst = dst;
   setMsg(hintText(m, dst)); render();
 }
@@ -741,6 +799,7 @@ function render(opts = {}) {
   }
   let order = 0;
   const stockTop = last(S.stock)?.id;
+  const play = new Set(level === 'facile' && sel === null && autoId === null && !isWon() ? movable() : []);
   for (const [c, x, y, z] of spots) {
     const el = E[c.id];
     const wasDown = el.classList.contains('down');
@@ -754,6 +813,7 @@ function render(opts = {}) {
     el.style.zIndex = moved && !opts.instant ? 1000 + z : z;
     el.classList.toggle('can', c.id === stockTop || (c.up && selectable(c.id)));
     el.classList.toggle('auto', c.id === autoId);
+    el.classList.toggle('play', play.has(c.id));
     if (wasDown && c.up && !opts.instant && !REDUCED) el.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: 220, easing: 'ease-out' });
   }
   clearTimeout(zT);
@@ -763,14 +823,20 @@ function render(opts = {}) {
   }), opts.deal ? 1700 : opts.slow ? FLY_MS + 60 : 360);
 
   drawMarks();
-  document.getElementById('undoBtn').disabled = !undo.length;
+  const undoBtn = document.getElementById('undoBtn'), hintBtn = document.getElementById('hintBtn');
+  undoBtn.disabled = !undo.length;
+  undoBtn.dataset.why = "Il n'y a pas encore de coup à annuler.";
+  undoBtn.toggleAttribute('data-nudge', noSafe && undo.length > 0);
+  hintBtn.disabled = isWon();
+  hintBtn.dataset.why = 'La partie est gagnée. Cliquez sur « Nouvelle partie ».';
 }
 // The yellow ring around the chosen cards, and a yellow frame on each place they can go.
 function drawMarks() {
   ring.style.display = 'none';
   marks.forEach(m => m.remove()); marks = [];
   const addMark = (x, y, cls, key) => { const m = mk('mark ' + cls); put(m, x, y); m.dataset.key = key; marks.push(m); };
-  if (hintStock) addMark(bankX(0), L.top, 'hint', 'stock');
+  // The stock framed: the hint shows it, or no card can move without it.
+  if (hintStock || (sel === null && autoId === null && !drag && !isWon() && stockOnly())) addMark(bankX(0), L.top, 'hint', 'stock');
   // The pile where the card about to go home by itself will land.
   if (sel === null && autoId !== null && !drag) {
     const f = S.found[st(autoId)];
@@ -797,8 +863,8 @@ function shake(el) { el.classList.remove('shake'); void el.offsetWidth; el.class
 function celebrate() {
   if (S.done) return;
   S.done = true;
-  save(); render(); window.Sound?.play('win');
-  setMsg('Bravo, vous avez gagné !');
+  save(); render(); window.Sound?.play('win'); Kit.gameOver(true);
+  setMsg('Bravo, vous avez gagné ! Cliquez sur « Nouvelle partie ».');
   // The four finished piles hop one after the other, twice.
   if (!REDUCED) S.found.forEach((f, s) => E[last(f).id].animate(
     [{ translate: '0 0' }, { translate: `0 ${-L.h * 0.14}px` }, { translate: '0 0' }],
@@ -871,7 +937,7 @@ addEventListener('pointerup', e => {
   if (hit && destinations(d.loc).some(t => samePile(t, hit))) return moveCards(d.loc, hit);
   // A missed drop puts the cards back and keeps them chosen.
   render();
-  if (hit && !samePile(hit, pileAt(d.loc))) { setMsg(why(d.loc, hit)); window.Sound?.play('bad'); }
+  if (hit && !samePile(hit, pileAt(d.loc))) { setMsg(why(d.loc, hit) + PICK); window.Sound?.play('bad'); }
 });
 addEventListener('pointercancel', e => {
   if (!drag || e.pointerId !== drag.pointer) return;
@@ -898,8 +964,8 @@ addEventListener('resize', () => {
 for (const h of document.querySelectorAll('#help .sg-here')) h.insertAdjacentHTML('beforeend', Kit.icon('hand'));
 
 build();
-// The rules open by themselves the first time the game is opened.
-if (load()) { if (legacy) save(); setMsg(isWon() ? 'Bravo, vous avez gagné !' : HELLO); render({ instant: true }); autoStep(); } else { Kit.firstVisit(newGame); }
+// The first visit starts a game at Facile at once, with the coach (lib/kit.js).
+if (load()) { if (legacy) save(); if (isWon()) Kit.gameOver(true); setMsg(isWon() ? 'Bravo, vous avez gagné ! Cliquez sur « Nouvelle partie ».' : hello()); render({ instant: true }); autoStep(); } else { Kit.firstVisit(newGame); }
 </script>
 </body>
 </html>

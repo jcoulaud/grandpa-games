@@ -30,6 +30,20 @@ const upper = (t) => t[0].toUpperCase() + t.slice(1);
 const over = () => !!game?.over;
 const myTurn = () => game && !over() && game.turn === 'player';
 const blocked = () => !game || busy || stale || Kit.isOpen() || !myTurn();
+const SHOOT = 'cliquez sur « Tirer ».',
+  OVER = 'La partie est terminée : cliquez sur « Nouvelle partie ».';
+// Why he cannot play now: said on a click on the table or on a grey button.
+const waitWhy = () =>
+  over() ? OVER : game.turn === 'cpu' ? OPPONENT + ' joue, attendez votre tour.' : busy ? 'Les billes roulent, attendez.' : null;
+// An aim of his own: « Tirer » is the next thing to press, and the automatic hint of Facile waits.
+// The hint's aim: « Tirer » too, and the hint may come again. A new turn clears both.
+function aimed(on, his = false) {
+  if (on) $('shoot').dataset.nudge = '';
+  else delete $('shoot').dataset.nudge;
+  if (his) $('hintBtn').dataset.auto = 'no';
+  else delete $('hintBtn').dataset.auto;
+  if (on) Kit.point($('shoot'));
+}
 // The balls as he sees them now: with the white where he holds it while it is in his hand.
 function ballsNow() {
   const balls = game.balls.filter((b) => b.id !== 0 || !game.ballInHand);
@@ -151,8 +165,26 @@ function controls() {
   $('hintBtn').disabled = !mine;
   $('undoBtn').disabled = busy || stale || !game.history?.length;
   $('stage').classList.toggle('wait', busy || !myTurn());
+  // Why each grey button is grey: the kit says it when he clicks one.
+  const wait = waitWhy() ?? (placing ? 'Cliquez d’abord sur le tapis, là où vous voulez poser la blanche.' : null),
+    edge = {
+      weaker: 'C’est déjà la force la plus petite. Réglez autre chose, ou ' + SHOOT,
+      stronger: 'C’est déjà la force la plus grande. Réglez autre chose, ou ' + SHOOT,
+      spinDown: 'C’est déjà l’effet rétro, le plus bas. Réglez autre chose, ou ' + SHOOT,
+      spinUp: 'C’est déjà l’effet coulé, le plus haut. Réglez autre chose, ou ' + SHOOT,
+      undoBtn: 'Il n’y a pas encore de coup à annuler.'
+    };
+  for (const id of ['turnLeft', 'turnRight', 'weaker', 'stronger', 'spinDown', 'spinUp', 'shoot', 'hintBtn', 'undoBtn']) {
+    const b = $(id);
+    if (!b.disabled) delete b.dataset.why;
+    else if (id === 'undoBtn') b.dataset.why = game.history?.length ? wait ?? '' : edge.undoBtn;
+    else b.dataset.why = wait ?? edge[id] ?? '';
+  }
+  // At Facile, the balls he may play wear a soft gold edge on his turn.
+  view.state.marks = game.level === 'facile' && mine && !placing ? game.balls.map((b) => b.id).filter((id) => E.legalFirst(game, id)) : [];
 }
 function render(message) {
+  Kit.gameOver(over());
   panels();
   controls();
   preview();
@@ -166,12 +198,17 @@ function newTurn(message) {
   placing = false;
   hand = game.ballInHand ? E.suggestPlace(game) : null;
   aim = { angle: aimAtNearest(), power: game.broken ? 5 : 9, spin: 0 };
+  aimed(false);
   render(
     message +
       (game.ballInHand
         ? ' Vous avez la blanche en main : visez, ou cliquez sur « Déplacer la blanche ».'
-        : '')
+        : /cliquez/.test(message)
+          ? ''
+          : ' Cliquez sur une bille pour viser, puis sur « Tirer ».')
   );
+  // The coach of his first game: the cue already points at a ball, so « Tirer » is a fine first try.
+  Kit.point($('shoot'));
 }
 function aimAtNearest() {
   const cue = white();
@@ -187,7 +224,12 @@ function aimAtNearest() {
 const ballAt = (p, balls = ballsNow()) => balls.find((b) => b.id !== 0 && Math.hypot(b.x - p.x, b.y - p.y) < T.R * 1.5);
 const onCloth = (p) => p.x > -0.01 && p.x < T.L + 0.01 && p.y > -0.01 && p.y < T.W + 0.01;
 function click(ev) {
-  if (ev.button !== 0 || blocked()) return;
+  if (ev.button !== 0) return;
+  if (blocked()) {
+    // The canvas is not watched by the kit: answer a click that cannot play here.
+    if (game && !stale && !Kit.isOpen()) Kit.tell(waitWhy() ?? OVER);
+    return;
+  }
   const p = view.toTable(ev);
   if (placing) {
     if (!E.canPlace(game, p.x, p.y)) {
@@ -200,23 +242,44 @@ function click(ev) {
     hand = { x: p.x, y: p.y };
     placing = false;
     aim.angle = aimAtNearest();
-    render('La blanche est posée. Visez, puis cliquez sur « Tirer ».');
+    render('La blanche est posée. Cliquez sur une bille pour viser, puis sur « Tirer ».');
+    Kit.point($('shoot'));
     return;
   }
   if (!onCloth(p)) {
-    Kit.say('Cliquez sur une bille, ou sur le tapis, pour viser.');
+    Kit.tell('Cliquez sur une bille, ou sur le tapis, pour viser.');
     return;
   }
   const cue = white();
   if (Math.hypot(p.x - cue.x, p.y - cue.y) < T.R * 1.5) {
-    Kit.say('C’est la blanche : cliquez sur la bille à toucher.');
+    Kit.tell('C’est la blanche : cliquez sur la bille à toucher.');
     return;
   }
   const b = ballAt(p),
     to = b ?? p;
-  aim.angle = Math.atan2(to.y - cue.y, to.x - cue.x);
   view.state.rings = [];
-  render(b ? 'Vous visez ' + ballName(b.id) + '. Réglez la force, puis cliquez sur « Tirer ».' : 'Réglez la force, puis cliquez sur « Tirer ».');
+  aim.angle = Math.atan2(to.y - cue.y, to.x - cue.x);
+  // A ball he may not touch first: aimed at as he asked, with a warning.
+  if (b && !E.legalFirst(game, b.id)) {
+    aimed(true, true);
+    render(
+      (b.id === 8 ? 'La noire se joue en dernier' : 'C’est une bille de ' + OPPONENT) +
+        ' : la toucher d’abord est une faute. Cliquez sur une de vos billes.'
+    );
+    return;
+  }
+  // At Facile, the cue lines the ball up with its easiest pocket, so it drops more often.
+  const pot = b && game.level === 'facile' && game.broken ? E.aimFor(game, b.id, cue) : null;
+  if (pot) {
+    aim.angle = pot.angle;
+    aim.power = Math.max(1, Math.min(10, Math.round(pot.power)));
+  }
+  aimed(true, true);
+  render(
+    b
+      ? 'Vous visez ' + ballName(b.id) + (pot ? ' vers ' + E.pocketNames[pot.pocket] : '') + ' : ' + SHOOT
+      : 'Réglez la force, puis ' + SHOOT
+  );
 }
 function hover(ev) {
   if (!game) return;
@@ -239,6 +302,7 @@ function turn(dir) {
   if (blocked() || placing) return;
   aim.angle += dir * STEP;
   view.state.rings = [];
+  if ($('hintBtn').dataset.auto !== 'no') aimed(true, true); // once: the hand is not pointed again at each step
   preview();
 }
 // Holding ↺ or ↻ keeps turning, slowly at first.
@@ -289,7 +353,7 @@ function report(res, who) {
     parts.push(me ? 'Vous jouez ' + groupName(res.assigned) + '.' : OPPONENT + ' joue ' + groupName(res.assigned) + ', vous ' + groupName(other(res.assigned)) + '.');
   if (res.pocketed.own.length) parts.push(by + ' rentré ' + listOf(res.pocketed.own) + '.');
   if (res.pocketed.other.length) parts.push(upper(listOf(res.pocketed.other)) + (res.pocketed.other.length > 1 ? ' sont rentrées' : ' est rentrée') + ' aussi.');
-  if (res.keepsTurn) parts.push(me ? 'Rejouez.' : 'Il rejoue.');
+  if (res.keepsTurn) parts.push(me ? 'Rejouez : cliquez sur une bille pour viser, puis sur « Tirer ».' : 'Il rejoue.');
   else if (!res.pocketed.own.length && !res.pocketed.other.length) parts.push(me ? 'Aucune bille n’est rentrée : à ' + OPPONENT + '.' : OPPONENT + ' n’a rien rentré : à vous.');
   else parts.push(me ? 'À ' + OPPONENT + ' de jouer.' : 'À vous de jouer.');
   return parts.join(' ');
@@ -385,6 +449,7 @@ async function opponent() {
 
 // ---------- The end of a game ----------
 function end(res, shooter) {
+  Kit.gameOver(true);
   panels();
   controls();
   preview();
@@ -410,7 +475,7 @@ function end(res, shooter) {
     confetti();
   }
   window.Sound?.play(won ? 'win' : 'lose');
-  Kit.say(won ? 'Vous avez gagné la partie : bravo !' : OPPONENT + ' a gagné la partie.');
+  Kit.say((won ? 'Vous avez gagné la partie : bravo !' : OPPONENT + ' a gagné la partie.') + ' Cliquez sur « Nouvelle partie » pour rejouer.');
   // The result waits for its game: it never opens over another dialog, the rules or a new game.
   const shown = game;
   clearTimeout(endTimer);
@@ -464,15 +529,24 @@ function hint() {
   const h = E.hint(game);
   if (h.place) hand = { x: h.place.x, y: h.place.y };
   aim = { angle: h.angle, power: h.power, spin: 0 };
+  aimed(true);
   const rings = [];
   const target = game.balls.find((b) => b.id === h.target);
   if (target) rings.push({ x: target.x, y: target.y });
   const pocket = T.pockets.find((p) => p.id === h.pocket);
   if (pocket) rings.push({ x: pocket.x, y: pocket.y, r: (pocket.mouth ?? 0.12) * 0.62 });
   view.state.rings = rings;
-  render(h.reason);
+  // The hint ends with the button to press: « …, puis cliquez sur « Tirer ». ».
+  render(/^(Visez|Jouez|Touchez|Aucune bille)/.test(h.reason) ? h.reason.replace(/\.$/, ', puis ') + SHOOT : h.reason + ' Cliquez sur « Tirer ».');
 }
 
+// The effect: where the cue strikes the white, and what the white does after the shock.
+const spinSaid = () =>
+  [
+    'Effet rétro : la queue frappe la blanche en bas, elle revient en arrière après le choc. Puis ',
+    'Effet au centre : la queue frappe la blanche au milieu, elle s’arrête presque après le choc. Puis ',
+    'Effet coulé : la queue frappe la blanche en haut, elle suit la bille après le choc. Puis '
+  ][aim.spin + 1] + SHOOT;
 function init() {
   drawGuide(T);
   view = createTable(document.querySelector('canvas'), T);
@@ -494,27 +568,31 @@ function init() {
   $('weaker').onclick = () => {
     if (blocked()) return;
     aim.power = Math.max(1, Math.round(aim.power) - 1);
-    render();
+    aimed(true, true);
+    render('Force ' + aim.power + ' sur 10 : ' + SHOOT);
   };
   $('stronger').onclick = () => {
     if (blocked()) return;
     aim.power = Math.min(10, Math.round(aim.power) + 1);
-    render();
+    aimed(true, true);
+    render('Force ' + aim.power + ' sur 10 : ' + SHOOT);
   };
   $('spinDown').onclick = () => {
     if (blocked()) return;
     aim.spin = Math.max(-1, aim.spin - 1);
-    render(aim.spin < 0 ? 'Rétro : après le choc, la blanche revient en arrière.' : 'Au centre : après un choc bien plein, la blanche s’arrête presque.');
+    aimed(true, true);
+    render(spinSaid());
   };
   $('spinUp').onclick = () => {
     if (blocked()) return;
     aim.spin = Math.min(1, aim.spin + 1);
-    render(aim.spin > 0 ? 'Coulé : après le choc, la blanche suit la bille.' : 'Au centre : après un choc bien plein, la blanche s’arrête presque.');
+    aimed(true, true);
+    render(spinSaid());
   };
   $('place').onclick = () => {
     if (blocked()) return;
     placing = !placing;
-    render(placing ? 'Cliquez sur le tapis, là où vous voulez poser la blanche.' : 'La blanche reste ici. Visez, puis cliquez sur « Tirer ».');
+    render(placing ? 'Cliquez sur le tapis, là où vous voulez poser la blanche.' : 'La blanche reste ici. Cliquez sur une bille pour viser, puis sur « Tirer ».');
   };
   $('shoot').onclick = shoot;
   $('hintBtn').onclick = hint;
@@ -527,7 +605,7 @@ function init() {
     if (e.key === 'Escape') {
       if (placing && !Kit.isOpen()) {
         placing = false;
-        render('La blanche reste à sa place.');
+        render('La blanche reste à sa place. Cliquez sur une bille pour viser, puis sur « Tirer ».');
       } else Kit.escape();
     }
     if (Kit.isOpen() || e.target.closest?.('button')) return;
@@ -547,7 +625,7 @@ function init() {
   if (over()) {
     render('La partie est terminée. Cliquez sur « Nouvelle partie » pour rejouer.');
   } else if (game.turn === 'cpu') {
-    render('C’est au tour de ' + OPPONENT + '.');
+    render('C’est au tour de ' + OPPONENT + ', attendez.');
     pause(PACE.read).then(opponent);
   } else newTurn(game.shots ? 'À vous de jouer.' : BREAK);
 }

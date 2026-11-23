@@ -49,6 +49,7 @@
   .card.hand.sel, .card.hand.sel:hover { --lift: calc(var(--rise) * -1); outline: 5px solid var(--gold); outline-offset: 0;
     box-shadow: 0 0 0 2px rgba(var(--shade),.9), 0 16px 26px rgba(0,0,0,.5), 0 4px 8px rgba(0,0,0,.3); }
   .card.hand.hint { outline: 5px solid var(--gold); box-shadow: 0 0 0 2px rgba(var(--shade),.8), 0 0 26px 8px rgba(255,200,61,.7); }
+  .card.hand.can { box-shadow: 0 0 0 3px rgba(255,200,61,.8), 0 0 16px 4px rgba(255,200,61,.45); }
   .card.hand.wait, .card.hand.wait:hover { cursor: default; --lift: 0px; }
   .card.hand.wait.sel { --lift: calc(var(--rise) * -1); }
   /* The card taken from the défausse this turn carries a white tag: it cannot go back. */
@@ -414,11 +415,27 @@ function turnMessage() {
   if (G.turn !== 0) return `${ODETTE} joue.`;
   if (G.phase === 'draw') return 'Prenez une carte : la pioche ou la défausse.';
   const n = sel.size, open = G.opened[0] && G.melds.length;
+  // Before he opens, a hand that cannot make 51 points has only one move: throwing a card.
+  const short = !G.opened[0] && handGroups(G.hands[0]).pts < RA.OPEN;
   if (!n) return G.opened[0] ? 'Posez des combinaisons, ajoutez des cartes ou jetez une carte : cliquez sur vos cartes.'
+    : short ? 'Pas encore 51 points : jetez une carte. Cliquez sur une carte, puis sur la défausse.'
     : 'Posez des combinaisons ou jetez une carte : cliquez sur vos cartes pour les choisir.';
-  if (n === 1) { const c = mySel()[0]; return open ? `Cliquez sur la défausse pour jeter ${nameOf(c)}, ou sur une combinaison pour l'y ajouter.` : `Cliquez sur la défausse pour jeter ${nameOf(c)}, ou choisissez d'autres cartes.`; }
+  if (n === 1) { const c = mySel()[0]; return open ? `Cliquez sur la défausse pour jeter ${nameOf(c)}, ou sur une combinaison pour l'y ajouter.` : short ? `Cliquez sur la défausse pour jeter ${nameOf(c)}.` : `Cliquez sur la défausse pour jeter ${nameOf(c)}, ou choisissez d'autres cartes.`; }
+  if (short) return 'Pas encore 51 points : jetez une carte. Gardez une seule carte choisie, puis cliquez sur la défausse.';
   if (n === 2) return open ? 'Choisissez une 3e carte pour poser, ou cliquez sur une combinaison pour y ajouter ces cartes.' : 'Choisissez au moins 3 cartes pour poser une combinaison.';
+  if (!G.opened[0] && selPoints() < RA.OPEN) return `Ces cartes font ${selPoints()} points sur 51 : choisissez d'autres cartes pour ouvrir.`;
   return open ? `Cliquez sur « Poser » pour poser ces ${n} cartes, ou sur une combinaison pour les y ajouter.` : `Cliquez sur « Poser » pour poser ces ${n} cartes.`;
+}
+// Why "Poser" or "Jeter" is grey, said when he clicks it.
+function greyWhy(lay) {
+  if (G.phase === 'over') return 'La partie est finie : cliquez sur « Nouvelle partie ».';
+  if (G.turn !== 0) return `Attendez, ${ODETTE} joue.`;
+  if (G.phase === 'draw') return LAY_WHY.phase;
+  const n = sel.size;
+  if (!lay) return n ? 'Choisissez une seule carte à jeter.' : "Choisissez d'abord la carte à jeter : cliquez sur une carte de votre jeu.";
+  if (n < 3) return 'Choisissez au moins 3 cartes pour poser.';
+  return handGroups(G.hands[0]).pts < RA.OPEN ? 'Pas encore 51 points : jetez une carte.'
+    : `Ces cartes font ${selPoints()} points : il en faut 51 pour ouvrir. Choisissez d'autres cartes.`;
 }
 const LAY_WHY = {
   few: 'Il faut au moins 3 cartes pour une combinaison.',
@@ -457,10 +474,11 @@ const say = Kit.say;
 // A refused click: what was clicked shakes, the reason shows in a bubble above it for 3 s, and the
 // message line says it too, with a flash, so he sees that his click was heard.
 let bubbleT = 0;
-function refuse(el, text) {
+// next: what to click now, added on the line only, so the bubble stays short.
+function refuse(el, text, next = '') {
   window.Sound?.play('bad');
   shake(el);
-  say(text);
+  say(next ? text + ' ' + next : text);
   const m = $('msg'); m.classList.remove('flash'); void m.offsetWidth; m.classList.add('flash');
   if (!el || !L) return;
   const b = $('bubble');
@@ -484,7 +502,8 @@ function shake(el) {
 
 /* ---------- His moves ---------- */
 const myTurn = () => !stale && G && G.turn === 0 && (G.phase === 'draw' || G.phase === 'play');
-const busy = el => refuse(el, G.phase === 'over' ? 'La partie est finie : cliquez sur « Nouvelle partie ».' : `Attendez un instant : ${ODETTE} joue.`);
+const busy = el => refuse(el, G.phase === 'over' ? 'La partie est finie : cliquez sur « Nouvelle partie ».' : `Attendez, ${ODETTE} joue.`);
+const RETAKE = 'Cliquez sur une carte choisie pour la reprendre.';
 function tapCard(c) {
   if (stale) return;
   hideBubble();
@@ -493,7 +512,6 @@ function tapCard(c) {
   if (G.phase === 'draw') return refuse(el, LAY_WHY.phase);
   if (sel.has(c)) sel.delete(c); else sel.add(c);
   window.Sound?.play('tap');
-  hint = null;
   say(turnMessage());
   render();
 }
@@ -527,7 +545,7 @@ function tapLay() {
   const c = RA.layCheck(G, s);
   if (c.why) s.forEach(x => shake(els.get(x)));
   if (c.why === 'open') return refuse($('layBtn'), `Il manque ${c.missing} ${c.missing > 1 ? 'points' : 'point'} pour ouvrir : il en faut 51.`);
-  if (c.why) return refuse($('layBtn'), LAY_WHY[c.why]);
+  if (c.why) return refuse($('layBtn'), LAY_WHY[c.why], RETAKE);
   move(() => RA.lay(G, s));
 }
 function tapMeld(i) {
@@ -539,10 +557,12 @@ function tapMeld(i) {
   const s = mySel();
   if (!s.length) return refuse(el, "Choisissez d'abord une carte de votre jeu, puis cliquez sur la combinaison.");
   const why = RA.addCheck(G, i, s);
-  if (why === 'closed') return refuse(el, "Ouvrez d'abord avec 51 points : ensuite vous pourrez ajouter des cartes.");
-  if (why === 'joker') return refuse(el, 'Cette combinaison a déjà un joker.');
-  if (why === 'keep') return refuse(el, LAY_WHY.keep);
-  if (why) return refuse(el, s.length === 1 ? `${cap(nameOf(s[0]))} ne va pas sur cette ${meldWord(G.melds[i]) === 'suite' ? 'suite' : 'combinaison'}.` : 'Ces cartes ne vont pas sur cette combinaison.');
+  const other = G.melds.some((m, j) => j !== i && !RA.addCheck(G, j, s)) ? 'Cliquez sur une combinaison entourée de jaune.'
+    : s.length === 1 ? `Cliquez sur la défausse pour jeter ${nameOf(s[0])}.` : RETAKE;
+  if (why === 'closed') return refuse(el, "Ouvrez d'abord avec 51 points : ensuite vous pourrez ajouter des cartes.", s.length === 1 ? other : '');
+  if (why === 'joker') return refuse(el, 'Cette combinaison a déjà un joker.', other);
+  if (why === 'keep') return refuse(el, LAY_WHY.keep, RETAKE);
+  if (why) return refuse(el, s.length === 1 ? `${cap(nameOf(s[0]))} ne va pas sur cette ${meldWord(G.melds[i]) === 'suite' ? 'suite' : 'combinaison'}.` : 'Ces cartes ne vont pas sur cette combinaison.', other);
   move(() => RA.add(G, i, s));
 }
 function tapThrow() {
@@ -557,7 +577,7 @@ function tapSort() {
   if (stale) return;
   sortBy = sortBy === 'suit' ? 'rank' : 'suit';
   window.Sound?.play('tap');
-  say(sortBy === 'suit' ? 'Vos cartes sont rangées par couleur.' : 'Vos cartes sont rangées par valeur.');
+  Kit.tell(sortBy === 'suit' ? 'Vos cartes sont rangées par couleur.' : 'Vos cartes sont rangées par valeur.');
   save();
   render(true);
 }
@@ -619,9 +639,10 @@ function markFresh(e) {
 /* ---------- The end ---------- */
 function gameOver(isNew) {
   render();
+  Kit.gameOver(true);
   const won = G.result.winner === 0, pts = G.result.points;
-  say(won ? `Bravo, vous avez gagné ! ${ODETTE} garde ${plural(pts, 'point', 'points')} en main.`
-    : `${ODETTE} a gagné. Il vous reste ${plural(pts, 'point', 'points')} en main.`);
+  say((won ? `Bravo, vous avez gagné ! ${ODETTE} garde ${plural(pts, 'point', 'points')} en main.`
+    : `${ODETTE} a gagné. Il vous reste ${plural(pts, 'point', 'points')} en main.`) + ' Cliquez sur « Nouvelle partie ».');
   if (!isNew) return;
   window.Sound?.play(won ? 'win' : 'lose');
   const games = ['Retour aux jeux', Kit.home];
@@ -685,7 +706,7 @@ function showHint() {
   if (!myTurn() || Kit.isOpen()) return;
   const h = RA.hint(G);
   hint = h;
-  if (h.type === 'take') say(h.from === 'pile' ? `Prenez ${nameOf(RA.top(G))} à la défausse : cette carte va avec les vôtres.` : 'Prenez une carte de la pioche : la carte de la défausse ne vous aide pas.');
+  if (h.type === 'take') say(h.from === 'pile' ? `Cliquez sur la défausse pour prendre ${nameOf(RA.top(G))} : cette carte va avec les vôtres.` : 'Cliquez sur la pioche : la carte de la défausse ne vous aide pas.');
   else if (h.type === 'lay') {
     const pts = h.groups.reduce((a, g) => a + RA.combo(g).pts, 0);
     say(G.opened[0] ? `Choisissez les ${h.cards.length} cartes entourées de jaune, puis cliquez sur « Poser ».`
@@ -852,7 +873,7 @@ function handGroups(hand) {
   const groups = (pack ? pack.groups : []).map(g => RA.combo(g).slots.map(([c]) => c))
     .sort((a, b) => Math.min(...a.map(pos)) - Math.min(...b.map(pos)));
   const used = new Set(groups.flat());
-  groupMemo = { key, v: { groups, rest: sorted.filter(c => !used.has(c)) } };
+  groupMemo = { key, v: { groups, rest: sorted.filter(c => !used.has(c)), pts: pack ? pack.pts : 0 } };
   return groupMemo.v;
 }
 // The points the cards he chose make in combinations, for the opening gauge.
@@ -938,9 +959,12 @@ function render(moving = false) {
 
   // The keys.
   const layB = $('layBtn'), thrB = $('throwBtn'), sortB = $('sortBtn');
-  const n = playing ? sel.size : 0;
-  layB.disabled = !(playing && n >= 3);
+  const n = playing ? sel.size : 0, best = mine ? bestMove() : null;
+  // Before he opens, "Poser" stays grey until the gauge reaches 51.
+  layB.disabled = !(playing && n >= 3 && (G.opened[0] || pts >= RA.OPEN));
   thrB.disabled = !(playing && n === 1);
+  if (layB.disabled) layB.dataset.why = greyWhy(true); else delete layB.dataset.why;
+  if (thrB.disabled) thrB.dataset.why = greyWhy(false); else delete thrB.dataset.why;
   layB.classList.toggle('primary', !layB.disabled);
   thrB.classList.toggle('primary', !thrB.disabled);
   layB.classList.toggle('hint', !!(hint && hint.type === 'lay' && sel.size && hint.cards.every(c => sel.has(c)) && sel.size === hint.cards.length));
@@ -948,7 +972,7 @@ function render(moving = false) {
   // pulses only when he has nothing left to lay or add, so a wait never pushes him to throw a useful card;
   // otherwise the hint button pulses and shows the move.
   layB.toggleAttribute('data-nudge', !layB.disabled && (G.opened[0] || pts >= RA.OPEN) && !RA.layCheck(G, mySel()).why);
-  thrB.toggleAttribute('data-nudge', !thrB.disabled && RA.hint(G).type === 'throw');
+  thrB.toggleAttribute('data-nudge', !thrB.disabled && best.type === 'throw');
   if (L.narrow) {
     const bw = Math.floor((L.W - 2 * pad - 2 * gap) / 3);
     [layB, thrB, sortB].forEach((b, i) => { b.style.width = bw + 'px'; b.style.left = pad + i * (bw + gap) + 'px'; b.style.top = L.keys + 'px'; });
@@ -1027,6 +1051,8 @@ function render(moving = false) {
   const groupOf = new Map();
   groups.forEach((g, gi) => g.forEach(c => groupOf.set(c, gi)));
   const hintCards = new Set(hint ? hint.type === 'lay' ? hint.cards : hint.type === 'add' ? hint.cards : hint.type === 'throw' ? [hint.card] : [] : []);
+  // At Facile, once he has opened, the cards that go on a combination of the table glow softly.
+  const fits = new Set(level === 'facile' && playing && G.opened[0] && !sel.size ? G.hands[0].filter(c => G.melds.some((m, i) => !RA.addCheck(G, i, [c]))) : []);
   const mid = (nh - 1) / 2, turn = nh > 1 ? Math.min(1.4, 10 / (nh - 1)) : 0, xs = [];
   let gapsBefore = 0;
   order.forEach((c, i) => {
@@ -1037,7 +1063,7 @@ function render(moving = false) {
     const e = cardEl(c), isNew = !e.style.left;
     live.add(c);
     setFace(e, c, 'full');
-    e.className = `card hand ${colourOf(c)}${isJ(c) ? ' joker' : ''}${gi >= 0 ? ' grp' : ''}` + (sel.has(c) ? ' sel' : '') + (hintCards.has(c) && !sel.has(c) ? ' hint' : '') + (mine ? '' : ' wait');
+    e.className = `card hand ${colourOf(c)}${isJ(c) ? ' joker' : ''}${gi >= 0 ? ' grp' : ''}` + (sel.has(c) ? ' sel' : '') + (hintCards.has(c) && !sel.has(c) ? ' hint' : fits.has(c) ? ' can' : '') + (mine ? '' : ' wait');
     e.style.removeProperty('--w'); e.style.removeProperty('--h');
     const t = mid ? (i - mid) / mid : 0;
     e.style.setProperty('--rot', ((i - mid) * turn).toFixed(2) + 'deg');
@@ -1081,7 +1107,30 @@ function render(moving = false) {
 
   Kit.showWins(stats.won);
   $('undoBtn').disabled = stale || !undo.length;
+  $('undoBtn').dataset.why = "Il n'y a pas encore de coup à annuler.";
   $('hintBtn').disabled = !mine;
+  $('hintBtn').dataset.why = G.phase === 'over' ? 'La partie est finie : cliquez sur « Nouvelle partie ».' : `Attendez, ${ODETTE} joue.`;
+  if (mine) coach(best);
+}
+// The best move of the computer's hint, worked out once for each state of the game.
+let bestMemo = { G: null, v: null };
+function bestMove() {
+  if (bestMemo.G !== G) bestMemo = { G, v: RA.hint(G) };
+  return bestMemo.v;
+}
+// The coach of his first game points at the next real thing to click: the pioche first, then the cards
+// of the best move one by one, then "Poser", the combination or the défausse.
+function coach(best) {
+  if (!Kit.coaching()) return;
+  if (G.phase === 'draw') return Kit.point(G.turns[0] && best.from === 'pile' || !RA.canTake(G, 'stock') ? $('pileBox') : $('stock'));
+  const s = mySel(), cards = best.type === 'throw' ? [best.card] : best.cards || [];
+  const next = cards.find(c => !sel.has(c));
+  let el = null;
+  if (s.every(c => cards.includes(c))) el = next !== undefined ? els.get(next)
+    : best.type === 'lay' ? $('layBtn') : best.type === 'add' ? meldEls[best.meld] : $('pileBox');
+  else if (!$('layBtn').disabled) el = $('layBtn');
+  else if (s.length === 1) el = $('pileBox');
+  Kit.point(el);
 }
 function meldLabel(m) {
   const who = m.owner === 0 ? 'Votre' : `Combinaison d'${ODETTE} :`;
@@ -1286,6 +1335,8 @@ table.addEventListener('pointerdown', e => {
   if (e.button !== 0 || Kit.isOpen()) return;
   const el = e.target.closest(TARGETS);
   press = el ? { key: keyOf(el), x: e.clientX, y: e.clientY, id: e.pointerId, at: G.n + ':' + G.phase + ':' + G.turn } : null;
+  // A click on the felt while Odette plays: say so, rather than nothing.
+  if (!el && !e.target.closest('button') && G && G.turn === 1 && G.phase !== 'over') Kit.tell(`Attendez, ${ODETTE} joue.`);
 });
 addEventListener('pointerup', e => {
   const p = press; press = null;
@@ -1321,14 +1372,15 @@ addEventListener('keydown', e => {
     else if (sel.size && myTurn()) { sel.clear(); say(turnMessage()); render(); }
   }
 });
-addEventListener('resize', () => render());
+// The table follows its own size: the window, and the bar or the message line settling after the first deal.
+new ResizeObserver(() => render()).observe(table);
 
 // The pictures of the rules: the jokers, and the pointing hand on the pioche.
 document.querySelectorAll('#help [data-joker]').forEach(e => { e.className = 'card joker red'; e.innerHTML = jokerFace(); });
 document.querySelectorAll('#help .hp-frame.solid').forEach(e => e.insertAdjacentHTML('beforeend', Kit.icon('hand')));
 document.querySelectorAll('#help .guide-btn[data-lay]').forEach(e => e.insertAdjacentHTML('afterbegin', $('layBtn').querySelector('svg').outerHTML));
 
-// The rules open by themselves the first time the game is opened.
+// The first time the game is opened, a game at Facile starts at once, with the coach.
 const loaded = load();
 if (loaded === 'ok') {
   Kit.showLevel(level);
@@ -1337,7 +1389,7 @@ if (loaded === 'ok') {
   else { say(turnMessage()); render(); }
 } else if (loaded === 'broken') {
   newGame(level);
-  say("La partie enregistrée n'a pas pu être relue : une nouvelle partie commence.");
+  say("La partie enregistrée n'a pas pu être relue : une nouvelle partie commence. " + turnMessage());
 } else {
   Kit.firstVisit(newGame);
 }

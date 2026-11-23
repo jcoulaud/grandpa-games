@@ -179,17 +179,17 @@ function tap(i, how) {
   if (how === 'flag') {
     if (G.first < 0) return refuse(i, "Ouvrez d'abord une case : la première ne cache jamais de mine.");
     if (c === 'o') return refuse(i, 'Cette case est déjà ouverte : un drapeau se pose sur une case verte.');
-    if (c === 'f') return play(D.flag(G, i), 'Drapeau retiré.');
+    if (c === 'f') return play(D.flag(G, i), 'Drapeau retiré. ' + nextText());
     if (!flagsLeft()) return refuse(i, `Vous avez posé ${G.mines} drapeaux, autant que de mines : retirez-en un d'abord.`);
     const k = flagsLeft() - 1;
-    return play(D.flag(G, i), k ? `Drapeau posé. Il reste ${plural(k, 'drapeau', 'drapeaux')} à poser.` : 'Drapeau posé. Tous les drapeaux sont posés.');
+    return play(D.flag(G, i), (k ? `Drapeau posé. Il reste ${plural(k, 'drapeau', 'drapeaux')} à poser. ` : 'Drapeau posé. Tous les drapeaux sont posés. ') + nextText());
   }
   if (c === 'f') return play(D.flag(G, i), 'Drapeau retiré. Cliquez encore sur la case pour l\'ouvrir.');
   if (c === 'o') {
     const n = D.number(G, i);
-    if (!n) return say('Cette case est déjà ouverte.');
+    if (!n) return say('Cette case est déjà ouverte : cliquez sur une case verte.');
     const closed = nb(i).filter(j => G.cells[j] === '.').length, flags = nb(i).filter(j => G.cells[j] === 'f').length;
-    if (!closed) return say(`Les cases autour de ce ${n} sont déjà toutes ouvertes ou marquées.`);
+    if (!closed) return say(`Les cases autour de ce ${n} sont déjà toutes ouvertes ou marquées : cliquez sur une case verte.`);
     if (flags !== n) return refuse(i, `Ce ${n} ${flags ? 'touche ' + plural(flags, 'drapeau', 'drapeaux') : 'ne touche aucun drapeau'} : il en faut ${n} pour ouvrir d'un clic les cases autour.`);
     if (guided() && nb(i).some(j => G.cells[j] === '.' && D.isMine(G, j))) return refuse(i, `Un drapeau autour de ce ${n} n'est pas sur une mine : retirez-le d'abord.`);
     const next = D.openAround(G, i);
@@ -206,7 +206,7 @@ function tap(i, how) {
   const first = G.first < 0;
   const next = D.open(G, i);
   const opened = [...next.cells].filter((x, j) => x === 'o' && G.cells[j] !== 'o').length;
-  play(next, first ? 'Bien joué ! Chaque chiffre dit combien de mines touchent sa case.'
+  play(next, first ? 'Bien joué ! Chaque chiffre dit combien de mines touchent sa case. ' + nextText()
     : opened > 1 ? 'Plusieurs cases se sont ouvertes : une case sans chiffre ne touche aucune mine. ' + nextText() : nextText());
 }
 const nextText = () => 'À vous : ouvrez une case sûre, ou posez un drapeau sur une mine.';
@@ -214,6 +214,8 @@ function refuse(i, text) { shake(i); window.Sound?.play('bad'); say(text); }
 
 function setArming(on) {
   arming = on;
+  // The automatic hint of Facile waits while "Drapeau" is on: he is choosing the square of his flag.
+  if (on) $('hintBtn').dataset.auto = 'no'; else delete $('hintBtn').dataset.auto;
   $('flagBtn').setAttribute('aria-pressed', String(on));
   $('board').classList.toggle('arming', on);
 }
@@ -234,11 +236,15 @@ function finish(show) {
   const after = (open, ms) => later(() => { if (!Kit.isOpen()) open(); }, still ? 0 : ms);
   if (show) later(() => window.Sound?.play(G.result === 'won' ? 'win' : 'lose'), G.result === 'won' ? 300 : 900);
   if (G.result === 'won') {
-    say(`Bravo, vous avez gagné : les ${G.mines} mines sont trouvées.`);
+    say(`Bravo, vous avez gagné : les ${G.mines} mines sont trouvées. Cliquez sur « Nouvelle partie » pour rejouer.`);
+    Kit.gameOver(true);
     if (show) after(() => Kit.dialog('Bravo, vous avez gagné !', `Vous avez trouvé les ${G.mines} mines sans en toucher une.${!wonNow ? '' : stats.won === 1 ? " C'est votre première victoire." : ` C'est votre ${stats.won}e victoire.`}`,
       [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', home]], true), 600);
   } else {
-    say('Perdu : il y avait une mine sous cette case. « Annuler le dernier coup » reprend juste avant.');
+    say('Perdu : il y avait une mine sous cette case. Cliquez sur « Annuler le dernier coup » pour reprendre juste avant.');
+    // The game can go on from just before: "Annuler" is the next thing to press, before "Nouvelle partie".
+    $('undoBtn').dataset.nudge = '';
+    Kit.gameOver(true);
     if (show && !still) explode();
     if (show) after(() => Kit.dialog('Une mine a sauté', 'Il y avait une mine sous cette case. Vous pouvez reprendre la partie juste avant ce coup.',
       [['Annuler le dernier coup', doUndo, true], ['Nouvelle partie', askNewGame], ['Retour aux jeux', home]]), 1400);
@@ -253,6 +259,7 @@ function doUndo() {
   timers.forEach(clearTimeout); timers = []; clearBlast();
   Kit.closeDialog();
   G = JSON.parse(undo.pop()); hint = null; lastTap = null; setArming(false);
+  delete $('undoBtn').dataset.nudge; Kit.gameOver(false);
   save(); render();
   if (!saved) return;
   if (guided() && G.first >= 0) showHint('Coup annulé. ');
@@ -264,7 +271,9 @@ function doUndo() {
 function hintText(h) {
   const many = h.cells && h.cells.length > 1;
   const them = many ? 'les cases encadrées sont sûres, ouvrez-les' : 'la case encadrée est sûre, ouvrez-la';
-  const flagIt = many ? 'posez un drapeau sur chaque case encadrée' : 'posez un drapeau sur la case encadrée';
+  // At Facile a click on the red "!" puts the flag: the hint says that click.
+  const flagIt = guided() ? (many ? "cliquez sur chaque point d'exclamation rouge encadré" : "cliquez sur le point d'exclamation rouge encadré")
+    : many ? 'posez un drapeau sur chaque case encadrée' : 'posez un drapeau sur la case encadrée';
   const na = h.a >= 0 ? D.number(G, h.a) : 0, nb2 = h.b >= 0 ? D.number(G, h.b) : 0;
   const left = i => D.number(G, i) - nb(i).filter(j => G.cells[j] === 'f').length;
   switch (h.kind + '-' + h.rule) {
@@ -275,10 +284,11 @@ function hintText(h) {
       return k === 1 ? `Le ${na} entouré n'a plus qu'une case fermée pour sa mine : ${flagIt}.`
         : `Le ${na} entouré n'a plus que ${k} cases fermées pour ${k} mines : ${flagIt}.`;
     }
-    case 'safe-two': return `Il manque autant de mines au ${nb2} qu'au ${na}, tous deux entourés, et toutes les cases fermées du ${na} touchent le ${nb2} : ${them}.`;
+    // Two numbers: two short sentences, the comparison, then the squares and what to do.
+    case 'safe-two': return `Il manque autant de mines au ${nb2} qu'au ${na}, tous deux entourés. Les cases fermées du ${na} touchent toutes le ${nb2} : ${them}.`;
     case 'mine-two': {
       const d = left(h.b) - left(h.a);
-      return `Il manque ${plural(d, 'mine', 'mines')} de plus au ${nb2} qu'au ${na}, tous deux entourés, et parmi les cases fermées, seule${many ? 's les cases encadrées touchent' : ' la case encadrée touche'} le ${nb2} sans toucher le ${na} : ${flagIt}.`;
+      return `Il manque ${plural(d, 'mine', 'mines')} de plus au ${nb2} qu'au ${na}, tous deux entourés. Seule${many ? 's les cases encadrées touchent' : ' la case encadrée touche'} le ${nb2}, pas le ${na} : ${flagIt}.`;
     }
     case 'safe-count': return `Toutes les mines ont leur drapeau : ${them}.`;
     case 'mine-count': return `Il reste ${plural(h.left, 'mine', 'mines')} et ${plural(h.left, 'case fermée', 'cases fermées')} : ${flagIt}.`;
@@ -288,14 +298,23 @@ function hintText(h) {
 // lead: the words said before the reason, after a move of Facile.
 function showHint(lead = '') {
   if (G.result || Kit.isOpen()) return;
-  setArming(false);
   const h = D.hint(G);
   if (!h) return;
-  if (h.kind === 'start') { hint = null; render(); return say("Cliquez sur n'importe quelle case : la première ne cache jamais de mine."); }
-  if (h.kind === 'wrong') { hint = { cells: [h.cell] }; render(); return say(lead + "Il n'y a pas de mine sous le drapeau encadré : cliquez dessus pour le retirer."); }
+  // "Drapeau" stays on when the hint is about a flag; a square to open turns it off, and says so.
+  if (arming && h.kind !== 'mine' && h.kind !== 'wrong') { setArming(false); lead = 'Drapeau annulé. ' + lead; }
+  if (h.kind === 'start') { hint = null; render(); coach(); return say("Cliquez sur n'importe quelle case : la première ne cache jamais de mine."); }
+  if (h.kind === 'wrong') { hint = { cells: [h.cell] }; render(); coach(h.cell); return say(lead + "Il n'y a pas de mine sous le drapeau encadré : cliquez dessus pour le retirer."); }
   hint = { cells: h.cells, ring: [h.a, h.b].filter(x => x >= 0) };
   render();
+  coach(h.cell);
   say(lead + hintText(h));
+}
+// During his first game, the hand points at the square to click: the middle one to start, then the one
+// the hint frames.
+function coach(i = -1) {
+  if (!Kit.coaching() || !G || G.result) return;
+  if (i < 0) i = G.first < 0 ? Math.floor(G.h / 2) * G.w + Math.floor(G.w / 2) : (D.hint(G) || {}).cell ?? -1;
+  if (i >= 0) Kit.point(squares[i]);
 }
 
 function askNewGame() {
@@ -303,6 +322,7 @@ function askNewGame() {
 }
 async function newGame(lv) {
   timers.forEach(clearTimeout); timers = []; clearBlast();
+  delete $('undoBtn').dataset.nudge;
   if (lv) level = lv;
   Kit.showLevel(level);
   const seed = crypto.getRandomValues(new Uint32Array(1))[0];
@@ -311,6 +331,7 @@ async function newGame(lv) {
   const written = save();
   render();
   if (!stale) say("Cliquez sur une case pour commencer : la première n'a jamais de mine.");
+  coach();
   if (await written) GG.track('demineur', 'start');
 }
 
@@ -342,7 +363,7 @@ addEventListener('keydown', e => {
 });
 addEventListener('resize', render);
 
-// The rules open by themselves the first time the game is opened.
+// The first visit starts a game at Facile at once, with the coach (lib/kit.js).
 if (load()) {
   Kit.showLevel(level);
   if (G.result) finish(false);

@@ -99,18 +99,24 @@ const sheetCheck = id => g(id => {
   return e.classList.contains('on') && inside && buttons;
 }, id);
 
-// 1. The first visit: the rules open, and each page fits without scrolling.
+// 1. The first visit: a game starts at Facile at once, with the coach on the card to play or « Piocher ».
 await page.goto(URL);
 await wait(400);
-ok(await g(() => Kit.isOpen()), 'the rules open on the first visit');
+ok(!(await g(() => Kit.isOpen())) && await g(() => level === 'facile' && Kit.coaching()), 'the first visit starts a game at Facile at once, with the coach');
+if (await g(() => G.turn === 0)) ok(await g(() => { const a = HA.choose(G, 'fort'), el = document.querySelector('.coach');
+  return !!el && (a.type === 'play' ? el.dataset.c === String(a.card) : el.id === 'drawBtn'); }), 'the coach rings the card the hint would play, or « Piocher »');
+// The rules stay one click away, on « Règles », and each page fits without scrolling.
+await page.click('#helpBtn');
 for (let n = 0; n < 5; n++) {
   ok(await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }), `rules page ${n + 1} fits without scrolling`);
   await page.screenshot({ path: `${OUT}/ha-rules-${n + 1}.png` });
   await page.click('#helpNext');
 }
+ok(!(await g(() => Kit.isOpen())), 'the last « Suivant » closes the rules');
+await page.click('#newBtn');
 await page.getByRole('button', { name: 'Moyen', exact: true }).click();
 await wait(300);
-ok(!(await g(() => Kit.isOpen())) && await g(() => level === 'moyen'), 'the level is chosen after the rules');
+ok(!(await g(() => Kit.isOpen())) && await g(() => level === 'moyen' && !Kit.coaching()), 'a new game at Moyen ends the coach');
 ok((await g(() => document.getElementById('level').textContent)) === 'Niveau moyen', 'the level shows under the name');
 ok(await g(() => G.hands.every(h => h.length === 7) && G.pile.length === 1 && G.turn === 0), 'a new game deals 7 cards each, and he starts');
 ok(await g(() => cast.length === 3 && cast.every(id => Object.hasOwn(CAST, id))), 'three players of the computer sit at the table');
@@ -137,10 +143,10 @@ ok(await g(() => {
 ok(await g(() => { const top = s => document.querySelector(`.card.hand.${s}`).getBoundingClientRect().top;
   return top('can') < top('no') - 5; }), 'the cards that fit stand up above the others');
 await clickCard(card('4H'));
-ok(await g(c => G.hands[0].includes(c), card('4H')) && (await msg()) === 'Il faut un trèfle ou un 9.', 'a card that does not fit stays, and the line says why: ' + await msg());
+ok(await g(c => G.hands[0].includes(c), card('4H')) && (await msg()) === 'Il faut un trèfle ou un 9. Cliquez sur une carte levée.', 'a card that does not fit stays, and the line says why: ' + await msg());
 ok(await g(c => {
   const b = document.getElementById('bubble'), r = b.getBoundingClientRect(), k = document.querySelector(`.card.hand[data-c="${c}"]`).getBoundingClientRect();
-  return b.classList.contains('on') && b.textContent === 'Il faut un trèfle ou un 9.' && r.bottom <= k.top && r.right > k.left && r.left < k.right;
+  return b.classList.contains('on') && b.textContent === 'Il faut un trèfle ou un 9. Cliquez sur une carte levée.' && r.bottom <= k.top && r.right > k.left && r.left < k.right;
 }, card('4H')), 'the reason also shows in a bubble just above the card');
 await page.screenshot({ path: `${OUT}/ha-refused.png` });
 await clickEl('#stock');
@@ -151,7 +157,7 @@ const r9 = await g(c => { const b = document.querySelector(`.card.hand[data-c="$
 await page.mouse.dblclick(...r9); await page.mouse.move(5, 5);
 await wait(100);
 ok(await g(c => G.pile[G.pile.length - 1] === c && G.hands[0].length === 4 && G.suit === 1, card('9H')), 'a card that fits goes on the défausse with one click, a double-click counts once');
-ok((await msg()) === 'Vous posez le 9 de cœur.', 'the line says what he played');
+ok((await msg()) === 'Vous posez le 9 de cœur.', 'the line says what he played: ' + await msg());
 ok(await g(() => document.getElementById('badge').textContent.includes('Cœur')), 'the colour in the middle turns to cœur');
 // The computers answer, one at a time, each named.
 await wait(1100);
@@ -167,8 +173,18 @@ ok(await g(() => document.getElementById('suitSheet').classList.contains('on') &
 ok(await sheetCheck('suitSheet'), 'the colour sheet fits, with large buttons');
 ok((await g(() => document.getElementById('suitTitle').textContent)) === 'Choisissez la couleur', 'the sheet says "Choisissez la couleur"');
 await page.screenshot({ path: `${OUT}/ha-suits.png` });
+ok(await g(() => document.getElementById('hintBtn').disabled && document.getElementById('hintBtn').dataset.why.includes('« Ne pas poser le 8 »')), 'the grey hint says why: choose a colour first');
+ok(await g(() => document.querySelectorAll('#suits [data-nudge]').length === 1 && document.querySelector('#suits [data-nudge]') === document.activeElement), 'one colour, the one the hint would name, is the nudge target and has the focus');
 await page.click('#suitCancel');
-ok(await g(() => !document.getElementById('suitSheet').classList.contains('on') && G.hands[0].length === 3), '"Garder mon 8" keeps the card');
+ok(await g(() => !document.getElementById('suitSheet').classList.contains('on') && G.hands[0].length === 3), '« Ne pas poser le 8 » keeps the card');
+// A click on a card of his hand while the colours show closes them, and says so. The sheet stands over
+// the middle: with a long hand, the cards at the ends show beside it.
+await setRound(['8S 4C KC 2C 3C 5C 6C 7C 9C 10C JC QC', '3S 5D 6D', '6S 7S 10D', '10S JS QD'], '9H', '2D 3D 4D');
+await clickCard(card('8S'));
+await clickCard(await g(() => G.hands[0].find(c => { const b = document.querySelector(`.card.hand[data-c="${c}"]`).getBoundingClientRect();
+  return rank(c) !== 8 && document.elementFromPoint(b.left + 12, b.top + 16)?.closest('.card.hand') !== null; })));
+ok(await g(() => !document.getElementById('suitSheet').classList.contains('on') && G.hands[0].length === 12) && (await msg()).startsWith('Le 8 reste dans votre main'), 'a card clicked while the colours show closes them and says why: ' + await msg());
+await setRound(['8S 4C KC', '3S 5D 6D', '6S 7S 10D', '10S JS QD'], '9H', '2D 3D 4D');
 await clickCard(card('8S'));
 await page.keyboard.press('Escape');
 ok(await g(() => !document.getElementById('suitSheet').classList.contains('on') && G.hands[0].length === 3), 'Escape keeps the card too');
@@ -189,7 +205,7 @@ await clickEl('#stock');
 ok(await g(c => G.phase === 'drawn' && G.drawn === c && G.hands[0].includes(c), card('3H')), 'a click on the pioche draws the 3 de cœur');
 ok(await g(() => document.getElementById('drawBtn').textContent === 'Passer mon tour' && !!document.querySelector('.card.hand.drawn .tag')), 'the card drawn stands up with a tag, and "Passer mon tour" shows');
 ok(await g(() => !document.getElementById('drawBtn').hasAttribute('data-nudge')), '"Passer mon tour" is not pulsed: he may also play the card');
-ok((await msg()).startsWith('Vous avez pioché le 3 de cœur. Cette carte va'), 'the line says he may play it: ' + await msg());
+ok((await msg()).startsWith('Vous avez pioché le 3 de cœur. Cette carte va') && (await msg()).endsWith('ou sur « Passer mon tour » pour la garder.'), 'the line says he may play it, or keep it: ' + await msg());
 await clickCard(card('4C'));
 ok((await msg()).startsWith('Vous venez de piocher'), 'another card is refused after a draw');
 await page.click('#drawBtn');
@@ -214,7 +230,7 @@ ok(await g(() => started && G.phase === 'drawn' && GG.meta('huit-americain').sum
 await setRound(['8S AC', '3S 5D 6D', '6S 7S 10D', '10S JS QD'], '9H', '2D 3D');
 ok((await msg()) === 'À vous : posez un cœur, un 9 ou un 8.', 'with an 8 in hand, the line names it: ' + await msg());
 await clickCard(card('AC'));
-ok((await msg()) === 'Il faut un cœur, un 9 ou un 8.', 'a refused card names the 8 too: ' + await msg());
+ok((await msg()) === 'Il faut un cœur, un 9 ou un 8. Cliquez sur une carte levée.', 'a refused card names the 8 too: ' + await msg());
 await clickEl('#stock');
 ok((await msg()) === 'Une de vos cartes va : posez un cœur, un 9 ou un 8.', 'the refused pioche names the 8 too: ' + await msg());
 await setRound(['4C KC', '3S 5D 6D', '6S 7S 10D', '10S JS QD'], '8D', '2D 3D', { suit: 1 });
@@ -231,7 +247,19 @@ for (let i = 0; i < 40 && !(await g(() => G.last.kind === 'play' && G.last.seat 
 ok(await g(() => G.hands[0].length === 5 && G.turn === 1), 'Ginette plays her 2: he draws two cards and Josette plays next');
 ok((await msg()) === 'Ginette pose le 2 de cœur : vous piochez deux cartes et passez votre tour.', 'the line says it: ' + await msg());
 ok(await g(() => document.querySelector('#seat0 .fx')?.textContent === '+2 cartes'), 'a "+2 cartes" sign rises over his seat');
+ok(await g(() => document.querySelector('#seat0 .tot.missed')?.textContent === 'Tour passé'), 'his seat says « Tour passé » while the others play');
+ok(await g(() => document.getElementById('hintBtn').disabled && document.getElementById('hintBtn').dataset.why === `Attendez, ${PLAYERS[G.turn].name} joue.`), 'the grey hint says who plays');
+
 await page.screenshot({ path: `${OUT}/ha-two.png` });
+await waitMyTurn();
+ok(await g(() => !document.querySelector('#seat0 .tot.missed')), 'the tag goes when the play comes back to him');
+// Josette's turn, held still: a click on the table or on his cards says who plays.
+await setRound(['4C KC 5D', '3S 5S 6S', '7S 10S KS', '2H 3C 5C'], '9H', '2D 3D 4D');
+await g(() => { G = { ...G, turn: 1 }; say(''); render(); });
+await clickEl('#badge');
+ok((await msg()) === 'Attendez, Josette joue.', 'a click on the table while a computer plays says who plays: ' + await msg());
+await clickCard(card('KC'));
+ok((await msg()) === 'Attendez, Josette joue.', 'a click on his card says it too');
 // Josette's as turns the way.
 await setRound(['4C KC 5D', 'AH 3C 5C', '6S 7S 10S', '2S 3S 5S'], '9H', '2D 3D 4D', { turn: 1 });
 for (let i = 0; i < 40 && !(await g(() => G.last.kind === 'play')); i++) await wait(100);
@@ -272,6 +300,7 @@ await wait(600);
 await g(() => { undo = ['{']; render(); });
 await page.click('#undoBtn'); await wait(600);
 ok((await g(() => JSON.stringify(G))) === snap && await g(() => document.getElementById('undoBtn').disabled), 'an undo entry that cannot be read is skipped');
+ok(await g(() => document.getElementById('undoBtn').dataset.why === "Il n'y a pas encore de coup à annuler."), 'the grey undo says why');
 await g(() => { undo = [JSON.stringify({ ...G, turn: 1 })]; render(); });
 await page.click('#undoBtn'); await wait(600);
 ok((await g(() => JSON.stringify(G))) === snap && await g(() => !undo.length), 'an undo entry of a computer\'s turn is skipped, so the table never waits for nobody');
@@ -326,6 +355,7 @@ await page.click('#helpClose');
 await page.locator('#over.on').waitFor();
 ok(await g(() => G.phase === 'over' && G.result.winner === 0 && stats.won === 1), 'he wins with the lowest total');
 ok((await g(() => document.getElementById('overTitle').textContent)) === 'Bravo, vous avez gagné !', 'the win sheet shows');
+ok(await g(() => document.getElementById('newBtn').hasAttribute('data-nudge')) && (await msg()).endsWith('Cliquez sur « Nouvelle partie ».'), 'the game is over: « Nouvelle partie » is the next thing to press: ' + await msg());
 ok(await g(() => /atteint 100 points : la partie est finie\.\n[^]*\nLes points : Vous 10, Josette 108/.test(document.getElementById('overText').textContent)), 'the win sheet says why the game ended, with the four totals');
 await page.screenshot({ path: `${OUT}/ha-won.png` });
 ok((await g(() => GG.meta('huit-americain').summary)) === '1 victoire', 'the library tile shows the win');
@@ -389,11 +419,11 @@ for (const [w, h, z] of sizes) {
   await p.goto(URL); await wait(300);
   const name = `${w}x${h}${z > 1 ? ' at ' + z * 100 + ' %' : ''}`;
   if (h / z >= 620) {
+    await p.click('#helpBtn');
     let fit = true;
     for (let n = 0; n < 5; n++) { fit &&= await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }); await p.click('#helpNext'); }
     ok(fit, `${name}: every rules page fits without scrolling`);
-  } else { await p.click('#helpClose'); }
-  await p.getByRole('button', { name: 'Facile', exact: true }).click();
+  }
   await wait(900);
   ok(await g(z => Zoom.z() === z, z), `${name}: the page is at ${z * 100} %`);
   // A long hand and the longest message: the corners stay in view.
@@ -434,8 +464,6 @@ for (const [w, h] of [[720, 900], [360, 760], [1093, 680]]) {
   watch(p);
   page = p;
   await p.goto(URL); await wait(300);
-  await p.click('#helpClose');
-  await p.getByRole('button', { name: 'Facile', exact: true }).click();
   await setRound(...DEAL);
   let bad = await layoutCheck(true);
   ok(!bad.length, `${w}x${h}: a seven-card deal with totals of 100 fits, no seat over another ${bad.join(', ')}`);
@@ -469,10 +497,10 @@ for (const [w, h] of [[720, 900], [360, 760], [1093, 680]]) {
   watch(p);
   page = p;
   await p.goto(URL); await wait(300);
+  await p.click('#helpBtn');
   let fit = true;
   for (let n = 0; n < 5; n++) { fit &&= await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }); await p.click('#helpNext'); }
   ok(fit, '390x760: every rules page fits without scrolling');
-  await p.getByRole('button', { name: 'Facile', exact: true }).click();
   await wait(900);
   let bad = await layoutCheck();
   ok(!bad.length, '390x760: the table fits ' + bad.join(', '));
@@ -505,8 +533,6 @@ for (const [w, h] of [[720, 900], [360, 760], [1093, 680]]) {
   watch(p);
   page = p;
   await p.goto(URL); await wait(300);
-  await p.click('#helpClose');
-  await p.getByRole('button', { name: 'Facile', exact: true }).click();
   await setRound(['5H', '3S 5D KD', '8S 7S', '10S JS QD'], '9H', '2D 3D 4D', { scores: [10, 90, 60, 40] });
   await clickCard(card('5H'));
   for (let i = 0; i < 30 && !(await g(() => document.getElementById('over').classList.contains('on'))); i++) await wait(100);

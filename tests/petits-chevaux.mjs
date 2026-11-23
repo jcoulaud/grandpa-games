@@ -20,7 +20,7 @@ const click = async loc => { await loc.click(); await page.mouse.move(5, 5); awa
 const myTurn = () => page.waitForFunction(() => G.turn === 0 && !showing && !anim && !rolling && G.result === null, null, { timeout: 30000 });
 // Sets a game by hand, his turn, with the die already thrown, as after his throw.
 const setGame = (horses, die, extra = {}) => g(([horses, die, extra]) => {
-  calm(); hint = null; moved = null;
+  calm(); hint = null; moved = null; noMove = '';
   G = view = { ...PetitsChevaux.newGame('facile', 99), horses, die, ...extra };
   save(); render();
   if (die !== null && G.turn === 0) afterThrow();
@@ -31,19 +31,23 @@ const shown = () => g(() => [...document.querySelectorAll('.horse')].filter(e =>
 const writeSave = async fn => g(async fn => { await GG.flush(); const v = GG.load('petits-chevaux'); eval(fn)(v); localStorage.setItem('gg:save:petits-chevaux', JSON.stringify({ updatedAt: Date.now(), data: v })); }, String(fn));
 const relTo = (q, p, pos) => g(([q, p, pos]) => (PetitsChevaux.abs(p, pos) - PetitsChevaux.START[q] + 56) % 56, [q, p, pos]);
 
-// 1. The first visit: the rules open, each page fits, and the level starts a game.
+// 1. The first visit: a game starts at Facile at once, with the coach on the die; the rules open on « Règles ».
 await page.goto(URL);
 await wait(400);
-ok(await g(() => Kit.isOpen()), 'the rules open on the first visit');
+ok(await g(() => !Kit.isOpen() && G.level === 'facile' && G.die === null), 'the first visit starts a game at Facile, with no dialog');
+ok(await g(() => Kit.coaching() && document.getElementById('die').classList.contains('coach')), 'the coach rings the die');
+ok(await g(() => document.querySelector('#dieBox .six.on')?.textContent === 'Il faut un 6'), 'with all his horses in the stable, the die says « Il faut un 6 »');
+ok(await g(() => document.getElementById('undoBtn').dataset.why === "Il n'y a pas encore de coup à annuler."), 'the grey undo button says why');
+await page.click('#helpBtn');
 for (let n = 0; n < 5; n++) {
   ok(await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }), `rules page ${n + 1} fits without scrolling`);
   await page.screenshot({ path: `${OUT}/petits-chevaux-rules-${n + 1}.png` });
-  await page.click('#helpNext');
+  if (n < 4) await page.click('#helpNext');
 }
+await page.click('#helpClose');
 ok(await g(() => /Amenez vos chevaux au centre/.test(document.querySelector('#help .page').textContent)), 'the first rules page says to bring the horses to the centre, for two or four');
 ok(await g(() => [...document.querySelectorAll('#help .page')].every(p => p.querySelector('svg.pc-pic') && p.querySelector('.guide-lead') && [...p.querySelectorAll('p')].map(e => e.textContent).join(' ').split(/\s+/).filter(w => /\w/.test(w)).length <= 25)),
   'each rules page is one picture and at most about 25 words');
-await page.getByRole('button', { name: 'Facile', exact: true }).click();
 ok(await g(() => G.die === null && G.turn === 0 && /chevaux bleus/.test(document.getElementById('msg').textContent)), 'a new game says he plays blue and waits for his throw');
 ok(await shown() === 8 && await page.locator('.horse.can').count() === 0, 'two horses each in their stables, none framed before the throw');
 ok(await g(() => document.getElementById('die').classList.contains('ready') && !document.getElementById('die').disabled && document.querySelector('#dieBox .hand').getBoundingClientRect().width > 0
@@ -65,8 +69,15 @@ await setGame([S, S, S, S], 3);
 ok(/il faut un 6 pour sortir/.test(await msg()) && /Rouge/.test(await msg()), 'no move: the message says why and who plays next');
 await page.waitForFunction(() => G.turn !== 0 || showing, null, { timeout: 5000 });
 ok(true, 'the turn passes after a pause');
+ok(await g(() => /il faut un 6 pour sortir/.test(document.getElementById('why').textContent) && !document.getElementById('why').hidden), 'the reason stays beside the die while the others play');
+ok(await g(() => document.getElementById('die').disabled && /^Attendez : c'est à (Rouge|Vert|Jaune) de jouer\.$/.test(document.getElementById('die').dataset.why)), 'the grey die names who plays');
 await myTurn();
-ok(/lancez le dé/.test(await msg()), 'after the computer players, the message gives him the hand: ' + await msg());
+ok(/À vous : cliquez sur le dé\.$/.test(await msg()), 'after the computer players, the message gives him the hand: ' + await msg());
+ok(await g(() => !document.getElementById('why').hidden), 'the reason stays until his next throw');
+// A long message of the last computer move is kept when the turn comes back.
+await g(() => { calm(); G = view = { ...PetitsChevaux.newGame('facile', 7), horses: [[10, -1], [-1, -1], [-1, -1], [-1, -1]], turn: 3, die: null }; render(); computerPlays(); });
+await myTurn();
+ok(/À vous : cliquez sur le dé\.$/.test(await msg()) && (await msg()).length > 30, 'the last move stays on the line with his turn: ' + await msg());
 
 // 4. A 6: the two horses in the stable are framed; one click brings one out, and he throws again.
 await setGame([S, S, S, S], 6);
@@ -80,7 +91,8 @@ ok(await g(() => document.getElementById('rollBtn').hidden && /Cliquez sur un ch
 ok(await page.locator('#marks .land').count() === 1, 'the start square shows where a horse from the stable lands');
 await click(horse(0, 1));
 ok(await g(() => G.horses[0][1] === 0 && G.turn === 0 && G.die === null), 'one click brings the horse out to the start square');
-ok(/sort de l'écurie/.test(await msg()) && /relancez/.test(await msg()), 'the message says so, and to throw again');
+ok(/sort de l'écurie/.test(await msg()) && /cliquez sur le dé pour rejouer/.test(await msg()), 'the message says so, and to throw again');
+ok(await g(() => document.getElementById('why').hidden), 'a new throw takes the old reason away');
 
 // 5. One move only: it still waits for his click, and says so.
 await setGame([[10, -1], S, S, S], 4);
@@ -260,8 +272,8 @@ await page.keyboard.press('Escape');
 await writeSave(v => { v.G.horses[0][0] = 70; v.stats = { won: 12 }; });
 await page.reload();
 await wait(300);
-ok(await g(() => Kit.isOpen() && document.getElementById('table').hidden), 'a broken save is refused, and the game starts again');
-await page.click('#helpClose');
+ok(await g(() => !Kit.isOpen() && G.level === 'facile' && G.die === null), 'a broken save is refused, and a new game starts');
+await page.click('#newBtn');
 await page.getByRole('button', { name: 'Moyen', exact: true }).click();
 ok(await g(() => stats.won === 12 && GG.load('petits-chevaux').stats.won === 12), 'a broken game keeps the count of wins');
 // A level that is not a word, an undo step from another level, and a last move that took five horses.
@@ -319,8 +331,6 @@ await myTurn();
   await a.goto(URL);
   await a.evaluate(() => localStorage.clear());
   await a.reload();
-  await a.click('#helpClose');
-  await a.getByRole('button', { name: 'Facile', exact: true }).click();
   await b.goto(URL);
   await b.evaluate(() => newGame('facile'));
   await a.evaluate(() => { window.sent = []; GG.track = (game, kind) => sent.push(kind); });
@@ -343,8 +353,6 @@ await myTurn();
 const live = await browser.newPage({ viewport: { width: 1366, height: 680 } });
 live.on('pageerror', e => errors.push(e.message));
 await live.goto(URL);
-await live.evaluate(() => { Kit.closeHelp(); });
-await live.getByRole('button', { name: 'Facile', exact: true }).click();
 await live.evaluate(() => { calm(); undo = []; G = view = { ...PetitsChevaux.newGame('facile', 3), horses: [[4, -1], [-1, -1], [-1, -1], [-1, -1]], die: 5 }; render(); afterThrow(); });
 await live.evaluate(() => document.addEventListener('click', () => { window.moveStarted = performance.now(); }, { capture: true, once: true }));
 await live.locator('.horse[data-p="0"][data-h="0"]').click();
@@ -386,7 +394,9 @@ await live.evaluate(() => {
 });
 for (let turn = 0; turn < 10 && await live.evaluate(() => landings.filter(l => l.p !== 0).length) < 8; turn++) {
   await live.waitForFunction(() => G.turn === 0 && !showing && !anim && !rolling && G.result === null, null, { timeout: 90000 });
-  await live.click('#rollBtn');
+  // The throw button breathes when he waits (the nudge): a moving button takes a click all the same.
+  await live.locator('#rollBtn').waitFor({ state: 'visible' });
+  await live.click('#rollBtn', { force: true });
   await live.waitForFunction(() => !rolling, null, { timeout: 5000 });
   if (await live.locator('#pick button').count()) await live.locator('#pick button').first().click();
   else if (await live.locator('.horse.can').count()) await live.locator('.horse.can').first().click();
@@ -430,20 +440,21 @@ for (const [w, h, z] of sizes) {
   const name = `${w}x${h}${z !== 1 ? ' at ' + z * 100 + ' %' : ''}`;
   // The rules: each page fits without scrolling in a window 620 px high or more.
   if (h / z >= 620) {
+    await p.click('#helpBtn');
     const fit = [];
     for (let n = 0; n < 5; n++) {
       fit.push(await p.evaluate(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }));
       await p.click('#helpNext');
     }
+    await p.evaluate(() => Kit.closeHelp());
     ok(fit.every(Boolean), `${name}: every rules page fits without scrolling (${fit.map(f => f ? 'ok' : 'scrolls').join(', ')})`);
-  } else await p.evaluate(() => Kit.closeHelp());
-  await p.getByRole('button', { name: 'Facile', exact: true }).click();
+  }
   // A busy game, with his two framed horses side by side, and the longest kind of message.
   await p.evaluate(() => {
     calm();
     G = view = { ...PetitsChevaux.newGame('facile', 5), horses: [[12, 13], [20, 61], [5, 40], [61, 33]], die: 6 };
     render(); afterThrow();
-    Kit.say('Le cheval jaune renvoie votre cheval à l’écurie. À vous : lancez le dé.');
+    Kit.say('Le cheval jaune renvoie votre cheval à l’écurie. À vous : cliquez sur le dé.');
   });
   await p.waitForTimeout(250);
   const r = await p.evaluate(phone => {
@@ -520,8 +531,7 @@ for (const [w, h, z] of sizes) {
 }
 const cellAt = await (async () => {
   const p = await browser.newPage({ viewport: { width: 1920, height: 1000 }, reducedMotion: 'reduce' });
-  await p.goto(URL); await p.evaluate(() => { localStorage.setItem('gg:size', '1'); Kit.closeHelp(); });
-  await p.getByRole('button', { name: 'Facile', exact: true }).click();
+  await p.goto(URL); await p.evaluate(() => { localStorage.setItem('gg:size', '1'); });
   const c = await p.evaluate(() => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell')));
   await p.close();
   return c;

@@ -72,8 +72,7 @@ try {
 
   // 2. Solitaire at 130 %: a click and a drag move the right card.
   await page.goto(gameUrl('solitaire'));
-  await page.click('#helpClose');
-  await page.locator('#overBtns button', { hasText: 'Facile' }).click();
+  // The first visit starts a game at Facile at once.
   await page.waitForFunction(() => !busy);
   ok(await zoomText() === '130 %', 'a game opens at the size chosen in the library');
   const findMove = want => g(want => {
@@ -113,8 +112,7 @@ try {
 
   // 3. FreeCell at 130 %: a click on the last card of a column moves it.
   await page.goto(gameUrl('freecell'));
-  await page.click('#helpClose');
-  await page.locator('#overBtns button', { hasText: 'Facile' }).click();
+  // The first visit starts a game at Facile at once.
   await page.waitForFunction(() => !busy);
   const fc = await g(() => { const p = S.tab.find(p => p.length); const r = E[p[p.length - 1]].getBoundingClientRect(); return [r.x + r.width / 2, r.y + 14]; });
   const fcBefore = await g(() => S.moves);
@@ -123,8 +121,7 @@ try {
 
   // 4. Dames at 130 %: a piece and a square, clicked where they show.
   await page.goto(gameUrl('dames'));
-  await page.click('#helpClose');
-  await page.locator('#overBtns button', { hasText: 'Facile' }).click();
+  // The first visit starts a game at Facile at once.
   await wait(400);
   const mv = await g(() => legal()[0]);
   const sq = n => g(n => { const r = squares[n].getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }, n);
@@ -135,8 +132,7 @@ try {
 
   // 5. Dame de pique at 130 %: the three cards clicked are the three chosen.
   await page.goto(gameUrl('dame-de-pique'));
-  await page.click('#helpClose');
-  await page.locator('#overBtns button', { hasText: 'Facile' }).click();
+  // The first visit starts a game at Facile at once.
   await wait(500);
   const cards = await g(() => [...document.querySelectorAll('.card.hand')].slice(0, 3).map(e => +e.dataset.c));
   for (const c of cards) {
@@ -147,7 +143,7 @@ try {
 
   // 6. Mots mêlés at 130 %: a click on the first letter and one on the last find the word, and a drag too.
   await page.goto(gameUrl('mots-meles'));
-  await page.click('#helpClose');
+  await page.click('#newBtn');
   await page.locator('#overBtns button', { hasText: 'Difficile' }).click();
   await wait(300);
   const letter = i => g(i => { const r = document.querySelector(`.cell[data-i="${i}"]`).getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }, i);
@@ -160,8 +156,7 @@ try {
   ok(await g(() => G.found.includes(1)), 'mots mêlés at 130 %: a drag from the first letter to the last finds the word');
   // 6. Petits chevaux at 130 %: a click on a framed horse moves that horse, also beside a red one.
   await page.goto(gameUrl('petits-chevaux'));
-  await page.click('#helpClose');
-  await page.locator('#overBtns button', { hasText: 'Facile' }).click();
+  // The first visit starts a game at Facile at once.
   await wait(300);
   await g(() => {
     calm();
@@ -180,7 +175,7 @@ try {
   // 7. A smaller window lowers the size it can hold; a phone stays at 100 % and shows no buttons.
   // 5b. Morpion at 130 %: a click near the edge of a square of the big sheet plays that square.
   await page.goto(gameUrl('morpion'));
-  await page.click('#helpClose');
+  await page.click('#newBtn');
   await page.locator('#overBtns button', { hasText: 'Moyen' }).click();
   await wait(400);
   const target = await g(() => G.n * G.n - 2);

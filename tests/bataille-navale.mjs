@@ -19,19 +19,24 @@ const click = async (k, i) => { await sq(k, i).click(); await page.mouse.move(5,
 const answered = () => page.waitForFunction(() => G.turn === 'me' || G.result);
 const water = () => g(() => { const v = Bataille.view(G, 1); return v.findIndex((x, i) => x === '.' && Bataille.shipAt(G, 1, i) < 0); });
 
-// 1. The first visit: the rules open, and each page fits without scrolling.
+// 1. The first visit: a game starts at Facile at once, with the coach on a square of the computer's sea.
+// The rules open on « Règles », and each page fits without scrolling.
 await page.goto(URL);
 await wait(400);
-ok(await g(() => Kit.isOpen()), 'the rules open on the first visit');
+ok(await g(() => !Kit.isOpen() && level === 'facile' && !started()), 'the first visit starts a game at Facile, with no dialog');
+ok(await g(() => Kit.coaching() && document.querySelector('#sea1 .q.coach')), "the coach rings a square of the computer's sea");
+ok(await g(() => document.querySelector('#side0 h2').textContent === 'Vos bateaux' && document.getElementById('side0').classList.contains('calm')), 'his sea is named « Vos bateaux » and steps back during his turn');
+ok(/déjà placés/.test(await msg()), 'the first line says his ships are already placed');
+await page.click('#helpBtn');
 const pages = await page.locator('#helpText .page').count();
 ok(pages >= 3 && pages <= 5, `the rules have ${pages} pages`);
 ok(await g(() => [...document.querySelectorAll('#help .page')].every(p => p.querySelector('.bn-pic[aria-hidden="true"]') && p.querySelector('.guide-lead'))), 'each rules page is one picture and a short sentence');
 ok(await g(() => !document.querySelector('#help .q, #help .boat')), 'the squares and ships of the rules use their own classes');
 for (let n = 0; n < pages; n++) {
   ok(await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }), `rules page ${n + 1} fits without scrolling`);
-  await page.click('#helpNext');
+  if (n < pages - 1) await page.click('#helpNext');
 }
-await page.getByRole('button', { name: 'Facile', exact: true }).click();
+await page.click('#helpClose');
 await g(() => { G = Bataille.newGame('facile', 4242); save(); render(); });
 ok(await page.locator('.q').count() === 200, 'two seas of 10 by 10 squares');
 ok(await page.locator('#sea0 .boat').count() === 5 && await page.locator('#sea1 .boat').count() === 0, 'his ships show, the computer\'s are hidden');
@@ -43,14 +48,14 @@ ok(await g(b => JSON.stringify(G.fleets[0]) !== b, before) && /placés autrement
 
 // 3. Refusals: his own sea, with the reason.
 await click(0, 0);
-ok(/C'est votre flotte/.test(await msg()) && await g(() => G.shots[1] === '.'.repeat(100)), 'a click on his own sea is refused, with the reason');
+ok(/^C'est votre mer : tirez dans la mer de l'ordinateur, à droite\.$/.test(await msg()) && await g(() => G.shots[1] === '.'.repeat(100)), 'a click on his own sea is refused, with the reason');
 
 // 4. A shot in the water, then the computer's answer, with its last shot ringed.
 let w = await water();
 await sq(1, w).click();
 ok(await g(i => G.shots[1][i] === 'o', w) && /à l'eau/.test(await msg()), 'a shot in the water says so');
 await answered();
-ok(/L'ordinateur tire en [A-J]\d+/.test(await msg()) && /À vous/.test(await msg()), 'the computer answers and says where');
+ok(/^L'ordinateur tire en [A-J]\d+ : [^.]+[.!] À vous : tirez dans sa mer, à droite\.$/.test(await msg()), 'the computer answers, says where, and what to do next: ' + await msg());
 ok(await page.locator('#sea0 .q.last').count() === 1 && await page.locator('#sea1 .q.last').count() === 1, 'the last shot of each side is ringed');
 ok(!(await page.locator('#moveBtn').isVisible()), 'the button to place the ships again goes after the first shot');
 await page.mouse.move(5, 5); await wait(520);
@@ -81,7 +86,7 @@ await answered(); await page.mouse.move(5, 5); await wait(520);
 ok(await g(t => t.every(i => Bataille.view(G, 1)[i] === 's'), torp) && await page.locator('#sea1 .boat.sunk').count() === 1, 'a sunk ship shows on his sea');
 const clear = await g(() => Bataille.view(G, 1).indexOf('c'));
 await click(1, clear);
-ok(/touche un bateau coulé/.test(await msg()), 'a square beside a sunk ship is refused, with the reason');
+ok(/est vide : les bateaux ne se touchent jamais/.test(await msg()), 'a square beside a sunk ship is refused, with the reason');
 await page.screenshot({ path: `${OUT}/bataille-navale-sunk.png` });
 
 // 8. The hint frames a new square on the computer's sea and says why.
@@ -90,6 +95,8 @@ const hinted = await g(() => [...document.querySelectorAll('#sea1 .q.hint')].map
 ok(hinted.length === 1 && await g(i => Bataille.view(G, 1)[i] === '.', hinted[0]) && /Tirez en [A-J]\d+/.test(await msg()), 'the hint frames a new square and says why');
 const hit = await g(() => G.fleets[1][0][0]);
 await click(1, hit); await answered();
+ok(/Touché ! Tirez sur une case juste à côté\.$/.test(await msg()), 'after a hit, the line says to shoot beside it: ' + await msg());
+ok(await g(h => { const near = [...document.querySelectorAll('#sea1 .q.near')].map(e => +e.dataset.i); return near.length >= 1 && near.every(i => [h - 1, h + 1, h - 10, h + 10].includes(i)); }, hit), 'at Facile the open squares beside the hit are marked');
 await page.click('#hintBtn');
 ok(/touché|ligne|colonne/.test(await msg()) && await page.locator('#sea1 .q.ring').count() >= 1, 'after a hit, the hint follows it and rings it');
 
@@ -107,6 +114,7 @@ const last = await g(() => G.fleets[1].flat().find(i => G.shots[1][i] === '.'));
 await click(1, last);
 await page.waitForSelector('#over.on');
 ok(/Bravo/.test(await page.textContent('#overTitle')) && /première victoire/.test(await page.textContent('#overText')), 'the win dialog, with the first win');
+ok(await g(() => document.getElementById('newBtn').hasAttribute('data-nudge') && document.getElementById('hintBtn').dataset.why) && /Nouvelle partie/.test(await msg()), 'the end points to « Nouvelle partie », and the grey hint says why');
 ok(await g(() => GG.meta('bataille-navale').summary) === '1 victoire', 'the library line counts the win');
 await page.screenshot({ path: `${OUT}/bataille-navale-won.png` });
 await page.locator('#overBtns button', { hasText: 'Nouvelle partie' }).click();
@@ -160,8 +168,6 @@ ok(onTop, 'a refused click on his own ship does not hide the ship');
 const slow = await browser.newPage({ viewport: { width: 1366, height: 680 }, reducedMotion: 'no-preference' });
 slow.on('pageerror', e => errors.push(e.message));
 await slow.goto(URL);
-await slow.click('#helpClose');
-await slow.getByRole('button', { name: 'Facile', exact: true }).click();
 await slow.evaluate(() => { const v = Bataille.view(G, 1); tap(1, v.findIndex((x, i) => x === '.' && Bataille.shipAt(G, 1, i) < 0)); });
 await slow.waitForTimeout(600);
 ok(await slow.locator('#sea1 .word.eau').textContent() === 'Plouf !', 'a shot in the water says "Plouf !" over its square');
@@ -182,8 +188,6 @@ await slow.close();
 const phone = await browser.newPage({ viewport: { width: 390, height: 760 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' });
 phone.on('pageerror', e => errors.push(e.message));
 await phone.goto(URL);
-await phone.click('#helpClose');
-await phone.getByRole('button', { name: 'Facile', exact: true }).click();
 const tops = await phone.evaluate(() => [0, 1].map(k => document.getElementById('sea' + k).getBoundingClientRect().top));
 ok(tops[1] < tops[0], 'on a phone the computer\'s sea comes first');
 await phone.locator('.q[data-k="1"][data-i="55"]').tap();

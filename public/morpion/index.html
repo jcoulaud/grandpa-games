@@ -58,6 +58,8 @@
   .cell { position: relative; background: var(--tile); border-radius: var(--r); }
   /* His turn: a free square turns lilac under the mouse and shows a pale cross, so he sees where it will go. */
   #grid.yours .cell.free { cursor: pointer; }
+  /* At Facile, each free square shows a faint dashed frame before any hover, so he sees where he can play. */
+  #sheet.small #grid.yours .cell.free { outline: 3px dashed rgba(91,70,160,.35); outline-offset: -12px; }
   #grid.yours .cell.free:hover { background: var(--tile-hover); box-shadow: inset 0 0 0 max(2px, calc(var(--gap) * .8)) var(--edge-hover); }
   #grid.yours .cell.free:hover::after, .cell.hint::after {
     content: ""; position: absolute; inset: 16%; opacity: .3;
@@ -374,23 +376,23 @@ function turnMessage() {
 // The warning when the computer can win or make an open four at its next move, else null.
 function warning() {
   const danger = Morpion.danger(G);
-  if (danger === 'win') return `Attention : l'ordinateur peut aligner ${G.k} ronds au prochain coup. Bloquez-le !`;
-  if (danger === 'wins') return `Attention : l'ordinateur peut aligner ${G.k} ronds à plusieurs endroits, et une croix n'en bloque qu'un. Annulez votre dernier coup.`;
-  if (danger === 'three') return "Attention : l'ordinateur a trois ronds alignés, libres aux deux bouts.";
-  if (danger === 'gap') return "Attention : l'ordinateur a trois ronds sur une ligne, avec une case vide entre eux, libres aux deux bouts.";
+  if (danger === 'win') return `Attention : l'ordinateur peut aligner ${G.k} ronds au prochain coup. Bloquez-le : cliquez sur la case qui lui manque.`;
+  if (danger === 'wins') return `Attention : l'ordinateur peut aligner ${G.k} ronds à plusieurs endroits, et une croix n'en bloque qu'un. Cliquez sur « Annuler le dernier coup ».`;
+  if (danger === 'three') return "Attention : l'ordinateur a trois ronds alignés, libres aux deux bouts. Cliquez au bout de ses ronds.";
+  if (danger === 'gap') return "Attention : l'ordinateur a trois ronds sur une ligne, avec un trou. Cliquez dans le trou ou au bout.";
   return null;
 }
 // True when the cross is placed.
 function tap(i) {
-  if (phase === 'thinking' || phase === 'anim') return say("Attendez un instant : l'ordinateur joue."), false;
-  if (phase === 'hint') return say('Attendez un instant : je cherche une bonne case.'), false;
+  if (phase === 'thinking' || phase === 'anim') return Kit.tell("Attendez, l'ordinateur pose son rond."), false;
+  if (phase === 'hint') return Kit.tell('Attendez un instant : je cherche une bonne case.'), false;
   const why = Morpion.refusal(G, i);
   if (why === 'over') return say(`Cette partie est finie : cliquez sur « ${shown($('nextBtn')) ? 'Partie suivante' : 'Nouvelle partie'} » pour en commencer une autre.`), false;
   if (why) {
     shake(i);
     window.Sound?.play('bad');
-    say(why === 'mine' ? 'Cette case a déjà votre croix : choisissez une case vide.'
-      : "Cette case a déjà un rond de l'ordinateur : choisissez une case vide.");
+    say(why === 'mine' ? 'Cette case a déjà votre croix : cliquez sur une case vide.'
+      : "Cette case a déjà un rond de l'ordinateur : cliquez sur une case vide.");
     return false;
   }
   playCross(i);
@@ -466,8 +468,8 @@ async function computerPlays(c) {
 function computerSaid(c) {
   const warn = warning();
   if (warn) return warn;
-  if (Morpion.blocked(G, c)) return "L'ordinateur a bloqué vos croix. À vous de jouer.";
-  return "L'ordinateur a posé son rond. À vous de jouer.";
+  if (Morpion.blocked(G, c)) return "L'ordinateur a bloqué vos croix. À vous : cliquez sur une case vide.";
+  return "L'ordinateur a posé son rond. À vous : cliquez sur une case vide.";
 }
 // Waits until the mark just drawn is finished.
 const settle = () => new Promise(resolve => later(resolve, INK_MS));
@@ -490,9 +492,13 @@ function finish(show, move = -1) {
     if (r.winner === X && !wonNow) { wonNow = true; total.won++; firstWin = true; }
   }
   render(move);
+  // "Partie suivante" beside the board is the next button (it has data-nudge). When the side cards are
+  // hidden, "Nouvelle partie" is.
+  Kit.gameOver(!shown($('nextBtn')));
   const title = r.winner === X ? 'Bravo, vous avez gagné !' : r.winner === O ? "L'ordinateur a gagné" : 'Match nul';
-  say(r.winner === X ? `Bravo, vous avez gagné : vous avez aligné ${crosses(k)}.`
-    : r.winner === O ? `L'ordinateur a gagné : il a aligné ${k} ronds.` : 'Match nul : la grille est pleine.');
+  const go = shown($('nextBtn')) ? ' Cliquez sur « Partie suivante ».' : ' Cliquez sur « Nouvelle partie ».';
+  say((r.winner === X ? `Bravo, vous avez gagné : vous avez aligné ${crosses(k)}.`
+    : r.winner === O ? `L'ordinateur a gagné : il a aligné ${k} ronds.` : 'Match nul : la grille est pleine.') + go);
   const my = gen;
   // A result counts once, and only when it is saved: a stale window cannot count it a second time.
   // A result already counted is not saved again, so opening it in another window changes nothing.
@@ -519,7 +525,8 @@ function finish(show, move = -1) {
     pendingResult = () => {
       if (my !== gen || stale) return;
       if (r.winner === X) Kit.dialog(title, text, [next, ['Changer de niveau', askNewGame], games], true);
-      else if (r.winner === O) Kit.dialog(title, text, [['Annuler le dernier coup', doUndo, true], ['Partie suivante', nextGame], games]);
+      // The next game is the yellow choice: undo after a loss is offered, but never the default.
+      else if (r.winner === O) Kit.dialog(title, text, [next, ['Annuler le dernier coup', doUndo], games]);
       else Kit.dialog(title, text, [next, games]);
     };
     showPendingResult();
@@ -586,7 +593,7 @@ function showHint() {
     phase = 'player';
     if (!answer) { render(); return; }
     hint = answer.cell;
-    say(answer.why);
+    say(answer.why + ' Cliquez sur la case jaune.');
     render();
   });
 }
@@ -608,7 +615,7 @@ async function newGame(lv) {
   render();
   const written = save();
   if (first === O) { computerTurn(); say("Nouvelle partie : l'ordinateur commence."); }
-  else say('Nouvelle partie : vous commencez. ' + (big() ? 'Cliquez sur une case vide.' : 'Cliquez sur une case de la grille.'));
+  else say('Nouvelle partie : vous commencez. Cliquez sur une case vide.');
   if (await written && id === gameId) GG.track('morpion', 'start');
 }
 
@@ -696,6 +703,14 @@ function renderGrid(animate = -1) {
   if (G.result && G.result.line) {
     if (animate >= 0 || !$('strike').firstChild) strikeLine(G.result.line, G.result.winner, animate >= 0);
   } else $('strike').innerHTML = '';
+  if (phase === 'player' && !G.result) coach();
+}
+// The coach of his first game points at the centre square, else at the square the hint would choose.
+function coach() {
+  if (!Kit.coaching()) return;
+  const b = Morpion.board(G), mid = (G.n * G.n - 1) / 2;
+  const cell = hint !== null && !b[hint] ? hint : !b[mid] ? mid : !big() ? Morpion.hint(G).cell : -1;
+  if (cell >= 0) Kit.point(cells[cell]);
 }
 const ICON = {
   [X]: '<path d="M22 22L78 78M78 22L22 78" stroke="#1F3FBF" stroke-width="15"/>',
@@ -740,7 +755,10 @@ function renderSide() {
   $('stripYou').textContent = s.you; $('stripCpu').textContent = s.cpu; $('stripDraws').textContent = s.draws;
   Kit.showWins(total.won);
   $('undoBtn').disabled = !G.moves.some((c, i) => Morpion.mover(G, i) === X);
+  $('undoBtn').dataset.why = "Il n'y a pas encore de coup à annuler.";
   $('hintBtn').disabled = phase !== 'player' || !!G.result;
+  $('hintBtn').dataset.why = G.result ? `La partie est finie : cliquez sur « ${shown($('nextBtn')) ? 'Partie suivante' : 'Nouvelle partie'} ».`
+    : phase === 'hint' ? 'Attendez un instant : je cherche une bonne case.' : "Attendez, l'ordinateur pose son rond.";
 }
 
 /* ---------- Animations ----------
@@ -799,7 +817,9 @@ grid.addEventListener('pointerdown', e => {
 addEventListener('pointerup', e => {
   if (!down || e.pointerId !== down.id) return;
   const d = down; down = null;
-  if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 16 * Zoom.z() || d.turn !== phase + G.moves.length) return;
+  if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 16 * Zoom.z()) return;
+  // A press held through the computer's move plays nothing, but says why.
+  if (d.turn !== phase + G.moves.length) { if (phase === 'thinking' || phase === 'anim') Kit.tell("Attendez, l'ordinateur pose son rond."); return; }
   // Only a click that placed a cross makes the next click on its square a double-click.
   const t = performance.now(), prev = lastTap;
   if (prev && prev.i === d.i && t - prev.t < 500) return;
@@ -854,15 +874,18 @@ for (const b of document.querySelectorAll('#help .gb')) {
   }
 }
 
-// The rules open by themselves the first time the game is opened.
+// The first time, a game starts at Facile at once, with the coach.
 if (load()) {
   Kit.showLevel(level);
   render();
   if (G.result) finish(true);
   else if (Morpion.turn(G) === O) computerTurn();
   else say(warning() || (G.moves.length ? turnMessage() : 'À vous de commencer : cliquez sur une case vide.'));
+} else if (series) {
+  // A save that did not read back keeps its level and its score: a new game starts there, without the coach.
+  newGame(level);
 } else {
-  if (!series) series = freshSeries(level);
+  series = freshSeries(level);
   Kit.firstVisit(newGame);
 }
 </script>

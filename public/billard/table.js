@@ -27,6 +27,7 @@ export function createTable(canvas, T) {
     cue: null, // { angle, pull (m), alpha }
     preview: null, // { aim, cue, object: [{x,y}], ghost: {x,y} | null, gold: bool }
     rings: [], // { x, y, r } in metres, yellow
+    marks: [], // ids of the balls he may play, edged in soft gold at Facile
     hand: null, // { x, y, ok } the white under the mouse while he places it
     headLine: false,
     hover: null, // { id, x, y }
@@ -310,6 +311,19 @@ export function createTable(canvas, T) {
     }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
+  // The balls he may play, at Facile: a thin soft-gold edge, so he sees them without moving the mouse.
+  function drawMarks() {
+    if (!state.marks.length) return;
+    ctx.lineWidth = 3 * dpr;
+    ctx.strokeStyle = 'rgba(255, 214, 120, .85)';
+    for (const b of state.balls) {
+      if (!state.marks.includes(b.id)) continue;
+      const { X, Y } = toScreen(b.x, b.y);
+      ctx.beginPath();
+      ctx.arc(X, Y, R * s + 3.5 * dpr, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
   function drawRings() {
     const t = performance.now() / 1000;
     for (const r of state.rings) {
@@ -390,6 +404,7 @@ export function createTable(canvas, T) {
     drawPreview(state.preview);
     for (const d of state.drops) drawBall(d, 1 - 0.3 * d.k, Math.min(0.85, d.k * 1.1));
     for (const b of state.balls) drawBall(b);
+    drawMarks();
     drawRings();
     drawHand(state.hand);
     drawCue(state.cue, state.balls.find((b) => b.id === 0) ?? state.hand);

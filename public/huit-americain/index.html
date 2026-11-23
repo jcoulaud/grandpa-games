@@ -149,6 +149,8 @@
   #seat0 .who { display: flex; flex-direction: column; }
   #seat0 b { font-size: 25px; }
   #seat0.turn .now { display: flex; }
+  /* A turn he loses to a 2 or a valet: his total gives way to a tag, until the play comes back to him. */
+  #seat0 .tot.missed { align-self: flex-start; padding: 0 10px; border-radius: 10px; background: var(--turn); color: #4A0E2E; font-weight: 700; }
   html.low #seat0 { padding: 4px 14px 4px 4px; gap: 8px; } html.low #seat0 .ava { width: 34px; height: 34px; } html.low #seat0 b { font-size: 20px; line-height: 1.1; } html.low #seat0 .tot, html.low #seat0 .now { line-height: 1.15; }
   /* A word over a seat for a special card: "+2 cartes", "Passe son tour". */
   .seat .fx { position: absolute; left: 50%; top: -16px; translate: -50% -100%; z-index: 5; padding: 4px 14px; border-radius: 12px;
@@ -337,7 +339,7 @@
   <h2 id="suitTitle">Choisissez la couleur</h2>
   <p>Le joueur suivant devra poser cette couleur, ou un 8.</p>
   <div id="suits"></div>
-  <button id="suitCancel">Garder mon 8</button>
+  <button id="suitCancel">Ne pas poser le 8</button>
 </div>
 <div class="sheet" id="scoreSheet" role="group" aria-labelledby="scoreTitle">
   <h2 id="scoreTitle"></h2>
@@ -438,10 +440,10 @@ const ICON_DRAW = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="7"
 /* ---------- State ----------
    G: the game (see engine.js). undo: the games before each of his moves in this round. hint: what the
    hint shows ({ card, suit } or { draw: true }). choosing: the 8 he clicked, while he names a colour.
-   wonNow: this game is counted as won, so a win counts once. */
+   wonNow: this game is counted as won, so a win counts once. missed: he loses this turn to a 2 or a valet. */
 let G, undo = [], level = 'facile', stats = { won: 0 }, wonNow = false, started = false;
 let gameId = 0, pendingResult = null, holdingScore = false, winWrite = null;
-let hint = null, choosing = null, gen = 0, timers = [], lastTap = null, stale = false;
+let hint = null, choosing = null, gen = 0, timers = [], lastTap = null, stale = false, missed = false;
 addEventListener('gg-stale', () => { stale = true; cancelAll(); render(); });
 
 const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
@@ -518,7 +520,7 @@ async function commit(next) {
 /* ---------- Messages ---------- */
 function turnMessage() {
   if (G.turn !== 0) return '';
-  if (G.phase === 'drawn') return `Vous avez pioché ${cardName(G.drawn)}. Cette carte va : cliquez dessus pour la poser, ou sur « Passer mon tour ».`;
+  if (G.phase === 'drawn') return `Vous avez pioché ${cardName(G.drawn)}. Cette carte va : cliquez dessus pour la poser, ou sur « Passer mon tour » pour la garder.`;
   if (G.phase !== 'play') return '';
   if (canDraw(G)) return `Vous n'avez ${neither()} : cliquez sur « Piocher ».`;
   return `À vous : posez ${need()}.`;
@@ -549,6 +551,10 @@ function describe(before) {
   return '';
 }
 const say = Kit.say;
+// Why a click does nothing now, ending with what to click.
+const waitWhy = () => `Attendez, ${PLAYERS[G.turn].name} joue.`;
+const endWhy = () => G.phase === 'over' ? 'La partie est finie : cliquez sur « Nouvelle partie ».' : 'La manche est finie : cliquez sur « Manche suivante ».';
+const SUIT_WHY = "Choisissez d'abord la couleur de votre 8, ou cliquez sur « Ne pas poser le 8 ».";
 
 // A refused click: the card shakes, the reason shows in a bubble just above it for 3 s, and the
 // message line says it too, with a short flash, so he sees that his click was heard.
@@ -579,21 +585,22 @@ function tapCard(c) {
   if (stale) return;
   hideBubble();
   const el = els.get(c);
-  if (choosing !== null) return closeSuits();
-  if (G.phase === 'done' || G.phase === 'over') return refuse(el, 'La manche est finie : cliquez sur le bouton de la feuille des points.');
-  if (!myTurn()) return refuse(el, 'Attendez un instant : les autres joueurs jouent.');
+  if (choosing !== null) { closeSuits(); return Kit.tell('Le 8 reste dans votre main : cliquez sur la carte à poser.'); }
+  if (G.phase === 'done' || G.phase === 'over') return refuse(el, endWhy());
+  if (!myTurn()) return refuse(el, waitWhy());
   const why = refusal(G, c);
-  if (why === 'drawn') return refuse(el, `Vous venez de piocher : posez ${cardName(G.drawn)}, ou passez votre tour.`);
-  if (why) return refuse(el, `Il faut ${need()}.`);
+  if (why === 'drawn') return refuse(el, `Vous venez de piocher : cliquez sur ${cardName(G.drawn)}, ou sur « Passer mon tour ».`);
+  if (why) return refuse(el, `Il faut ${need()}. ${canDraw(G) ? 'Cliquez sur « Piocher ».' : 'Cliquez sur une carte levée.'}`);
   // An 8 names a colour first, unless it is his last card.
   if (rank(c) === 8 && G.hands[0].length > 1) return openSuits(c);
   move(() => HA.play(G, c));
 }
 function tapStock() {
-  if (stale || choosing !== null) return;
+  if (stale) return;
+  if (choosing !== null) return Kit.tell(SUIT_WHY);
   hideBubble();
-  if (!myTurn()) return refuse($('stock'), G.phase === 'done' || G.phase === 'over' ? 'La manche est finie.' : 'Attendez un instant : les autres joueurs jouent.');
-  if (G.phase === 'drawn') return refuse($('stock'), `Vous avez déjà pioché : posez ${cardName(G.drawn)}, ou passez votre tour.`);
+  if (!myTurn()) return refuse($('stock'), G.phase === 'done' || G.phase === 'over' ? endWhy() : waitWhy());
+  if (G.phase === 'drawn') return refuse($('stock'), `Vous avez déjà pioché : cliquez sur ${cardName(G.drawn)}, ou sur « Passer mon tour ».`);
   if (!canDraw(G)) return refuse($('stock'), `Une de vos cartes va : posez ${need()}.`);
   move(() => HA.draw(G));
 }
@@ -614,20 +621,31 @@ function move(make) {
 }
 
 /* ---------- The colour after an 8 ---------- */
+// The colour the hint would name pulses when he waits, and the coach points at it.
 function openSuits(c) {
   choosing = c;
-  $('suits').innerHTML = [0, 1, 2, 3].map(s => `<button data-suit="${s}" class="${s === 1 || s === 2 ? 'red' : 'black'}${hint && hint.card === c && hint.suit === s ? ' hint' : ''}">${SUIT_SVG(s)}${cap(SUIT_NAMES[s])}</button>`).join('');
+  const a = HA.choose(G, 'fort');
+  const pick = hint && hint.card === c ? hint.suit : a.card === c && a.suit !== undefined ? a.suit : HA.bestSuit(G.hands[0], c);
+  $('suits').innerHTML = [0, 1, 2, 3].map(s => `<button data-suit="${s}" class="${s === 1 || s === 2 ? 'red' : 'black'}${hint && hint.card === c && hint.suit === s ? ' hint' : ''}"${s === pick ? ' data-nudge' : ''}>${SUIT_SVG(s)}${cap(SUIT_NAMES[s])}</button>`).join('');
   $('suitSheet').classList.add('on');
   placeSheet($('suitSheet'));
-  say(`Vous posez ${cardName(c)} : choisissez la couleur que le joueur suivant devra poser.`);
+  say(`Vous posez ${cardName(c)} : cliquez sur la couleur que le joueur suivant devra poser.`);
   render();
-  ($('suits').querySelector('.hint') || $('suits').firstChild).focus();
+  const pulse = $('suits').querySelector('[data-nudge]');
+  pulse.focus();
+  Kit.point(pulse);
 }
 function closeSuits(quiet) {
   if (choosing === null) return;
   choosing = null;
   $('suitSheet').classList.remove('on');
-  if (!quiet) { say(turnMessage()); render(); }
+  if (!quiet) { say(turnMessage()); render(); coach(); }
+}
+// The coach of his first game: the hand points at the card the hint would play, or at « Piocher ».
+function coach() {
+  if (!Kit.coaching() || !myTurn() || choosing !== null) return;
+  const a = HA.choose(G, 'fort');
+  Kit.point(a.type === 'play' ? els.get(a.card) : $('drawBtn'));
 }
 $('suits').addEventListener('click', e => {
   const b = e.target.closest('button[data-suit]');
@@ -646,12 +664,14 @@ function after(before) {
   // His turn comes: what the other player did stays on the line, and his turn is added to it.
   say(G.turn === 0 && e.seat !== 0 && (G.phase === 'play' || G.phase === 'drawn') ? text + ' ' + turnMessage() : text);
   holdingScore = G.phase === 'done' || G.phase === 'over';
+  if (e.kind === 'play' && (e.effect === 'jack' || e.effect === 'two') && e.victim === 0) missed = true;
+  else if (G.turn === 0 || holdingScore) missed = false;
   render(true);
   showEffect(e, before);
   if (e.kind === 'play' || e.kind === 'draw') window.Sound?.play(e.shuffled ? 'shuffle' : 'card');
   if (G.phase === 'done' || G.phase === 'over') return later(() => roundOver(true), motion.matches ? 0 : 560);
   // His turn rings once the other player's card has landed.
-  if (G.turn === 0 && e.seat !== 0) return later(() => window.Sound?.play('turn'), 600);
+  if (G.turn === 0 && e.seat !== 0) { coach(); return later(() => window.Sound?.play('turn'), 600); }
   const special = e.kind === 'play' && e.effect;
   later(step, e.seat === 0 && G.turn === 0 ? 50 : special ? EFFECT_MS : e.seat === 0 ? FIRST_MS : STEP_MS);
 }
@@ -659,7 +679,7 @@ function after(before) {
 function step() {
   if (stale) return;
   if (G.phase === 'done' || G.phase === 'over') return roundOver(true);
-  if (G.turn === 0) { say(turnMessage()); render(); return; }
+  if (G.turn === 0) { say(turnMessage()); render(); coach(); return; }
   // A computer player: it chooses, the move is saved, then shown.
   render();
   later(() => {
@@ -675,8 +695,9 @@ function roundOver(fresh) {
   render();
   if (G.phase === 'over') {
     const ws = G.result.winners, won = ws.includes(0), mates = ws.filter(s => s !== 0);
-    say(won ? (mates.length ? `Bravo, vous partagez la victoire avec ${names(mates)} !` : 'Bravo, vous avez gagné la partie !')
-      : `${names(ws)} ${verb(ws, 'a', 'ont')} gagné la partie.`);
+    say((won ? (mates.length ? `Bravo, vous partagez la victoire avec ${names(mates)} !` : 'Bravo, vous avez gagné la partie !')
+      : `${names(ws)} ${verb(ws, 'a', 'ont')} gagné la partie.`) + ' Cliquez sur « Nouvelle partie ».');
+    Kit.gameOver(true);
     if (!fresh) return;
     window.Sound?.play(won ? 'win' : 'lose');
     const why = reachedText() + ' : la partie est finie.\n';
@@ -694,8 +715,8 @@ function roundOver(fresh) {
     return;
   }
   if (fresh && G.out === 0) { celebrate(false); window.Sound?.play('good'); }
-  say(G.out === 0 ? 'Bravo, vous gagnez la manche ! Vous marquez 0 point.'
-    : `${PLAYERS[G.out].name} gagne la manche. Vous marquez ${ptsText(G.roundPts[0])}.`);
+  say((G.out === 0 ? 'Bravo, vous gagnez la manche ! Vous marquez 0 point.'
+    : `${PLAYERS[G.out].name} gagne la manche. Vous marquez ${ptsText(G.roundPts[0])}.`) + ' Cliquez sur « Manche suivante ».');
 }
 function reachedText() {
   const reached = [0, 1, 2, 3].filter(s => G.scores[s] >= 100);
@@ -727,6 +748,7 @@ function nextRoundNow() {
   say(G.turn === 0 ? turnMessage() : `Nouvelle manche : ${PLAYERS[G.turn].name} commence.`);
   render();
   dealing = false;
+  coach();
   later(step, G.turn === 0 ? 0 : 1500);
 }
 
@@ -737,6 +759,7 @@ function cancelAll() {
   timers = [];
   pendingResult = null;
   holdingScore = false;
+  missed = false;
   press = null;
   hideBubble();
   document.querySelectorAll('#confetti, .card.fly, .seat .fx').forEach(el => el.remove());
@@ -757,6 +780,7 @@ function doUndo() {
     save(); window.Sound?.play('card');
     say('Coup annulé. ' + turnMessage());
     render(true);
+    coach();
     return;
   }
   render();
@@ -792,6 +816,7 @@ async function newGame(lv) {
   say(G.turn === 0 ? turnMessage() : `${PLAYERS[G.turn].name} commence.`);
   render();
   dealing = false;
+  coach();
   if (G.turn !== 0) later(step, 1500);
   if ((await written) && id === gameId && !stale) GG.track('huit-americain', 'start');
 }
@@ -950,7 +975,7 @@ function render(moving = false) {
   // His hand along the bottom, and his seat on its left, or above it on a phone.
   const s0 = $('seat0');
   const fx0 = s0.querySelector('.fx');
-  s0.innerHTML = `${ava(0)}<div class="who"><b>Vous</b><span class="tot">Total : ${total(G.scores[0])}</span><span class="now">À vous de jouer</span></div>`;
+  s0.innerHTML = `${ava(0)}<div class="who"><b>Vous</b><span class="tot${missed ? ' missed' : ''}">${missed ? 'Tour passé' : 'Total : ' + total(G.scores[0])}</span><span class="now">À vous de jouer</span></div>`;
   if (fx0) s0.appendChild(fx0);
   s0.classList.toggle('turn', mine);
   const hand = G.hands[0], n = hand.length;
@@ -1036,8 +1061,11 @@ function render(moving = false) {
   if (choosing !== null) placeSheet($('suitSheet'));
 
   Kit.showWins(stats.won);
+  const reload = 'Ce jeu a changé dans une autre fenêtre : rechargez-le pour continuer.';
   $('undoBtn').disabled = stale || (!undo.length && choosing === null);
+  $('undoBtn').dataset.why = stale ? reload : "Il n'y a pas encore de coup à annuler.";
   $('hintBtn').disabled = !mine;
+  $('hintBtn').dataset.why = stale ? reload : choosing !== null ? SUIT_WHY : !playing ? endWhy() : waitWhy();
 }
 // The players' seats: the name, the total, the cards held. Filled before the layout, which measures them.
 // short: the words of a phone, for three seats in columns.
@@ -1243,6 +1271,13 @@ table.addEventListener('keydown', e => {
   if (el.id === 'stock') tapStock(); else tapCard(+el.dataset.c);
 });
 
+// A click on the table while a computer plays: he is told who plays. The cards and the pioche answer themselves.
+table.addEventListener('click', e => {
+  if (stale || !G || myTurn() || G.phase === 'done' || G.phase === 'over' || e.target.closest('.card.hand, #stock, button')) return;
+  // The second click of a double-click on his card lands after the card has left.
+  if (e.detail > 1 || (lastTap && performance.now() - lastTap.t < 500)) return;
+  Kit.tell(waitWhy());
+});
 $('undoBtn').onclick = doUndo;
 $('hintBtn').onclick = showHint;
 $('helpBtn').onclick = () => Kit.openHelp();
@@ -1258,13 +1293,13 @@ addEventListener('keydown', e => {
 });
 addEventListener('resize', () => render());
 
-// The rules open by themselves the first time the game is opened.
+// The first time, a game starts at Facile at once, with the coach (Kit.firstVisit).
 const loaded = load();
 if (loaded === 'ok') {
   Kit.showLevel(level);
   if (G.phase === 'done' || G.phase === 'over') roundOver(false);
   else if (G.turn !== 0) { say(`${PLAYERS[G.turn].name} joue.`); render(); later(step, 900); }
-  else { say(turnMessage()); render(); }
+  else { say(turnMessage()); render(); coach(); }
 } else if (loaded === 'broken') {
   newGame(level);
   say("La partie enregistrée n'a pas pu être relue : une nouvelle partie commence.");

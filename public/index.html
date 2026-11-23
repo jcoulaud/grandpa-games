@@ -117,6 +117,36 @@
     border-radius: 16px; background: var(--gold); color: #1F1A00; font: 700 calc(22px * var(--k)) var(--ui);
   }
   a.tile:hover .play { background: #FFD666; }
+  /* A game in progress on its tile: a white key with a gold edge and the play triangle, so it reads apart
+     from the yellow "Jouer". The one yellow "Reprendre la partie" is the entry of his last game above. */
+  .play svg { width: calc(20px * var(--k)); height: calc(20px * var(--k)); flex: none; fill: currentColor; }
+  .play.again { background: #fff; box-shadow: inset 0 0 0 3px var(--gold); }
+  a.tile:hover .play.again { background: #FFF4D6; }
+
+  /* His last game, under the greeting: one compact card with its picture, what was saved, and the yellow
+     key to go on. Compact, so the first row of games still shows whole at 1366 by 680. Nothing shows
+     before his first game. */
+  #last { margin-top: calc(clamp(8px, 2vh - 6px, 16px) * var(--k)); }
+  #last[hidden] { display: none; }
+  a.last {
+    display: inline-flex; align-items: center; gap: calc(18px * var(--k)); max-width: 100%; padding: 5px 6px 5px 5px; border-radius: 20px;
+    background: var(--face); color: var(--text); text-decoration: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,.2), 0 10px 26px rgba(0,0,0,.26);
+  }
+  a.last:focus-visible { outline: 5px solid var(--gold); outline-offset: 4px; }
+  a.last .art { --k: .36; flex: none; width: 94px; border-radius: 15px; }
+  a.last .what { display: flex; flex-direction: column; min-width: 0; }
+  a.last .what b { font: 700 calc(23px * var(--k))/1.15 var(--ui); }
+  a.last .what span { font: 500 calc(20px * var(--k))/1.25 var(--ui); color: var(--muted); }
+  a.last .play { margin: 0 0 0 calc(10px * var(--k)); min-height: calc(52px * var(--k)); padding: 4px 22px; white-space: nowrap; }
+  a.last:hover .play { background: #FFD666; }
+  a.last.opening { opacity: .85; }
+  @media (min-width: 1800px) and (min-height: 1050px) { a.last .art { --k: .43; width: 112px; } }
+  @media (max-width: 699px) {
+    a.last { flex-wrap: wrap; gap: 10px 14px; }
+    a.last .what { flex: 1 1 150px; }
+    a.last .play { flex: 1 1 100%; margin: 0; white-space: normal; }
+  }
   a.tile.opening { opacity: .85; transform: none; }
 
   /* Keep the desktop controls in one row while the library scrolls. */
@@ -207,6 +237,7 @@
   <header class="greeting">
     <h1>Des jeux classiques à votre rythme</h1>
     <p id="tagline">Simples et sans publicité. Cliquez sur un jeu pour commencer.</p>
+    <div id="last" hidden></div>
   </header>
 
   <div id="games"></div>
@@ -656,35 +687,51 @@ function ramiScene() {
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+const PLAY = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3.2v13.6a1 1 0 0 0 1.5.86l11-6.8a1 1 0 0 0 0-1.72l-11-6.8A1 1 0 0 0 5 3.2z"/></svg>';
+const art = g => `<div class="art" style="background: radial-gradient(90% 120% at 50% 0%, ${g.felt[0]}, ${g.felt[1]})">${g.scene()}</div>`;
+// The line a game saved for the library, such as "Trou 3 sur 9 en cours · 2 parcours finis".
+const partsOf = meta => typeof meta?.summary === 'string' && meta.summary ? meta.summary.split(' · ') : [];
+const inProgress = parts => parts.some(p => /en cours/i.test(p));
 function render() {
   const tile = g => {
-    const meta = GG.meta(g.id);
-    const parts = typeof meta?.summary === 'string' ? meta.summary.split(' · ') : [];
     // The tile shows no line about the saved game: only the button says a game is in progress.
-    const playing = parts.some(p => /en cours/i.test(p));
+    const playing = inProgress(partsOf(GG.meta(g.id)));
     return `<a class="tile" href="${g.id}/" data-id="${g.id}">
-      <div class="art" style="background: radial-gradient(90% 120% at 50% 0%, ${g.felt[0]}, ${g.felt[1]})">${g.scene()}</div>
+      ${art(g)}
       <div class="body">
         <h3>${esc(g.title)}</h3>
         <p>${esc(g.text)}</p>
-        <div class="play">${playing ? 'Reprendre la partie' : 'Jouer'}</div>
+        <div class="play${playing ? ' again' : ''}">${playing ? PLAY + 'Reprendre la partie' : 'Jouer'}</div>
       </div></a>`;
   };
+  // His last game, the one saved most recently. Nothing before his first game.
+  const last = GAMES.map(g => ({ g, meta: GG.meta(g.id) })).filter(x => x.meta?.updatedAt)
+    .sort((a, b) => b.meta.updatedAt - a.meta.updatedAt)[0];
+  const box = document.getElementById('last');
+  box.hidden = !last;
+  if (last) {
+    const parts = partsOf(last.meta), now = parts[0] ? parts[0][0].toLowerCase() + parts[0].slice(1) : '';
+    box.innerHTML = `<a class="last" href="${last.g.id}/" data-id="${last.g.id}">${art(last.g)}
+      <span class="what"><b>${esc(last.g.title)}</b><span>Votre dernière partie${now ? ' : ' + esc(now) : ''}</span></span>
+      <span class="play">${PLAY}${inProgress(parts) ? 'Reprendre la partie' : 'Rejouer'}</span></a>`;
+  }
   document.getElementById('games').innerHTML = FAMILIES.map(([id, name]) => {
     const games = GAMES.filter(g => g.family === id);
     return games.length ? `<section class="family" aria-labelledby="family-${id}"><h2 id="family-${id}">${esc(name)}</h2>
       <div class="grid">${games.map(tile).join('')}</div></section>` : '';
   }).join('');
 }
-document.getElementById('games').addEventListener('click', e => {
-  const t = e.target.closest('a.tile');
+function opening(e) {
+  const t = e.target.closest('a.tile, a.last');
   // A click with Cmd, Ctrl or Shift opens the game in another tab or window: this page stays.
   if (!t || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
   t.classList.add('opening');
   t.querySelector('.play').textContent = 'Un instant…';
   // If the browser stops the navigation, the tiles must not stay on "Un instant…".
   setTimeout(render, 4000);
-});
+}
+document.getElementById('games').addEventListener('click', opening);
+document.getElementById('last').addEventListener('click', opening);
 // Safari keeps the page in memory when Papi goes into a game. Coming back, redraw the tiles.
 addEventListener('pageshow', e => { if (e.persisted) render(); });
 

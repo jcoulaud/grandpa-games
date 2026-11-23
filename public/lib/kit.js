@@ -22,7 +22,9 @@
 //   Kit.escape()                            closes the rules or the dialog; false if nothing was open
 //   Kit.icon(name)                          an icon as SVG markup; Kit.icon('hand') is the pointing hand of the rules guide
 //   Kit.firstVisit(start)                   no save yet: starts a game at Facile at once, with the coach on
-//   Kit.point(el)                           during the coach, rings el and points the hand at it until he clicks
+//   Kit.point(el, at)                       during the coach, rings el and points the hand at it until he clicks;
+//                                           at: where the finger goes down el; by default .62, or its top strip when
+//                                           another card covers that spot, as in a column of cards
 //   Kit.coaching()                          true during the coach of his first game
 //   Kit.tell(text)                          a short answer in the message line; the line before comes back after 4 s
 //   Kit.gameOver(on)                        the game is over: the nudge goes to "Nouvelle partie"
@@ -285,6 +287,10 @@
     coaching = true; coachStarts = 0; coachSteps = 0;
     PH.capture('first visit', { coach: true });
     start('facile');
+    // The level line appears under the name and the bar may change height after the start, without a resize:
+    // a game that lays out from the size of its table measures again.
+    requestAnimationFrame(() => dispatchEvent(new Event('resize')));
+    setTimeout(() => dispatchEvent(new Event('resize')), 400);
   }
   function closeHelp() {
     if (!helpOpen()) return;
@@ -335,18 +341,22 @@
   // rules guide at it, until his next click. The kit also points the hand at the nudged button. The coach ends
   // after his first 8 actions, a new game or a win.
   const COACH_STEPS = 8;
-  let coaching = false, coachStarts = 0, coachSteps = 0, pointed = null, hand = null;
-  function point(el) {
+  let coaching = false, coachStarts = 0, coachSteps = 0, pointed = null, pointAt = .62, hand = null;
+  function point(el, at) {
     unpoint();
     if (!coaching || !el || !el.isConnected) return;
-    pointed = el;
+    if (at === undefined) {
+      const r = el.getBoundingClientRect(), top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height * .62);
+      at = !top || el.contains(top) ? .62 : Math.min(.12, 22 / Math.max(r.height, 1));
+    }
+    pointed = el; pointAt = at;
     el.classList.add('coach');
     if (!hand) {
       document.body.insertAdjacentHTML('beforeend', `<div id="coachHand" aria-hidden="true">${icon('hand')}</div>`);
       hand = $('coachHand');
     }
     hand.hidden = false;
-    place();
+    if (!placing) place();
   }
   function unpoint() {
     if (pointed) pointed.classList.remove('coach');
@@ -354,14 +364,20 @@
     if (hand) hand.hidden = true;
   }
   // The hand follows the element, under it, its finger on the lower half. The page may be zoomed (lib/zoom.js).
+  // One loop of frames at a time, however often the game points.
+  let placing = false;
   function place() {
+    placing = false;
     if (!pointed || !hand || hand.hidden) return;
     if (!pointed.isConnected || pointed.offsetParent === null) { unpoint(); return; }
+    // A game that draws again may reset the classes of the element: the ring comes back.
+    if (!pointed.classList.contains('coach')) pointed.classList.add('coach');
     const z = window.Zoom ? Zoom.z() : 1, r = pointed.getBoundingClientRect();
-    const x = (r.left + r.width / 2) / z, y = (r.top + Math.min(r.height * .62, r.height - 6)) / z;
+    const x = (r.left + r.width / 2) / z, y = (r.top + Math.min(r.height * pointAt, r.height - 6)) / z;
     const bottom = innerHeight / z - 70;
     hand.style.left = `${x - 22}px`;
     hand.style.top = `${Math.min(y, bottom)}px`;
+    placing = true;
     requestAnimationFrame(place);
   }
   function endCoach() { coaching = false; unpoint(); }
@@ -383,8 +399,9 @@
   }
   const visible = e => e && !e.disabled && !e.hidden && e.offsetParent !== null;
   function nudgeTarget() {
-    const marked = [...document.querySelectorAll('[data-nudge]')].find(visible);
-    if (marked) return marked;
+    // A button of the game, such as "Partie suivante", comes before "Nouvelle partie" of Kit.gameOver.
+    const marked = [...document.querySelectorAll('[data-nudge]')].filter(visible);
+    if (marked.length) return marked.find(e => e.id !== 'newBtn') || marked[0];
     const hint = $('hintBtn');
     return visible(hint) ? hint : null;
   }
@@ -419,12 +436,16 @@
     const target = nudgeTarget();
     if (target) { idle = 0; nudge(target); }
   }
-  let watch = null;
+  // The second click of a double-click is not a silent click: the games ignore it on purpose.
+  let watch = null, lastDown = { t: 0, x: 0, y: 0 };
   addEventListener('pointerdown', e => {
     if (!e.isTrusted || e.button !== 0 || isOpen()) return;
     const table = $('table');
     if (!table || !table.contains(e.target) || e.target.closest('canvas')) return;
+    const again = e.timeStamp - lastDown.t < 500 && Math.hypot(e.clientX - lastDown.x, e.clientY - lastDown.y) < 24;
+    lastDown = { t: e.timeStamp, x: e.clientX, y: e.clientY };
     if (watch) watch.obs.disconnect();
+    if (again) { watch = null; return; }
     const w = watch = { changed: false, obs: new MutationObserver(() => { w.changed = true; }) };
     w.obs.observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true });
   }, true);

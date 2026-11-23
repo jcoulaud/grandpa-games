@@ -65,22 +65,32 @@ await page.waitForURL('https://jeux-papi.fr/solitaire/');
 const play = events('/solitaire/regles/', 'play clicked')[0];
 check('"Jouer" on a rules page sends play clicked', play?.props.to_game === 'solitaire' && play?.props.place === 'play button', JSON.stringify(play));
 
-// The game opens its guide the first time, then asks for the level.
-await until(() => events('/solitaire/', 'rules guide opened').length);
+// The first visit starts a game at Facile at once, with the coach. The guide opens on "Règles".
+await until(() => events('/solitaire/', 'first visit').length);
 check('the game is a game page', registered('/solitaire/').page_type === 'game' && registered('/solitaire/').game === 'solitaire');
-check('the first guide says it opened by itself', events('/solitaire/', 'rules guide opened')[0]?.props.first_visit === true);
+check('the first visit says the coach is on', events('/solitaire/', 'first visit')[0]?.props.coach === true);
+await page.click('#helpBtn');
+await until(() => events('/solitaire/', 'rules guide opened').length);
+check('a guide he opens says so', events('/solitaire/', 'rules guide opened')[0]?.props.first_visit === false);
 await page.click('#helpClose');
 const closed = events('/solitaire/', 'rules guide closed')[0];
 check('closing the guide says how far it was read', closed?.props.page === 1 && closed.props.read_all === false && closed.props.pages > 1, JSON.stringify(closed));
-await page.click('#box button:has-text("Facile")');
 await until(() => events('/solitaire/', 'game started').length);
 check('a new game sends game started', events('/solitaire/', 'game started')[0]?.props.game === 'solitaire');
 check('the level goes with the later events', registered('/solitaire/').level === 'facile');
+// A click on the grey undo button at the start is a silent click: it is counted, and the line answers.
+if (await page.locator('#undoBtn').isDisabled()) {
+  await page.locator('#undoBtn').click({ force: true });
+  await until(() => events('/solitaire/', 'dead click').length);
+  check('a click on a grey button sends dead click', events('/solitaire/', 'dead click')[0]?.props.target === 'grey undoBtn', JSON.stringify(events('/solitaire/', 'dead click')[0]));
+}
 const hint = page.locator('#hintBtn');
 if (await hint.isVisible()) {
   await hint.click();
   await until(() => events('/solitaire/', 'hint used').length);
-  check('a hint asked by hand sends hint used', events('/solitaire/', 'hint used')[0]?.props.automatic === false);
+  check('a hint asked by hand sends hint used', events('/solitaire/', 'hint used').some(e => e.props.automatic === false), JSON.stringify(events('/solitaire/', 'hint used')));
+  await until(() => events('/solitaire/', 'first action').length);
+  check('his first click on the game sends first action', events('/solitaire/', 'first action')[0]?.props.coach === true);
 }
 
 // The game and the level of a game do not follow him to the next page.
@@ -93,7 +103,8 @@ await page.goto('https://jeux-papi.fr/rami/');
 await page.evaluate(() => PH.capture('test event'));
 await until(() => events('/rami/', 'test event').length);
 const rami = events('/rami/', 'test event')[0].props;
-check('another game does not get the level of the last one', rami.game === 'rami' && !('level' in rami), JSON.stringify(rami));
+// The rami starts its own first game at Facile, so a level there is its own.
+check('another game gets its own name', rami.game === 'rami', JSON.stringify(rami));
 
 // Away from jeux-papi.fr, nothing loads.
 const local = await ctx.newPage();

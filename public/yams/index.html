@@ -144,6 +144,9 @@
   #sheet td.can.zero::before { border-color: #C9CDC9; }
   #sheet td.can:hover::before { background: var(--gold); border: 2.5px solid #C9951A; }
   #sheet td.can:hover { color: #1F1A00; }
+  /* A box chosen by a first click: a second click writes it. */
+  #sheet td.can.pick::before { background: var(--gold); border: 2.5px solid #C9951A; }
+  #sheet td.can.pick { color: #1F1A00; }
   #sheet td.can.zero { color: #9AA29E; }
   #sheet td.can:focus-visible { outline: 4px solid #1B2422; outline-offset: -4px; }
   /* The box just written: a frame, yellow for him, blue for the computer. */
@@ -432,6 +435,8 @@ const dieSvg = n => `<svg viewBox="0 0 100 100" aria-hidden="true">`
    until his next action. wonNow: this game is counted as won (undo keeps it, so a win counts once). */
 let G, view, undo = [], level = 'facile', stats = { won: 0, best: 0 }, wonNow = false, hint = null, timers = [], fresh = null, rolling = [];
 let stale = false, saved = true;
+// pick: the box his first click chose, when a second click must confirm it (before the third throw, or a box at 0).
+let pick = null;
 addEventListener('gg-stale', () => { stale = true; });
 const say = Kit.say;
 const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
@@ -499,10 +504,24 @@ function writeText(g, player, box) {
   const verb = player === 0 ? (p ? 'marquez' : 'barrez') : (p ? 'marque' : 'barre');
   return p ? `${name} ${verb} ${ptsText(p)} en ${boxName(box)}.` : `${name} ${verb} la case ${boxName(box)} : 0 point.`;
 }
+const rollLabel = () => { const n = G.kept.filter(k => !k).length; return n === 5 ? 'Relancer les 5 dés' : `Relancer ${plural(n, 'dé', 'dés')}`; };
 function turnText() {
-  if (!G.dice) return 'À vous : lancez les dés.';
+  if (!G.dice) return 'À vous : cliquez sur « Lancer les dés ».';
   if (G.rolls >= 3) return 'Dernier lancer : cliquez sur une case de votre colonne pour marquer vos points.';
   return 'Cliquez sur les dés à garder, puis relancez. Ou cliquez sur une case pour marquer vos points.';
+}
+// The coach of his first game points at the next thing to click: the throw button, a die the hint would
+// keep, the throw button again once the good dice are kept, or the box the hint would write.
+function coach() {
+  if (!Kit.coaching() || !G || G.result || G.turn !== 0 || busy()) return;
+  if (pick !== null) return Kit.point(boxEls.find(e => e.dataset.p === '0' && +e.dataset.b === pick));
+  const a = Y.advice(G, 'fort');
+  if (a.kind === 'roll') return Kit.point($('rollBtn'));
+  if (a.kind === 'keep') {
+    const i = a.kept.findIndex((k, j) => k !== G.kept[j]);
+    return Kit.point(i >= 0 ? dieEls[i] : $('rollBtn'));
+  }
+  Kit.point(boxEls.find(e => e.dataset.p === '0' && +e.dataset.b === a.box));
 }
 
 /* ---------- His actions ---------- */
@@ -524,34 +543,47 @@ function rollDice() {
   if (G.dice && G.kept.every(k => k)) return say('Vous gardez les cinq dés : cliquez sur un dé pour le relancer, ou sur une case pour marquer.');
   const thrown = G.dice ? G.kept.map((k, i) => k ? -1 : i).filter(i => i >= 0) : [0, 1, 2, 3, 4];
   stopParty();
-  G = view = Y.roll(G); hint = null; fresh = null;
+  G = view = Y.roll(G); hint = null; fresh = null; pick = null;
   window.Sound?.play('dice');
   save(); rolling = thrown; render(); rolling = [];
   if (!saved) return;
   const p = Y.points(11, G.dice);
   if (p) { ribbon(); later(() => window.Sound?.play('good'), 650); }
-  if (p && G.sheets[0][11] === null) return say('Yams ! Les cinq dés sont pareils : cliquez sur la case Yams pour marquer 50 points.');
-  say(turnText());
+  if (p && G.sheets[0][11] === null) say('Yams ! Les cinq dés sont pareils : cliquez sur la case Yams pour marquer 50 points.');
+  else say(turnText());
+  coach();
 }
 async function tapDie(i) {
   if (Kit.isOpen() || refuseBusy()) return;
   if (!G.dice) return say("Lancez d'abord les dés avec le bouton « Lancer les dés ».");
   if (G.rolls >= 3) return shakeDie(i), say('Vous avez lancé trois fois : cliquez sur une case de votre colonne pour marquer vos points.');
-  G = view = Y.keep(G, i); hint = null;
+  G = view = Y.keep(G, i); hint = null; pick = null;
   window.Sound?.play('tap');
   const current = G;
   const written = save();
   render();
   if (!(await written) || G !== current) return;
   const d = G.dice[i], n = G.kept.filter(k => k).length;
-  say(G.kept[i] ? (n === 5 ? `Vous gardez le ${d}. Les cinq dés sont gardés : cliquez sur une case pour marquer.` : `Vous gardez le ${d}. Cliquez encore dessus pour le relancer.`)
-    : `Le ${d} sera relancé.`);
+  say(G.kept[i] ? (n === 5 ? `Vous gardez le ${d}. Les cinq dés sont gardés : cliquez sur une case pour marquer.` : `Vous gardez le ${d}. Cliquez sur « ${rollLabel()} », ou sur un autre dé à garder.`)
+    : `Le ${d} sera relancé. Cliquez sur « ${rollLabel()} », ou sur un dé à garder.`);
+  coach();
 }
 async function tapBox(player, box) {
   if (Kit.isOpen() || refuseBusy()) return;
   if (player !== 0) return shakeBox(player, box), say(`Cette colonne est celle de ${them()} : marquez dans la colonne « Vous ».`);
   if (!G.dice) return shakeBox(player, box), say("Lancez d'abord les dés avec le bouton « Lancer les dés ».");
-  if (G.sheets[0][box] !== null) return shakeBox(player, box), say('Cette case est déjà remplie : choisissez une case vide.');
+  if (G.sheets[0][box] !== null) return shakeBox(player, box), say('Cette case est déjà remplie : cliquez sur une case vide.');
+  // A slip of the hand must not end his turn: before the third throw, and for a box at 0, a first click
+  // only chooses the box, and a second click writes it.
+  const p = Y.points(box, G.dice);
+  if ((G.rolls < 3 || !p) && pick !== box) {
+    pick = box; hint = null;
+    window.Sound?.play('tap');
+    render();
+    say(p ? `Cliquez encore sur ${boxName(box)} pour marquer ${ptsText(p)}.` : `Cliquez encore sur ${boxName(box)} pour la barrer : 0 point.`);
+    return coach();
+  }
+  pick = null;
   stopParty();
   undo.push(JSON.stringify(G));
   G = Y.write(G, box); view = G; hint = null; fresh = { player: 0, box, at: performance.now() };
@@ -629,6 +661,7 @@ function computerPlays() {
     if (G.result) { view = { ...G, dice: prev ? prev.dice : null }; return finish(true, record(oldBest)); }
     view = G; render();
     if (saved) say(writeText(G, 1, s.box) + ' ' + turnText());
+    coach();
   };
   render();
   later(show, REDUCED ? 200 : FIRST_MS);
@@ -636,7 +669,8 @@ function computerPlays() {
 
 /* ---------- End of the game ---------- */
 function finish(show, record) {
-  hint = null;
+  hint = null; pick = null;
+  Kit.gameOver(true);
   if (!view || !view.result) view = G;
   render();
   // The rules or the levels he opened meanwhile stay open: the message line says the result.
@@ -650,13 +684,13 @@ function finish(show, record) {
   if (G.result !== 'lost' && show) party();
   if (show) later(() => window.Sound?.play(G.result === 'lost' ? 'lose' : 'win'), 400);
   if (G.result === 'won') {
-    say(`Bravo, vous avez gagné : ${me} points contre ${it}.`);
+    say(`Bravo, vous avez gagné : ${me} points contre ${it}. Cliquez sur « Nouvelle partie » pour rejouer.`);
     if (show) later(() => dialog('Bravo, vous avez gagné !', scores + nth + best + lost, buttons, true), REDUCED ? 0 : 900);
   } else if (G.result === 'tie') {
-    say(`Égalité : ${me} points chacun. Vous partagez la victoire avec ${them()}.`);
+    say(`Égalité : ${me} points chacun. Cliquez sur « Nouvelle partie » pour rejouer.`);
     if (show) later(() => dialog('Égalité !', `Vous avez tous les deux ${ptsText(me)} : vous partagez la victoire.` + nth + best + lost, buttons, true), REDUCED ? 0 : 900);
   } else {
-    say(`${them()} a gagné : ${it} points contre ${me}.`);
+    say(`${them()} a gagné : ${it} points contre ${me}. Cliquez sur « Nouvelle partie » pour rejouer.`);
     if (show) later(() => dialog(`${them()} a gagné`, scores + best + lost + ' « Annuler le dernier coup » reprend votre dernière case.',
       [['Nouvelle partie', askNewGame, true], ['Annuler le dernier coup', doUndo], ['Retour aux jeux', home]]), REDUCED ? 0 : 900);
   }
@@ -676,16 +710,18 @@ function doUndo() {
   if (!undo.length) return;
   calm();
   Kit.closeDialog();
-  G = view = JSON.parse(undo.pop()); hint = null; fresh = null; showing = false;
+  G = view = JSON.parse(undo.pop()); hint = null; fresh = null; showing = false; pick = null;
   // His next throws are drawn again, so an undo cannot show him what a throw would give. The computer
   // keeps its own numbers: the same box gives it the same turn.
   G = view = { ...G, rng: [crypto.getRandomValues(new Uint32Array(1))[0], G.rng[1]] };
   save(); render();
-  if (saved) say('Coup annulé : vos dés sont revenus, choisissez une autre case. ' + (G.rolls < 3 ? 'Vous pouvez aussi relancer.' : ''));
+  if (saved) say(G.rolls < 3 ? 'Coup annulé : vos dés sont revenus. Cliquez sur une autre case, ou relancez.' : 'Coup annulé : vos dés sont revenus. Cliquez sur une autre case.');
+  coach();
 }
 function showHint() {
   if (Kit.isOpen() || refuseBusy()) return;
   const a = Y.advice(G, 'fort');
+  pick = null;
   if (a.kind === 'roll') { hint = null; render(); return say('Cliquez sur « Lancer les dés » pour commencer votre tour.'); }
   if (a.kind === 'keep') {
     hint = { dice: a.kept.map((k, i) => k ? i : -1).filter(i => i >= 0) };
@@ -693,7 +729,7 @@ function showHint() {
     const wrong = a.kept.some((k, i) => k !== G.kept[i]);
     render();
     if (!keepDice.length) return say(wrong ? 'Ne gardez aucun dé : cliquez sur les dés gardés pour les rendre, puis relancez les cinq.' : 'Relancez les cinq dés : aucun ne vaut la peine d\'être gardé.');
-    return say(wrong ? `Gardez ${diceWords(keepDice)}, les dés entourés, et relancez les autres.` : `Vous gardez les bons dés : relancez les autres.`);
+    return say(wrong ? `Gardez ${diceWords(keepDice)} : cliquez sur les dés entourés, puis relancez les autres.` : `Vous gardez les bons dés : cliquez sur « ${rollLabel()} ».`);
   }
   hint = { box: a.box };
   render();
@@ -708,11 +744,12 @@ async function newGame(lv) {
   Kit.showLevel(level);
   newOpponent();
   const seed = crypto.getRandomValues(new Uint32Array(1))[0];
-  G = view = Y.newGame(level, seed); undo = []; hint = null; fresh = null; wonNow = false;
+  G = view = Y.newGame(level, seed); undo = []; hint = null; fresh = null; wonNow = false; pick = null;
   // A stale window cannot save, so it does not count a game either.
   const written = save();
   render();
-  if (!stale) say(`Vous jouez contre ${them()}. À vous : lancez les dés.`);
+  if (!stale) say(`Vous jouez contre ${them()}. À vous : cliquez sur « Lancer les dés ».`);
+  coach();
   if (await written) GG.track('yams', 'start');
 }
 
@@ -787,6 +824,13 @@ function render() {
   const label = !mine ? (g.result ? 'Partie finie' : `${CAST[who].name} joue`) : !g.dice ? 'Lancer les dés' : g.rolls >= 3 ? 'Plus de lancer' : free === 0 ? 'Tous les dés sont gardés' : free === 5 ? 'Relancer les 5 dés' : `Relancer ${plural(free, 'dé', 'dés')}`;
   rb.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>' + label;
   rb.disabled = !mine || g.rolls >= 3 || free === 0;
+  // A grey button says why, and the button is the next step while he has kept dice, or not thrown yet.
+  rb.dataset.why = g.result ? 'La partie est finie : cliquez sur « Nouvelle partie ».' : !mine ? `Attendez : c'est à ${CAST[who].name} de jouer.`
+    : g.rolls >= 3 ? 'Vous avez lancé trois fois : cliquez sur une case de votre colonne pour marquer vos points.'
+    : 'Vous gardez les cinq dés : cliquez sur un dé pour le relancer, ou sur une case pour marquer.';
+  rb.toggleAttribute('data-nudge', !rb.disabled && (!g.dice || g.kept.some(k => k)));
+  // While a box is chosen, the automatic hint would undo his choice.
+  if (pick !== null) $('hintBtn').dataset.auto = 'no'; else delete $('hintBtn').dataset.auto;
   // The sheet
   document.querySelectorAll('#sheet th.them').forEach(e => {
     if (e.dataset.who !== who) { e.textContent = CAST[who].name; e.dataset.who = who; }
@@ -800,6 +844,7 @@ function render() {
     if (v === 0) cls += ' zeroed';
     if (fresh && fresh.player === p && fresh.box === b) cls += ' fresh' + (performance.now() - fresh.at < 500 ? ' ink' : '');
     if (hint && hint.box === b && p === 0) cls += ' hint';
+    if (can && pick === b) cls += ' pick';
     if (e.className.replace(' shake', '') !== cls) e.className = cls;
     const text = v !== null ? String(v) : can ? `<b>${preview ? '+' + preview : 'barrer'}</b>` : '';
     if (e.innerHTML !== text) e.innerHTML = text;
@@ -817,7 +862,9 @@ function render() {
   // The count of wins changes once the computer's last turn has been shown.
   if (!busy()) Kit.showWins(stats.won);
   $('undoBtn').disabled = !undo.length;
+  $('undoBtn').dataset.why = "Il n'y a pas encore de coup à annuler.";
   $('hintBtn').disabled = !!G.result;
+  $('hintBtn').dataset.why = 'La partie est finie : cliquez sur « Nouvelle partie ».';
   layout();
 }
 // Five dice alike: the ribbon says "Yams !" for a moment, and the dice hop.
@@ -942,7 +989,7 @@ for (const e of document.querySelectorAll('#help [data-mini]')) e.insertAdjacent
 for (const b of document.querySelectorAll('#help [data-roll]')) b.insertAdjacentHTML('afterbegin', ROLL_ICON);
 for (const e of document.querySelectorAll('#help td.here')) e.insertAdjacentHTML('beforeend', Kit.icon('hand'));
 
-// The rules open by themselves the first time the game is opened.
+// The first time, a game starts at Facile at once, with the coach.
 if (load()) {
   Kit.showLevel(level);
   if (G.result) finish(false);
@@ -950,6 +997,7 @@ if (load()) {
   else {
     if (G.last && G.last.player === 1 && !G.dice) { fresh = { player: 1, box: G.last.box, at: 0 }; render(); say(writeText(G, 1, G.last.box) + ' ' + turnText()); }
     else { render(); say(turnText()); }
+    coach();
   }
 } else {
   Kit.firstVisit(newGame);

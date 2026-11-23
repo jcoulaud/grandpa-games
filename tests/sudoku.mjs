@@ -26,15 +26,31 @@ const nearWin = (p, skip = -1) => p.evaluate(skip => {
   G = g2; undo = []; save(); render();
   return first;
 }, skip);
+// A new grid of a level: "Nouvelle partie" first when the level dialog is not open.
 const start = async (p, label) => {
+  await p.waitForFunction(() => G && !making);
+  if (!(await p.evaluate(() => Kit.isOpen()))) await p.click('#newBtn');
   await p.locator('#overBtns button', { hasText: label }).click();
   await p.waitForFunction(() => G && !making);
 };
 
-// 1. The first visit: the rules open, each page fits without scrolling, then the level.
+// 1. The first visit: a grid at Facile starts at once, with the coach on a cell where one digit only can
+// go, then on its key. The rules stay on "Règles", and each page fits without scrolling.
 await page.goto(URL);
-await wait(300);
-ok(await g(() => Kit.isOpen()), 'the rules open on the first visit');
+await page.waitForFunction(() => G && !making);
+ok(!(await g(() => Kit.isOpen())) && await g(() => G.level === 'facile' && Kit.coaching()), 'the first visit starts a grid at Facile at once, with the coach');
+const coachCell = await g(() => { const c = document.querySelector('.cell.coach'), h = Sudoku.hint(G); return c && +c.dataset.i === h.cell ? h : null; });
+ok(!!coachCell && ['naked', 'hidden'].includes(coachCell.kind), 'the coach rings a cell where one digit only can go');
+ok(await g(() => document.getElementById('pad').classList.contains('off')), 'the keys rest while no cell is chosen');
+await cell(coachCell.cell).click();
+ok(await g(d => document.querySelector(`.key[data-d="${d}"]`).classList.contains('coach') && !document.getElementById('pad').classList.contains('off'), coachCell.digit), 'then the coach rings its key, and the keys wake');
+await key(coachCell.digit).click();
+ok(await g(() => sel === -1) && /cliquez sur une autre case vide\.$/i.test(await msg()), 'a digit written lets the cell go, and the line says to choose another');
+await wait(550);
+await key(coachCell.digit).click();
+ok((await msg()).startsWith("Choisissez d'abord une case vide") && await g(i => +G.cells[i], coachCell.cell) === coachCell.digit, 'a second key does not write over it');
+await page.click('#helpBtn');
+ok(await g(() => Kit.isOpen()), 'the rules open on « Règles »');
 for (let n = 0; n < 5; n++) {
   ok(await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }), `rules page ${n + 1} fits without scrolling`);
   await page.screenshot({ path: `${OUT}/sudoku-rules-${n + 1}.png` });
@@ -54,7 +70,7 @@ await page.screenshot({ path: `${OUT}/sudoku-start.png` });
 
 // 2. A digit without a cell is refused; a cell, then a digit, writes it in yellow.
 await key(5).click();
-ok(/Cliquez d'abord sur une case vide/.test(await msg()), 'a digit before a cell says to choose a cell');
+ok(/Choisissez d'abord une case vide/.test(await msg()), 'a digit before a cell says to choose a cell');
 await cell(empty).click();
 ok(/sel/.test(await cls(empty)) && /Choisissez le chiffre de cette case à droite/.test(await msg()), 'a click chooses an empty cell and says what to do');
 const house = await g(i => [...document.querySelectorAll('.cell.house')].map(e => +e.dataset.i).every(j => Sudoku.PEERS[i].includes(j)), empty);
@@ -62,6 +78,7 @@ ok(house && await page.locator('.cell.house').count() > 10, 'its row, column and
 const right = await sol(empty);
 await key(right).click();
 ok(/mine/.test(await cls(empty)) && await cell(empty).textContent() === String(right) && /Vous avez écrit un/.test(await msg()), 'a digit key writes his digit in the cell');
+await cell(empty).click();
 ok(await page.locator('.cell.same').count() >= 1, 'the cells with the same digit are lit');
 ok(await g(d => document.querySelector(`.key[data-d="${d}"] .left`).textContent === String(9 - Sudoku.board(G).filter(x => x === d).length), right),
   'its key says how many of the digit are still to place');
@@ -80,7 +97,7 @@ const e2 = [...givens].findIndex((c, i) => c === '0' && i !== empty && Math.floo
 const inRow = await g(i => Sudoku.UNITS[Sudoku.ROW(i)].map(j => +G.givens[j]).find(d => d && !Sudoku.UNITS[9 + Sudoku.COL(i)].some(k => +G.givens[k] === d)), e2);
 await cell(e2).click();
 await key(inRow).click();
-ok(/bad/.test(await cls(e2)) && (await msg()) === `Il y a déjà un ${inRow} dans cette ligne.`, `a digit already in the row turns red and says so: ${await msg()}`);
+ok(/bad/.test(await cls(e2)) && (await msg()) === `Il y a déjà un ${inRow} dans cette ligne. Cliquez sur un autre chiffre, ou sur « Effacer ».` && await g(i => sel === i, e2), `a digit already in the row turns red and says so: ${await msg()}`);
 ok(await page.locator('.cell.blame').count() === 1, 'the digit it meets has a red ring');
 await page.screenshot({ path: `${OUT}/sudoku-clash.png` });
 
@@ -97,6 +114,7 @@ const free = await g(i => [1, 2, 3, 4, 5, 6, 7, 8, 9].find(d => !Sudoku.PEERS[i]
 if (givens[e3] === '0') {
   await page.keyboard.press(String(free));
   ok(await g(i => +G.cells[i], e3) === free, 'a digit key of the keyboard writes it');
+  await cell(e3).click();
   await page.keyboard.press('Backspace');
   ok(await g(i => G.cells[i] === '0', e3) && /effacé/.test(await msg()), 'Backspace erases it');
   await page.keyboard.press('Control+z');
@@ -118,20 +136,23 @@ await cell(e2).click();
   await key(3).dblclick();
   ok(await g(() => undo.length) === n + 1 && await g(i => G.cells[i], e2) === '3', 'a double-click on a key writes once');
   await wait(550);
+  await cell(e2).click();
   await page.keyboard.down('5'); await page.keyboard.down('5'); await page.keyboard.down('5'); await page.keyboard.up('5');
   ok(await g(() => undo.length) === n + 2 && await g(i => G.cells[i], e2) === '5', 'a digit held down on the keyboard writes once');
   await page.locator('#undoBtn').dblclick();
   ok(await g(() => undo.length) === n + 1 && await g(i => G.cells[i], e2) === '3', 'a double-click on undo takes one move back');
   await wait(550);
+  await cell(e2).click();
 }
 await page.keyboard.press('Backspace');
-ok(await g(i => G.cells[i], e2) === '0' && (await msg()) === 'Le 3 est effacé.', 'Backspace erases the 3 and says so');
+ok(await g(i => G.cells[i], e2) === '0' && (await msg()) === 'Le 3 est effacé. Cliquez sur un autre chiffre pour cette case.', 'Backspace erases the 3 and says so');
 ok(await page.locator('#notesBtn').count() === 0 && !/notes/i.test(await page.locator('#help').textContent()), 'the game has no notes, and the rules do not speak of them');
 await wait(550);
 
 // 8. The hint fills a cell and says why.
 await page.click('#hintBtn');
-const h = await g(() => ({ sel, d: Sudoku.board(G)[sel], right: +G.solution[sel], ring: !!document.querySelector('.cell.hint') }));
+const h = await g(() => { const i = +document.querySelector('.cell.hint').dataset.i; return { sel, d: Sudoku.board(G)[i], right: +G.solution[i], ring: true }; });
+ok(h.sel === -1 && (await msg()).endsWith('Cliquez sur une autre case vide.'), 'the cell the hint filled lets go, and the line says what to do next');
 ok(h.d === h.right && h.ring && /(seul le \d est possible|ne peut aller que dans cette case)/.test(await msg()), `the hint fills a right digit and says why: ${await msg()}`);
 await page.screenshot({ path: `${OUT}/sudoku-hint.png` });
 // A legal digit that is not the solution is shown only when he asks.
@@ -186,6 +207,7 @@ ok(stats.won === 1 && await g(() => stats.won === 1 && GG.meta('sudoku').summary
 await page.keyboard.press('Escape');
 await cell(last[0]).click();
 ok(/Cette grille est terminée/.test(await msg()) && await page.locator('#undoBtn').isDisabled(), 'after the win, a click says to start a new game');
+ok(await g(() => 'nudge' in document.getElementById('newBtn').dataset && /Nouvelle partie/.test(document.getElementById('hintBtn').dataset.why)), 'after the win, « Nouvelle partie » is the next thing to press, and the grey hint says why');
 await page.reload();
 ok(await g(() => G.result === 'won' && !Kit.isOpen()) && /Bravo/.test(await msg()), 'a reload after the win shows it without the dialog');
 
@@ -193,8 +215,8 @@ ok(await g(() => G.result === 'won' && !Kit.isOpen()) && /Bravo/.test(await msg(
 await g(() => { const v = GG.load('sudoku'); v.G.solution = '1'.repeat(81); return GG.save('sudoku', v); });
 await page.reload();
 await wait(300);
-ok(await g(() => Kit.isOpen() && !G), 'a broken save is not loaded');
-await page.click('#helpClose');
+await page.waitForFunction(() => G && !making);
+ok(await g(() => !Kit.isOpen() && G.level === 'facile' && G.cells === '0'.repeat(81)), 'a broken save is not loaded: a new grid starts');
 
 // 12. Moyen and Difficile come from the worker, with the reasoning of their level.
 await start(page, 'Moyen');
@@ -229,7 +251,7 @@ await page.screenshot({ path: `${OUT}/sudoku-difficile.png` });
   await play(j, red);
   await p.waitForTimeout(550);
   await play(i);
-  const full = 'La grille est pleine, mais des chiffres sont en rouge : corrigez-les.';
+  const full = 'La grille est pleine, mais des chiffres sont en rouge : cliquez sur un chiffre rouge pour le changer.';
   ok(await p.evaluate(() => G.result === '' && Sudoku.filled(G)) && await pmsg() === full, 'a full grid with a red digit says to correct the red digits');
   await p.evaluate(() => GG.flush());
   await p.reload();
@@ -283,11 +305,11 @@ await page.screenshot({ path: `${OUT}/sudoku-difficile.png` });
     }
     return out;
   });
-  ok(steps[0].same && /^Étape 1 sur 3 : à cause des cases en jaune, le 3 ne va pas dans la case entourée\.$/.test(steps[0].text) && steps[0].rings.join() === '1' && steps[0].why.length > 0,
+  ok(steps[0].same && /^Étape 1 sur 3 : à cause des cases en jaune, le 3 ne va pas dans la case entourée\. Cliquez encore sur « Une aide \? » pour la suite\.$/.test(steps[0].text) && steps[0].rings.join() === '1' && steps[0].why.length > 0,
     `a longer hint first says the step its pair needs: ${steps[0].text}`);
-  ok(steps[1].same && /^Étape 2 sur 3 : à cause des cases en jaune, le 1 et le 8 ne vont pas dans la case entourée\.$/.test(steps[1].text) && steps[1].rings.join() === '5' && steps[1].why.join() === '1,2',
+  ok(steps[1].same && /^Étape 2 sur 3 : à cause des cases en jaune, le 1 et le 8 ne vont pas dans la case entourée\. Cliquez encore sur « Une aide \? » pour la suite\.$/.test(steps[1].text) && steps[1].rings.join() === '5' && steps[1].why.join() === '1,2',
     `then the pair: ${steps[1].text}`);
-  ok(!steps[2].same && steps[2].text === 'Étape 3 sur 3 : dans cette case, il ne reste que le 4.' && await p.evaluate(() => G.cells[5] === '4'),
+  ok(!steps[2].same && steps[2].text === 'Étape 3 sur 3 : dans cette case, il ne reste que le 4. Cliquez sur une autre case vide.' && await p.evaluate(() => G.cells[5] === '4'),
     `then it writes the digit: ${steps[2].text}`);
   await p.close();
 }
@@ -344,7 +366,7 @@ const WINDOWS = [[1366, 680], [1093, 530], [1920, 1000], [1280, 620], [390, 760]
 // A longer hint can name seven digits that a cell cannot take.
 const LONGEST = "À cause des cases en jaune, le 1, le 2, le 3, le 4, le 5, le 6 et le 7 ne vont pas dans cette case : il n'y reste que le 8.";
 // A step of a longer hint: a quad of a column that rules five digits out.
-const LONGEST_STEP = "Étape 12 sur 14 : dans cette colonne, le 1, le 2, le 3 et le 4 ne vont que dans les cases en jaune, donc le 5, le 6, le 7, le 8 et le 9 n'y vont pas.";
+const LONGEST_STEP = "Étape 12 sur 14 : dans cette colonne, le 1, le 2, le 3 et le 4 ne vont que dans les cases en jaune, donc le 5, le 6, le 7, le 8 et le 9 n'y vont pas. Cliquez encore sur « Une aide ? » pour la suite.";
 for (const [w, h, z] of WINDOWS) {
   const name = `${w}x${h}` + (z ? ` at ${z * 100} %` : '');
   const phone = w < 700;
@@ -354,6 +376,8 @@ for (const [w, h, z] of WINDOWS) {
   await p.goto(URL);
   await p.waitForTimeout(200);
   let rulesFit = true;
+  await p.waitForFunction(() => G && !making);
+  await p.evaluate(() => Kit.openHelp());
   for (let n = 0; n < 5; n++) {
     const r = await p.evaluate(() => { const t = document.getElementById('helpText'), b = document.getElementById('helpBox').getBoundingClientRect();
       return { fit: t.scrollHeight <= t.clientHeight + 1, inside: b.left >= 0 && b.top >= 0 && b.right <= innerWidth + 1 && b.bottom <= innerHeight + 1, wide: t.scrollWidth <= t.clientWidth + 1 }; });

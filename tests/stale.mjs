@@ -11,8 +11,7 @@ for (const game of ['solitaire', 'freecell', 'dames', 'dame-de-pique', 'demineur
   const ctx = await browser.newContext({ reducedMotion: 'reduce' });
   const a = await ctx.newPage(), b = await ctx.newPage();
   await a.goto(gameUrl(game));
-  await a.click('#helpClose');
-  await a.getByRole('button', { name: 'Facile', exact: true }).click();
+  // The first visit starts a game at Facile at once.
   // The sudoku makes its grid in a worker and saves it after: b must open after that save.
   if (game === 'sudoku') await a.waitForFunction(() => G && !making);
   await b.goto(gameUrl(game));
@@ -48,8 +47,7 @@ for (const game of ['solitaire', 'freecell', 'dames', 'dame-de-pique', 'demineur
   const ctx = await browser.newContext({ reducedMotion: 'reduce' });
   const a = await ctx.newPage(), b = await ctx.newPage();
   await a.goto(gameUrl('sudoku'));
-  await a.click('#helpClose');
-  await a.getByRole('button', { name: 'Facile', exact: true }).click();
+  // The first visit starts a game at Facile at once.
   await a.waitForFunction(() => G && !making);
   const first = await a.evaluate(async () => {
     let g = G;

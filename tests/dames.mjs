@@ -28,10 +28,14 @@ const setPos = (w, b, extra = {}) => g(`(() => {
 })()`);
 const waitTurn = async () => { for (let i = 0; i < 60 && await g(() => phase !== 'player' && phase !== 'over'); i++) await wait(100); };
 
-// 1. The first visit: the rules open, and each page fits without scrolling.
+// 1. The first visit: a game starts at Facile at once, with the coach; the rules open on « Règles ».
 await page.goto(URL);
 await wait(500);
-ok(await g(() => Kit.isOpen()), 'the rules open on the first visit');
+ok(await g(() => !Kit.isOpen() && level === 'facile' && phase === 'player'), 'the first visit starts a game at Facile, with no dialog');
+ok(await g(() => Kit.coaching() && document.querySelector('.pc.w.can.coach')), 'the coach rings a white piece that can move');
+ok(await g(() => boardEl.classList.contains('pick') && getComputedStyle(document.querySelector('.pc.can b')).display === 'block'), 'the pieces that can move show a ring without hover');
+ok(await g(() => document.getElementById('undoBtn').dataset.why === "Il n'y a pas encore de coup à annuler."), 'the grey undo button says why');
+await page.click('#helpBtn');
 const pages = await page.locator('#helpText .page').count();
 ok(pages >= 3 && pages <= 5, `the rules have ${pages} pages`);
 ok(await g(() => [...document.querySelectorAll('#help .page')].every(p => p.querySelector('.dg-pic[aria-hidden="true"]') && p.querySelector('.guide-lead'))), 'each rules page is one picture and a short sentence');
@@ -39,10 +43,10 @@ ok(await g(() => !document.querySelector('#help .pc.must, #help .pc.sel, #help .
 for (let n = 0; n < pages; n++) {
   ok(await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }), `rules page ${n + 1} fits without scrolling`);
   await page.screenshot({ path: `${OUT}/dames-rules-${n + 1}.png` });
-  await page.click('#helpNext');
+  if (n < pages - 1) await page.click('#helpNext');
 }
-await page.getByRole('button', { name: 'Facile', exact: true }).click();
-ok(!(await g(() => Kit.isOpen())), '"J\'ai compris" closes the rules');
+await page.click('#helpClose');
+ok(!(await g(() => Kit.isOpen())), '« Fermer » closes the rules');
 
 // 2. Layout: large squares, and the board and the side column fit in the window.
 const lay = await g(() => {
@@ -58,6 +62,7 @@ ok(lay.twoCols, 'a laptop window puts the computer on the left and the player on
 // 3. A move: click a piece, then a framed square. The computer answers from its worker.
 await click(32);
 ok(JSON.stringify(await goes()) === '[27,28]', 'a man shows its two squares forward');
+ok(await g(() => [27, 28].some(n => squares[n].classList.contains('coach'))), 'the coach then points at a square to go to');
 await page.screenshot({ path: `${OUT}/dames-chosen.png` });
 await click(28);
 ok(await g(() => G.b[28] === 1 && G.b[32] === 0), 'the man moved from 32 to 28');
@@ -66,7 +71,7 @@ await page.screenshot({ path: `${OUT}/dames-thinking.png` });
 await waitTurn();
 ok(await g(() => G.turn === 1 && phase === 'player'), 'the computer answered');
 ok(await g(() => workerOk && !!worker), 'the computer thinks in a worker, also from a file');
-ok((await msg()).startsWith("L'ordinateur a"), 'the line says what the computer did: ' + await msg());
+ok(/^L'ordinateur a (avancé un pion, marqué|pris .* avec un pion, marqué) en bleu\. (À vous|Vous devez prendre) .*cliquez sur /.test(await msg()), 'the line names the computer\'s move and its blue squares: ' + await msg());
 ok(await g(() => document.querySelectorAll('.sq.last').length === 2), 'the computer\'s move stays marked');
 await page.screenshot({ path: `${OUT}/dames-answered.png` });
 
@@ -84,7 +89,8 @@ ok(await g(() => sel === null), 'a second, slower click puts it back');
 await click(17);
 ok((await msg()).includes("à l'ordinateur"), 'a black piece: ' + await msg());
 await click(45);
-ok((await msg()).includes("Ce pion ne peut pas avancer") || (await msg()).includes('Cliquez'), 'a blocked man: ' + await msg());
+ok((await msg()).includes("Ce pion ne peut pas avancer") && /cliquez sur une pièce qui brille/.test(await msg()), 'a blocked man: ' + await msg());
+ok(await g(() => boardEl.classList.contains('show')), 'a blocked man makes the pieces that can move flash');
 
 // 6. Undo while the computer thinks: his move comes back and no answer arrives later.
 const before = await g(() => JSON.stringify(G.b));
@@ -119,6 +125,7 @@ await click(35);
 await wait(1200);
 ok(await g(() => G.result && G.result.winner === 1), 'taking the last pieces wins');
 ok(await g(() => stats.won === 1 && document.getElementById('over').classList.contains('on')), 'the win is counted and shown');
+ok(await g(() => document.getElementById('newBtn').hasAttribute('data-nudge')) && /Nouvelle partie/.test(await msg()), 'the end points to « Nouvelle partie »');
 ok(await g(() => document.querySelectorAll('#trayW i.b').length === 20 && document.getElementById('tookW').textContent.includes('20 pièces')), 'every black piece is in his tray');
 await page.screenshot({ path: `${OUT}/dames-won.png` });
 ok((await g(() => [...document.querySelectorAll('#overBtns button')].map(b => b.textContent).join())) === 'Nouvelle partie,Fermer le jeu', 'the win offers a new game or the way back to the games');

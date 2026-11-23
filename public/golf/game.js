@@ -29,6 +29,50 @@ function meter(s) {
   $('force').querySelector('b').style.width = Math.round(s * 100) + '%';
 }
 const blocked = () => !game || busy || stale || Kit.isOpen() || current(game).done;
+const SHOOT = ' : cliquez sur « Taper la balle ».';
+// His aim and the hint's: the yellow button is then the next thing to press. His own aim also stops the
+// automatic hint of Facile, so it never replaces it.
+function aimed(on, his = false) {
+  const shoot = $('shoot');
+  if (on) shoot.dataset.nudge = '';
+  else delete shoot.dataset.nudge;
+  if (his) $('hintBtn').dataset.auto = 'no';
+  else delete $('hintBtn').dataset.auto;
+}
+// Why each grey button is grey: the kit says it when he clicks one.
+function why(text) {
+  for (const id of ['shoot', 'hintBtn', 'undoBtn']) {
+    const b = $(id);
+    if (!b.disabled) delete b.dataset.why;
+    else b.dataset.why = id === 'undoBtn' && !sum() ? 'Il n’y a pas encore de coup à annuler.' : text;
+  }
+}
+// The coach of his first game: a ring on a good spot of the turf, then on the yellow button.
+function coachSpot() {
+  const spot = $('spot');
+  spot.hidden = true;
+  if (!Kit.coaching() || !game || stale || current(game).done) return;
+  const { h, ball } = current(game),
+    // Where the hint's ball stops: always on the turf, unlike its target, which may lie past an edge.
+    p = simulate(h, ball, hint(h, ball)).end;
+  spot.hidden = false;
+  // The view may still be settling: the ring follows the spot on the screen while it shows.
+  const follow = () => {
+    if (spot.hidden) return;
+    const at = view.screen(p, 0);
+    spot.style.left = at.x + 'px';
+    spot.style.top = at.y + 'px';
+    requestAnimationFrame(follow);
+  };
+  follow();
+  Kit.point(spot);
+}
+// A click on the turf while it cannot take a shot.
+function refuse() {
+  if (!game || Kit.isOpen() || stale) return;
+  if (busy) Kit.tell('La balle roule, attendez.');
+  else if (current(game).done) Kit.tell('Le trou est terminé : cliquez sur « ' + $('shoot').textContent + ' ».');
+}
 async function save() {
   const summary =
     (finished() ? 'Parcours terminé' : 'Trou ' + game.rounds.length + ' sur 9 en cours') +
@@ -47,6 +91,7 @@ function render(message) {
     loaded = key;
   }
   target = null;
+  aimed(false);
   meter(0);
   view.trace(null);
   view.pose(ball, !done, done);
@@ -69,13 +114,17 @@ function render(message) {
   $('undoBtn').disabled = !sum();
   $('hintBtn').disabled = done;
   $('stage').classList.toggle('idle', done);
+  why(done ? 'Le trou est terminé : cliquez sur « ' + shoot.textContent + ' ».' : 'Cliquez d’abord sur le gazon, là où la balle doit s’arrêter.');
   Kit.showLevel(game.level);
+  Kit.gameOver(finished());
   Kit.say(
     message ||
       (done
         ? 'Le trou est terminé : cliquez sur « ' + shoot.textContent + ' ».'
-        : 'Tirez la balle en arrière puis lâchez, ou cliquez sur le gazon.')
+        : 'Cliquez sur le gazon, là où la balle doit s’arrêter, ou tirez la balle en arrière.')
   );
+  if (done) Kit.point(shoot);
+  else coachSpot();
 }
 // A click on the lane: the dotted path of that shot, and the yellow button plays it.
 function aim(p, advice = false) {
@@ -91,13 +140,17 @@ function aim(p, advice = false) {
   meter(strengthOf(h, Math.hypot(p.x - ball.x, p.z - ball.z)));
   view.trace(shot, p, game.level, advice);
   $('shoot').disabled = false;
+  why();
+  aimed(true, !advice);
+  $('spot').hidden = true;
   Kit.say(
     advice
       ? shot.sunk
-        ? 'Ce coup entre dans le trou : cliquez sur « Taper la balle ».'
-        : 'Ce coup rapproche la balle du trou : cliquez sur « Taper la balle ».'
+        ? 'Ce coup entre dans le trou : regardez le chemin, puis cliquez sur « Taper la balle ».'
+        : 'Ce coup rapproche la balle du trou : regardez le chemin, puis cliquez sur « Taper la balle ».'
       : 'Cliquez sur « Taper la balle », ou sur le gazon pour changer de cible.'
   );
+  Kit.point($('shoot'));
 }
 
 // « Moins fort » and « Plus fort »: the same direction, one tenth of the strength less or more.
@@ -105,7 +158,7 @@ function step(by) {
   if (blocked()) return;
   if (!target) {
     window.Sound?.play('bad');
-    Kit.say('Visez d’abord : tirez la balle en arrière, ou cliquez sur le gazon.');
+    Kit.say('Visez d’abord : cliquez sur le gazon, là où la balle doit s’arrêter.');
     return;
   }
   const { h, ball } = current(game),
@@ -116,7 +169,8 @@ function step(by) {
     // « Plus fort » never shortens a hint aimed past the longest pull.
     reach = Math.max(distOf(h, s), by > 0 ? d : 0);
   aim({ x: ball.x + (dx / d) * reach, z: ball.z + (dz / d) * reach });
-  Kit.say('Force ' + Math.round(s * 10) + ' sur 10 : cliquez sur « Taper la balle », ou changez la force.');
+  Kit.say('Force ' + Math.round(s * 10) + ' sur 10' + SHOOT);
+  Kit.point($('shoot'));
 }
 
 // ---------- The pull ----------
@@ -162,7 +216,11 @@ function showPull(p, pull) {
   meter(pull ? pull.strength : 0);
 }
 function down(e) {
-  if (e.button !== 0 || blocked()) return;
+  if (e.button !== 0) return;
+  if (blocked()) {
+    refuse();
+    return;
+  }
   const p = view.local(e),
     at = view.screen(current(game).ball);
   press = { start: p, near: Math.hypot(p.x - at.x, p.y - at.y) <= GRAB, dragging: false, pull: null, id: e.pointerId };
@@ -181,7 +239,10 @@ function move(e) {
     if (!press.near || Math.hypot(p.x - press.start.x, p.y - press.start.y) < DRAG) return;
     press.dragging = true;
     target = null;
+    aimed(false);
+    $('spot').hidden = true;
     $('shoot').disabled = true;
+    why('Cliquez d’abord sur le gazon, là où la balle doit s’arrêter.');
     e.target.style.cursor = 'grabbing';
   }
   const pull = pullOf(p),
@@ -202,7 +263,10 @@ function up(e) {
     if (!was.pull || blocked()) {
       view.trace(null);
       meter(0);
-      if (!blocked()) Kit.say('Le coup est annulé : la balle n’a pas bougé.');
+      if (!blocked()) {
+        Kit.say('Le coup est annulé : cliquez sur le gazon, là où la balle doit s’arrêter.');
+        coachSpot();
+      }
       return;
     }
     target = was.pull.target;
@@ -211,7 +275,7 @@ function up(e) {
   }
   const at = view.screen(current(game).ball);
   if (Math.hypot(p.x - at.x, p.y - at.y) < CANCEL)
-    Kit.say('Pour taper, tirez la balle vers l’arrière, ou cliquez sur le gazon.');
+    Kit.say('Pour taper, cliquez sur le gazon, là où la balle doit s’arrêter, ou tirez la balle en arrière.');
   else aim(view.pick(p));
 }
 function cancel() {
@@ -313,8 +377,11 @@ async function shoot() {
   const shot = play(game, target);
   window.Sound?.play('hit');
   target = null;
+  aimed(false);
+  $('spot').hidden = true;
   $('shoot').disabled = true;
   $('undoBtn').disabled = $('hintBtn').disabled = true;
+  why('La balle roule, attendez.');
   Kit.say('La balle roule…');
   const end = finished(),
     win = end && sum() <= totalPar() && !game.won;
@@ -339,16 +406,18 @@ async function shoot() {
     void ribbon.offsetWidth;
     ribbon.classList.add('on');
   }
+  // The hole is over: the line ends with the yellow button, « Trou suivant » or « Voir le résultat ».
+  const next = ' Cliquez sur « ' + (end ? 'Voir le résultat' : 'Trou suivant') + ' ».';
   render(
     shot.sunk
-      ? count === 1
-        ? 'Du premier coup, dans le trou : bravo !'
-        : 'Dans le trou en ' + count + ' coups, pour un par de ' + h.par + (count <= h.par ? ' : bravo !' : '.')
+      ? (count === 1
+          ? 'Du premier coup, dans le trou : bravo !'
+          : 'Dans le trou en ' + count + ' coups, pour un par de ' + h.par + (count <= h.par ? ' : bravo !' : '.')) + next
       : count === 8
-        ? 'Après huit coups, la balle est posée dans le trou : passons au suivant.'
+        ? 'Après huit coups, la balle est posée dans le trou.' + next
         : 'La balle s’arrête à ' +
           (away < 1 ? Math.max(1, Math.round(away * 100)) + ' cm' : String(Math.round(away * 10) / 10).replace('.', ',') + ' m') +
-          ' du trou.'
+          ' du trou. Visez à nouveau : cliquez sur le gazon.'
   );
   if (written) {
     if (end && sum() <= totalPar()) window.Sound?.play('win');
@@ -359,7 +428,7 @@ async function shoot() {
 async function back() {
   if (!game || busy || stale || Kit.isOpen() || !undo(game)) return;
   busy = true;
-  render('Votre dernier coup est annulé.');
+  render('Votre dernier coup est annulé : cliquez sur le gazon, là où la balle doit s’arrêter.');
   await save();
   busy = false;
 }

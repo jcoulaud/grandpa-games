@@ -35,11 +35,21 @@ const setHand = (hands, extra = {}) => g(([hands, extra]) => {
 const SU = 'SHDC', RK = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 const card = n => SU.indexOf(n.slice(-1)) * 13 + RK.indexOf(n.slice(0, -1));
 
-// 1. The first visit: the rules open, and each page fits without scrolling. Each page is one picture
-// and at most two short sentences, the first in large type.
+// 1. The first visit: a game at Facile starts at once, with the coach. The hand points at a card to give,
+// then at the button once 3 are chosen. The rules stay on « Règles »: each page fits without scrolling,
+// one picture and at most two short sentences, the first in large type.
 await page.goto(URL);
 await wait(400);
-ok(await g(() => Kit.isOpen()), 'the rules open on the first visit');
+ok(await g(() => !Kit.isOpen() && level === 'facile' && G.phase === 'pass'), 'the first visit starts a game at Facile at once');
+ok(/plus fortes, comme la dame de pique[^]*cliquez sur 3 cartes\.$/.test(await msg()), 'the pass says which cards to give, and what to click: ' + await msg());
+ok(await g(() => Kit.coaching() && document.querySelectorAll('.card.hand.coach').length === 1 && !document.getElementById('coachHand').hidden), 'the coach rings a card to give');
+ok(await g(() => document.getElementById('hintBtn').dataset.auto === 'no'), 'the automatic hint never chooses his cards for him');
+await page.mouse.click(...await g(() => { const r = document.getElementById('undoBtn').getBoundingClientRect(); return [r.left + 20, r.top + 20]; }));
+ok((await msg()).startsWith("Vous n'avez pas encore choisi de carte"), 'the grey undo button says why it is grey');
+for (const c of await g(() => G.hands[0].slice(0, 3))) await clickCard(c);
+ok(await g(() => { const b = document.getElementById('passBtn'); return b.classList.contains('coach') && b.hasAttribute('data-nudge'); }), 'with 3 cards chosen, the coach points at « Donner ces 3 cartes »');
+await page.click('#helpBtn');
+ok(await g(() => Kit.isOpen()), 'the rules open on « Règles »');
 const pages = await g(() => [...document.querySelectorAll('#helpText .page')].map(p => ({
   pictures: p.querySelectorAll('.ddp-scene[aria-hidden="true"]').length, lists: p.querySelectorAll('ul, ol').length,
   words: [...p.querySelectorAll(':scope > p')].map(e => e.textContent).join(' ').split(/\s+/).filter(w => /\w/.test(w)).length,
@@ -54,9 +64,14 @@ for (let n = 0; n < pages.length; n++) {
   await page.screenshot({ path: `${OUT}/ddp-rules-${n + 1}.png` });
   await page.click('#helpNext');
 }
+ok(!(await g(() => Kit.isOpen())), 'the last page closes the rules');
+const cast1 = await g(() => cast.slice());
+await page.click('#newBtn');
 await page.getByRole('button', { name: 'Moyen', exact: true }).click();
-ok(!(await g(() => Kit.isOpen())) && await g(() => level === 'moyen'), 'the level is chosen after the rules');
-ok(await g(() => cast.length === 3 && !['jeanne', 'paul', 'louise'].some(id => cast.includes(id))), 'a new game seats three other players');
+// The cards of the first game slide to their places in the new deal: wait until they are there.
+await page.waitForFunction(() => [...document.querySelectorAll('.card.hand')].every(e => !e.getAnimations().length));
+ok(!(await g(() => Kit.isOpen())) && await g(() => level === 'moyen'), 'a new game at Moyen');
+ok(await g(cast1 => cast.length === 3 && !cast1.some(id => cast.includes(id)), cast1), 'a new game seats three other players');
 ok(await g(() => [1, 2, 3].every(s => document.querySelector(`#seat${s} img.ava`).src.endsWith(`/lib/avatars/${cast[s - 1]}.webp`))), 'each player shows a face');
 ok(await g(() => document.querySelector('#seat0 img.ava').src.endsWith('/lib/avatars/vous.webp')), 'you show a face too');
 // The checks below name the first three players.
@@ -65,7 +80,7 @@ await g(() => { setCast(['jeanne', 'paul', 'louise']); save(); render(); });
 // 2. Layout at 1366x680: large cards, and the corner of each card of his hand in view.
 const lay = await g(() => {
   const t = table.getBoundingClientRect();
-  const hand = [...document.querySelectorAll('.card.hand')].map(e => e.getBoundingClientRect());
+  const hand = [...document.querySelectorAll('.card.hand')].map(e => e.getBoundingClientRect()).sort((a, b) => a.left - b.left);
   const inside = id => { const r = document.getElementById(id).getBoundingClientRect(); return r.left >= t.left && r.right <= t.right && r.top >= t.top && r.bottom <= t.bottom; };
   return { w: L.w, n: hand.length, corners: hand.every((r, i) => r.top + r.height * .3 <= innerHeight && (i === hand.length - 1 || hand[i + 1].left - r.left >= r.width * .3)),
     seats: ['seat1', 'seat2', 'seat3', 'side'].every(inside),
@@ -103,7 +118,7 @@ await page.screenshot({ path: `${OUT}/ddp-received.png` });
 // 4. His turn: a refused card says why; a legal card is played; the others answer.
 await myTurn();
 ok(await g(() => document.getElementById('mySlot').classList.contains('on') && document.getElementById('seat0').classList.contains('turn')
-  && document.getElementById('seat0').textContent.includes('À vous de jouer')), 'his turn shows on the table: his place in the trick and his seat');
+  && getComputedStyle(document.querySelector('#seat0 .now')).display !== 'none'), 'his turn shows on the table: his place in the trick and his seat');
 // His seat against the leftmost card of his hand (the cards he received are sorted in, so it is not always the
 // first in the page), at the places the game gives them: the cards may still be sliding.
 ok(await g(() => { const v = document.getElementById('seat0'), cs = [...document.querySelectorAll('.card.hand')];
@@ -123,6 +138,8 @@ if (bad !== undefined) {
   ok(!(await g(() => document.getElementById('bubble').classList.contains('on'))), 'the bubble goes after 3 seconds');
 }
 ok(await g(() => document.querySelectorAll('.card.hand.no').length === G.hands[0].filter(c => DDP.refusal(G, c)).length), 'the cards that cannot be played are darker');
+ok(await g(() => (document.querySelector('#seat0 .now').textContent === 'À vous de jouer') === !document.querySelector('.card.hand.no')),
+  'his seat says why some cards are dark: ' + await g(() => document.querySelector('#seat0 .now').textContent));
 ok(await g(() => [...document.querySelectorAll('.card.hand')].every(e => e.classList.contains('up') === !DDP.refusal(G, +e.dataset.c)
   && (getComputedStyle(e).transform !== 'none') === e.classList.contains('up'))), 'the cards he may play stand up out of his hand');
 // The way of play: four arrows around the trick, the one that leads to him lit.
@@ -144,7 +161,10 @@ ok(await g(() => { const b = document.getElementById('hintBtn'); return b.disabl
 await g(() => { cancelAll(); G.turn = 2; G.trick = G.trick.length ? G.trick : []; render(); });
 const n5 = await g(() => G.hands[0].length);
 await clickCard(await g(() => G.hands[0][0]));
-ok((await g(() => G.hands[0].length)) === n5 && (await msg()).includes('Attendez'), 'a click while the others play is refused');
+ok((await g(() => G.hands[0].length)) === n5 && (await msg()) === 'Attendez, Paul joue.', 'a click while the others play says who plays');
+ok(await g(() => document.getElementById('hintBtn').dataset.why === 'Attendez, Paul joue.'), 'the grey hint button says who plays');
+await page.mouse.click(...await g(() => [table.getBoundingClientRect().left + 30, L.cy]));
+ok((await msg()) === 'Attendez, Paul joue.', 'a click on the felt while the others play says who plays');
 
 // 6. Undo takes back his card and the cards played after it.
 await page.evaluate(() => GG.flush());
@@ -166,6 +186,12 @@ ok((await g(() => JSON.stringify(G))) === snap && await g(() => level === 'moyen
 await page.click('#hintBtn'); await wait(500);
 ok(await g(() => hint.length === 1 && DDP.legal(G).includes(hint[0]) && !!document.querySelector('.card.hand.hint')), 'the hint frames a card he may play');
 await page.screenshot({ path: `${OUT}/ddp-hint.png` });
+
+// He must follow suit: his seat says so, by his hand.
+await setHand(['2D 3S', '3D 4D', '5D 6D', '7D 8D'], { leader: 1, turn: 1 });
+await myTurn();
+ok(await g(() => document.querySelector('#seat0 .now').textContent === 'Suivez la couleur : carreau' && !!document.querySelector('.card.hand.no')),
+  'the line by his hand says to follow suit: ' + await g(() => document.querySelector('#seat0 .now').textContent + ' ' + G.trick));
 
 // 9. The end of a hand: the score sheet, which Escape does not close, then the next hand passes right.
 await setHand(['2D', '3D', '4D', 'AH'], { pts: [5, 10, 6, 4], scores: [10, 20, 30, 40] });
@@ -237,6 +263,7 @@ await clickCard(card('2D'));
 for (let i = 0; i < 80 && !(await g(() => document.getElementById('over').classList.contains('on'))); i++) await wait(100);
 ok(await g(() => G.phase === 'over' && G.result.winner === 0 && stats.won === 1), 'he wins with the lowest score');
 ok((await g(() => document.getElementById('overTitle').textContent)) === 'Bravo, vous avez gagné !', 'the win sheet shows');
+ok(await g(() => document.getElementById('newBtn').hasAttribute('data-nudge')) && (await msg()).endsWith('Cliquez sur « Nouvelle partie » pour rejouer.'), 'the game is over: « Nouvelle partie » is the next thing to press');
 ok(await g(() => /atteint 100 points : la partie est finie\.\n[^]*\nLes points : Vous 20, Jeanne/.test(document.getElementById('overText').textContent)), 'the win sheet says why the game ended, with the four totals');
 ok(await g(() => getComputedStyle(document.getElementById('scoreSheet')).visibility === 'hidden'), 'the score sheet hides behind the win sheet');
 await page.screenshot({ path: `${OUT}/ddp-won.png` });

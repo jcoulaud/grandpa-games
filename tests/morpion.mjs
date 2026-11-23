@@ -32,18 +32,22 @@ const shownScore = () => {
 };
 const score = () => g(shownScore);
 
-// 1. The first visit: the rules open, each page fits without scrolling, "Fermer" works, then the level.
+// 1. The first visit: a game starts at Facile at once, with the coach on the centre square. The rules
+// open on « Règles », each page fits without scrolling, and "Fermer" goes back to the game.
 await page.goto(URL);
 await wait(400);
-ok(await g(() => Kit.isOpen()), 'the rules open on the first visit');
+ok(await g(() => !Kit.isOpen() && level === 'facile' && G.moves.length === 0), 'the first visit starts a game at Facile, with no dialog');
+ok(await g(() => Kit.coaching() && cells[4].classList.contains('coach')), 'the coach rings the centre square');
+ok(await g(() => getComputedStyle(cells[0]).outlineStyle === 'dashed'), 'at Facile the free squares show a faint frame without hover');
+ok(await g(() => document.getElementById('undoBtn').dataset.why === "Il n'y a pas encore de coup à annuler."), 'the grey undo button says why');
+await page.click('#helpBtn');
 for (let n = 0; n < 5; n++) {
   ok(await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }), `rules page ${n + 1} fits without scrolling`);
   await page.screenshot({ path: `${OUT}/morpion-rules-${n + 1}.png` });
   if (n < 4) await page.click('#helpNext');
 }
 await page.click('#helpClose');
-ok(/Choisissez le niveau/.test(await g(() => document.getElementById('overText').textContent)), '"Fermer" closes the rules and asks for the level');
-await page.getByRole('button', { name: 'Facile', exact: true }).click();
+ok(!(await g(() => Kit.isOpen())), '"Fermer" closes the rules');
 ok(await page.locator('.cell').count() === 9, 'Facile is a grid of 3 by 3');
 ok(await g(() => G.first === Morpion.X) && /vous commencez/.test(await msg()), 'he starts the first game, and the line says so');
 ok(/Vous 0 · Ordinateur 0 · Nuls 0/.test(await score()), 'the game shows the score of the series');
@@ -141,9 +145,10 @@ await setGame('facile', 1, [0, 4, 1, 2, 7]);
 await g(() => computerPlays(6));
 await page.waitForSelector('#over.on', { timeout: 8000 });
 ok(/L'ordinateur a gagné/.test(await g(() => document.getElementById('overTitle').textContent)), 'the computer wins and the sheet says so');
-ok(await g(() => document.querySelector('#overBtns button').textContent === 'Annuler le dernier coup'), 'after a loss, undo comes first');
+ok(await g(() => document.querySelector('#overBtns button.primary').textContent === 'Partie suivante'), 'after a loss, the next game is the yellow choice');
+ok(await g(() => /Cliquez sur « (Partie suivante|Nouvelle partie) »\.$/.test(document.getElementById('msg').textContent)), 'the end says what to click next');
 ok(/Ordinateur 1/.test(await score()), 'the loss is in the score');
-await page.click('#overBtns button');
+await page.locator('#overBtns').getByRole('button', { name: 'Annuler le dernier coup' }).click();
 ok(await g(() => !G.result && G.moves.length === 4) && /Ordinateur 0/.test(await score()), 'undo takes back the loss, and the score with it');
 
 // 11. A draw.
@@ -171,7 +176,7 @@ await g(() => { say(computerSaid(61)); });
 ok(/trois ronds alignés/.test(await msg()), 'the line warns of three rings in a row');
 await page.click('#hintBtn');
 await page.waitForSelector('.cell.hint', { timeout: 8000 });
-ok(await msg() === 'Ici, vous bloquez trois ronds alignés.' && [58, 62].includes(+(await g(() => document.querySelector('.cell.hint').dataset.i))), 'the hint frames a square at an end of the three rings and says why');
+ok(await msg() === 'Ici, vous bloquez trois ronds alignés. Cliquez sur la case jaune.' && [58, 62].includes(+(await g(() => document.querySelector('.cell.hint').dataset.i))), 'the hint frames a square at an end of the three rings and says why');
 await page.screenshot({ path: `${OUT}/morpion-moyen-hint.png` });
 // Five crosses win the big sheet.
 await setGame('moyen', 1, [55, 0, 56, 2, 57, 4, 58, 6]);
@@ -200,8 +205,8 @@ ok(await g(() => level === 'facile' && G.moves.join() === '4,0' && !Kit.isOpen()
 await g(() => GG.save('morpion', { level: 'moyen', first: 1, moves: [84, 84], series: { you: 2, cpu: 'x' }, total: { won: 3 } }));
 await page.reload();
 await wait(400);
-ok(await g(() => Kit.isOpen()), 'a broken save is not loaded and the game starts again');
-await page.click('#helpClose');
+ok(await g(() => !Kit.isOpen() && level === 'moyen' && G.moves.length === 0 && !Kit.coaching()), 'a broken save is not loaded and a new game starts at its level');
+await page.click('#newBtn');
 await page.getByRole('button', { name: 'Moyen', exact: true }).click();
 ok(await g(() => total.won === 3 && series.you === 2 && series.cpu === 0), 'the wins and the score of a broken save are kept, a bad count reads as 0');
 
@@ -352,7 +357,7 @@ const centre = async i => { const b = await cell(i).boundingBox(); return [b.x +
   // The warnings describe the real position: a gap in the three rings, and two squares that make five.
   await setLevelGame('moyen', 1, [32, 54, 0, 76, 27, 87]);
   const gapWarn = await g(() => warning());
-  ok(/case vide entre eux/.test(gapWarn) && !/alignés/.test(gapWarn), 'three rings with a gap are not called three in a row: ' + gapWarn);
+  ok(/avec un trou/.test(gapWarn) && !/alignés/.test(gapWarn), 'three rings with a gap are not called three in a row: ' + gapWarn);
   await setLevelGame('moyen', 1, [32, 54, 0, 76, 27, 87, 17, 65]);
   const twoWarn = await g(() => warning());
   ok(/plusieurs endroits, et une croix n'en bloque qu'un/.test(twoWarn) && !/Bloquez/.test(twoWarn), 'two squares that make five: the warning does not ask him to block one: ' + twoWarn);
@@ -364,8 +369,6 @@ const centre = async i => { const b = await cell(i).boundingBox(); return [b.x +
   const a = await ctx.newPage(), b = await ctx.newPage();
   const spy = p => p.evaluate(() => { window.sentKinds = []; GG.track = (game, kind) => sentKinds.push(kind); });
   await a.goto(URL);
-  await a.click('#helpClose');
-  await a.getByRole('button', { name: 'Facile', exact: true }).click();
   await b.goto(URL);
   await b.evaluate(() => newGame('facile'));
   await spy(a);
@@ -428,6 +431,7 @@ for (const [w, h, z] of WINDOWS) {
   await p.waitForTimeout(300);
   const label = `${w}x${h}${z !== 1 ? ' at ' + z * 100 + ' %' : ''}`;
   if (h / z >= 620 || z === 1) {
+    await p.click('#helpBtn');
     let fit = true;
     for (let n = 0; n < 5; n++) {
       if (h >= 620 && !(await p.evaluate(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }))) fit = false;
@@ -437,6 +441,7 @@ for (const [w, h, z] of WINDOWS) {
     if (h >= 620) ok(fit, `${label}: every rules page fits without scrolling`);
   }
   await p.evaluate(() => Kit.closeHelp());
+  await p.click('#newBtn');
   await check(p, `${label} level dialog`);
   for (const [lv, moves] of [['Facile', [4, 0, 8]], ['Moyen', [60, 61, 49, 50, 72, 73]]]) {
     await p.getByRole('button', { name: lv, exact: true }).click();

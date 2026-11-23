@@ -52,10 +52,16 @@ try {
   const frame = () => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
 
   // ---------- The rules guide fits at every size ----------
+  // The first visit starts a game at Facile at once, with the coach on « Tirer »: the cue already points at the rack.
   await page.goto('http://localhost/billard/');
-  await page.locator('#help.on').waitFor();
+  await page.locator('#shoot.coach').waitFor();
+  assert.equal(await page.evaluate(() => Kit.isOpen()), false);
+  assert.match(await page.textContent('#msg'), /^À vous de casser : .*cliquez sur « Tirer »\.$/);
+  assert.match(await page.getAttribute('#undoBtn', 'data-why'), /pas encore de coup/);
+  await page.waitForFunction(() => GG.load('billard')?.level === 'facile');
   for (const [width, height, zoom] of sizes) {
     await setSize(width, height, zoom);
+    await page.click('#helpBtn');
     await page.locator('#help.on').waitFor();
     for (let i = 0; i < 5; i++) {
       const fits = await page.evaluate(() => {
@@ -68,9 +74,6 @@ try {
     }
   }
   await setSize(1366, 680, 1);
-  await page.click('#helpClose');
-  await page.getByRole('button', { name: 'Facile', exact: true }).click();
-  await page.waitForFunction(() => GG.load('billard')?.level === 'facile');
   assert.deepEqual(stats.filter((s) => s === 'start').length, 1);
 
   // ---------- The layout at every size and level ----------
@@ -116,7 +119,15 @@ try {
   const one = await ballAt(1);
   await page.mouse.click(one.x, one.y);
   assert.match(await page.getAttribute('#aimLabel', 'aria-label'), /^La \d+ |^La noire$|^La bande$/);
-  assert.match(await page.textContent('#msg'), /Vous visez la 1 jaune/);
+  assert.match(await page.textContent('#msg'), /^Vous visez la 1 jaune : cliquez sur « Tirer »\.$/);
+  // His own aim: « Tirer » is the nudge, and the automatic hint waits.
+  assert.equal(await page.getAttribute('#shoot', 'data-nudge'), '');
+  assert.equal(await page.getAttribute('#hintBtn', 'data-auto'), 'no');
+  // « Effet » says what it does, and what to click next.
+  await page.click('#spinUp');
+  assert.match(await page.textContent('#msg'), /^Effet coulé : .*Puis cliquez sur « Tirer »\.$/);
+  await page.click('#spinDown');
+  assert.match(await page.textContent('#msg'), /^Effet au centre/);
 
   // ---------- The break, then René, then his turn again ----------
   const before = (await saved()).shots;
@@ -139,6 +150,52 @@ try {
     assert.match(await page.textContent('#msg'), /annulé/);
     if (shotsBefore !== null) assert.equal((await saved()).shots, shotsBefore);
   }
+
+  // ---------- René's turn: a click on the table or a grey button says to wait ----------
+  await page.evaluate(async () => {
+    const E = await import('/billard/engine.js');
+    const g = E.fresh('moyen', 0, 5);
+    g.broken = true;
+    g.shots = 1;
+    g.turn = 'cpu';
+    await GG.save('billard', g, { summary: '' });
+  });
+  await page.reload();
+  await page.waitForSelector('#you .tray');
+  const lane = await page.locator('#stage canvas').boundingBox();
+  await page.mouse.click(lane.x + lane.width / 2, lane.y + lane.height / 2);
+  assert.equal(await page.textContent('#msg'), 'René joue, attendez votre tour.');
+  assert.equal(await page.getAttribute('#shoot', 'data-why'), 'René joue, attendez votre tour.');
+
+  // ---------- At Facile, a click on a ball lines it up with a pocket; René's ball warns ----------
+  await page.evaluate(async () => {
+    const E = await import('/billard/engine.js');
+    const T = E.table,
+      g = E.fresh('facile', 0, 9);
+    const q = [1, 0, 0, 0];
+    g.broken = true;
+    g.shots = 4;
+    g.groups = { player: 'pleines' };
+    g.balls = [
+      { id: 0, x: T.L - 0.55, y: T.W - 0.32, q },
+      { id: 3, x: T.L - 0.25, y: T.W - 0.25, q },
+      { id: 12, x: T.L * 0.3, y: T.W * 0.3, q },
+      { id: 8, x: T.L * 0.3, y: T.W * 0.7, q }
+    ];
+    await GG.save('billard', g, { summary: '' });
+  });
+  await page.reload();
+  await page.waitForSelector('#you .tray .mb');
+  const twelve = await ballAt(12);
+  await page.mouse.click(twelve.x, twelve.y);
+  assert.equal(await page.textContent('#msg'), 'C’est une bille de René : la toucher d’abord est une faute. Cliquez sur une de vos billes.');
+  const three = await ballAt(3);
+  await page.mouse.click(three.x, three.y);
+  assert.match(await page.textContent('#msg'), /^Vous visez la 3 rouge vers le trou du coin en bas à droite : cliquez sur « Tirer »\.$/);
+  await page.click('#shoot');
+  await page.waitForFunction(() => GG.load('billard').shots > 4);
+  assert.ok(!(await saved()).balls.some((b) => b.id === 3), 'the aimed ball drops');
+  await page.waitForFunction(() => /Rejouez : cliquez sur une bille pour viser, puis sur « Tirer »\./.test(document.querySelector('#msg').textContent));
 
   // ---------- The white in hand ----------
   await page.evaluate(async () => {
@@ -190,6 +247,8 @@ try {
   await page.locator('#over.on, #box:has-text("Vous avez gagné")').first().waitFor({ timeout: 20000 });
   const g2 = await saved();
   assert.equal(g2.over?.winner, 'player');
+  // The game is over: « Nouvelle partie » is the nudge.
+  assert.equal(await page.getAttribute('#newBtn', 'data-nudge'), '');
   assert.equal(g2.wins, 3);
   await page.waitForFunction(() => true);
   assert.ok(stats.includes('won'));

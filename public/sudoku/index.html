@@ -85,6 +85,9 @@
   .key { position: relative; min-height: 0; padding: 0; justify-content: center; border-radius: 14px; font: 700 var(--fk)/1 var(--ui);
     background: #FBFAF6; color: #1F2830; border-color: #8C979F; box-shadow: 0 4px 0 #8C979F; }
   .key:hover { background: #FFF3C4; }
+  /* No empty cell chosen: the keys rest, pale. A click still says what to do first. */
+  #pad.off .key { background: #ECEEEC; color: #8A9298; border-color: #B9C0C4; box-shadow: 0 4px 0 #B9C0C4; }
+  #pad.off .key .left { opacity: .55; }
   /* How many of the digit are still to place: a slate blue badge on the corner of its key. */
   .key .left { position: absolute; top: -10px; right: -10px; min-width: calc(var(--fb) * 1.6); height: calc(var(--fb) * 1.6); padding: 0 6px; border-radius: 999px;
     display: flex; align-items: center; justify-content: center; font: 700 var(--fb)/1 var(--ui); font-variant-numeric: tabular-nums;
@@ -352,19 +355,20 @@ function choose(i) {
 }
 const padWhere = () => $('stage').classList.contains('under') ? 'en dessous' : 'à droite';
 // A full grid that is not won has red digits: a full grid that keeps every rule is the solution.
-const FIX_RED = 'La grille est pleine, mais des chiffres sont en rouge : corrigez-les.';
+const FIX_RED = 'La grille est pleine, mais des chiffres sont en rouge : cliquez sur un chiffre rouge pour le changer.';
 const WON_LINE = 'Cette grille est terminée : cliquez sur « Nouvelle partie » pour en commencer une autre.';
+const NEXT = 'Cliquez sur une autre case vide.';
 
 // Before a move: why it cannot be done, said in one sentence, or false.
 function refuse(what, d) {
   if (G.result) { Kit.say(WON_LINE); return true; }
-  if (sel < 0) { Kit.say(what === 'erase' ? "Cliquez d'abord sur la case à effacer." : "Cliquez d'abord sur une case vide de la grille."); return true; }
+  if (sel < 0) { Kit.tell(what === 'erase' ? "Cliquez d'abord sur la case à effacer." : "Choisissez d'abord une case vide : cliquez sur une case de la grille."); return true; }
   const why = S.refusal(G, sel, what, d);
   if (!why) return false;
   if (why === 'given') Kit.say(what === 'erase' ? 'Ce chiffre est un chiffre du départ : il ne peut pas être effacé.'
     : 'Ce chiffre est un chiffre du départ : il ne peut pas changer. Choisissez une case vide.');
-  else if (why === 'same') Kit.say(`Ce ${d} est déjà écrit dans cette case.`);
-  else if (why === 'empty') Kit.say('Cette case est déjà vide.');
+  else if (why === 'same') Kit.say(`Ce ${d} est déjà écrit dans cette case. ${NEXT}`);
+  else if (why === 'empty') Kit.say('Cette case est déjà vide : cliquez sur un chiffre pour la remplir.');
   shake(sel);
   return true;
 }
@@ -388,6 +392,9 @@ async function digit(d) {
   const r = S.write(G, i, d);
   const previous = G;
   const written = commit(r.G);
+  // A digit that keeps the rules is done: the cell lets go, so a second key never writes over it. A red
+  // digit keeps its cell, so the next key changes it.
+  if (!r.clash) sel = -1;
   drawMove(previous, i);
   const fresh = S.complete(G).filter(x => !before.includes(x));
   fresh.forEach(animKeyDone);
@@ -396,10 +403,10 @@ async function digit(d) {
   if (r.clash) {
     blameCell(r.clash.cell);
     shake(i);
-    Kit.say(`Il y a déjà un ${d} dans ${UNIT_NAME[r.clash.unit]}.`);
+    Kit.say(`Il y a déjà un ${d} dans ${UNIT_NAME[r.clash.unit]}. Cliquez sur un autre chiffre, ou sur « Effacer ».`);
   } else if (S.filled(G)) Kit.say(FIX_RED);
-  else if (fresh.includes(d)) Kit.say(`Bravo, les neuf ${d} sont écrits sans doublon !`);
-  else Kit.say(`Vous avez écrit un ${d}. Encore ${plural(empties(), 'case', 'cases')} à remplir.`);
+  else if (fresh.includes(d)) Kit.say(`Bravo, les neuf ${d} sont écrits sans doublon ! ${NEXT}`);
+  else Kit.say(`Vous avez écrit un ${d}. Encore ${plural(empties(), 'case', 'cases')} : cliquez sur une autre case vide.`);
   await written;
 }
 async function eraseCell() {
@@ -410,7 +417,7 @@ async function eraseCell() {
   const written = commit(r.G);
   drawMove(previous);
   window.Sound?.play('write');
-  Kit.say(`Le ${r.was} est effacé.`);
+  Kit.say(`Le ${r.was} est effacé. Cliquez sur un autre chiffre pour cette case.`);
   await written;
 }
 async function doUndo() {
@@ -421,7 +428,7 @@ async function doUndo() {
   const written = save();
   drawMove(previous);
   // A save short of room keeps fewer steps, so the first step kept may not be the start.
-  Kit.say(playing() ? 'Le dernier coup est annulé.' : 'Le dernier coup est annulé. La grille est comme au départ.');
+  Kit.say((playing() ? 'Le dernier coup est annulé.' : 'Le dernier coup est annulé. La grille est comme au départ.') + ' Cliquez sur une case vide.');
   await written;
 }
 
@@ -447,7 +454,8 @@ async function showHint() {
   render();
   Kit.say(`Étape ${k + 1} sur ${n} : ` + (s.subset.length
     ? `dans ${UNIT_NAME[s.unit]}, ${digitList(s.subset)} ne vont que dans les cases en jaune, donc ${digitList(s.digits)} n'y ${few} pas.`
-    : `à cause des cases en jaune, ${digitList(s.digits)} ne ${few} pas dans ${s.targets.length > 1 ? 'les cases entourées' : 'la case entourée'}.`));
+    : `à cause des cases en jaune, ${digitList(s.digits)} ne ${few} pas dans ${s.targets.length > 1 ? 'les cases entourées' : 'la case entourée'}.`)
+    + ' Cliquez encore sur « Une aide ? » pour la suite.');
 }
 // Plays the hint h. step: the start of the last step of a longer reasoning, which says only the end.
 async function placeHint(h, step = '') {
@@ -469,7 +477,11 @@ async function placeHint(h, step = '') {
   }
   const previous = G, before = S.complete(G);
   const written = commit(next);
-  sel = i;
+  // A digit written by the hint is done: the cell lets go, its ring shows it. A digit erased leaves the
+  // cell chosen, for the right one.
+  const erased = h.kind === 'clash' || h.kind === 'wrong';
+  sel = erased ? i : -1;
+  text += erased ? ' Cliquez sur un autre chiffre pour cette case.' : ` ${NEXT}`;
   hint = { rings: [i], house: h.kind === 'hidden' || (step && h.via === 'hidden') ? houseOf(i, h.unit) : h.kind === 'deep' && !step ? h.cells : [] };
   drawMove(previous, i);
   S.complete(G).filter(x => !before.includes(x)).forEach(animKeyDone);
@@ -486,7 +498,8 @@ const houseOf = (i, unit) => S.UNITS[unit === 'row' ? S.ROW(i) : unit === 'col' 
 function finish(written) {
   const show = !!written;
   hint = null; plan = null; sel = -1; render();
-  const text = `Bravo, la grille est complète ! Niveau ${Kit.levelNames[level].toLowerCase()}.`;
+  const text = `Bravo, la grille est complète ! Niveau ${Kit.levelNames[level].toLowerCase()}. Cliquez sur « Nouvelle partie » pour rejouer.`;
+  Kit.gameOver(true);
   if (!show) { if (saved && !stale) Kit.say(text); return; }
   if (saved && !stale) Kit.say(text);
   animWin();
@@ -706,12 +719,27 @@ function render() {
     e.setAttribute('aria-label', on ? `${d}, les neuf sont écrits` : `${d}, encore ${left} à placer`);
   });
   $('undoBtn').disabled = !undo.length || !!G.result;
+  $('undoBtn').dataset.why = G.result ? WON_LINE : "Il n'y a pas encore de coup à annuler.";
   $('hintBtn').disabled = !!G.result;
   $('eraseBtn').disabled = !!G.result;
+  $('hintBtn').dataset.why = $('eraseBtn').dataset.why = WON_LINE;
+  // The keys rest while no empty cell, or one of his digits, is chosen.
+  padEl.classList.toggle('off', !!G.result || sel < 0 || S.isGiven(G, sel));
+  coach();
   const left = empties(), count = G.result ? '<span>Grille</span> <b>complète</b>'
     : `<span>Encore</span> <b>${plural(left, 'case', 'cases')}</b>`;
   if ($('count').innerHTML !== count) $('count').innerHTML = count;
   Kit.showWins(stats.won);
+}
+
+// During his first game, the hand points at a cell where one digit only can go, then at its key. A wrong
+// digit: at the cell, then at "Effacer".
+function coach() {
+  if (!Kit.coaching() || !G || G.result || making || Kit.isOpen()) return;
+  const h = S.hint(G);
+  if (!h) return;
+  if (sel !== h.cell) return Kit.point(cells[h.cell]);
+  Kit.point(h.kind === 'clash' || h.kind === 'wrong' ? $('eraseBtn') : keys[h.digit - 1]);
 }
 
 /* ---------- Motion ---------- */
@@ -842,13 +870,13 @@ if (window.ResizeObserver) { let lastH = 0; new ResizeObserver(() => { if (table
    The cell and the key to click get a yellow ring in the style sheet, and a pointing hand here. */
 for (const b of document.querySelectorAll('#help .ex-here')) b.insertAdjacentHTML('beforeend', Kit.icon('hand'));
 
-// The rules open by themselves the first time the game is opened.
+// The first visit starts a game at Facile at once, with the coach (lib/kit.js).
 if (load()) {
   Kit.showLevel(level);
   render();
   if (G.result) finish();
   else if (S.filled(G)) Kit.say(FIX_RED);
-  else Kit.say(playing() ? `À vous : encore ${plural(empties(), 'case', 'cases')} à remplir.` : `Remplissez les ${empties()} cases vides. Cliquez sur une case, puis sur un chiffre.`);
+  else Kit.say(playing() ? `À vous : encore ${plural(empties(), 'case', 'cases')} à remplir. Cliquez sur une case vide, puis sur un chiffre.` : `Remplissez les ${empties()} cases vides. Cliquez sur une case, puis sur un chiffre.`);
 } else {
   render();
   Kit.firstVisit(newGame);
