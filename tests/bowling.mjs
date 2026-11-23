@@ -322,9 +322,12 @@ try {
           assert.ok(box.bottom <= table.bottom + 1, [name, width, height, zoom, box.bottom, table.bottom].join(' '));
         }
         const panel = boxes.console;
-        if (height / zoom > 660) {
+        if (width < 700 && height / zoom > 660) {
+          // A tall phone: the sheet beside the lane, under the card.
+          assert.ok(strip.left >= stage.right - 1 && strip.bottom <= panel.top + 1 && card.bottom <= strip.top + 1);
+        } else if (height / zoom > 660 && width / zoom >= 1100) {
+          // A tall and wide window: the sheet in the right column, above the panel.
           assert.ok(strip.left >= stage.right - 1 && strip.bottom <= panel.top + 1);
-          if (width < 700) assert.ok(card.bottom <= strip.top + 1);
         } else assert.ok(strip.bottom <= stage.top + 1 && Math.abs(strip.left - stage.left) < 1);
       }
       assert.equal(await page.textContent('#curveLabel'), 'Tout droit');
@@ -402,7 +405,7 @@ try {
     if (win)
       for (const [width, height, zoom] of sizes) {
         await setSize(width, height, zoom);
-        await page.waitForSelector('#endChoice');
+        await page.waitForSelector('#over.on #overBtns .primary');
         assert.ok(
           await page.evaluate(() => {
             const box = document.querySelector('#box').getBoundingClientRect();

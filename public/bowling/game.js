@@ -169,7 +169,6 @@ function end() {
     ],
     s.total >= game.goal
   );
-  $('overBtns').firstElementChild.id = 'endChoice';
 }
 async function shoot() {
   if (busy || stale || Kit.isOpen()) return;

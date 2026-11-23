@@ -236,18 +236,6 @@ function choose() {
 function card(end) {
   const total = sum(),
     par = totalPar();
-  Kit.dialog(
-    end ? 'Parcours terminé !' : 'Carte de score',
-    end
-      ? (total <= par ? 'Bravo, vous avez gagné : ' : 'Bravo pour ces neuf trous : ') + plural(total, 'coup') + ' pour un par de ' + par + '.'
-      : '',
-    end
-      ? [
-          ['Revoir le terrain', null, true],
-          ['Nouvelle partie', choose]
-        ]
-      : [['Fermer', null, true]]
-  );
   const last = game.rounds.length - 1,
     kind = (d) => (d < 0 ? 'better' : d ? 'worse' : 'even');
   let parDone = 0,
@@ -284,7 +272,24 @@ function card(end) {
     rows.join('') +
     '</tbody><tfoot><tr class="' + (parDone ? kind(d) : '') + '"><th scope="row">Total</th><td class="n par">' + par +
     '</td><td class="n"><span class="ink">' + total + '</span></td><td class="gap">' + (parDone ? gap(d) : '') + '</td></tr></tfoot>';
-  $('overText').append(table);
+  // The card goes into the dialog with its text, so a dialog held behind the close question keeps it.
+  const text = document.createDocumentFragment();
+  text.append(
+    end
+      ? (total <= par ? 'Bravo, vous avez gagné : ' : 'Bravo pour ces neuf trous : ') + plural(total, 'coup') + ' pour un par de ' + par + '.'
+      : '',
+    table
+  );
+  Kit.dialog(
+    end ? 'Parcours terminé !' : 'Carte de score',
+    text,
+    end
+      ? [
+          ['Revoir le terrain', null, true],
+          ['Nouvelle partie', choose]
+        ]
+      : [['Fermer', null, true]]
+  );
 }
 async function shoot() {
   if (busy || stale) return;

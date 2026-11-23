@@ -47,8 +47,9 @@ button.game {--accent:#B8323F} button.game:hover {background:#a12b37}
 html.low #stats {flex-direction:row;gap:10px;padding:2px 8px}
 html.low #stats>span:first-child,html.low #toGoal {display:none}
 html.low #stats>span:last-child {line-height:1.05;text-align:left}
-/* A tall enough window: the score sheet goes in the right column, in two rows of five, so the lane takes the full height. */
-@media (min-width:700px) {
+/* A tall and wide enough window: the score sheet goes in the right column, in two rows of five, so the lane
+   takes the full height. Below 1100 px wide the panel is too narrow for both, and the sheet stays above the lane. */
+@media (min-width:1100px) {
  html:not(.short) #strip {grid-column:3;grid-row:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}
  html:not(.short) #strip .frame {border-bottom:1px solid #cfc0a6}
  html:not(.short) #strip .frame:nth-child(5) {border-right:0}
@@ -154,6 +155,8 @@ html.low #card {gap:5px;padding:6px 5px}
  html.short:not(.low) #console {gap:6px;padding:8px 12px}
  html.short:not(.low) #card {gap:6px;padding-block:10px}
 }
+/* A narrow panel, as at 800 px wide, has no room beside its keys: each label goes above them. */
+@container (max-width:340px) { #console .controls {display:block} #console .controls h3 {margin:0 0 2px} }
 /* Each control row puts its label beside its keys, so the panel fits beside the lane at every height. */
 @media(min-width:700px) {
  html:not(.short) #console {gap:4px;padding:6px 10px}

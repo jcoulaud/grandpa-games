@@ -30,11 +30,11 @@ await page.waitForTimeout(300);
 ok(!(await g(() => dialogOpen())) && page.url().includes('solitaire'), '"Continuer la partie" stays in the game');
 // A dialog the game opens during the question waits, then shows when he stays (Escape stays too).
 await page.click('#quit');
-await g(() => Kit.dialog('Résultat', 'Test', [['OK', null, true]]));
+await g(() => { const card = document.createElement('table'); card.id = 'heldCard'; Kit.dialog('Résultat', card, [['OK', null, true]]); });
 ok((await g(() => document.getElementById('overTitle').textContent)) === 'Fermer le jeu ?', 'a result does not replace the close question');
 await page.keyboard.press('Escape');
 await page.waitForTimeout(200);
-ok((await g(() => document.getElementById('overTitle').textContent)) === 'Résultat' && (await g(() => dialogOpen())), 'the held result shows when he stays');
+ok((await g(() => document.getElementById('overTitle').textContent)) === 'Résultat' && (await g(() => dialogOpen())) && (await g(() => !!document.querySelector('#overText #heldCard'))), 'the held result shows with its card when he stays');
 await page.getByRole('button', { name: 'OK' }).click();
 await page.waitForTimeout(200);
 

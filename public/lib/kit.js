@@ -16,7 +16,7 @@
 //
 //   Kit.say(text)                           the message line
 //   Kit.showLevel(level), Kit.showWins(n)   the level line under the name: "Niveau facile · 3 victoires"
-//   Kit.dialog(title, text, [[label, fn, primary]], soft)   soft: the win sheet, with a light backdrop
+//   Kit.dialog(title, text, [[label, fn, primary]], soft)   text: a string or a node; soft: the win sheet, with a light backdrop
 //   Kit.closeDialog(), Kit.openHelp(), Kit.closeHelp()
 //   Kit.isOpen()                            true while the rules or a dialog are open
 //   Kit.escape()                            closes the rules or the dialog; false if nothing was open
@@ -70,7 +70,7 @@
       quitting = true;
       show('Fermer le jeu ?', 'Vous revenez à la liste des jeux.', [
         ['Continuer la partie', null, true],
-        ['Retour aux jeux', () => { held = null; home(); }]
+        ['Retour aux jeux', () => { held = null; staleHeld = false; home(); }]
       ]);
     });
   }
@@ -137,13 +137,20 @@
     if (!quitting) return;
     quitting = false;
     // After the click: a choice to leave drops the held dialog first.
-    Promise.resolve().then(() => { const h = held; held = null; if (h) show(...h); });
+    Promise.resolve().then(() => { const h = held; held = null; staleHeld = false; if (h) show(...h); });
   };
-  const dialog = (...args) => { if (quitting) held = args; else show(...args); };
+  // A held « Le jeu a changé ailleurs » keeps its place: a result that comes after it must not hide it.
+  let staleHeld = false;
+  const dialog = (...args) => {
+    if (!quitting) show(...args);
+    else if (!staleHeld) held = args;
+  };
   function show(title, text, buttons, soft) {
     remember();
     $('overTitle').textContent = title;
-    $('overText').textContent = text;
+    // The text is a string, or a page element such as the golf score card.
+    if (typeof text === 'string') $('overText').textContent = text;
+    else $('overText').replaceChildren(text);
     const b = $('overBtns'); b.innerHTML = '';
     let first = null;
     buttons.forEach(([label, fn, primary, note]) => {
@@ -333,6 +340,7 @@
     if (firstStart || quitting || !over.classList.contains('on')) dialog('Le jeu a changé ailleurs',
       'Ce jeu a été enregistré dans une autre fenêtre. Rechargez-le pour continuer la partie à jour.',
       [['Recharger le jeu', () => location.reload(), true]]);
+    if (quitting) staleHeld = true;
   });
 
   window.Kit = { home, firstVisit, levelNames, showLevel, showWins, chooseLevel, say, dialog, closeDialog, openHelp, closeHelp, isOpen, escape, icon };
