@@ -118,7 +118,8 @@
   .site-nav-links { gap: 4px; margin-inline-start: -9px; }
   .site-nav-links > a, .site-menu > summary { padding-inline: 9px; font-size: 19px; text-underline-offset: 8px; }
   .site-menu { position: static; }
-  .site-menu-panel { inset-inline-end: 0; max-width: 100%; }
+  /* The header takes two lines here, so the menu has less room under it. */
+  .site-menu-panel { inset-inline-end: 0; max-width: 100%; max-height: calc(100dvh / var(--z, 1) - 120px); }
   .site-menu-panel a { padding-inline: 8px; gap: 8px; font-size: 17px; }
   .site-menu-panel img { width: 32px; height: 32px; }
 }

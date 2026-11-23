@@ -255,7 +255,7 @@ li + li { margin-top: .55rem; }
 }
 .rules-jump[open] summary::after { transform: translateY(-3px) rotate(225deg); }
 .rules-jump-label { font-size: 16px; color: var(--muted); }
-.rules-jump-now { font-weight: 600; }
+.rules-jump-now { font-weight: 600; overflow-wrap: anywhere; }
 .rules-jump-list {
   position: absolute;
   inset-block-end: calc(100% + 12px);
@@ -355,12 +355,12 @@ figcaption { padding: 1rem 1.25rem 1.15rem; color: #2c3633; font-size: 19px; lin
 @media (max-width: 860px), (max-height: 550px) {
   .rules-layout { display: block; }
   .rules-contents { position: static; margin-bottom: 1.25rem; }
-  /* Each part on its own row with an arrow, in columns when there is room. */
+  /* Each part on its own row, with an arrow. */
   .rules-contents h2 { margin: 0 0 .5rem .25rem; }
-  .rules-contents ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); gap: 0 1.5rem; }
+  .rules-contents ul { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 1.5rem; }
   .rules-contents li { border-top: 1px solid var(--rule-line); }
-  .rules-contents ul a { justify-content: space-between; gap: .75em; min-height: 52px; padding: .45em .25em; border-radius: 6px; }
-  .rules-contents ul a::after { content: "›"; flex: none; font-size: 1.3em; line-height: 1; }
+  .rules-contents ul a { gap: .75em; min-height: 52px; padding: .45em .25em; border-radius: 6px; }
+  .rules-contents ul a::after { content: "›"; flex: none; margin-inline-start: auto; font-size: 1.3em; line-height: 1; }
   .rules-contents .play { display: none; }
 }
 @media (max-width: 560px) {
