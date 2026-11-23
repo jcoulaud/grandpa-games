@@ -1,6 +1,6 @@
 // Renders the images: node scripts/icons.mjs
-// public/icons/icon.svg to the PNG sizes the app manifest needs, and scripts/og.html to public/og.jpg,
-// the 1200 x 630 image that link previews show.
+// public/icons/icon.svg to the PNG sizes the app manifest needs. The link preview images are drawn by
+// scripts/og.mjs.
 import { readFileSync } from 'node:fs';
 import { chromium } from 'playwright';
 const svg = readFileSync(new URL('../public/icons/icon.svg', import.meta.url), 'utf8');
@@ -15,8 +15,4 @@ for (const size of [192, 512]) {
 const apple = await b.newPage({ viewport: { width: 180, height: 180 } });
 await apple.setContent(`<style>html,body{margin:0;background:#0F4F47}svg{width:180px;height:180px;display:block}</style>${svg.replace('rx="112"', 'rx="0"')}`);
 await apple.screenshot({ path: out('icons/apple-touch-icon.png') });
-const og = await b.newPage({ viewport: { width: 1200, height: 630 } });
-await og.goto(new URL('og.html', import.meta.url).href, { waitUntil: 'networkidle' });
-await og.evaluate(() => document.fonts.ready);
-await og.screenshot({ path: out('og.jpg'), type: 'jpeg', quality: 88 });
 await b.close();
