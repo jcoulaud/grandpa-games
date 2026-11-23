@@ -228,13 +228,6 @@
       <span id="helpStatus" class="sr" role="status"></span>
     </div>`;
     $('helpTitle').textContent = help.dataset.title || 'Comment jouer';
-    if (help.dataset.guide) {
-      const guide = document.createElement('a');
-      guide.className = 'help-guide';
-      guide.href = help.dataset.guide;
-      guide.textContent = 'Guide complet';
-      $('helpClose').before(guide);
-    }
     pages = [...help.querySelectorAll('#helpText .page')];
     $('helpClose').onclick = () => closeHelp();
     $('helpPrev').onclick = () => showPage(Math.max(0, at - 1));

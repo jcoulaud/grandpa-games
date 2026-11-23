@@ -159,9 +159,6 @@ html.short #rail { margin-top: 0; }
 #helpBox { width: min(840px, calc(94vw / var(--z, 1))); height: min(560px, calc(94vh / var(--z, 1))); display: flex; flex-direction: column; }
 #helpBox .head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 24px 12px 32px; border-bottom: 1px solid #D5DCD9; }
 #helpBox h2 { margin: 0; font: 700 32px var(--ui); letter-spacing: -.01em; }
-#helpBox .help-guide { display: grid; place-items: center; min-height: 44px; margin-inline-start: auto;
-  color: var(--text); font-size: 20px; text-align: center; text-underline-offset: .15em; }
-#helpBox .help-guide:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
 #helpClose { flex: none; font-size: 22px; padding-inline: 16px 22px; }
 #helpText { flex: 1; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 14px 32px;
   font: 400 22px/1.32 var(--ui); color: #26302D; }
@@ -208,8 +205,6 @@ html.low #helpBox > .end { padding-block: 8px 12px; }
 @media (max-width: 700px) {
   #helpBox { height: min(720px, 94vh); }
   #helpBox .head, #helpText, #helpBox > .end { padding-inline: 16px; }
-  #helpBox .head:has(.help-guide) { gap: 8px; }
-  #helpBox .help-guide { font-size: 16px; }
   #helpBox h2, #helpText h3 { font-size: 24px; }
   #helpText { font-size: 20px; }
   #helpClose, #helpBox > .end button { font-size: 18px; padding: 6px 10px; }
@@ -218,11 +213,6 @@ html.low #helpBox > .end { padding-block: 8px 12px; }
   #helpText .guide-lead { font-size: 22px; } #helpText .guide-more { font-size: 20px; }
   #box { padding: 28px 20px; }
   #overBtns button { padding-inline: 12px; }
-}
-@media (max-width: 360px) {
-  #helpBox .head:has(.help-guide) { padding-inline: 10px; }
-  #helpBox .help-guide + #helpClose { padding-inline: 8px; }
-  #helpBox .help-guide + #helpClose svg { display: none; }
 }
 
 /* Dialog */
