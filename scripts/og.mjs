@@ -14,18 +14,19 @@ const games = [...library.matchAll(/\{ id: '([^']+)', family: '[^']+', title: '(
   .map(([, id, title, text, top, bottom]) => ({ id, title, text, top, bottom }));
 if (games.length < 10) throw new Error(`Only ${games.length} games found in public/index.html`);
 
-const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+// The space before « : » never breaks, as in French print.
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/ ([:;!?])/g, '\u00a0$1');
 const page = (g, art) => `<!doctype html><html lang="fr"><head><meta charset="utf-8"><style>
 @font-face { font-family: Lexend; src: url(${new URL('fonts/lexend.woff2', root).href}) format('woff2'); font-weight: 100 900; }
 html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
 body { position: relative; font-family: Lexend, sans-serif; color: #fff;
   background: radial-gradient(ellipse at 50% 35%, transparent 50%, rgb(0 0 0 / 28%) 100%), radial-gradient(120% 90% at 50% 0%, ${g.top}, ${g.bottom} 75%) ${g.bottom}; }
-.text { position: absolute; left: 70px; top: 0; bottom: 120px; width: 490px; display: flex; flex-direction: column; justify-content: center; }
-h1 { margin: 0; font: 700 72px/1.04 Lexend; letter-spacing: -.02em; }
-p { margin: 26px 0 0; font: 500 33px/1.3 Lexend; color: rgb(255 255 255 / .9); }
+.text { position: absolute; left: 64px; top: 0; bottom: 110px; width: 590px; display: flex; flex-direction: column; justify-content: center; }
+h1 { margin: 0; font: 700 96px/1.02 Lexend; letter-spacing: -.02em; }
+p { margin: 24px 0 0; font: 500 42px/1.25 Lexend; color: rgb(255 255 255 / .9); }
 .brand { position: absolute; left: 80px; bottom: 50px; display: flex; align-items: center; gap: 16px; font: 700 32px Lexend; color: rgb(255 255 255 / .8); }
 .brand img { width: 60px; height: 60px; border-radius: 50%; }
-.art { position: absolute; right: 50px; top: 50%; width: 520px; height: 300px; margin-top: -150px; }
+.art { position: absolute; right: 30px; top: 50%; width: 460px; height: 265px; margin-top: -132px; }
 </style></head><body>
 <div class="text"><h1>${esc(g.title)}</h1><p>${esc(g.text)}</p></div>
 <div class="brand"><img src="${new URL('icons/logo.webp', root).href}" alt="">jeux-papi.fr</div>
