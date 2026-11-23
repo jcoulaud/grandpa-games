@@ -542,6 +542,14 @@ test('seeded hints hit a legal ball first whenever the candidate shots can', () 
 });
 
 test('stronger levels win more seeded matches and think within the UI budget', (t) => {
+  // René's thinking time is measured in breaks: the time one break takes on this machine, timed between
+  // his shots, so a slower or busier machine (as in CI) does not fail the test.
+  const unit = [];
+  const timeBreak = () => {
+    const start = performance.now();
+    B.simulate(B.rack(seedAt(unit.length)), straight(10));
+    unit.push(performance.now() - start);
+  };
   const stats = Object.fromEntries(B.levels.map((level) => [level, {
     pots: 0, visits: 0, times: [], openingVisits: 0, openingRunouts: 0
   }]));
@@ -556,6 +564,7 @@ test('stronger levels win more seeded matches and think within the UI budget', (
       while (g.shots < shotLimit && !g.over) {
         g.level = g.turn === stronger ? strong : weak;
         const record = stats[g.level];
+        if (record.times.length % 25 === 0) timeBreak();
         const start = performance.now(), aim = B.cpuShot(g);
         record.times.push(performance.now() - start);
         const result = B.play(g, aim);
@@ -579,14 +588,16 @@ test('stronger levels win more seeded matches and think within the UI budget', (
     assert.equal(unfinished, 0);
     assert.ok(wins / games >= minimum);
   }
+  const breakTime = median(unit);
   for (const level of B.levels) {
     const { pots, visits, times, openingVisits, openingRunouts } = stats[level];
     const average = pots / visits, p95 = quantile(times, 0.95), max = Math.max(...times);
-    t.diagnostic(`${level}: ${average.toFixed(3)} own balls per visit, cpuShot p95 ${p95.toFixed(2)} ms, max ${max.toFixed(2)} ms`);
+    t.diagnostic(`${level}: ${average.toFixed(3)} own balls per visit, cpuShot p95 ${p95.toFixed(2)} ms, max ${max.toFixed(2)} ms (${(p95 / breakTime).toFixed(0)} and ${(max / breakTime).toFixed(0)} breaks of ${breakTime.toFixed(3)} ms)`);
     t.diagnostic(`${level}: ${openingRunouts}/${openingVisits} run-outs on the first visit after a match break`);
     if (level === 'fort') assert.ok(average >= 1.5, `Fort averaged ${average.toFixed(3)} own balls per visit`);
-    assert.ok(p95 < 400);
-    assert.ok(max < 1200);
+    // On this PC a break takes about 0.65 ms: 600 breaks is about 400 ms, 1,800 about 1.2 s.
+    assert.ok(p95 / breakTime < 600, `${level} cpuShot p95 is ${(p95 / breakTime).toFixed(0)} breaks`);
+    assert.ok(max / breakTime < 1800, `${level} cpuShot max is ${(max / breakTime).toFixed(0)} breaks`);
   }
 });
 
