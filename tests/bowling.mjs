@@ -46,7 +46,11 @@ try {
     [1280, 620, 1],
     [390, 760, 1],
     [1366, 680, 1.3],
-    [1920, 1000, 1.75]
+    [1920, 1000, 1.75],
+    // Sizes that once broke the panel or the score sheet.
+    [1280, 800, 1.2],
+    [1150, 680, 1],
+    [1024, 768, 1]
   ];
   const setSize = async (width, height, zoom) => {
     await page.setViewportSize({ width, height });
@@ -250,6 +254,29 @@ try {
     });
     assert.deepEqual(problems, [], 'screen ' + [width, height, zoom] + ' ' + JSON.stringify(problems));
   }
+  // A game nine frames deep, with three-digit totals: at every size the totals fit their boxes and
+  // « Lancer la boule » stays above the bottom bar.
+  await page.evaluate(async () => {
+    const E = await import('/bowling/engine.js');
+    const g = E.fresh('facile', 0, 7);
+    while (E.sheet(g).next < 9) E.play(g, E.hint(g));
+    await GG.save('bowling', g, { summary: '' });
+  });
+  for (const [width, height, zoom] of sizes) {
+    await setSize(width, height, zoom);
+    await page.waitForSelector('#pins .pin');
+    const fit = await page.evaluate(() => {
+      const crowded = [...document.querySelectorAll('#strip .frame b, #strip .boxes i')].some(
+        (e) => e.offsetParent && e.scrollWidth > e.clientWidth + 1
+      );
+      const shoot = document.getElementById('shoot').getBoundingClientRect(),
+        rail = document.getElementById('rail').getBoundingClientRect(),
+        total = document.getElementById('score').textContent;
+      return { crowded, below: rail.height > 0 && shoot.bottom > rail.top + 1, total };
+    });
+    assert.ok(Number(fit.total) >= 100 && !fit.crowded && !fit.below, JSON.stringify({ width, height, zoom, ...fit }));
+  }
+  await setSize(1366, 680, 1);
   // Compare full and single-pin renders. Count bright pin pixels against the deck
   // to measure the visible rack without relying on camera constants.
   await setSize(1366, 680, 1);
@@ -325,10 +352,16 @@ try {
         if (width < 700 && height / zoom > 660) {
           // A tall phone: the sheet beside the lane, under the card.
           assert.ok(strip.left >= stage.right - 1 && strip.bottom <= panel.top + 1 && card.bottom <= strip.top + 1);
-        } else if (height / zoom > 660 && width / zoom >= 1100) {
-          // A tall and wide window: the sheet in the right column, above the panel.
-          assert.ok(strip.left >= stage.right - 1 && strip.bottom <= panel.top + 1);
-        } else assert.ok(strip.bottom <= stage.top + 1 && Math.abs(strip.left - stage.left) < 1);
+        } else if (width >= 700) {
+          // A computer: the sheet in the right column above the panel, or above the lane when the panel
+          // needs the column, as the page measured it.
+          assert.ok(
+            (strip.left >= stage.right - 1 && strip.bottom <= panel.top + 1) ||
+              (strip.bottom <= stage.top + 1 && Math.abs(strip.left - stage.left) < 1),
+            ['sheet', width, height, zoom].join(' ')
+          );
+          assert.ok(panel.right <= table.right + 1, ['panel', width, height, zoom].join(' '));
+        }
       }
       assert.equal(await page.textContent('#curveLabel'), 'Tout droit');
       await checkLayout();

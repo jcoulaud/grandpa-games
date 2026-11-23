@@ -44,18 +44,20 @@ button.game {--accent:#B8323F} button.game:hover {background:#a12b37}
 #toGoal {align-self:stretch;height:12px;border-radius:6px;background:#dcd0b6;overflow:hidden}
 #toGoal i {display:block;height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,#438251,#bd8c10);transition:width .6s}
 #toGoal.won i {background:#438251}
-html.low #stats {flex-direction:row;gap:10px;padding:2px 8px}
-html.low #stats>span:first-child,html.low #toGoal {display:none}
-html.low #stats>span:last-child {line-height:1.05;text-align:left}
-/* A tall and wide enough window: the score sheet goes in the right column, in two rows of five, so the lane
-   takes the full height. Below 1100 px wide the panel is too narrow for both, and the sheet stays above the lane. */
-@media (min-width:1100px) {
- html:not(.short) #strip {grid-column:3;grid-row:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}
- html:not(.short) #strip .frame {border-bottom:1px solid #cfc0a6}
- html:not(.short) #strip .frame:nth-child(5) {border-right:0}
- html:not(.short) #strip .frame:last-child {display:none}
- html:not(.short) #stage {grid-row:1/span 2}
- html:not(.short) #console {grid-row:2}
+html:is(.low,.card-tight) #stats {flex-direction:row;gap:10px;padding:2px 8px}
+html:is(.low,.card-tight) #stats>span:first-child,html:is(.low,.card-tight) #toGoal {display:none}
+html:is(.low,.card-tight) #stats>span:last-child {line-height:1.05;text-align:left}
+/* A computer: the score sheet goes in the right column, in two rows of five, so the lane takes the full height.
+   game.js measures the page and sets .sheet-top when the panel would not fit under it; the sheet then goes
+   above the lane, and .sheet-rows gives it two rows when its totals would not fit in one. */
+@media (min-width:700px) {
+ html:not(.short):not(.sheet-top) #strip {grid-column:3;grid-row:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}
+ html:not(.short):not(.sheet-top) #stage {grid-row:1/span 2}
+ html:not(.short):not(.sheet-top) #console {grid-row:2}
+ html.sheet-rows #strip {display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}
+ html:not(.short):not(.sheet-top) #strip .frame,html.sheet-rows #strip .frame {border-bottom:1px solid #cfc0a6}
+ html:not(.short):not(.sheet-top) #strip .frame:nth-child(5),html.sheet-rows #strip .frame:nth-child(5) {border-right:0}
+ html:not(.short):not(.sheet-top) #strip .frame:last-child,html.sheet-rows #strip .frame:last-child {display:none}
 }
 .pinrow {display:flex;justify-content:center}
 .pin {width:44px;height:44px;display:grid;place-items:center;position:relative;isolation:isolate;color:#29243c;font:700 20px var(--ui)}
@@ -156,7 +158,7 @@ html.low #card {gap:5px;padding:6px 5px}
  html.short:not(.low) #card {gap:6px;padding-block:10px}
 }
 /* A narrow panel, as at 800 px wide, has no room beside its keys: each label goes above them. */
-@container (max-width:340px) { #console .controls {display:block} #console .controls h3 {margin:0 0 2px} }
+@media (min-width:700px) { @container (max-width:340px) { #console .controls {display:block} #console .controls h3 {margin:0 0 2px} } }
 /* Each control row puts its label beside its keys, so the panel fits beside the lane at every height. */
 @media(min-width:700px) {
  html:not(.short) #console {gap:4px;padding:6px 10px}
@@ -214,7 +216,7 @@ html.low #card {gap:5px;padding:6px 5px}
 </main>
 <footer id="rail"><div class="zoom"></div></footer>
 <div id="help" data-title="Bowling">
-<section class="page"><h3>Lancer la boule</h3><p>Faites tomber les quilles. Atteignez l’objectif en dix tours pour gagner.</p><ol><li>Réglez votre lancer dans « Votre lancer », à droite.</li><li>Cliquez sur « Lancer la boule ».</li><li>Au deuxième lancer, visez les quilles encore debout.</li></ol><div class="guide-panel"><figure class="guide-example"><img src="icon.svg" width="76" height="60" alt=""><figcaption>Pour viser le milieu, cliquez directement sur « Lancer la boule ».</figcaption></figure></div></section>
+<section class="page"><h3>Lancer la boule</h3><p>Faites tomber les quilles. Marquez assez de points en dix tours pour gagner.</p><ol><li>Réglez votre lancer dans « Votre lancer », à droite.</li><li>Cliquez sur « Lancer la boule ».</li><li>Au deuxième lancer, visez les quilles encore debout.</li></ol><div class="guide-panel"><figure class="guide-example"><img src="icon.svg" width="76" height="60" alt=""><figcaption>Chaque lancer part du milieu, tout droit.</figcaption></figure></div></section>
 <section class="page"><h3>Départ, direction, courbe et force</h3><p>« Départ » place la boule sur la ligne. « Direction » choisit où elle arrive aux quilles. Chaque lancer repart du milieu, tout droit, avec la force 6.</p>
 <div class="guide-panel"><figure class="guide-example"><svg width="92" height="84" viewBox="0 0 92 84" aria-hidden="true">
 <rect width="92" height="84" rx="8" fill="#e2bc84"/><path d="M45 73 L60 40 Q65 24 53 15" stroke="#1f3570" stroke-width="4" fill="none" stroke-dasharray="4 2"/>

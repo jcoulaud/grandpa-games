@@ -74,6 +74,22 @@ function pinPlan(pins) {
   for (const pin of $('pins').querySelectorAll('.pin'))
     pin.classList.toggle('down', !pins.some((p) => p.id === +pin.dataset.pin));
 }
+// The score sheet goes where it fits, measured in page pixels so the size buttons count: first in the
+// right column above the panel, else above the lane, in one row, or in two rows when its totals need
+// the width. The card closes up when it is too tall.
+function fitLayout() {
+  const root = document.documentElement;
+  root.classList.remove('sheet-top', 'sheet-rows', 'card-tight');
+  if (innerWidth < 700) return;
+  const table = $('table').getBoundingClientRect(),
+    panel = $('console').getBoundingClientRect();
+  if (panel.bottom > table.bottom + 1 || panel.right > table.right + 1) root.classList.add('sheet-top');
+  const crowded = () =>
+    [...$('strip').querySelectorAll('.frame b, .boxes i')].some((e) => e.scrollWidth > e.clientWidth + 1);
+  if ((root.classList.contains('sheet-top') || root.classList.contains('short')) && crowded()) root.classList.add('sheet-rows');
+  // The card closes up its score box, as in a low window, when it is too tall for the table.
+  if ($('card').getBoundingClientRect().bottom > table.bottom + 1) root.classList.add('card-tight');
+}
 function render(msg, previous) {
   // Every throw starts from the same settings: the middle, straight, force 6.
   shot = defaults();
@@ -127,6 +143,7 @@ function render(msg, previous) {
   Kit.showWins(game.wins);
   preview();
   Kit.say(msg || 'Réglez votre lancer à droite, puis cliquez sur « Lancer la boule ».');
+  fitLayout();
 }
 function message(result) {
   if (result.gutter) return 'La boule est tombée dans la rigole.';
@@ -222,6 +239,7 @@ async function back() {
   busy = false;
 }
 function init() {
+  new ResizeObserver(() => game && fitLayout()).observe($('table'));
   try {
     view = createScene(canvas);
   } catch {
