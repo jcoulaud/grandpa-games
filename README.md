@@ -208,7 +208,7 @@ The design and the research behind it are in `docs/design.md`.
 
 ## Statistics
 
-PostHog (EU) gets the visits of jeux-papi.fr, with the same anonymous id as the admin page. Pages opened from disk, the tests and local runs send nothing. `public/lib/ph.js` loads it on every page except the admin page.
+PostHog (EU) gets the visits of jeux-papi.fr, with the same anonymous id as the admin page. Pages opened from disk, the tests and local runs send nothing. `public/lib/ph.js` loads it on every page except the admin page. `tests/analytics-rules.mjs` fails when a page does not load it, or when a first folder that is not a game is missing from `SITE` in `lib/ph.js`.
 
 PostHog records the pages, the clicks, the time on each page, how far it was scrolled, the errors and a recording of the session. Each event carries `page_type` (`library`, `game`, `rules` or `blog`), the `game` of a game or rules page, and `installed`, true in the window of the installed app. The site adds these events:
 
