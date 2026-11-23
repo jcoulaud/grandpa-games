@@ -113,7 +113,9 @@ function preview() {
     cue: line.hit != null ? cut(afterContact(path.cue, contact), show.cue) : [],
     gold: show.gold && path.potted
   };
-  $('aimLabel').innerHTML = line.hit != null ? trayBall(line.hit) + (line.hit === 8 ? 'La noire' : 'La ' + line.hit) : 'Vers la bande';
+  // The ball the cue points at, as a small copy of it, or « Bande »: short enough for the narrowest panel.
+  $('aimLabel').innerHTML = line.hit != null ? trayBall(line.hit) : 'Bande';
+  $('aimLabel').setAttribute('aria-label', line.hit != null ? upper(ballName(line.hit)) : 'La bande');
   view.draw();
 }
 // The cue ball's path from the contact on: the preview already draws the line up to it.
@@ -406,17 +408,21 @@ function end(res, shooter) {
     confetti();
   }
   Kit.say(won ? 'Vous avez gagné la partie : bravo !' : OPPONENT + ' a gagné la partie.');
+  // The result waits for its game: it never opens over another dialog, the rules or a new game.
   const shown = game;
   clearTimeout(endTimer);
-  endTimer = setTimeout(
-    () =>
-      shown === game && game.over && !stale &&
-      Kit.dialog(won ? 'Vous avez gagné !' : OPPONENT + ' a gagné', why + (won ? '' : ' Une revanche ?'), [
-        ['Nouvelle partie', choose, true],
-        ['Revoir la table', null]
-      ]),
-    won && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 1600 : 300
-  );
+  const open = () => {
+    if (shown !== game || !game.over || stale) return;
+    if (Kit.isOpen()) {
+      endTimer = setTimeout(open, 300);
+      return;
+    }
+    Kit.dialog(won ? 'Vous avez gagné !' : OPPONENT + ' a gagné', why + (won ? '' : ' Une revanche ?'), [
+      ['Nouvelle partie', choose, true],
+      ['Revoir la table', null]
+    ]);
+  };
+  endTimer = setTimeout(open, won && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 1600 : 300);
 }
 let endTimer = 0;
 function confetti() {

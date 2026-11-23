@@ -416,18 +416,43 @@ test('the default and hinted breaks reload with their opening rack for seeds 0 t
   }
 });
 
-test('restore accepts tiny overlaps in the current position and in an old opening rack', () => {
+test('restore accepts tiny overlaps in the current position', () => {
   const current = position([pose(0, 0.4, 0.3), pose(8, 0.4 + diameter - 5e-7, 0.3)]);
   assert.deepEqual(B.restore(current, 2001), current);
+});
 
+test('a legacy rack reloads after a shot that leaves the rack untouched', () => {
+  // The original positions from commit 4c399ac, before the seeded rack was widened.
+  const coordinates = [
+    [1.4849999999999999, 0.495], [1.5346409917355819, 0.46640520158302384],
+    [1.534551884285024, 0.5235864220367942], [1.5842293880786833, 0.4377704860548896],
+    [1.5841819923058458, 0.49502034774661646], [1.5842493312230175, 0.5522269630636077],
+    [1.6337879945432272, 0.4091048530312395], [1.6337856649543199, 0.46636157863224736],
+    [1.633750683529715, 0.5236758904353622], [1.6338207603141555, 0.5809355414720799],
+    [1.683375604384404, 0.38040238241412794], [1.6834475477702575, 0.4377355311806232],
+    [1.6833699335299488, 0.4949875608465937], [1.683351804228441, 0.5522961969329708],
+    [1.6833646784326013, 0.6095556665856111]
+  ];
   const g = B.fresh('moyen', 0, 637);
-  assert.deepEqual(B.play(g, straight(9)).pocketed.own, [13]);
-  const oldRack = g.history[0].balls;
-  const a = pick(oldRack, 2), b = pick(oldRack, 6);
-  const scale = (diameter - 5e-6) / distance(a, b);
-  b.x = a.x + (b.x - a.x) * scale;
-  b.y = a.y + (b.y - a.y) * scale;
-  assert.deepEqual(B.restore(JSON.parse(JSON.stringify(g)), 2001), g);
+  coordinates.forEach(([x, y], i) => Object.assign(g.balls[i + 1], { x, y }));
+  near(diameter - distance(pick(g.balls, 2), pick(g.balls, 6)), 5.03e-6, 1e-9);
+  const reload = (save) => B.restore(JSON.parse(JSON.stringify(save)), 2001);
+  const shot = sidePot(1);
+  const loaded = reload(g), opening = structuredClone(loaded);
+  assert.equal(loaded.seed, 637);
+  for (const save of [loaded, g]) {
+    const { sim } = B.play(save, shot);
+    assert.equal(sim.firstHit, null);
+    assert.equal(sim.events[0].type, 'cushion');
+    const restored = reload(save);
+    assert.equal(restored.seed, 637);
+    assert.equal(restored.shots, 1);
+    assert.equal(restored.turn, 'cpu');
+    assert.deepEqual(reload(restored), restored);
+    clearRest(restored.balls);
+    assert.ok(B.undo(restored));
+    assert.deepEqual(restored, opening);
+  }
 });
 
 test('a hint and each CPU level can reach a blocked 8 off the cushions', () => {
@@ -440,6 +465,55 @@ test('a hint and each CPU level can reach a blocked 8 off the cushions', () => {
     assert.equal(sim.events[0].type, 'cushion');
     assert.ok(!sim.pocketed.some(({ id }) => id === 0));
   }
+});
+
+test('on shot 19 of seed 2, the hint and each CPU level find the legal escape to the 10', () => {
+  const g = B.fresh('facile', 0, 2);
+  B.play(g, straight(9));
+  while (g.shots < 18) {
+    const shot = g.turn === 'player' ? B.hint(g) : B.cpuShot(g);
+    assert.ok(B.play(g, shot));
+  }
+  assert.equal(g.turn, 'player');
+  assert.equal(g.groups.player, 'rayees');
+  assert.equal(B.simulate(g.balls, { angle: 143.5 * radians, power: 4.8 }).firstHit, 10);
+  const cpu = { ...g, turn: 'cpu', groups: { player: 'pleines' } };
+  assert.equal(B.simulate(g.balls, B.hint(g)).firstHit, 10, 'Hint');
+  for (const level of B.levels) {
+    assert.equal(B.simulate(g.balls, B.cpuShot({ ...cpu, level })).firstHit, 10, level);
+  }
+});
+
+test('seeded games choose a legal first contact when the escape search can reach one', (t) => {
+  let shots = 0, wrong = 0;
+  for (let seed = 0; seed < 24; seed++) {
+    const level = B.levels[seed % B.levels.length];
+    const g = B.fresh(level, 0, seed);
+    B.play(g, straight(9));
+    while (g.shots < 80 && !g.over) {
+      const shot = g.turn === 'player' ? B.hint(g) : B.cpuShot(g);
+      const player = g.groups.player;
+      const group = player && (g.turn === 'player' ? player : player === 'pleines' ? 'rayees' : 'pleines');
+      const allowed = new Set(g.balls.map((b) => b.id).filter((id) => group ? B.groupOf(id) === group : B.groupOf(id)));
+      if (group && !allowed.size) allowed.add(8);
+      const balls = shot.place ? [pose(0, shot.place.x, shot.place.y), ...g.balls] : g.balls;
+      const label = `Seed ${seed}, ${g.turn} on shot ${g.shots + 1}`;
+      const result = B.play(g, shot);
+      assert.ok(result, label);
+      shots++;
+      if (result.sim.firstHit === null || allowed.has(result.sim.firstHit)) continue;
+      wrong++;
+      for (let i = 0; i < 720; i++) {
+        const angle = i * 0.5 * radians;
+        for (const power of [3.5, 4.8, 7]) {
+          const hit = B.simulate(balls, { angle, power }).firstHit;
+          assert.ok(!allowed.has(hit), `${label} hit ${result.sim.firstHit}, but ${i * 0.5}° at power ${power} hits ${hit}`);
+        }
+      }
+    }
+  }
+  t.diagnostic(`${shots} shots across 24 games, ${wrong} wrong first contacts`);
+  assert.ok(shots >= 300);
 });
 
 test('seeded hints hit a legal ball first whenever the candidate shots can', () => {

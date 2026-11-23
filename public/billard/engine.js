@@ -91,7 +91,7 @@ export const remaining = (g, who) => {
 };
 export const levels = ['facile', 'moyen', 'fort'];
 
-export function rack(seed) {
+function rackLayout(seed) {
   const next = random(seed);
   const solid = 1 + Math.floor(next() * 7), stripe = 9 + Math.floor(next() * 7);
   const ids = Array.from({ length: 15 }, (_, i) => i + 1).filter((id) => id !== 8 && id !== solid && id !== stripe);
@@ -113,6 +113,11 @@ export function rack(seed) {
       balls.push(pose(ids[balls.length - 1], x + (row ? (next() - 0.5) * 0.000105 : 0), y + (row ? (next() - 0.5) * 0.000105 : 0)));
     }
   }
+  return balls;
+}
+
+export function rack(seed) {
+  const balls = rackLayout(seed);
   // Preserve the seeded layout, expanding it about the apex only if the jitter closed a gap.
   let nearest = Infinity;
   for (let i = 1; i < balls.length; i++) {
@@ -598,7 +603,34 @@ function savedPose(b) {
 const validSide = (side) => side === 'player' || side === 'cpu';
 const validGroup = (group) => group === 'pleines' || group === 'rayees';
 
-function readPosition(raw) {
+function separateRest(balls) {
+  // Recheck neighbours because moving a ball can close a gap in the cluster.
+  for (let pass = 0; pass < 32; pass++) {
+    let overlap = false;
+    for (let i = 0; i < balls.length; i++) {
+      const a = balls[i];
+      for (let j = i + 1; j < balls.length; j++) {
+        const b = balls[j], distance = dist(a, b);
+        if (distance >= diameter) continue;
+        overlap = true;
+        const scale = (diameter + tiny - distance) / (2 * distance);
+        const dx = (b.x - a.x) * scale, dy = (b.y - a.y) * scale;
+        if (inside(a.x - dx, a.y - dy, true) && inside(b.x + dx, b.y + dy, true)) {
+          a.x -= dx; a.y -= dy;
+          b.x += dx; b.y += dy;
+        } else if (inside(a.x - 2 * dx, a.y - 2 * dy, true)) {
+          a.x -= 2 * dx; a.y -= 2 * dy;
+        } else if (inside(b.x + 2 * dx, b.y + 2 * dy, true)) {
+          b.x += 2 * dx; b.y += 2 * dy;
+        }
+      }
+    }
+    if (!overlap) return true;
+  }
+  return false;
+}
+
+function readPosition(raw, atLegacySpot) {
   if (!raw || !validSide(raw.turn) || !Array.isArray(raw.balls) || raw.balls.length > 16 ||
       !Number.isSafeInteger(raw.wins) || raw.wins < 0 || !Number.isSafeInteger(raw.shots) || raw.shots < 0 ||
       typeof raw.ballInHand !== 'boolean' || typeof raw.behindLine !== 'boolean' || typeof raw.broken !== 'boolean' ||
@@ -606,13 +638,17 @@ function readPosition(raw) {
       !raw.groups) return null;
   const { player, cpu } = raw.groups;
   if ((player !== null && !validGroup(player)) || (cpu !== undefined && cpu !== oppositeGroup(player))) return null;
-  // Legacy racks allowed up to (sqrt(0.75) + 0.5) * 0.000105 - 0.00012 metres of overlap.
-  const overlapTolerance = raw.broken ? 1e-6 : 24e-6;
   const ids = new Set(), balls = [];
+  let needsSeparation = false;
   for (const b of raw.balls) {
     if (!b || !Number.isInteger(b.id) || b.id < 0 || b.id > 15 || ids.has(b.id) ||
-        !Number.isFinite(b.x) || !Number.isFinite(b.y) || !inside(b.x, b.y, true) ||
-        balls.some((a) => dist(b, a) < diameter - overlapTolerance)) return null;
+        !Number.isFinite(b.x) || !Number.isFinite(b.y) || !inside(b.x, b.y, true)) return null;
+    for (const a of balls) {
+      const overlap = diameter - dist(a, b);
+      // Old racks could overlap by up to 24 µm, even after a shot that left the pair untouched.
+      if (overlap > 24e-6 || (overlap > 1e-6 && raw.broken && !(atLegacySpot(a) && atLegacySpot(b)))) return null;
+      if (overlap > (raw.broken ? 1e-6 : 0)) needsSeparation = true;
+    }
     const pose = savedPose(b);
     if (!pose) return null;
     balls.push(pose);
@@ -631,6 +667,7 @@ function readPosition(raw) {
     over = { winner, reason };
   } else if (!ids.has(8) || ids.has(0) === raw.ballInHand) return null;
   if (!raw.broken && (balls.length !== 16 || raw.turn !== 'player' || player !== null)) return null;
+  if (needsSeparation && !separateRest(balls)) return null;
   return snapshot({ ...raw, balls, groups: { player }, over });
 }
 
@@ -638,13 +675,18 @@ export function restore(raw, seed) {
   const reset = fresh(raw?.level, raw?.wins, seed);
   if (raw?.v !== 1 || raw.level !== reset.level || !Number.isInteger(raw.seed) || raw.seed < 0 ||
       raw.seed > 0xffffffff || !Array.isArray(raw.history) || raw.history.length > 40) return reset;
-  const position = readPosition(raw);
+  let legacy;
+  const atLegacySpot = (ball) => {
+    legacy ??= rackLayout(raw.seed);
+    return legacy.some(({ id, x, y }) => id === ball.id && x === ball.x && y === ball.y);
+  };
+  const position = readPosition(raw, atLegacySpot);
   if (!position) return reset;
   const history = [];
   const won = position.over?.winner === 'player' ? 1 : 0;
   let lastShot = -1, previousIds = null;
   for (const entry of raw.history) {
-    const s = readPosition(entry);
+    const s = readPosition(entry, atLegacySpot);
     if (!s || s.over || s.turn !== 'player' || s.shots <= lastShot || s.shots >= position.shots ||
         s.wins !== position.wins - won ||
         (previousIds && s.balls.some((b) => b.id && !previousIds.has(b.id)))) return reset;
@@ -865,6 +907,13 @@ function safety(g, who, level, fallbacks) {
     }
     return (ownPot(sim) ? 10 : 0) + leave(g, other(who), sim) - 0.16 * leave(g, who, sim) - 0.05 * shot.power;
   };
+  const consider = (checked) => {
+    const value = rate(checked);
+    if (value > score) {
+      best = checked;
+      score = value;
+    }
+  };
   const describe = ({ shot, sim, legal }) => {
     const pot = legal && ownPot(sim);
     const bank = sim.events[0]?.type === 'cushion';
@@ -885,11 +934,7 @@ function safety(g, who, level, fallbacks) {
       if (legal) {
         const checked = { shot, sim, legal };
         if (ownPot(sim)) return describe(checked);
-        const value = rate(checked);
-        if (value > score) {
-          best = checked;
-          score = value;
-        }
+        consider(checked);
       }
       if (++attempts >= budget) break;
     }
@@ -908,27 +953,31 @@ function safety(g, who, level, fallbacks) {
       }
     }
   }
-  const chooseFallback = () => {
-    for (const checked of fallbacks) {
-      const value = rate(checked);
-      if (value <= score) continue;
-      best = checked;
-      score = value;
-    }
-  };
   const lastResort = { angle: targets.length ? toward(cue, targets[0]) : 0, power: 3.5, ...(place && { place }) };
   trial(g, who, lastResort, fallbacks);
-  chooseFallback();
+  for (const checked of fallbacks) consider(checked);
   if (best?.legal || !targets.length) return best ? describe(best) : lastResort;
-  // Search multiple-cushion paths when the direct and one-cushion shots fail.
-  fallbacks.length = 0;
-  for (let i = 0; i < 180; i++) {
-    const angle = i * Math.PI / 90;
+  const examine = (shot) => {
+    const { sim, legal } = trial(g, who, shot);
+    if (canHit(g, who, sim.firstHit)) consider({ shot, sim, legal });
+  };
+  // Cover the whole table, including paths that use more than one cushion.
+  for (let i = 0; i < 720; i++) {
+    const angle = i * 0.5 * (Math.PI / 180);
     const { hit } = aimLine(balls, angle);
     if (hit !== null && !canHit(g, who, hit)) continue;
-    for (const power of [4.8, 7]) trial(g, who, { angle, power, ...(place && { place }) }, fallbacks);
+    for (const power of [3.5, 4.8, 7]) examine({ angle, power, ...(place && { place }) });
   }
-  chooseFallback();
+  if (best) {
+    const shot = best.shot;
+    for (const offset of [-0.25, -0.125, 0, 0.125, 0.25]) {
+      for (const change of [-0.35, 0, 0.35]) {
+        if (offset || change) {
+          examine({ ...shot, angle: shot.angle + offset * Math.PI / 180, power: clamp(shot.power + change, 1, 10) });
+        }
+      }
+    }
+  }
   return best ? describe(best) : lastResort;
 }
 
@@ -1381,8 +1430,10 @@ export function cpuShot(g) {
     angle: shot.angle + gaussian * settings.angle * Math.PI / 180,
     power: clamp(shot.power + shot.power * settings.power * (2 * next() - 1), 1, 10)
   };
-  // Keep the execution error on a safety only if the resulting shot is legal.
-  return pot || trial(g, who, aim).legal ? aim : shot;
+  const { sim, legal } = trial(g, who, aim);
+  // A pot attempt can still miss, but execution error cannot change contact to the wrong group.
+  if (pot) return sim.firstHit === null || canHit(g, who, sim.firstHit) ? aim : shot;
+  return legal ? aim : shot;
 }
 
 // A ball as he reads it: « la 3 rouge », « la 11 rouge rayée », « la noire ».

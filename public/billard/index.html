@@ -68,9 +68,9 @@
   .keys button { flex: 0 0 54px; min-height: 54px; padding: 0; justify-content: center; font: 700 28px/1 var(--ui); }
   .meter { flex: 1; min-width: 0; text-align: center; color: var(--ink); font: 600 20px/1.1 var(--ui); }
   .meter > span { display: block; min-height: 1.1em; }
-  /* The ball he aims at: a small copy of it and its number, on one line, so the panel never moves. */
+  /* The ball he aims at: a small copy of it, so the panel never moves. */
   #aimLabel { display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
-  #aimLabel .mb { width: 26px; height: 26px; } #aimLabel .mb b { width: 17px; height: 17px; font-size: 12px; }
+  #aimLabel .mb { width: 30px; height: 30px; } #aimLabel .mb b { width: 19px; height: 19px; font-size: 13px; }
   #segments { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; margin-bottom: 4px; }
   #segments i { height: 14px; border-radius: 2px; background: #DED4C2; }
   #segments i.on, .bl-seg i.on { background: #438251; }
@@ -175,7 +175,7 @@
       <h2 id="panelTitle">Votre coup</h2>
       <div class="controls"><h3>Visée</h3><div class="keys">
         <button id="turnLeft" aria-label="Tourner la queue un peu vers la gauche">↺</button>
-        <div class="meter"><span id="aimLabel">Vers la bande</span></div>
+        <div class="meter"><span id="aimLabel">Bande</span></div>
         <button id="turnRight" aria-label="Tourner la queue un peu vers la droite">↻</button></div></div>
       <div class="controls"><h3>Force</h3><div class="keys">
         <button id="weaker" aria-label="Moins de force">−</button>
