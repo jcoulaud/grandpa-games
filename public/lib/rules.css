@@ -510,3 +510,9 @@ figcaption { padding: 1rem 1.25rem 1.15rem; color: #2c3633; font-size: 19px; lin
   .card-stack .example-card + .example-card { margin-top: -54px; }
   .par-scale span:last-child { font-size: 15px; }
 }
+.rules.billard {
+  --guide-ink: #7a3a22;
+  --guide-light: #f2e4dc;
+  --hero-top: #7a3a22;
+  --hero-bottom: #3a170b;
+}

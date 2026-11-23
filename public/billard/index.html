@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Billard américain · Jeux de Papi</title>
+<meta name="description" content="Le billard du café, contre René : rentrez vos sept billes, puis la noire.">
+<link rel="canonical" href="https://jeux-papi.fr/billard/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Jeux de Papi">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://jeux-papi.fr/billard/">
+<meta property="og:title" content="Billard américain · Jeux de Papi">
+<meta property="og:description" content="Le billard du café, contre René : rentrez vos sept billes, puis la noire.">
+<meta property="og:image" content="https://jeux-papi.fr/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../lib/kit.css">
+<script src="../lib/zoom.js"></script>
+<script src="../lib/ph.js"></script>
+<style>
+  /* A mahogany café room around a blue cloth table. The players and « Votre coup » stand on the right. */
+  :root { --felt-top: #7A3A22; --felt: #3A170B; --shade: 58,23,11; --accent: #1F6E9C; --paper: #FFF8EA; --ink: #1F3E70; --cloth: #2A74B0; }
+  button.game { --accent: #1F6E9C; }
+  button.game:hover { background: #2780B4; }
+  button.game:active { background: #195C83; }
+  #table { min-height: 0; margin: 0 clamp(8px, 1.4vw, 22px) 8px; display: grid; grid-template-columns: minmax(0, 1fr) clamp(300px, 25vw, 380px); gap: clamp(10px, 1.2vw, 18px); font: 600 20px var(--ui); }
+  #table[hidden] { display: none; }
+  #stage { position: relative; min-height: 0; }
+  #stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; border-radius: 18px; }
+  #stage.wait canvas { cursor: progress; }
+  #side { min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+
+  /* The two players on one card: a face, the name and what happens now, then the balls of the family still
+     to sink. The player whose turn it is has a yellow frame. */
+  #players { display: grid; gap: 4px; padding: 6px; border-radius: 16px; background: var(--paper); color: #2A2420; box-shadow: 0 5px 16px rgba(20,8,2,.4); }
+  .player { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 2px 10px; align-items: center; padding: 3px 8px 5px; border-radius: 12px; border: 3px solid transparent; }
+  .player.turn { background: #FFF1C7; border-color: var(--gold); }
+  .player img { width: 32px; height: 32px; border-radius: 50%; background: #E8DCC4; }
+  .player .line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; font: 600 20px/1.2 var(--ui); color: #4A403A; }
+  .player .name { font: 700 21px/1.2 var(--ui); color: var(--ink); }
+  .player .now:not(:empty)::before { content: '·'; margin-right: 8px; color: #8A7C70; font-weight: 600; }
+  .player.turn .now { color: #1B2422; font-weight: 700; }
+  .tray { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 3px; min-height: 30px; align-items: center; }
+  .tray .open { font: 500 20px/1.15 var(--ui); color: #6A5E54; }
+  /* A ball of the tray, as on the table: the colour, a white band for a stripe, the number in a white disc. */
+  .mb { position: relative; width: 30px; height: 30px; border-radius: 50%; flex: none; display: grid; place-items: center;
+    background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.55), transparent 42%), var(--c);
+    box-shadow: inset -3px -4px 6px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.4); }
+  .mb.stripe { background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.55), transparent 42%),
+    linear-gradient(#FAF7EC 0 22%, var(--c) 22% 78%, #FAF7EC 78%); }
+  .mb b { display: grid; place-items: center; width: 19px; height: 19px; border-radius: 50%; background: #fff; color: #16181A; font: 800 13px/1 "Segoe UI", system-ui, sans-serif; }
+  /* A ball already in a pocket: a faint dashed ring with its number. */
+  .mb.in { background: none; box-shadow: none; border: 2px dashed #BBA996; }
+  .mb.in b { background: none; color: #9A8A7A; }
+  .mb.eight { margin-left: 8px; }
+
+  /* « Votre coup »: the aim, the force and the effect, each a label, two keys and a meter, then « Tirer ». */
+  #console { display: flex; flex-direction: column; gap: 7px; padding: 10px 12px 12px; border-radius: 16px; background: var(--paper); color: #2A2420;
+    box-shadow: 0 5px 16px rgba(20,8,2,.4); container-type: inline-size; }
+  /* For a screen reader only: the cards already say whose turn it is. */
+  #console h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  #console { position: relative; }
+  .controls { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 8px; }
+  .controls h3 { margin: 0; font: 600 20px var(--ui); }
+  .keys { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .keys button { flex: 0 0 54px; min-height: 54px; padding: 0; justify-content: center; font: 700 28px/1 var(--ui); }
+  .meter { flex: 1; min-width: 0; text-align: center; color: var(--ink); font: 600 20px/1.1 var(--ui); }
+  .meter > span { display: block; min-height: 1.1em; }
+  #segments { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; margin-bottom: 4px; }
+  #segments i { height: 14px; border-radius: 2px; background: #DED4C2; }
+  #segments i.on { background: #438251; }
+  #segments i.on:nth-child(n+5) { background: #BD8C10; }
+  #segments i.on:nth-child(n+8) { background: #D86917; }
+  /* The effect: where the tip meets the white, a red dot on a small white ball. */
+  #spinBall { display: block; position: relative; width: 30px; height: 30px; margin: 0 auto 2px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff, #E6E1D4 70%, #BDB6A6); box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+  #spinBall i { position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; margin: -4.5px; border-radius: 50%; background: #C8202B; transition: translate .15s; }
+  #aimArrow { display: block; height: 22px; margin-bottom: 2px; }
+  /* « Déplacer la blanche » shows beside « Tirer » only while he has the white in hand, so the panel never grows. */
+  .actions { display: flex; gap: 8px; }
+  .actions button { flex: 1 1 0; min-width: 0; }
+  #place { min-height: 54px; justify-content: center; text-align: center; line-height: 1.1; padding: 2px 8px; flex-grow: 1.6; }
+  #place[hidden] { display: none; }
+  #place.on { background: #FFF1C7; border-color: #C9951A; }
+  #shoot { min-height: 64px; justify-content: center; font-size: 24px; font-weight: 700; }
+  @container (max-width: 250px) { .controls { grid-template-columns: 1fr; gap: 2px; } }
+
+  /* A gold ribbon for the end of the game. */
+  #ribbon { position: absolute; left: 50%; top: 16%; translate: -50% 0; padding: 8px 34px; border-radius: 16px; pointer-events: none; display: none; white-space: nowrap;
+    background: linear-gradient(#FFD666, #F2B21E); color: #3A2600; font: 800 40px/1.15 var(--ui); box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 -3px 0 rgba(0,0,0,.15); }
+  #ribbon.on { display: block; animation: ribbon 1.9s cubic-bezier(.2,1.3,.4,1) both; }
+  @keyframes ribbon { 0% { scale: .3; opacity: 0; } 15% { scale: 1.08; opacity: 1; } 25% { scale: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+  #confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  #confetti i { position: absolute; width: 9px; height: 15px; top: -5%; background: var(--gold); animation: fall 1.8s ease-in both; }
+  #confetti i:nth-child(3n) { background: #2A74B0; } #confetti i:nth-child(3n+1) { background: #D0262B; }
+  @keyframes fall { to { top: 105%; transform: translateX(45px) rotate(285deg); } }
+  @media (prefers-reduced-motion: reduce) { #ribbon.on, #confetti { display: none; } }
+
+  /* A short window: tighter cards, the faces smaller, the keys 48 px. */
+  /* A short window: the card and « Votre coup » side by side, since the table is limited by the height anyway. */
+  @media (min-width: 700px) {
+    html.short #table { grid-template-columns: minmax(0, 1fr) min(600px, 50%); }
+    html.short #side { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 8px; }
+  }
+  html.short .player { padding: 2px 8px 4px; }
+  html.short #console { gap: 5px; padding: 8px 12px 10px; }
+  html.short .keys button { flex-basis: 48px; min-height: 48px; }
+  html.short #shoot { min-height: 52px; }
+  html.short #place { min-height: 48px; }
+  html.low #spinBall { width: 24px; height: 24px; }
+
+  /* A phone: the table upright on top, then the players side by side, then « Votre coup ». */
+  @media (max-width: 699px) {
+    #table { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; margin: 0 5px 5px; gap: 6px; }
+    #side { gap: 6px; }
+    #players { grid-template-columns: 1fr 1fr; padding: 4px; }
+    #console { grid-column: 1 / -1; padding: 6px 8px 8px; gap: 4px; }
+    .player { padding: 2px 4px 4px; grid-template-columns: 28px minmax(0, 1fr); gap: 0 6px; }
+    .player img { width: 28px; height: 28px; grid-row: 1; }
+    .player .line { font-size: 14px; } .player .name { font-size: 16px; }
+    .tray { grid-column: 1 / -1; }
+    .tray { gap: 2px; min-height: 22px; } .tray .open { font-size: 13px; }
+    .mb { width: 22px; height: 22px; } .mb b { width: 14px; height: 14px; font-size: 10px; } .mb.eight { margin-left: 3px; }
+    .controls { grid-template-columns: 60px minmax(0, 1fr); gap: 4px; }
+    .controls h3 { font-size: 16px; }
+    .keys button { flex-basis: 44px; min-height: 44px; }
+    .meter { font-size: 15px; }
+    #shoot { min-height: 50px; }
+    #ribbon { font-size: 28px; padding: 6px 22px; }
+  }
+
+  /* ---------- The rules guide ----------
+     Each page: one picture of the blue cloth drawn like the game, with its balls, cue and buttons. Then one
+     or two short sentences. The pictures use their own classes and cannot be clicked. */
+  #help { --guide-more: #3E342E; --guide-edge: #1B2422; }
+  .bl-pic { position: relative; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px 24px; margin: 2px 0 10px; padding: 14px;
+    border-radius: 18px; background: radial-gradient(120% 100% at 50% 0%, var(--felt-top), var(--felt) 85%); }
+  .bl-pic svg.bl-cloth { display: block; width: auto; max-width: 100%; height: 180px; overflow: visible; }
+  .bl-pic svg text { font-family: "Segoe UI", system-ui, sans-serif; font-weight: 800; }
+  .bl-row { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 16px; background: var(--paper); color: #2A2420; font: 600 20px var(--ui); }
+  .bl-row .mb { width: 40px; height: 40px; } .bl-row .mb b { width: 24px; height: 24px; font-size: 15px; }
+  .bl-keys { display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 16px; background: var(--paper); }
+  .bl-keys > span:not(.guide-btn) { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 13px; background: #fff; border: 2px solid #9AA6A1; box-shadow: 0 3px 0 #9AA6A1; font: 700 26px/1 var(--ui); color: var(--text); }
+  .bl-keys .bl-seg { display: grid; grid-template-columns: repeat(10, 14px); gap: 2px; }
+  .bl-keys .bl-seg i { height: 14px; border-radius: 2px; background: #DED4C2; }
+  .bl-keys .bl-seg i.on { background: #438251; } .bl-keys .bl-seg i.on:nth-child(n+5) { background: #BD8C10; }
+  .bl-pic .guide-btn.primary.here { box-shadow: 0 3px 0 #C9951A, 0 0 0 4px #fff, 0 0 0 9px var(--gold), 0 0 0 11px var(--guide-edge); }
+  html.low .bl-pic { padding: 8px; margin-bottom: 6px; }
+  html.low .bl-pic svg.bl-cloth { height: 140px; }
+</style>
+</head>
+<body>
+<div id="bar"><div id="title">Billard américain</div>
+  <button id="undoBtn" data-icon="undo" title="Annuler votre dernier coup"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span><span class="tiny">Annuler</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre un bon coup à jouer maintenant"><span class="long">Que jouer maintenant ?</span><span class="short">Que jouer ?</span><span class="tiny">Idée</span></button>
+  <span class="spacer"></span><button id="helpBtn" data-icon="help">Règles</button><button id="newBtn" class="game">Nouvelle partie</button></div>
+<div id="say"><div id="msg" aria-live="polite"></div></div>
+<main id="table">
+  <div id="stage"><canvas aria-label="La table de billard vue d’en haut. Cliquez sur une bille pour viser."></canvas>
+    <div id="confetti"></div><div id="ribbon"></div></div>
+  <div id="side">
+    <div id="players">
+      <section class="player" id="you"><img src="../lib/avatars/vous.webp" alt=""><div class="line"><span class="name">Vous</span><span class="now"></span></div><div class="tray"></div></section>
+      <section class="player" id="cpu"><img src="../lib/avatars/rene.webp" alt=""><div class="line"><span class="name">René</span><span class="now"></span></div><div class="tray"></div></section>
+    </div>
+    <aside id="console" aria-labelledby="panelTitle">
+      <h2 id="panelTitle">Votre coup</h2>
+      <div class="controls"><h3>Visée</h3><div class="keys">
+        <button id="turnLeft" aria-label="Tourner la queue un peu vers la gauche">↺</button>
+        <div class="meter"><span id="aimLabel">Vers la bande</span></div>
+        <button id="turnRight" aria-label="Tourner la queue un peu vers la droite">↻</button></div></div>
+      <div class="controls"><h3>Force</h3><div class="keys">
+        <button id="weaker" aria-label="Moins de force">−</button>
+        <div class="meter"><div id="segments" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span id="forceLabel">5 sur 10</span></div>
+        <button id="stronger" aria-label="Plus de force">+</button></div></div>
+      <div class="controls"><h3>Effet</h3><div class="keys">
+        <button id="spinDown" aria-label="Plus de rétro : la blanche revient en arrière">▼</button>
+        <div class="meter"><span id="spinBall" aria-hidden="true"><i></i></span><span id="spinLabel">Au centre</span></div>
+        <button id="spinUp" aria-label="Plus de coulé : la blanche suit la bille">▲</button></div></div>
+      <div class="actions"><button id="place" hidden>Déplacer la blanche</button><button id="shoot" class="primary">Tirer</button></div>
+    </aside>
+  </div>
+</main>
+<footer id="rail"><div class="zoom"></div></footer>
+<div id="help" data-title="Billard américain">
+  <section class="page"><h3>Viser une bille</h3>
+    <div class="bl-pic" aria-hidden="true" data-pic="aim"></div>
+    <p class="guide-lead">Cliquez sur une bille pour viser.</p>
+    <p class="guide-more">La queue se tourne vers elle. Les pointillés montrent où partent les billes.</p></section>
+  <section class="page"><h3>Tirer</h3>
+    <div class="bl-pic" aria-hidden="true"><div class="bl-keys"><span>−</span><span class="bl-seg"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></span><span>+</span></div>
+      <span class="guide-btn primary here">Tirer</span></div>
+    <p class="guide-lead">Réglez la force, puis cliquez sur « Tirer ».</p>
+    <p class="guide-more">« ↺ » et « ↻ » tournent la queue d’un tout petit peu, pour viser juste.</p></section>
+  <section class="page"><h3>Vos billes, puis la noire</h3>
+    <div class="bl-pic" aria-hidden="true" data-pic="groups"></div>
+    <p class="guide-lead">Rentrez vos sept billes, puis la noire.</p>
+    <p class="guide-more">Votre première bille rentrée choisit vos billes : les pleines ou les rayées. La noire trop tôt fait perdre.</p></section>
+  <section class="page"><h3>Les fautes</h3>
+    <div class="bl-pic" aria-hidden="true" data-pic="foul"></div>
+    <p class="guide-lead">La blanche dans un trou, c’est une faute.</p>
+    <p class="guide-more">Toucher d’abord une bille de René aussi. Après une faute, l’autre pose la blanche où il veut.</p></section>
+  <section class="page"><h3>Un doute ?</h3>
+    <div class="bl-pic" aria-hidden="true"><div class="guide-btns"><span class="guide-btn primary here" data-icon="bulb">Que jouer maintenant ?</span><span class="guide-btn" data-icon="undo">Annuler le dernier coup</span></div></div>
+    <p class="guide-lead">Cliquez sur « Que jouer maintenant ? ».</p>
+    <p class="guide-more">La queue se tourne vers un bon coup. « Annuler » reprend votre dernier coup.</p></section>
+</div>
+<script src="../lib/store.js"></script><script src="../lib/kit.js"></script><script type="module" src="game.js"></script>
+</body>
+</html>
