@@ -387,6 +387,11 @@
     if (e.target.closest && e.target.closest('#table, #bar button, #over button') && ++coachSteps >= COACH_STEPS) endCoach();
   }, true);
 
+  // An undo, from the bar or from a result dialog, takes the game back into play: the end-of-game mark goes.
+  addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('#undoBtn, #overBtns button');
+    if (b && (b.id === 'undoBtn' || /^Annuler/.test(b.textContent.trim()))) gameOver(false);
+  }, true);
   // The game is over: "Nouvelle partie" becomes the next thing to press.
   function gameOver(on) {
     const b = $('newBtn');

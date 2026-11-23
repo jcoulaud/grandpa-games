@@ -519,7 +519,7 @@ function checkStuck() {
   // Auto-play has already run, so the real position is checked: a card the player took back
   // from the foundation and that can go home again still counts as a move.
   if (anyMove()) return;
-  S.stuckShown = true; save();
+  S.stuckShown = true; save(); document.getElementById('hintBtn').disabled = true;
   window.Sound?.play('lose'); Kit.gameOver(true);
   dialog('Plus aucun coup possible', 'Aucune carte ne peut plus bouger.',
     [['Revenir en arrière', backToWinnable, true], ['Nouvelle partie', askNewGame]]);
@@ -541,7 +541,7 @@ function anyMove() {
 function checkLost() {
   if (S.lostShown || dialogOpen() || isWon()) return;
   if (solve(toSolver(), 20000).win !== false) return;
-  S.lostShown = true; save();
+  S.lostShown = true; save(); document.getElementById('hintBtn').disabled = true;
   lostDialog();
 }
 function lostDialog() {
@@ -829,8 +829,10 @@ function render(opts = {}) {
   undoBtn.disabled = !undo.length;
   undoBtn.dataset.why = "Il n'y a pas encore de coup à annuler.";
   undoBtn.toggleAttribute('data-nudge', noSafe && undo.length > 0);
-  hintBtn.disabled = isWon();
-  hintBtn.dataset.why = 'La partie est gagnée. Cliquez sur « Nouvelle partie ».';
+  // After a win or a loss, the hint has nothing to show: "Nouvelle partie" becomes the next thing to press.
+  hintBtn.disabled = isWon() || S.stuckShown || S.lostShown;
+  hintBtn.dataset.why = isWon() ? 'La partie est gagnée. Cliquez sur « Nouvelle partie ».'
+    : 'Il n’y a plus de coup à jouer. Cliquez sur « Annuler le dernier coup » ou sur « Nouvelle partie ».';
 }
 // The yellow ring around the chosen cards, and a yellow frame on each place they can go.
 function drawMarks() {

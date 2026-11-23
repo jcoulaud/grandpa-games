@@ -273,7 +273,7 @@ function click(ev) {
   if (pot) {
     aim.angle = pot.angle;
     // The power the engine found, not rounded: a rounded power can scratch. The force line shows it rounded.
-    aim.power = Math.max(1, Math.min(10, pot.power));
+    aim.power = pot.power;
   }
   aimed(true, true);
   render(
