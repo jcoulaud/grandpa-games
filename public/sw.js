@@ -17,7 +17,7 @@ const CORE = [
   'blog/illectronisme-par-age.png', 'blog/jeux-pour-seniors/',
   'freecell/regles/', 'dame-de-pique/regles/', 'bataille-navale/regles/', 'paires/regles/',
   'sudoku/regles/', 'mots-meles/regles/', 'petits-chevaux/regles/', 'morpion/regles/',
-  'golf/regles/', 'billard/regles/', 'rami/regles/', 'blog/agrandir-cartes-et-lettres/', 'blog/retrouver-une-partie/',
+  'golf/regles/', 'billard/regles/', 'bowling/regles/', 'rami/regles/', 'blog/agrandir-cartes-et-lettres/', 'blog/retrouver-une-partie/',
   'blog/jeux-de-cartes-a-jouer-seul/',
   'blog/agrandir-cartes-et-lettres/boutons-taille.webp', 'blog/agrandir-cartes-et-lettres/taille-80.webp',
   'blog/agrandir-cartes-et-lettres/taille-130.webp', 'blog/agrandir-cartes-et-lettres/mots-meles.webp',
