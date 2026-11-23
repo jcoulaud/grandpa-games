@@ -21,6 +21,16 @@
 //   Kit.isOpen()                            true while the rules or a dialog are open
 //   Kit.escape()                            closes the rules or the dialog; false if nothing was open
 //   Kit.icon(name)                          an icon as SVG markup; Kit.icon('hand') is the pointing hand of the rules guide
+//   Kit.firstVisit(start)                   no save yet: starts a game at Facile at once, with the coach on
+//   Kit.point(el)                           during the coach, rings el and points the hand at it until he clicks
+//   Kit.coaching()                          true during the coach of his first game
+//   Kit.tell(text)                          a short answer in the message line; the line before comes back after 4 s
+//   Kit.gameOver(on)                        the game is over: the nudge goes to "Nouvelle partie"
+//
+// Every click gets an answer. A click on a greyed button says its data-why, or the line flashes and the next
+// button pulses. A click on the table that changes nothing does the same (see "No silent click" below).
+// The automatic hint of Facile never fires while the hint button has data-auto="no": set it while he is in
+// the middle of an action (a chosen letter, a set aim), so the hint never undoes his work.
 (() => {
   'use strict';
   const ICONS = {
@@ -114,12 +124,24 @@
   // A new text flashes once, so his eye goes to the line when it changes.
   const say = text => {
     stir();
+    told = null;
     if (!msg) return;
     const changed = msg.textContent !== text;
     msg.textContent = text; fit();
     if (changed) { msg.classList.remove('flash'); void msg.offsetWidth; msg.classList.add('flash'); }
   };
   addEventListener('resize', fit);
+  // A short answer to a click, such as why a button is grey. The game's own line comes back after 4 s,
+  // unless the game said something new meanwhile.
+  let told = null;
+  function tell(text) {
+    if (!msg) return;
+    const before = told ? told.before : msg.textContent;
+    say(text);
+    const mine = told = { before, text };
+    setTimeout(() => { if (told === mine && msg.textContent === text) { say(before); } }, 4000);
+  }
+  const flashLine = () => { if (!msg) return; msg.classList.remove('flash'); void msg.offsetWidth; msg.classList.add('flash'); };
 
   // Dialog
   if (!$('over')) document.body.insertAdjacentHTML('beforeend',
@@ -256,11 +278,13 @@
     remember(); help.classList.add('on'); showPage(0);
     PH.capture('rules guide opened', { first_visit: !!firstStart });
   }
+  // The first visit starts a game at Facile at once: he learns on the real table, with the coach. The rules
+  // guide stays one click away, on "Règles". firstStart stays for a game that opens the guide itself first.
   let firstStart = null;
   function firstVisit(start) {
-    firstStart = start;
-    $('table').hidden = true;
-    openHelp();
+    coaching = true; coachStarts = 0; coachSteps = 0;
+    PH.capture('first visit', { coach: true });
+    start('facile');
   }
   function closeHelp() {
     if (!helpOpen()) return;
@@ -299,11 +323,63 @@
   // gold ring: a button the game marks with data-nudge (such as "Manche suivante"), else the hint button.
   // The wait depends on the level. At Facile, the hint then shows by itself, once, unless the hint button
   // has data-auto="no" because its hint plays the move for him (the sudoku fills a cell).
-  const NUDGE = { facile: [15, 40], moyen: [30, 0], fort: [60, 0] };
+  // During the coach of his first game, the nudge comes after 4 s and the hint after 10 s.
+  const NUDGE = { facile: [15, 40], moyen: [30, 0], fort: [60, 0] }, COACH = [4, 10];
   let shownLevel = null, idle = 0, nudged = null, autoDone = false;
   function stir() {
     idle = 0;
-    if (nudged) { nudged.classList.remove('nudge'); nudged = null; }
+    if (nudged) { nudged.classList.remove('nudge'); if (pointed === nudged) unpoint(); nudged = null; }
+  }
+
+  // The coach of the first game. Kit.point(el) rings the real thing to click and points the white hand of the
+  // rules guide at it, until his next click. The kit also points the hand at the nudged button. The coach ends
+  // after his first 8 actions, a new game or a win.
+  const COACH_STEPS = 8;
+  let coaching = false, coachStarts = 0, coachSteps = 0, pointed = null, hand = null;
+  function point(el) {
+    unpoint();
+    if (!coaching || !el || !el.isConnected) return;
+    pointed = el;
+    el.classList.add('coach');
+    if (!hand) {
+      document.body.insertAdjacentHTML('beforeend', `<div id="coachHand" aria-hidden="true">${icon('hand')}</div>`);
+      hand = $('coachHand');
+    }
+    hand.hidden = false;
+    place();
+  }
+  function unpoint() {
+    if (pointed) pointed.classList.remove('coach');
+    pointed = null;
+    if (hand) hand.hidden = true;
+  }
+  // The hand follows the element, under it, its finger on the lower half. The page may be zoomed (lib/zoom.js).
+  function place() {
+    if (!pointed || !hand || hand.hidden) return;
+    if (!pointed.isConnected || pointed.offsetParent === null) { unpoint(); return; }
+    const z = window.Zoom ? Zoom.z() : 1, r = pointed.getBoundingClientRect();
+    const x = (r.left + r.width / 2) / z, y = (r.top + Math.min(r.height * .62, r.height - 6)) / z;
+    const bottom = innerHeight / z - 70;
+    hand.style.left = `${x - 22}px`;
+    hand.style.top = `${Math.min(y, bottom)}px`;
+    requestAnimationFrame(place);
+  }
+  function endCoach() { coaching = false; unpoint(); }
+  addEventListener('gg-track', e => {
+    if (e.detail.kind === 'start') { gameOver(false); if (coaching && ++coachStarts > 1) endCoach(); }
+    else endCoach();
+  });
+  addEventListener('pointerdown', e => {
+    if (!e.isTrusted || !coaching) return;
+    unpoint();
+    if (e.target.closest && e.target.closest('#table, #bar button, #over button') && ++coachSteps >= COACH_STEPS) endCoach();
+  }, true);
+
+  // The game is over: "Nouvelle partie" becomes the next thing to press.
+  function gameOver(on) {
+    const b = $('newBtn');
+    if (!b) return;
+    if (on) b.dataset.nudge = ''; else delete b.dataset.nudge;
   }
   const visible = e => e && !e.disabled && !e.hidden && e.offsetParent !== null;
   function nudgeTarget() {
@@ -315,21 +391,70 @@
   function tick() {
     if (document.hidden || isOpen() || ($('table') && $('table').hidden)) { stir(); return; }
     idle++;
-    const [pulse, auto] = NUDGE[shownLevel] || NUDGE.moyen;
+    const [pulse, auto] = coaching ? COACH : NUDGE[shownLevel] || NUDGE.moyen;
     const target = nudgeTarget();
     if (!target) { stir(); return; }
-    if (idle >= pulse && target !== nudged) {
-      if (nudged) nudged.classList.remove('nudge');
-      target.classList.add('nudge');
-      nudged = target;
-      PH.capture('nudge shown', { button: target.id || target.textContent.trim().slice(0, 40) });
-    }
-    if (auto && idle >= auto && !autoDone && target.id === 'hintBtn' && target.dataset.auto !== 'no') {
+    if (idle >= pulse && target !== nudged) nudge(target);
+    if (coaching && nudged && !pointed) point(nudged);
+    if (auto && idle >= auto && !autoDone && target.id === 'hintBtn' && target.dataset.auto !== 'no' && !target.disabled) {
       autoDone = true;
       target.click();
     }
   }
+  function nudge(target) {
+    if (nudged) nudged.classList.remove('nudge');
+    target.classList.add('nudge');
+    nudged = target;
+    PH.capture('nudge shown', { button: target.id || target.textContent.trim().slice(0, 40) });
+  }
   setInterval(tick, 1000);
+
+  // No silent click. A click on a greyed button says why (its data-why), else the message line flashes and the
+  // next button pulses at once. A click on the table that changes nothing on the page within 0.45 s gets the
+  // same answer. The canvas of the skill games draws without changing the page, so the games answer those
+  // clicks themselves. Each silent click is counted, so the admin can see where he gets lost.
+  const label = e => (e.id || e.getAttribute('aria-label') || e.textContent.trim()).slice(0, 40);
+  function answer(why) {
+    if (why) tell(why); else flashLine();
+    const target = nudgeTarget();
+    if (target) { idle = 0; nudge(target); }
+  }
+  let watch = null;
+  addEventListener('pointerdown', e => {
+    if (!e.isTrusted || e.button !== 0 || isOpen()) return;
+    const table = $('table');
+    if (!table || !table.contains(e.target) || e.target.closest('canvas')) return;
+    if (watch) watch.obs.disconnect();
+    const w = watch = { changed: false, obs: new MutationObserver(() => { w.changed = true; }) };
+    w.obs.observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true });
+  }, true);
+  addEventListener('pointerup', e => {
+    if (!e.isTrusted || e.button !== 0 || isOpen()) return;
+    const btn = e.target.closest && e.target.closest('button');
+    if (btn && btn.disabled) {
+      PH.capture('dead click', { target: 'grey ' + label(btn) });
+      answer(btn.dataset.why);
+      return;
+    }
+    const w = watch;
+    if (!w) return;
+    setTimeout(() => {
+      w.obs.disconnect();
+      if (watch === w) watch = null;
+      if (w.changed || isOpen()) return;
+      PH.capture('dead click', { target: label(e.target.closest('[id], [class]') || e.target) });
+      answer();
+    }, 450);
+  }, true);
+
+  // The time from the start of a game to his first action on it, to see where he does not know what to do.
+  let startedAt = 0;
+  addEventListener('gg-track', e => { if (e.detail.kind === 'start') startedAt = Date.now(); });
+  addEventListener('pointerdown', e => {
+    if (!e.isTrusted || !startedAt || !e.target.closest || !e.target.closest('#table, #bar button:not(#quit)')) return;
+    PH.capture('first action', { seconds: Math.round((Date.now() - startedAt) / 1000), coach: coaching });
+    startedAt = 0;
+  }, true);
   // A hint asked by his hand, or shown by itself at Facile.
   addEventListener('click', e => {
     if (e.target.closest && e.target.closest('#hintBtn')) PH.capture('hint used', { automatic: !e.isTrusted });
@@ -352,5 +477,6 @@
     if (quitting) staleHeld = true;
   });
 
-  window.Kit = { home, firstVisit, levelNames, showLevel, showWins, chooseLevel, say, dialog, closeDialog, openHelp, closeHelp, isOpen, escape, icon };
+  window.Kit = { home, firstVisit, levelNames, showLevel, showWins, chooseLevel, say, tell, dialog, closeDialog, openHelp, closeHelp, isOpen, escape, icon,
+    point, coaching: () => coaching, gameOver };
 })();
