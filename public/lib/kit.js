@@ -16,7 +16,7 @@
 //
 //   Kit.say(text)                           the message line
 //   Kit.showLevel(level), Kit.showWins(n)   the level line under the name: "Niveau facile · 3 victoires"
-//   Kit.dialog(title, text, [[label, fn, primary]], soft)   soft: the win sheet, with a light backdrop
+//   Kit.dialog(title, text, [[label, fn, primary]], soft)   text: a string or a node; soft: the win sheet, with a light backdrop
 //   Kit.closeDialog(), Kit.openHelp(), Kit.closeHelp()
 //   Kit.isOpen()                            true while the rules or a dialog are open
 //   Kit.escape()                            closes the rules or the dialog; false if nothing was open
@@ -60,10 +60,19 @@
     home();
   });
   // A cross at the right end of the bar, where a window has its own: some players close the whole app
-  // to leave a game. This one closes the game and goes back to the library. The game is already saved.
+  // to leave a game. This one asks first, because a slip of the hand on it must not end a game by
+  // surprise; staying is the yellow choice, and Escape stays too. A dialog the game opens meanwhile,
+  // such as its result, waits behind the question and shows if he stays.
   if (bar && !$('quit')) {
     bar.insertAdjacentHTML('beforeend', '<button id="quit" data-icon="close" aria-label="Fermer le jeu" title="Fermer le jeu et revenir à la liste des jeux"></button>');
-    $('quit').addEventListener('click', home);
+    $('quit').addEventListener('click', () => {
+      if (isOpen()) return;
+      quitting = true;
+      show('Fermer le jeu ?', 'Vous revenez à la liste des jeux.', [
+        ['Continuer la partie', null, true],
+        ['Retour aux jeux', () => { held = null; staleHeld = false; home(); }]
+      ]);
+    });
   }
   if ($('rail') && !$('rail').querySelector('.credit'))
     $('rail').insertAdjacentHTML('afterbegin', `<a class="credit" href="https://x.com/JulienCoulaud" target="_blank" rel="noopener"><img src="${libRoot}icons/julien.webp" width="34" height="34" alt=""><span>Par <b>Julien Coulaud</b></span></a>`);
@@ -120,11 +129,28 @@
   let opener = null;
   const remember = () => { if (!isOpen()) opener = document.activeElement; };
   const giveBack = () => { if (!isOpen() && opener && opener.isConnected) opener.focus({ preventScroll: true }); opener = null; };
-  const closeDialog = () => { over.classList.remove('on', 'soft'); giveBack(); };
-  function dialog(title, text, buttons, soft) {
+  // While he answers the close cross, a dialog from the game is held, then shown if he stays.
+  let quitting = false, held = null;
+  const closeDialog = () => {
+    over.classList.remove('on', 'soft');
+    giveBack();
+    if (!quitting) return;
+    quitting = false;
+    // After the click: a choice to leave drops the held dialog first.
+    Promise.resolve().then(() => { const h = held; held = null; staleHeld = false; if (h) show(...h); });
+  };
+  // A held « Le jeu a changé ailleurs » keeps its place: a result that comes after it must not hide it.
+  let staleHeld = false;
+  const dialog = (...args) => {
+    if (!quitting) show(...args);
+    else if (!staleHeld) held = args;
+  };
+  function show(title, text, buttons, soft) {
     remember();
     $('overTitle').textContent = title;
-    $('overText').textContent = text;
+    // The text is a string, or a page element such as the golf score card.
+    if (typeof text === 'string') $('overText').textContent = text;
+    else $('overText').replaceChildren(text);
     const b = $('overBtns'); b.innerHTML = '';
     let first = null;
     buttons.forEach(([label, fn, primary, note]) => {
@@ -311,9 +337,10 @@
   // A window that is behind (another window or the backup saved a newer game) cannot save:
   // it asks to reload, at each refused save, until it is reloaded.
   addEventListener('gg-stale', () => {
-    if (firstStart || !over.classList.contains('on')) dialog('Le jeu a changé ailleurs',
+    if (firstStart || quitting || !over.classList.contains('on')) dialog('Le jeu a changé ailleurs',
       'Ce jeu a été enregistré dans une autre fenêtre. Rechargez-le pour continuer la partie à jour.',
       [['Recharger le jeu', () => location.reload(), true]]);
+    if (quitting) staleHeld = true;
   });
 
   window.Kit = { home, firstVisit, levelNames, showLevel, showWins, chooseLevel, say, dialog, closeDialog, openHelp, closeHelp, isOpen, escape, icon };

@@ -112,9 +112,6 @@
   .body { padding: calc(12px * var(--k)) calc(22px * var(--k)) calc(18px * var(--k)); display: flex; flex-direction: column; gap: calc(7px + var(--air) / 4); flex: 1; }
   .body h3 { margin: 0; font: 700 calc(31px * var(--k)) var(--ui); letter-spacing: -.01em; }
   .body p { margin: 0; font: 500 calc(20px * var(--k))/1.35 var(--ui); color: var(--muted); }
-  .status { display: flex; align-items: center; gap: 9px; min-height: 30px; font: 600 calc(21px * var(--k)) var(--ui); color: var(--accent); }
-  .status svg { width: 26px; height: 26px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .status:empty { display: none; }
   .play {
     margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; min-height: calc(60px * var(--k)); padding: 8px 16px; text-align: center;
     border-radius: 16px; background: var(--gold); color: #1F1A00; font: 700 calc(22px * var(--k)) var(--ui);
@@ -242,6 +239,8 @@ const GAMES = [
     felt: ['#B5532A', '#6A2A12'], scene: diceArt },
   { id: 'bataille-navale', family: 'plateau', title: 'Bataille navale', text: 'Coulez les bateaux de l’ordinateur avant les vôtres.',
     felt: ['#1C7896', '#0A3142'], scene: seaArt },
+  { id: 'bowling', family: 'adresse', title: 'Bowling', text: 'Dix tours sur une vraie piste : faites tomber les quilles à votre rythme.',
+    felt: ['#3C3F8E', '#1B1C4A'], scene: () => '<img src="bowling/icon.svg" alt="" style="width:100%;height:100%">' },
   { id: 'golf', family: 'adresse', title: 'Golf miniature', text: 'Neuf nouveaux trous à chaque partie : visez le drapeau à votre rythme.',
     felt: ['#3f7d55', '#1d4634'], scene: () => '<img src="golf/icon.svg" alt="" style="width:100%;height:100%">' },
   { id: 'paires', family: 'tete', title: 'Jeu des paires', text: 'Retournez les cartes deux par deux et retrouvez les paires.',
@@ -649,23 +648,19 @@ function ramiScene() {
       <text x="30" y="69" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-weight="800" font-size="13.5" fill="currentColor">JOKER</text></svg></div>`;
   return scene(lamp + tray + joker + card(CARREAU + 6, 95, 86, w, -8, 'lifted') + card(CARREAU + 7, 125, 82, w, 0, 'lifted') + card(CARREAU + 8, 155, 86, w, 8, 'lifted'));
 }
-const ICON_TROPHY = '<svg viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v4M8.5 20h7"/></svg>';
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 function render() {
   const tile = g => {
     const meta = GG.meta(g.id);
     const parts = typeof meta?.summary === 'string' ? meta.summary.split(' · ') : [];
+    // The tile shows no line about the saved game: only the button says a game is in progress.
     const playing = parts.some(p => /en cours/i.test(p));
-    // The button already says a game is in progress: the line under the text shows only the wins.
-    // A count of zero ("0 parcours finis") says nothing yet: it is left out.
-    const wins = parts.filter(p => !/en cours/i.test(p) && !/^0\s/.test(p)).join(' · ');
     return `<a class="tile" href="${g.id}/" data-id="${g.id}">
       <div class="art" style="background: radial-gradient(90% 120% at 50% 0%, ${g.felt[0]}, ${g.felt[1]})">${g.scene()}</div>
       <div class="body">
         <h3>${esc(g.title)}</h3>
         <p>${esc(g.text)}</p>
-        <div class="status">${wins ? ICON_TROPHY + esc(wins) : ''}</div>
         <div class="play">${playing ? 'Reprendre la partie' : 'Jouer'}</div>
       </div></a>`;
   };

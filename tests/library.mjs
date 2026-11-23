@@ -71,7 +71,7 @@ try {
   await page.click('#home');
   await page.waitForSelector('a.tile[data-id="solitaire"]');
   check('the game is saved on the PC', await page.evaluate(() => !!GG.load('solitaire')));
-  check('trophy line shows wins only', !(await page.textContent('a.tile')).includes('Partie en cours'));
+  check('the tile shows no line about the saved game', !(await page.textContent('a.tile')).includes('Partie en cours') && !(await page.locator('a.tile .status').count()));
   check('button says resume', (await page.textContent('a.tile .play')).includes('Reprendre'));
   await page.screenshot({ path: join(OUT, 'library.png') });
   // Three games per row: the fourth one is on a second row, below the fold. The first row must show whole.
