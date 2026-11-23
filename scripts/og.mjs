@@ -44,18 +44,19 @@ body { position: relative; font-family: Lexend, sans-serif; color: #fff;
     radial-gradient(ellipse at 50% 35%, transparent 50%, rgb(0 0 0 / 30%) 100%), radial-gradient(120% 90% at 50% 0%, #1F7A6C, #0F4F47 72%) #0F4F47; }
 .text { position: absolute; left: 70px; top: 50px; bottom: 50px; width: 560px; display: flex; flex-direction: column; }
 .brand { display: flex; align-items: center; gap: 18px; font: 700 36px Lexend; }
-.brand img { width: 72px; height: 72px; border-radius: 50%; box-shadow: 0 6px 16px rgb(0 0 0 / .3); }
+.brand img { width: 52px; height: 52px; border-radius: 50%; box-shadow: 0 4px 12px rgb(0 0 0 / .3); }
 h1 { margin: auto 0 0; font: 700 66px/1.06 Lexend; letter-spacing: -.02em; text-wrap: balance; }
 h1 em { font-style: normal; color: #FFC83D; }
-p { margin: 22px 0 auto; max-width: 500px; font: 500 30px/1.33 Lexend; color: rgb(255 255 255 / .9); }
-.site { font: 700 28px Lexend; color: rgb(255 244 214 / .85); }
+p { margin: 22px 0 auto; max-width: 500px; padding-bottom: 40px; font: 500 30px/1.33 Lexend; color: rgb(255 255 255 / .9); }
+.site { position: absolute; right: 50px; bottom: 44px; font: 700 28px Lexend; color: rgb(255 244 214 / .85); }
 .games { position: absolute; right: 40px; top: 50%; translate: 0 -50%; display: grid; grid-template-columns: repeat(2, 270px); gap: 26px 10px; }
 .games img { width: 270px; height: 156px; }
 </style></head><body>
 <div class="text"><div class="brand"><img src="${new URL('icons/logo.webp', root).href}" alt="">Jeux de Papi</div>
 <h1>Des jeux classiques <em>à votre rythme</em></h1>
 <p>Belote, solitaire, dames, billard et bien d’autres. Simples et sans publicité.</p>
-<div class="site">jeux-papi.fr</div></div>
+</div>
+<div class="site">jeux-papi.fr</div>
 <div class="games">${['billard', 'belote', 'dames', 'yams'].map((id) => `<img src="${art[id]}" alt="">`).join('')}</div>
 </body></html>`;
 
