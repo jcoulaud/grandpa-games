@@ -127,3 +127,13 @@
 .post-levels > div { padding: .8rem 1rem; background: var(--guide-light); border-radius: 10px; }
 .post-levels dt { font-weight: 700; color: var(--guide-ink); }
 .post-levels dd { margin: .25rem 0 0; font-size: 18px; }
+
+/* A picture of a game in an article: the screen as he sees it, with a line under it that says what to look at. */
+.post-shot { margin: 1.5rem 0; max-width: 46rem; }
+.post-shot img, .post-shot svg { display: block; width: 100%; height: auto; }
+.post-shot-small { max-width: 26rem; }
+.post-shot-medium { max-width: 28rem; }
+.post-shot-phone { max-width: 18rem; }
+/* Two sizes of the same game, one above the other, each as wide as the text, so the difference shows. */
+.post-pair { display: grid; gap: 1rem; max-width: 46rem; margin: 1.5rem 0; }
+.post-pair .post-shot { margin: 0; }

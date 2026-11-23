@@ -117,7 +117,32 @@ html.low #rail {padding-block:3px}
 html.low .controls h3 {margin:0}
 html.low #card {gap:5px;padding:6px 5px}
 #overText {white-space:pre-line}
-#help table {border-collapse:collapse}#help td,#help th {padding:4px 9px;border:1px solid #cfc5b1;text-align:left}
+/* The rules guide: one picture on the navy of the game, then one or two sentences, as in the other games. */
+.bw-pic {display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:16px 40px;margin:2px 0 12px;padding:16px;border-radius:18px;
+  background:radial-gradient(120% 100% at 50% 0%,var(--felt-top),var(--felt) 80%)}
+.bw-pins {display:block;width:180px;height:auto}
+.bw-lane {display:block;width:100%;max-width:470px;height:auto}
+.bw-lane text {font-family:var(--ui);font-weight:800}
+.bw-pic .guide-btn {font-size:22px;padding-inline:24px}
+.bw-pic .guide-hand {left:calc(100% - 18px);top:34%}
+.bw-frames {display:flex;flex-wrap:wrap;justify-content:center;gap:14px}
+.bw-frame {display:grid;justify-items:center;gap:4px;width:170px;padding:10px 8px 12px;border-radius:12px;background:var(--paper);color:var(--ink);line-height:1.15}
+.bw-boxes {display:flex;justify-content:flex-end;width:100%;max-width:120px}
+.bw-boxes i {width:44px;height:40px;display:grid;place-items:center;border:2px solid #cfc0a6;font:800 26px var(--ui);font-style:normal}
+.bw-boxes i:last-child {border-left:0}
+.bw-frame b {font-size:21px}
+.bw-frame small {font:600 17px/1.2 var(--ui);color:#4a4458}
+html.low .bw-pic {padding-block:10px}
+html.low .bw-pins {width:130px}
+@media(max-width:699px){
+ .bw-pic {gap:12px;padding:12px 8px}
+ .bw-pins {width:130px}
+ .bw-frames {flex-wrap:nowrap;gap:6px}
+ .bw-frame {width:auto;flex:1 1 0;min-width:0;padding:8px 4px 10px}
+ .bw-boxes i {width:32px;height:32px;font-size:20px}
+ .bw-frame b {font-size:17px}
+ .bw-frame small {font-size:14px}
+}
 #confetti {position:absolute;inset:0;pointer-events:none;overflow:hidden}
 #confetti i {position:absolute;width:8px;height:14px;top:-5%;background:#ffc83d;animation:fall 1.6s ease-in both}
 #confetti i:nth-child(odd){background:#c6374a}
@@ -216,14 +241,27 @@ html.low #card {gap:5px;padding:6px 5px}
  <button id="shoot" class="primary">Lancer la boule</button></aside>
 </main>
 <footer id="rail"><div class="zoom"></div></footer>
-<div id="help" data-title="Bowling">
-<section class="page"><h3>Lancer la boule</h3><p>Faites tomber les quilles. Marquez assez de points en dix tours pour gagner.</p><ol><li>Réglez votre lancer dans « Votre lancer », à droite.</li><li>Cliquez sur « Lancer la boule ».</li><li>Au deuxième lancer, visez les quilles encore debout.</li></ol><div class="guide-panel"><figure class="guide-example"><img src="icon.svg" width="76" height="60" alt=""><figcaption>Chaque lancer part du milieu, tout droit.</figcaption></figure></div></section>
-<section class="page"><h3>Départ, direction, courbe et force</h3><p>« Départ » place la boule sur la ligne. « Direction » choisit où elle arrive aux quilles. Chaque lancer repart du milieu, tout droit, avec la force 6.</p>
-<div class="guide-panel"><figure class="guide-example"><svg width="92" height="84" viewBox="0 0 92 84" aria-hidden="true">
-<rect width="92" height="84" rx="8" fill="#e2bc84"/><path d="M45 73 L60 40 Q65 24 53 15" stroke="#1f3570" stroke-width="4" fill="none" stroke-dasharray="4 2"/>
-<circle cx="45" cy="73" r="8" fill="#b8323f"/><g fill="#fff8e7" stroke="#8e5040" stroke-width="2"><circle cx="43" cy="21" r="9"/><circle cx="60" cy="10" r="9"/></g>
-<g text-anchor="middle" font-size="14" font-weight="bold" fill="#23243c"><text x="43" y="26">1</text><text x="60" y="15">3</text></g></svg>
-<figcaption>↶ et ↷ règlent la courbe. La boule va droit, puis tourne entre les quilles 1 et 3.</figcaption></figure></div>
-<p>« − » et « + » règlent la force.</p></section>
-<section class="page"><h3>Le score</h3><p>Chaque quille tombée vaut un point.</p><table><tr><th>Strike · X</th><td>Tout tombe au premier lancer. Ajoutez les deux lancers suivants.</td></tr><tr><th>Spare · /</th><td>Tout tombe en deux lancers. Ajoutez le lancer suivant.</td></tr><tr><th>10e tour</th><td>Un strike donne deux lancers de plus. Un spare en donne un.</td></tr></table><p>Pour gagner, marquez en dix tours : 145 points en Facile, 160 en Moyen, 175 en Difficile.</p></section>
+<div id="help" data-title="Comment jouer">
+<section class="page">
+  <h3>Lancer la boule</h3>
+  <div class="bw-pic" aria-hidden="true"><svg class="bw-pins" viewBox="0 0 200 150" width="200"><circle cx="46" cy="30" r="14" fill="#fffdf3" stroke="#bf9c75" stroke-width="1.5"/><circle cx="46" cy="30" r="9" fill="none" stroke="#b8323f" stroke-width="3.5"/><circle cx="82" cy="30" r="14" fill="#fffdf3" stroke="#bf9c75" stroke-width="1.5"/><circle cx="82" cy="30" r="9" fill="none" stroke="#b8323f" stroke-width="3.5"/><circle cx="118" cy="30" r="14" fill="#fffdf3" stroke="#bf9c75" stroke-width="1.5"/><circle cx="118" cy="30" r="9" fill="none" stroke="#b8323f" stroke-width="3.5"/><circle cx="154" cy="30" r="14" fill="#fffdf3" stroke="#bf9c75" stroke-width="1.5"/><circle cx="154" cy="30" r="9" fill="none" stroke="#b8323f" stroke-width="3.5"/><circle cx="64" cy="62" r="14" fill="#fffdf3" stroke="#bf9c75" stroke-width="1.5"/><circle cx="64" cy="62" r="9" fill="none" stroke="#b8323f" stroke-width="3.5"/><circle cx="100" cy="62" r="14" fill="#fffdf3" stroke="#bf9c75" stroke-width="1.5"/><circle cx="100" cy="62" r="9" fill="none" stroke="#b8323f" stroke-width="3.5"/><circle cx="136" cy="62" r="14" fill="#fffdf3" stroke="#bf9c75" stroke-width="1.5"/><circle cx="136" cy="62" r="9" fill="none" stroke="#b8323f" stroke-width="3.5"/><circle cx="82" cy="94" r="14" fill="#fffdf3" stroke="#bf9c75" stroke-width="1.5"/><circle cx="82" cy="94" r="9" fill="none" stroke="#b8323f" stroke-width="3.5"/><circle cx="118" cy="94" r="14" fill="#fffdf3" stroke="#bf9c75" stroke-width="1.5"/><circle cx="118" cy="94" r="9" fill="none" stroke="#b8323f" stroke-width="3.5"/><circle cx="100" cy="126" r="14" fill="#fffdf3" stroke="#bf9c75" stroke-width="1.5"/><circle cx="100" cy="126" r="9" fill="none" stroke="#b8323f" stroke-width="3.5"/></svg><span class="guide-btn primary here">Lancer la boule</span></div>
+  <p class="guide-lead">Réglez votre lancer à droite, puis cliquez sur «&nbsp;Lancer la boule&nbsp;».</p>
+  <p class="guide-more">Deux lancers par tour pour faire tomber les dix quilles. Au deuxième, visez celles encore debout.</p>
+</section>
+<section class="page">
+  <h3>Régler le lancer</h3>
+  <div class="bw-pic" aria-hidden="true"><svg class="bw-lane" viewBox="0 0 540 190"><rect x="8" y="34" width="524" height="122" rx="10" fill="#e2bc84" stroke="#b08850" stroke-width="3"/><path d="M8 95H532" stroke="#c99d62" stroke-width="2" stroke-dasharray="4 8"/><path d="M62 95H300Q372 95 424 110" fill="none" stroke="#1f3570" stroke-width="5" stroke-dasharray="10 7" stroke-linecap="round"/><circle cx="436" cy="95" r="10" fill="#fffdf3" stroke="#8e5040" stroke-width="2"/><circle cx="458" cy="80" r="10" fill="#fffdf3" stroke="#8e5040" stroke-width="2"/><circle cx="458" cy="110" r="10" fill="#fffdf3" stroke="#8e5040" stroke-width="2"/><circle cx="480" cy="65" r="10" fill="#fffdf3" stroke="#8e5040" stroke-width="2"/><circle cx="480" cy="95" r="10" fill="#fffdf3" stroke="#8e5040" stroke-width="2"/><circle cx="480" cy="125" r="10" fill="#fffdf3" stroke="#8e5040" stroke-width="2"/><circle cx="502" cy="50" r="10" fill="#fffdf3" stroke="#8e5040" stroke-width="2"/><circle cx="502" cy="80" r="10" fill="#fffdf3" stroke="#8e5040" stroke-width="2"/><circle cx="502" cy="110" r="10" fill="#fffdf3" stroke="#8e5040" stroke-width="2"/><circle cx="502" cy="140" r="10" fill="#fffdf3" stroke="#8e5040" stroke-width="2"/><text x="436" y="101" text-anchor="middle" font-size="13" fill="#23243c">1</text><text x="458" y="116" text-anchor="middle" font-size="13" fill="#23243c">3</text><circle cx="44" cy="95" r="17" fill="#b8323f" stroke="#7d1f29" stroke-width="2"/><circle cx="39" cy="89" r="2.5" fill="#5a141c"/><circle cx="47" cy="88" r="2.5" fill="#5a141c"/><circle cx="44" cy="96" r="2.5" fill="#5a141c"/><text x="44" y="182" text-anchor="middle" font-size="20" fill="#fff8e7">Départ</text><text x="340" y="182" text-anchor="middle" font-size="20" fill="#fff8e7">Courbe</text><text x="470" y="22" text-anchor="middle" font-size="20" fill="#fff8e7">Direction</text></svg></div>
+  <p class="guide-lead">Réglez le départ, la direction, la courbe et la force.</p>
+  <p class="guide-more">Chaque lancer repart du milieu, tout droit, avec la force 6.</p>
+</section>
+<section class="page">
+  <h3>Le score</h3>
+  <div class="bw-pic" aria-hidden="true"><div class="bw-frames">
+    <div class="bw-frame"><span class="bw-boxes"><i></i><i>X</i></span><b>Strike</b><small>+ les 2 lancers suivants</small></div>
+    <div class="bw-frame"><span class="bw-boxes"><i>7</i><i>/</i></span><b>Spare</b><small>+ le lancer suivant</small></div>
+    <div class="bw-frame"><span class="bw-boxes"><i>8</i><i>1</i></span><b>9 points</b><small>une quille par point</small></div>
+  </div></div>
+  <p class="guide-lead">Chaque quille tombée vaut un point.</p>
+  <p class="guide-more">Pour gagner, marquez en dix tours 145 points en Facile, 160 en Moyen et 175 en Difficile.</p>
+</section>
 </div><script src="../lib/store.js"></script><script src="../lib/kit.js"></script><script type="module" src="game.js"></script></body></html>

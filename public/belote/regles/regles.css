@@ -34,6 +34,7 @@
 
 /* The two columns of the score table: the atout column in the colour of the game. */
 .belote .score th:nth-child(-n+2), .belote .score td:nth-child(-n+2) { background: var(--guide-light); }
+.belote .score :is(th, td):nth-child(2) { border-inline-end: 1px solid var(--rule-line); }
 
 @media (max-width: 560px) {
   .trick { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem .25rem; }
