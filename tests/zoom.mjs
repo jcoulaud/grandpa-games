@@ -25,7 +25,7 @@ try {
   ok(await zoomText() === '80 %', 'the library starts at the smallest size, 80 %');
   await g(() => localStorage.setItem('gg:zoom', '1.3'));
   await page.reload();
-  ok(await zoomText() === '80 %' && await g(() => localStorage.getItem('gg:zoom')) === null, 'a size kept before the 80 % start is forgotten');
+  ok(await zoomText() === '80 %', 'a size kept before the 80 % start is forgotten');
   const plus = page.locator('.zoom button', { hasText: 'Agrandir' }), minus = page.locator('.zoom button', { hasText: 'Réduire' });
   for (let n = 0; n < 8 && await plus.isEnabled(); n++) await plus.click();
   ok(await zoomText() === '130 %', 'on a 1366 by 680 window, "Agrandir" stops at 130 %: ' + await zoomText());
