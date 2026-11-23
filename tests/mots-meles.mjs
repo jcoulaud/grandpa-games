@@ -295,7 +295,7 @@ for (const [w, h, z] of WINDOWS) {
   const phone = w < 700;
   const p = await browser.newPage(phone ? { viewport: { width: w, height: h }, isMobile: true, hasTouch: true } : { viewport: { width: w, height: h } });
   p.on('pageerror', e => errors.push(e.message));
-  await p.addInitScript(z => localStorage.setItem('gg:zoom', JSON.stringify(z)), z);
+  await p.addInitScript(z => localStorage.setItem('gg:size', JSON.stringify(z)), z);
   await p.goto(URL);
   await p.waitForTimeout(300);
   const tag = `${w}x${h}${z !== 1 ? ' at ' + z * 100 + ' %' : ''}`;

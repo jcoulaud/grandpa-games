@@ -380,7 +380,7 @@ for (const [w, h, z] of WINDOWS) {
   page = await browser.newPage({ viewport: { width: w, height: h } });
   watch(page);
   await page.goto(URL);
-  await g(z => { localStorage.setItem('gg:zoom', String(z)); localStorage.setItem('gg:save:belote', JSON.stringify({ updatedAt: 1, summary: '', data: { v: 1, level: 'moyen', stats: { won: 2 } } })); }, z);
+  await g(z => { localStorage.setItem('gg:size', String(z)); localStorage.setItem('gg:save:belote', JSON.stringify({ updatedAt: 1, summary: '', data: { v: 1, level: 'moyen', stats: { won: 2 } } })); }, z);
   await page.reload(); await wait(400);
   const size = `${w}x${h}${z > 1 ? ' at ' + Math.round(z * 100) + ' %' : ''}`;
   const min = w < 700 ? 13 : 20;

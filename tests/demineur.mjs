@@ -202,7 +202,7 @@ await phone.screenshot({ path: `${OUT}/demineur-phone.png` });
 
 // 14. At 130 %, the explosion is still centred on the mine that went off. Moyen, because Facile refuses the click.
 const big = await browser.newPage({ viewport: { width: 1366, height: 680 } });
-await big.addInitScript(() => localStorage.setItem('gg:zoom', '1.3'));
+await big.addInitScript(() => localStorage.setItem('gg:size', '1.3'));
 await big.goto(URL);
 await big.evaluate(() => { Kit.closeHelp(); });
 await big.locator('#overBtns button', { hasText: 'Moyen' }).click();
