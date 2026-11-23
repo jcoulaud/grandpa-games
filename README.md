@@ -12,6 +12,7 @@ public/                  the site, served as static files
   og.jpg                 the link preview image, drawn in scripts/og.html (node scripts/icons.mjs)
   <id>/index.html        one game per folder, at jeux-papi.fr/<id>/
   lib/store.js           saves for every game, in the browser of the PC, and the statistics
+  lib/ph.js              the anonymous id of the PC, and PostHog on jeux-papi.fr (see "Statistics")
   lib/kit.css, kit.js    shared look and behaviour: top bar, "Jeux" button, message line, rules guide, dialogs
   lib/zoom.js            the size buttons, "Réduire" and "Agrandir", on the library and in every game
   lib/cards.css, cards.js  playing cards: French names, suits, pips, court cards, back
@@ -25,7 +26,7 @@ migrations/              the database tables
 
 ## Add a game
 
-1. Make `public/<id>/index.html` like the solitaire: link `../lib/kit.css` (and `../lib/cards.css` for a card game), write the top bar, the message line, the table and the rules pages, then load `../lib/store.js`, `../lib/cards.js` and `../lib/kit.js` before the game's own script. Load `../lib/zoom.js` in the `<head>`, and divide any mouse position inside the table by `Zoom.z()`. The top of `lib/kit.js` shows the markup.
+1. Make `public/<id>/index.html` like the solitaire: link `../lib/kit.css` (and `../lib/cards.css` for a card game), write the top bar, the message line, the table and the rules pages, then load `../lib/store.js`, `../lib/cards.js` and `../lib/kit.js` before the game's own script. Load `../lib/zoom.js` in the `<head>`, then `../lib/ph.js`, and divide any mouse position inside the table by `Zoom.z()`. The top of `lib/kit.js` shows the markup.
 2. The kit adds the "Jeux" button, the close cross at the right of the bar (it asks « Fermer le jeu ? » first, with « Continuer la partie » in yellow), the nudge (after a wait on his turn, the hint button pulses, or first any visible button with `data-nudge`; put `data-auto="no"` on a hint that plays the move for him), the button icons (`data-icon="undo"`, `bulb`, `help`, `close`), the rules guide frame and the dialog. Use `Kit.say`, `Kit.dialog`, `Kit.openHelp` and `Kit.escape`. For the pictures of the guide, `lib/kit.css` has the sentence classes `guide-lead` and `guide-more`, the yellow ring (`guide-ring`, or `var(--guide-ring)` in a shadow of your own) and the copy of a bar button (`guide-btn`, yellow with `primary`, in a column with `guide-btns`). `Kit.icon('hand')` gives the pointing hand, with the class `guide-hand`; place it with `left` and `top`. A copy marked `here` gets the ring and the hand by itself, and `data-icon` gives it its icon. In an SVG picture, draw the hand with `<use href="#kit-hand" width="40" height="48"/>`. Set `--guide-more` (the colour of the second line) and `--guide-edge` (the dark edge of the rings) on `#help` to match the felt.
 3. Save with `GG.save('<id>', data, { summary })` and read with `GG.load('<id>')`. `summary` tells the library about the saved game, for example "Partie en cours · 3 victoires": a part with "en cours" turns the tile's button into "Reprendre la partie". The tiles show no other line under the description.
 4. Give the game its own browser tab icon: `public/<id>/icon.svg`, linked with `<link rel="icon" href="icon.svg">`.
@@ -204,6 +205,24 @@ The design and the research behind it are in `docs/design.md`.
 - Everyone plays freely, with no account and no approval. Each game saves in the browser of the PC (localStorage) and never leaves it.
 - The library asks Edge to keep this data when the disk is full. Clearing the browser data for jeux-papi.fr deletes the saves.
 - The browser locks each game while it checks and writes the save. The saved state and the library summary share one record. A window with an older version asks to reload.
+
+## Statistics
+
+PostHog (EU) gets the visits of jeux-papi.fr, with the same anonymous id as the admin page. Pages opened from disk, the tests and local runs send nothing. `public/lib/ph.js` loads it on every page except the admin page. `tests/analytics-rules.mjs` fails when a page does not load it, or when a first folder that is not a game is missing from `SITE` in `lib/ph.js`.
+
+PostHog records the pages, the clicks, the time on each page, how far it was scrolled, the errors and a recording of the session. Each event carries `page_type` (`library`, `game`, `rules` or `blog`), the `game` of a game or rules page, and `installed`, true in the window of the installed app. The site adds these events:
+
+| Event | Sent by | Properties |
+| --- | --- | --- |
+| `play clicked` | a link from a rules page or the blog to a game | `to_game`, `place` (`play button` or `link`) |
+| `game started`, `game won` | `GG.track` | `game`, and `level` from `Kit.showLevel` |
+| `rules guide opened` | the guide in a game | `first_visit`, true when it opened by itself |
+| `rules guide closed` | the guide in a game | `page`, `pages`, `read_all` |
+| `hint used` | the hint button | `automatic`, true when Facile showed it by itself |
+| `nudge shown` | the gold ring after a wait | `button` |
+| `app installed` | Edge, when the site is installed as an app | |
+
+`node scripts/posthog.mjs` turns on the recordings, errors, heatmaps and page speed in the project, and makes or updates two dashboards. "Les parties" has the games played and won by game and by level, the players per day, the hints and the return of players week after week. "Les visiteurs" has the funnels from a rules page, the blog and the library to a game started and won, the pages of rules and of the blog, and where the visitors come from. It needs `POSTHOG_PERSONAL_API_KEY`, a personal key of the EU project with the scopes `project:write`, `dashboard:write` and `insight:write`.
 
 ## Admin page
 

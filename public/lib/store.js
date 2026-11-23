@@ -10,7 +10,8 @@
 // fires a "gg-stale" event at each refused save. lib/kit.js then asks to reload.
 //
 // For the admin page, each PC also sends an anonymous visit once a day and its JavaScript errors.
-// It sends only a random id made on the PC, never a save.
+// It sends only the random id of the PC (lib/ph.js), never a save. PostHog also gets the games
+// started and won.
 (() => {
   const P = 'gg:';
   const SRC = document.currentScript.src;
@@ -52,13 +53,8 @@
       .forEach(k => localStorage.removeItem(k));
   } catch (e) {}
 
-  // The anonymous id of this PC. A PC from the time of the backup keeps the id it had.
-  let id = get('device');
-  if (typeof id !== 'string' || !/^[A-Z2-9]{26}$/.test(id)) {
-    const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    id = Array.from(crypto.getRandomValues(new Uint8Array(26)), b => abc[b % 32]).join('');
-    set('device', id);
-  }
+  // The anonymous id of this PC, made by lib/ph.js. A PC from the time of the backup keeps the id it had.
+  const id = PH.id;
   // Statistics are best effort: offline, they are lost, and the game never waits for them.
   const send = (path, body) => {
     if (!API) return;
@@ -143,7 +139,10 @@
     load,
     meta,
     save, flush,
-    track: (game, kind) => send('/stats', { game, kind }),
+    track: (game, kind) => {
+      send('/stats', { game, kind });
+      PH.capture(kind === 'won' ? 'game won' : 'game started', { game });
+    },
     get, set, // small per-PC flags for the library
   };
 })();
