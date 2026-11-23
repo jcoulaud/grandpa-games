@@ -3,7 +3,8 @@
 //
 //   PH.id                    the random id made on this PC. lib/store.js sends it with the statistics.
 //   PH.capture(event, props) sends one event. Offline, the PostHog script does not load and the event is lost.
-//   PH.register(props)       adds props to every later event of this page, such as the level being played.
+//   PH.register(props)       adds props to every later event, such as the level being played. The next page
+//                            clears the game and the level.
 //
 // PostHog records the pages, the clicks, the time on each page, how far it was scrolled and the session.
 // Each event also carries:
@@ -44,7 +45,8 @@
       defaults: '2025-05-24',
       person_profiles: 'always',
       bootstrap: { distinctID: id },
-      loaded: p => p.register({ ...page, installed }),
+      // PostHog keeps registered props for the next pages. A game and a level belong to one page only.
+      loaded: p => { p.unregister('game'); p.unregister('level'); p.register({ ...page, installed }); },
     }, 'posthog']];
     const s = document.createElement('script');
     s.async = true;

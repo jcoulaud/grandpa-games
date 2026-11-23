@@ -8,12 +8,16 @@ import { launch } from './harness.mjs';
 const pub = fileURLToPath(new URL('../public/', import.meta.url));
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.png': 'image/png', '.woff2': 'font/woff2' };
 
-// The stand-in reads the init call and the queue the way array.js does, and reports every call.
+// The stand-in reads the init call and the queue the way array.js does, and reports every call. Like
+// PostHog, it keeps the registered props in the browser, so they reach the events of the next pages.
 const STUB = `(() => {
   const q = window.posthog, [[, config]] = q._i;
+  const kept = () => JSON.parse(localStorage.getItem('stub:props') || '{}');
+  const keep = props => localStorage.setItem('stub:props', JSON.stringify(props));
   const ph = { __loaded: true,
-    capture: (event, props) => window.phCall('capture', event, props || {}),
-    register: props => window.phCall('register', null, props) };
+    capture: (event, props) => window.phCall('capture', event, { ...kept(), ...props }),
+    register: props => { keep({ ...kept(), ...props }); window.phCall('register', null, props); },
+    unregister: key => { const k = kept(); delete k[key]; keep(k); } };
   window.posthog = ph;
   window.phCall('init', null, { distinct: config.bootstrap.distinctID });
   config.loaded(ph);
@@ -78,6 +82,18 @@ if (await hint.isVisible()) {
   await until(() => events('/solitaire/', 'hint used').length);
   check('a hint asked by hand sends hint used', events('/solitaire/', 'hint used')[0]?.props.automatic === false);
 }
+
+// The game and the level of a game do not follow him to the next page.
+await page.goto('https://jeux-papi.fr/blog/');
+await page.evaluate(() => PH.capture('test event'));
+await until(() => events('/blog/', 'test event').length);
+const after = events('/blog/', 'test event')[0].props;
+check('a page after a game has no game and no level', after.page_type === 'blog' && !('game' in after) && !('level' in after), JSON.stringify(after));
+await page.goto('https://jeux-papi.fr/rami/');
+await page.evaluate(() => PH.capture('test event'));
+await until(() => events('/rami/', 'test event').length);
+const rami = events('/rami/', 'test event')[0].props;
+check('another game does not get the level of the last one', rami.game === 'rami' && !('level' in rami), JSON.stringify(rami));
 
 // Away from jeux-papi.fr, nothing loads.
 const local = await ctx.newPage();

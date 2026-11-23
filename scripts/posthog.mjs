@@ -1,11 +1,12 @@
 // Sets up the PostHog project of jeux-papi.fr: its recording settings, two dashboards and their charts.
 // Run it again after a change here: it finds the dashboards and the charts by name and updates them.
 //
-//   POSTHOG_PERSONAL_API_KEY=phx_... node scripts/posthog.mjs
+//   POSTHOG_PERSONAL_API_KEY=phx_... [POSTHOG_PROJECT_ID=363241] node scripts/posthog.mjs
 //
 // The key needs the scopes project:write, dashboard:write and insight:write. The events come from
 // public/lib/ph.js, store.js and kit.js.
 const HOST = 'https://eu.posthog.com';
+const TOKEN = 'phc_te2NfQa4rJfJW5G3GYCQjZt9bw3LEzTG4USXJeZijxSx'; // the project key in public/lib/ph.js
 const KEY = process.env.POSTHOG_PERSONAL_API_KEY;
 if (!KEY) { console.error('Set POSTHOG_PERSONAL_API_KEY.'); process.exit(1); }
 
@@ -65,7 +66,7 @@ const DASHBOARDS = [
       ['Part des parties gagnées par jeu (%)', trends([started, won], { breakdown: 'game', display: 'ActionsBarValue', formula: 'B / A * 100' })],
       ['Parties commencées par niveau', trends([started], { breakdown: 'level', display: 'ActionsBarValue' })],
       ['Part des parties gagnées par niveau (%)', trends([started, won], { breakdown: 'level', display: 'ActionsBarValue', formula: 'B / A * 100' })],
-      ['Parties commencées par jour', trends([started, won], { interval: 'day' })],
+      ['Parties commencées et gagnées par jour', trends([started, won], { interval: 'day' })],
       ['Joueurs par jour', trends([event('game started', { math: 'dau', label: 'Joueurs' })])],
       ['Indices et rappels par jeu', trends([event('hint used', { label: 'Indice' }), event('nudge shown', { label: 'Rappel' })], { breakdown: 'game', display: 'ActionsBarValue' })],
       ['Guide des règles lu jusqu’au bout', trends([event('rules guide closed')], { breakdown: 'read_all', display: 'ActionsPie' })],
@@ -90,7 +91,7 @@ const DASHBOARDS = [
     insights: [
       ['Des règles à la partie', funnel([rulesPage, play, started, won])],
       ['Des règles à la partie, par jeu', funnel([rulesPage, play, started], 'game')],
-      ['Du blog à la partie', funnel([blogPage, play, started])],
+      ['Du blog à la partie', funnel([blogPage, started])],
       ['De la bibliothèque à la victoire', funnel([libraryPage, started, won])],
       ['Premier guide, puis partie', funnel([event('rules guide opened', { props: [is('first_visit', true)], label: 'Premier guide ouvert' }), started, won])],
       ['Pages de règles vues par jeu', trends([event('$pageview', { props: [is('page_type', 'rules')] })], { breakdown: 'game', display: 'ActionsBarValue' })],
@@ -103,7 +104,13 @@ const DASHBOARDS = [
   },
 ];
 
-const project = await api('GET', '/api/projects/@current/');
+// The project of the site: POSTHOG_PROJECT_ID, else the project selected in PostHog. Nothing is written
+// unless it is the project of the key in public/lib/ph.js.
+const project = await api('GET', `/api/projects/${process.env.POSTHOG_PROJECT_ID || '@current'}/`);
+if (project.api_token !== TOKEN) {
+  console.error(`Project ${project.name} is not the project of jeux-papi.fr. Set POSTHOG_PROJECT_ID to its id.`);
+  process.exit(1);
+}
 const P = `/api/projects/${project.id}`;
 console.log(`project ${project.name} (${project.id})`);
 
@@ -112,6 +119,7 @@ await api('PATCH', `${P}/`, {
   session_recording_opt_in: true,
   autocapture_exceptions_opt_in: true,
   capture_performance_opt_in: true,
+  autocapture_web_vitals_opt_in: true,
   heatmaps_opt_in: true,
   autocapture_opt_out: false,
 });
