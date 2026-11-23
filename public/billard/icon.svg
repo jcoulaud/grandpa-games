@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 110">
+<defs>
+<radialGradient id="cloth" cx=".35" cy=".7" r=".9"><stop offset="0" stop-color="#3A8CC8"/><stop offset="1" stop-color="#1D5A8E"/></radialGradient>
+<linearGradient id="wood" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8A4C29"/><stop offset="1" stop-color="#4E2612"/></linearGradient>
+<radialGradient id="shine" cx=".34" cy=".3" r=".75"><stop offset="0" stop-color="#fff" stop-opacity=".75"/><stop offset=".38" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".4"/></radialGradient>
+<linearGradient id="cue" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1E1512"/><stop offset=".42" stop-color="#2A1C16"/><stop offset=".43" stop-color="#C9A24A"/><stop offset=".45" stop-color="#E7CC94"/><stop offset=".97" stop-color="#F0DDB2"/><stop offset=".97" stop-color="#E8E2D6"/><stop offset=".99" stop-color="#E8E2D6"/><stop offset=".99" stop-color="#3F6EA8"/></linearGradient>
+<clipPath id="eleven"><circle cx="92" cy="74" r="10"/></clipPath>
+</defs>
+<rect x="0" y="0" width="160" height="110" rx="16" fill="url(#wood)"/>
+<rect x="0" y="16" width="144" height="94" fill="url(#cloth)"/>
+<rect x="0" y="16" width="144" height="5" fill="#000" opacity=".2"/><rect x="139" y="16" width="5" height="94" fill="#000" opacity=".2"/>
+<circle cx="142" cy="18" r="15" fill="#080503"/><circle cx="142" cy="18" r="15" fill="none" stroke="#2A170D" stroke-width="3"/>
+<circle cx="56" cy="8" r="1.8" fill="#F4EEDF"/><circle cx="100" cy="8" r="1.8" fill="#F4EEDF"/><circle cx="152" cy="62" r="1.8" fill="#F4EEDF"/>
+<g stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-dasharray="0.1 7" opacity=".9"><path d="M48 88 107 46"/></g>
+<g stroke="#FFC83D" stroke-width="3" stroke-linecap="round" stroke-dasharray="0.1 7"><path d="M124 32 136 23"/></g>
+<g fill="#001A33" opacity=".35"><circle cx="50" cy="91" r="10.5"/><circle cx="118" cy="40" r="10.5"/><circle cx="94" cy="77" r="10.5"/></g>
+<rect x="-70" y="-3.4" width="118" height="6.8" rx="3.4" fill="url(#cue)" transform="translate(48 88) rotate(-35.4) translate(-60 0)"/>
+<circle cx="48" cy="88" r="10" fill="#FAF7EC"/><circle cx="48" cy="88" r="10" fill="url(#shine)"/>
+<circle cx="92" cy="74" r="10" fill="#FAF7EC"/><rect x="82" y="69" width="20" height="10" fill="#CE242C" clip-path="url(#eleven)"/>
+<circle cx="92" cy="74" r="4.6" fill="#fff"/><text x="92" y="76.4" font-family="Segoe UI,Arial,sans-serif" font-weight="800" font-size="6.2" text-anchor="middle" fill="#16181A">11</text>
+<circle cx="92" cy="74" r="10" fill="url(#shine)"/>
+<circle cx="116" cy="37" r="10" fill="#161618"/><circle cx="116" cy="37" r="4.8" fill="#fff"/><text x="116" y="39.6" font-family="Segoe UI,Arial,sans-serif" font-weight="800" font-size="7" text-anchor="middle" fill="#16181A">8</text>
+<circle cx="116" cy="37" r="10" fill="url(#shine)"/>
+<circle cx="30" cy="40" r="10" fill="#F2BE14"/><circle cx="30" cy="40" r="4.6" fill="#fff"/><text x="30" y="42.4" font-family="Segoe UI,Arial,sans-serif" font-weight="800" font-size="6.6" text-anchor="middle" fill="#16181A">1</text>
+<circle cx="30" cy="40" r="10" fill="url(#shine)"/>
+</svg>
