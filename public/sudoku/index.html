@@ -201,6 +201,7 @@
   @keyframes hop { 45% { translate: 0 calc(var(--c) * -.10); } 78% { translate: 0 1px; } }
 </style>
 <script src="../lib/zoom.js"></script>
+<script src="../lib/sound.js"></script>
 <script src="../lib/ph.js"></script>
 </head>
 <body>
@@ -382,7 +383,7 @@ async function commit(next) {
 // that fails replaces the message (see save).
 async function digit(d) {
   if (!ready() || double('key' + d)) return;
-  if (refuse('place', d)) return;
+  if (refuse('place', d)) return window.Sound?.play('bad');
   const i = sel, before = S.complete(G);
   const r = S.write(G, i, d);
   const previous = G;
@@ -391,6 +392,7 @@ async function digit(d) {
   const fresh = S.complete(G).filter(x => !before.includes(x));
   fresh.forEach(animKeyDone);
   if (G.result) { finish(written); return written; }
+  window.Sound?.play(r.clash ? 'bad' : fresh.includes(d) && !S.filled(G) ? 'good' : 'write');
   if (r.clash) {
     blameCell(r.clash.cell);
     shake(i);
@@ -402,11 +404,12 @@ async function digit(d) {
 }
 async function eraseCell() {
   if (!ready() || double('erase')) return;
-  if (refuse('erase')) return;
+  if (refuse('erase')) return window.Sound?.play('bad');
   const i = sel, r = S.erase(G, i);
   const previous = G;
   const written = commit(r.G);
   drawMove(previous);
+  window.Sound?.play('write');
   Kit.say(`Le ${r.was} est effacé.`);
   await written;
 }
@@ -487,6 +490,7 @@ function finish(written) {
   if (!show) { if (saved && !stale) Kit.say(text); return; }
   if (saved && !stale) Kit.say(text);
   animWin();
+  window.Sound?.play('win');
   winSave = written;
   const done = () => { if (winSave === written) winSave = null; };
   written.then(done, done);

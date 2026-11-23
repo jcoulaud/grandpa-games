@@ -243,6 +243,7 @@
     #confetti { display: none; }
   }
 </style><script src="../lib/zoom.js"></script>
+<script src="../lib/sound.js"></script>
 <script src="../lib/ph.js"></script>
 </head>
 <body>
@@ -457,6 +458,7 @@ const say = Kit.say;
 // message line says it too, with a flash, so he sees that his click was heard.
 let bubbleT = 0;
 function refuse(el, text) {
+  window.Sound?.play('bad');
   shake(el);
   say(text);
   const m = $('msg'); m.classList.remove('flash'); void m.offsetWidth; m.classList.add('flash');
@@ -490,6 +492,7 @@ function tapCard(c) {
   if (!myTurn()) return busy(el);
   if (G.phase === 'draw') return refuse(el, LAY_WHY.phase);
   if (sel.has(c)) sel.delete(c); else sel.add(c);
+  window.Sound?.play('tap');
   hint = null;
   say(turnMessage());
   render();
@@ -553,6 +556,7 @@ function tapThrow() {
 function tapSort() {
   if (stale) return;
   sortBy = sortBy === 'suit' ? 'rank' : 'suit';
+  window.Sound?.play('tap');
   say(sortBy === 'suit' ? 'Vos cartes sont rangées par couleur.' : 'Vos cartes sont rangées par valeur.');
   save();
   render(true);
@@ -584,6 +588,10 @@ function after(before) {
   else if (e.seat === 0) say(text + ` ${ODETTE} réfléchit…`);
   else say(text);
   render(true);
+  // The sound comes as the cards land, and his turn rings after it.
+  const done = landed();
+  later(() => window.Sound?.play(e.shuffled ? 'shuffle' : e.kind === 'lay' && e.seat === 0 ? 'good' : 'card'), done);
+  if (G.turn === 0 && e.seat === 1) later(() => window.Sound?.play('turn'), done + 500);
   if (e.kind === 'lay' && e.opening && e.seat === 0) ribbon(`Ouvert ! ${e.pts} points`, landed());
   if (G.turn === 1) later(step, Math.max(e.seat === 0 ? FIRST_MS : STEP_MS, landed() + PAUSE));
 }
@@ -615,6 +623,7 @@ function gameOver(isNew) {
   say(won ? `Bravo, vous avez gagné ! ${ODETTE} garde ${plural(pts, 'point', 'points')} en main.`
     : `${ODETTE} a gagné. Il vous reste ${plural(pts, 'point', 'points')} en main.`);
   if (!isNew) return;
+  window.Sound?.play(won ? 'win' : 'lose');
   const games = ['Retour aux jeux', Kit.home];
   const how = G.last.kind === 'lay' || G.last.kind === 'add' ? 'en posant ses dernières cartes' : 'en jetant sa dernière carte';
   if (won) {
@@ -664,7 +673,7 @@ function doUndo() {
     G = g; hint = null;
     for (const c of [...sel]) if (!G.hands[0].includes(c)) sel.delete(c);
     fresh = { melds: new Set(), cards: new Set() };
-    save();
+    save(); window.Sound?.play('card');
     say('Coup annulé. ' + turnMessage());
     render(true);
     return;
@@ -701,6 +710,7 @@ async function newGame(lv) {
   dealing = true;
   render(true);
   dealing = false;
+  window.Sound?.play('deal');
   if ((await written) && id === gameId && !stale) GG.track('rami', 'start');
 }
 

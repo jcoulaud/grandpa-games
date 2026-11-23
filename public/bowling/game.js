@@ -200,6 +200,7 @@ async function shoot() {
     mark = s.frames[before.next].marks.at(-1);
   for (const b of document.querySelectorAll('#console button,#undoBtn,#hintBtn')) b.disabled = true;
   Kit.say('La boule roule…');
+  window.Sound?.play('roll');
   const won = s.done && s.total >= game.goal && !game.reported;
   if (won) game.reported = true;
   const write = save().then((ok) => {
@@ -210,6 +211,7 @@ async function shoot() {
     if (!stale) {
       Kit.say(message(result));
       pinPlan(result.standing);
+      if (['X', '/'].includes(mark)) window.Sound?.play('good');
       celebrate(mark);
     }
   };
@@ -217,7 +219,10 @@ async function shoot() {
   busy = false;
   if (stale) return;
   render(ok ? message(result) : 'La partie ne peut pas être enregistrée sur cet appareil.', before.total);
-  if (s.done && ok) end();
+  if (s.done && ok) {
+    window.Sound?.play(s.total >= game.goal ? 'win' : 'lose');
+    end();
+  }
 }
 async function start(level) {
   if (busy || stale) return;
@@ -274,6 +279,7 @@ function init() {
       if (blocked()) return;
       const next = key === 'aim' ? onLane(shot.aim + by) : clamp(shot.speed + by, 1, 10);
       if (next === shot[key]) {
+        window.Sound?.play('bad');
         Kit.say(key === 'aim' ? 'C’est le bord de la piste : vous ne pouvez pas viser plus loin.' : next === 10 ? 'C’est déjà la force la plus grande.' : 'C’est déjà la force la plus petite.');
         return;
       }
@@ -301,6 +307,7 @@ function init() {
       if (blocked()) return;
       const next = onLane((shot.start ?? 20) + step);
       if (next === shot.start) {
+        window.Sound?.play('bad');
         Kit.say('C’est le bord de la piste : la boule ne peut pas partir plus loin.');
         return;
       }

@@ -969,18 +969,34 @@ export function createScene(canvas) {
     trace(null);
     if (reduced()) {
       place(shot.end, shot.sunk);
+      if (shot.sunk) setTimeout(() => window.Sound?.play('pocket'), 300);
       return Promise.resolve();
     }
     return new Promise((resolve) => {
       const start = performance.now(),
         n = shot.path.length - 1;
-      let sinkAt = 0;
+      let sinkAt = 0,
+        heard = 0,
+        knock = -Infinity;
       tasks.add((now) => {
         const f = Math.min(n, (Math.max(0, now - start) / 1000 / dt) * SPEED),
           i = Math.floor(f),
           a = shot.path[i],
           b = shot.path[Math.min(n, i + 1)],
           t = f - i;
+        // A wall: the ball turns by more than 30° between two steps while it still rolls. At most one knock per 80 ms.
+        for (; heard < i; heard++) {
+          const p = shot.path[heard],
+            q = shot.path[heard + 1],
+            r = shot.path[heard + 2];
+          if (!r || now - knock < 80) continue;
+          const ux = q.x - p.x, uz = q.z - p.z, vx = r.x - q.x, vz = r.z - q.z,
+            lu = Math.hypot(ux, uz), lv = Math.hypot(vx, vz);
+          if (lu > 0.004 && lv > 0.002 && ux * vx + uz * vz < 0.86 * lu * lv) {
+            knock = now;
+            window.Sound?.play('cushion');
+          }
+        }
         poseMill(f * dt);
         if (f < n) {
           place({ x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t });
@@ -993,6 +1009,7 @@ export function createScene(canvas) {
           return false;
         }
         // The drop: the ball slides to the middle of the cup and sinks in 0.4 s.
+        if (!sinkAt) window.Sound?.play('pocket');
         sinkAt ||= now;
         const k = Math.min(1, Math.max(0, now - sinkAt) / 400),
           y = yAt(h.cup.x, h.cup.z);

@@ -196,6 +196,7 @@
   @keyframes letterIn { from { opacity: 0; transform: translateY(-6px); } 75% { transform: translateY(1px); } }
 </style>
 <script src="../lib/zoom.js"></script>
+<script src="../lib/sound.js"></script>
 <script src="../lib/ph.js"></script>
 </head>
 <body>
@@ -362,7 +363,7 @@ function tap(i, x, y) {
   lastTap = { i, t, x, y };
   // Within 24 px, but less than half a square, so a tap on the next square of a small grid still counts.
   if (prev && t - prev.t < 500 && (prev.i === i || Math.hypot(x - prev.x, y - prev.y) < Math.min(24, cell * Zoom.z() / 2))) return;
-  if (G.result) return Kit.say('Cette grille est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.');
+  if (G.result) { window.Sound?.play('bad'); return Kit.say('Cette grille est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.'); }
   if (anchor < 0) {
     anchor = i; render();
     return Kit.say(chosen(i));
@@ -373,7 +374,7 @@ function tap(i, x, y) {
 
 async function pair(a, b) {
   const r = M.check(G, a, b);
-  if (r.kind === 'won') return Kit.say('Cette grille est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.');
+  if (r.kind === 'won') { window.Sound?.play('bad'); return Kit.say('Cette grille est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.'); }
   if (r.kind === 'found') {
     G = M.find(G, r.w); anchor = -1;
     const mine = G;
@@ -386,12 +387,14 @@ async function pair(a, b) {
     if (G !== mine) return;
     render(r.w, a);
     if (G.result) return finish(!stale);
+    window.Sound?.play('good');
     if (saved) Kit.say(`Vous avez trouvé ${name(r.w)}.`);
     return;
   }
   // A refusal keeps the first letter chosen, by a click or a drag, so he can try another last letter.
   render();
   showWrong(a, b, r.kind === 'none' || r.kind === 'almost');
+  window.Sound?.play('bad');
   if (r.kind === 'already') Kit.say(`Vous avez déjà trouvé ${name(r.w)} : cherchez un autre mot.`);
   else if (r.kind === 'notAligned') Kit.say("Ces deux lettres ne sont pas sur une même ligne : un mot se lit tout droit.");
   else if (r.kind === 'direction') Kit.say('Au niveau facile, les mots se lisent seulement vers la droite ou vers le bas.');
@@ -487,6 +490,7 @@ function finish(show) {
   if (saved && !stale) Kit.say(text);
   if (!show) return;
   const wait = showWin();
+  window.Sound?.play('win');
   const game = G;
   pendingWin = () => {
     if (G !== game || stale) return;

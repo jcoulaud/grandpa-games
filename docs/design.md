@@ -28,6 +28,15 @@ These rules hold for the library, every game, its rules pages and its dialogs. C
 - **The rules pages.** A game-colored hero above a paper surface, with an aligned frame up to 88rem wide. The header: where he is (Les jeux › Belote › Règles), the title, one line and "Jouer", with a picture of the game beside them. Hero art uses a game icon or an original GPT Image illustration. Cache the asset in `sw.js` so it works offline. A picture that shows a rule, a move or a hand is drawn exactly in HTML or SVG, never generated. "Jouer" is one flat yellow key, one word on one line, and its `aria-label` names the game ("Jouer à la belote"). The contents and a play link sit beside a stack of rule cards on desktop. On narrow or short windows, the contents move above the cards. Show each diagram or table in the section that explains it. On a phone or a short window, a bar at the foot of the window holds a "Sommaire" menu that names the part being read and opens upward, and "Jouer". A source on another site opens in a new tab, with a small arrow out of a box and a hidden "s’ouvre dans un nouvel onglet". Links inside the site and to the parts of the page open in place. The rules end with links to the other guides, then the footer of the library: the credit and the size buttons.
 - **The way of play.** Each game keeps the direction of the real game: the belote turns to the right, counter-clockwise, as in France; the dame de pique and the huit américain turn to the left. There is no setting for it. Arrows on the table show the way.
 
+## Sound
+
+Every game plays short, soft sounds made by the browser (`lib/sound.js`), with no sound file, so they work offline. A sound tells him that his click was taken, that a card or a piece landed, that the computer has played, and how a game ended.
+
+- **Mid tones.** The sounds sit between about 200 and 2,000 Hz, where an older ear hears best. No whistle, no bang, and nothing longer than a second.
+- **One sound for one kind of event.** A card laid down sounds the same in every card game, and a piece on a board the same in every board game. A refused move plays a low, kind note, never a buzzer. A won game plays a short rising tune, a lost one three falling notes.
+- **The keys.** The bar, dialog and rules keys give a soft click. The hint plays no sound of its own.
+- **Silence.** Nothing plays when a saved game opens, or before his first click. « Couper le son », next to the size keys, turns every sound off in every window, and « Remettre le son » turns them back on. A phone has no bottom bar, so its own volume keys do this.
+
 ## Write a rules guide
 
 The site owner found the old guides too long to read: paragraphs and lists of rules. Every guide now teaches with pictures.
@@ -70,7 +79,7 @@ Use the [morpion](../public/morpion/index.html) as the example: a picture with a
 - The fixed card size per window, with the stock, waste and foundations on the left and seven columns on the right.
 - Drag after 16 px, the yellow ring, the dashed yellow frames and the one-sentence refusal.
 - The French instruction line, the solver hint, unlimited undo, Ctrl+Z, Escape, autosave, the stuck and win dialogs, and reduced motion.
-- No settings, no sound, no score, no timer. The defaults are the accessible mode.
+- No settings, no score, no timer. The defaults are the accessible mode.
 
 ## Changed
 

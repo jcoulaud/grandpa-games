@@ -293,6 +293,7 @@
   }
 </style>
 <script src="../lib/zoom.js"></script>
+<script src="../lib/sound.js"></script>
 <script src="../lib/ph.js"></script>
 </head>
 <body>
@@ -547,6 +548,7 @@ const say = Kit.say;
 // message line says it too, with a short flash, so he sees that his click was heard.
 let bubbleT = 0;
 function refuse(c, text) {
+  window.Sound?.play('bad');
   shake(c);
   say(text);
   const m = $('msg'); m.classList.remove('flash'); void m.offsetWidth; m.classList.add('flash');
@@ -576,6 +578,7 @@ function tapCard(c) {
     if (picks.includes(c)) picks = picks.filter(x => x !== c);
     else if (picks.length < 3) picks.push(c);
     else return refuse(c, 'Vous avez déjà choisi 3 cartes : cliquez sur une carte entourée de jaune pour la reprendre.');
+    window.Sound?.play('tap');
     say(turnMessage()); render(); save();
     return;
   }
@@ -602,6 +605,7 @@ function confirmPass() {
   const next = doPass(G, all);
   got = next.hands[0].filter(c => !before.includes(c));
   commit(next);
+  window.Sound?.play('card');
   say(`${PLAYERS[from].name} vous a donné ${listNames(got)}.`);
   render();
   later(step, 1400);
@@ -613,6 +617,7 @@ function confirmPass() {
 function afterCard(before, seat, card) {
   started = true;
   const full = before.trick.length === 3;
+  window.Sound?.play('card');
   say(seat === 0 ? `Vous posez ${cardName(card)}.` : `${PLAYERS[seat].name} pose ${cardName(card)}.`);
   if (!full) { render(); return later(step, seat === 0 ? FIRST_MS : STEP_MS); }
   shown = { leader: before.leader, cards: [...before.trick, card], winner: G.last.winner };
@@ -637,6 +642,7 @@ function step() {
   if (G.phase === 'done' || G.phase === 'over') return handOver(true);
   if (G.phase !== 'play') { render(); return; }
   if (G.turn === 0) {
+    window.Sound?.play('turn');
     say((note ? note + ' ' : '') + turnMessage());
     note = '';
     render();
@@ -663,6 +669,7 @@ function handOver(fresh) {
     say(won ? (mates.length ? `Bravo, vous partagez la victoire avec ${names(mates)} !` : 'Bravo, vous avez gagné la partie !')
       : `${names(ws)} ${verb(ws, 'a', 'ont')} gagné la partie.`);
     if (!fresh) return;
+    window.Sound?.play(won ? 'win' : 'lose');
     const games = ['Retour aux jeux', Kit.home];
     // Why the game ended, and the four totals.
     const reached = [0, 1, 2, 3].filter(s => G.scores[s] >= 100);
@@ -688,6 +695,7 @@ function nextHandNow() {
   cancelAll();
   undo = []; picks = []; got = []; hint = [];
   commit(nextHand(G));
+  window.Sound?.play('deal');
   if (G.phase === 'pass') { say(turnMessage()); render(); }
   else { say('Cette manche, on garde ses cartes.'); render(); later(step, 1200); }
 }
@@ -705,7 +713,7 @@ function doUndo() {
   Kit.closeDialog();
   const u = JSON.parse(undo.pop());
   G = u.G; got = u.got || []; hint = [];
-  save();
+  save(); window.Sound?.play('card');
   say('Coup annulé. ' + turnMessage());
   render();
 }
@@ -743,7 +751,7 @@ async function newGame(lv) {
   // A stale window cannot save, so it does not count a game either.
   const written = save();
   if (G.phase === 'pass') say(turnMessage());
-  render();
+  render(); window.Sound?.play('deal');
   if (await written) GG.track('dame-de-pique', 'start');
 }
 

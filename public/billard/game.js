@@ -191,6 +191,7 @@ function click(ev) {
   const p = view.toTable(ev);
   if (placing) {
     if (!E.canPlace(game, p.x, p.y)) {
+      window.Sound?.play('bad');
       Kit.say(game.behindLine && p.x > T.headString
         ? 'Après une faute à la casse, la blanche se pose derrière la ligne blanche, du côté de la casse.'
         : 'La blanche ne tient pas ici : choisissez une place libre sur le tapis.');
@@ -310,6 +311,7 @@ async function shoot() {
   if (!res) {
     busy = false;
     placing = true;
+    window.Sound?.play('bad');
     render('La blanche ne tient pas à cette place : cliquez sur le tapis pour la poser ailleurs.');
     return;
   }
@@ -407,6 +409,7 @@ function end(res, shooter) {
     ribbon.classList.add('on');
     confetti();
   }
+  window.Sound?.play(won ? 'win' : 'lose');
   Kit.say(won ? 'Vous avez gagné la partie : bravo !' : OPPONENT + ' a gagné la partie.');
   // The result waits for its game: it never opens over another dialog, the rules or a new game.
   const shown = game;

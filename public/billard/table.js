@@ -462,6 +462,7 @@ export function createTable(canvas, T) {
     await tween(Math.max(55, 150 - power * 9), (k) => {
       state.cue = { angle, pull: back * (1 - k * k), alpha: 1 };
     });
+    window.Sound?.play('hit');
   }
   // The shot itself: the frames of the engine at their own times, then each pocketed ball drops into its pocket.
   function play(sim) {
@@ -482,6 +483,7 @@ export function createTable(canvas, T) {
       });
     const DROP = drops.reduce((m, d) => Math.max(m, d.span), 0);
     if (reduced() || !frames.length) {
+      if (sim.pocketed?.length) setTimeout(() => window.Sound?.play('pocket'), 300);
       state.cue = null;
       state.drops = [];
       state.balls = (sim.balls ?? []).map((b) => ({ ...b }));
@@ -490,6 +492,10 @@ export function createTable(canvas, T) {
     }
     const end = frames.at(-1).t + DROP;
     const last = new Map(); // the last place seen of each ball, where a falling ball starts
+    // The knocks of the balls, in time order. A rattle of the same kind plays at most once per 80 ms.
+    const knocks = (sim.events ?? []).filter((ev) => ev.type === 'pocket' || ev.speed > 0.05),
+      heard = {};
+    let due = 0;
     return new Promise((done) => {
       const t0 = performance.now();
       const finish = () => {
@@ -501,6 +507,13 @@ export function createTable(canvas, T) {
       };
       const tick = guard((now) => {
         const t = (now - t0) / 1000;
+        for (; due < knocks.length && knocks[due].t <= t; due++) {
+          const ev = knocks[due],
+            name = ev.type === 'ball' ? 'clack' : ev.type === 'pocket' ? 'pocket' : 'cushion';
+          if (name !== 'pocket' && now - (heard[name] ?? -Infinity) < 80) continue;
+          heard[name] = now;
+          window.Sound?.play(name);
+        }
         // The frame at or before t, and the next one, mixed.
         let i = Math.min(frames.length - 1, Math.max(0, Math.floor(t * 60)));
         while (i > 0 && frames[i].t > t) i--;

@@ -154,6 +154,7 @@
   @keyframes wave { 0%, 100% { translate: 0 0; } 50% { translate: 0 clamp(-10px, calc(var(--s) * -.06), -3px); } }
 </style>
 <script src="../lib/zoom.js"></script>
+<script src="../lib/sound.js"></script>
 <script src="../lib/ph.js"></script>
 </head>
 <body>
@@ -328,11 +329,12 @@ async function tap(i) {
   hideShown();
   if (gridEl.dataset.board === 'deal') delete gridEl.dataset.board;
   const why = P.refusal(G, i);
+  if (why) window.Sound?.play('bad');
   if (why === 'won') return say('Cette partie est gagnée : cliquez sur « Nouvelle partie » pour en commencer une autre.');
   if (why === 'found') { shake(i); render(); return say(`Cette paire de ${pic(i).many} est déjà trouvée : choisissez une carte à l'envers.`); }
   if (why === 'up') { shake(i); render(); return say('Cette carte est déjà retournée : choisissez une deuxième carte.'); }
   const visible = cards[i].classList.contains('up');
-  if (!visible) { cards[i].dataset.lift = ''; turnedAt[i] = performance.now(); }
+  if (!visible) { cards[i].dataset.lift = ''; turnedAt[i] = performance.now(); window.Sound?.play('flip'); }
   const r = P.flip(G, i);
   G = r.G; hint = null;
   const firstWin = G.result === 'won' && !wonNow;
@@ -353,6 +355,7 @@ async function tap(i) {
     missTimer = setTimeout(() => { hideShown(); render(); }, motion(UP_MS) + SHOW_MS);
   }
   // The pair keeps its lift until it ends, even if he turns the next card meanwhile.
+  if (r.event === 'pair' && !G.result) later(() => window.Sound?.play('good'), motion(UP_MS));
   if (r.event === 'pair') { const pair = just = [r.a, r.b]; later(() => { if (just === pair) { just = null; render(); } }, motion(UP_MS + PAIR_MS) + 300); }
   render();
   if (G.result) { finish(!stale, record); if (!saved && !stale) say(FULL); return; }
@@ -371,6 +374,7 @@ function finish(show, record) {
   // The last pair lifts, a wave runs across the board, then the win sheet opens.
   sayAfter(text, motion(UP_MS));
   boardEffect('win');
+  later(() => window.Sound?.play('win'), motion(UP_MS));
   const best = stats.best[level];
   const lv = Kit.levelNames[level].toLowerCase();
   const extra = !wonNow || record === 'first' ? '' : record === 'better' ? ` C'est votre meilleur score au niveau ${lv}.`
@@ -407,6 +411,7 @@ async function newGame(lv) {
   built = ''; delete gridEl.dataset.board;
   render();
   boardEffect('deal');
+  window.Sound?.play('deal');
   if (!stale) say(`Retrouvez les ${P.total(G)} paires. Cliquez sur une carte pour la retourner.`);
   if (await written) GG.track('paires', 'start');
 }

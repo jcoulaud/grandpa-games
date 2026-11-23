@@ -334,6 +334,11 @@
   addEventListener('click', e => {
     if (e.target.closest && e.target.closest('#hintBtn')) PH.capture('hint used', { automatic: !e.isTrusted });
   }, true);
+  // A soft click on the keys of the bar, the dialogs and the rules, so he hears that his click was taken.
+  // The game plays its own sounds for the moves on the table (lib/sound.js).
+  addEventListener('click', e => {
+    if (e.isTrusted && e.target.closest && e.target.closest('#bar button, #bar a, #over button, #helpBox button')) window.Sound?.play('tap');
+  }, true);
   // Only his own hand or keys allow a new automatic hint.
   for (const type of ['pointerdown', 'keydown', 'wheel'])
     addEventListener(type, e => { stir(); if (e.isTrusted) autoDone = false; }, { capture: true, passive: true });

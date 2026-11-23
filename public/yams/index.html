@@ -280,6 +280,7 @@
   }
 </style>
 <script src="../lib/zoom.js"></script>
+<script src="../lib/sound.js"></script>
 <script src="../lib/ph.js"></script>
 </head>
 <body>
@@ -524,10 +525,11 @@ function rollDice() {
   const thrown = G.dice ? G.kept.map((k, i) => k ? -1 : i).filter(i => i >= 0) : [0, 1, 2, 3, 4];
   stopParty();
   G = view = Y.roll(G); hint = null; fresh = null;
+  window.Sound?.play('dice');
   save(); rolling = thrown; render(); rolling = [];
   if (!saved) return;
   const p = Y.points(11, G.dice);
-  if (p) ribbon();
+  if (p) { ribbon(); later(() => window.Sound?.play('good'), 650); }
   if (p && G.sheets[0][11] === null) return say('Yams ! Les cinq dés sont pareils : cliquez sur la case Yams pour marquer 50 points.');
   say(turnText());
 }
@@ -536,6 +538,7 @@ async function tapDie(i) {
   if (!G.dice) return say("Lancez d'abord les dés avec le bouton « Lancer les dés ».");
   if (G.rolls >= 3) return shakeDie(i), say('Vous avez lancé trois fois : cliquez sur une case de votre colonne pour marquer vos points.');
   G = view = Y.keep(G, i); hint = null;
+  window.Sound?.play('tap');
   const current = G;
   const written = save();
   render();
@@ -552,6 +555,7 @@ async function tapBox(player, box) {
   stopParty();
   undo.push(JSON.stringify(G));
   G = Y.write(G, box); view = G; hint = null; fresh = { player: 0, box, at: performance.now() };
+  window.Sound?.play('write');
   const current = G;
   await afterWrite(writeText(G, 0, box));
   if (G !== current) return;
@@ -597,17 +601,20 @@ function computerPlays() {
       rolling = prev && prev.dice ? [0, 1, 2, 3, 4].filter(i => !prev.kept[i]) : [0, 1, 2, 3, 4];
       say(s.G.rolls === 1 ? `${them()} lance les dés.` : `${them()} relance ${plural(rolling.length, 'dé', 'dés')}.`);
       render(); rolling = [];
+      window.Sound?.play('dice');
       if (Y.points(11, s.G.dice)) ribbon();
     } else if (s.did === 'keep') {
       const kept = s.G.dice.filter((d, i) => s.G.kept[i]);
       say(kept.length ? `${them()} garde ${diceWords(kept)}.` : `${them()} ne garde aucun dé.`);
       render();
+      window.Sound?.play('tap');
     } else {
       fresh = { player: 1, box: s.box, at: performance.now() };
       // The dice it wrote stay on the felt until he throws.
       view = { ...s.G, turn: 1, result: null, dice: prev ? prev.dice : null, kept: [false, false, false, false, false] };
       say(writeText(s.G, 1, s.box));
       render();
+      window.Sound?.play('write');
     }
     if (at < steps.length) return later(show, REDUCED ? 300 : s.did === 'keep' ? KEEP_MS : STEP_MS);
     later(() => done(s, prev), REDUCED ? 300 : END_MS);
@@ -641,6 +648,7 @@ function finish(show, record) {
   const buttons = [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', home]];
   const lost = saved ? '' : " La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.";
   if (G.result !== 'lost' && show) party();
+  if (show) later(() => window.Sound?.play(G.result === 'lost' ? 'lose' : 'win'), 400);
   if (G.result === 'won') {
     say(`Bravo, vous avez gagné : ${me} points contre ${it}.`);
     if (show) later(() => dialog('Bravo, vous avez gagné !', scores + nth + best + lost, buttons, true), REDUCED ? 0 : 900);
@@ -861,7 +869,7 @@ function countUp(p, to) {
   el.textContent = from;
   requestAnimationFrame(step);
 }
-function shake(e) { if (!e) return; e.classList.remove('shake'); void e.offsetWidth; e.classList.add('shake'); }
+function shake(e) { if (!e) return; window.Sound?.play('bad'); e.classList.remove('shake'); void e.offsetWidth; e.classList.add('shake'); }
 const shakeBox = (p, b) => shake(boxEls.find(e => +e.dataset.p === p && +e.dataset.b === b));
 const shakeDie = i => shake(dieEls[i]);
 

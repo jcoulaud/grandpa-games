@@ -208,6 +208,7 @@
   }
 </style>
 <script src="../lib/zoom.js"></script>
+<script src="../lib/sound.js"></script>
 <script src="../lib/ph.js"></script>
 </head>
 <body>
@@ -387,6 +388,7 @@ function tap(i) {
   if (why === 'over') return say(`Cette partie est finie : cliquez sur « ${shown($('nextBtn')) ? 'Partie suivante' : 'Nouvelle partie'} » pour en commencer une autre.`), false;
   if (why) {
     shake(i);
+    window.Sound?.play('bad');
     say(why === 'mine' ? 'Cette case a déjà votre croix : choisissez une case vide.'
       : "Cette case a déjà un rond de l'ordinateur : choisissez une case vide.");
     return false;
@@ -397,6 +399,7 @@ function tap(i) {
 function playCross(i) {
   cancelAll();
   G = Morpion.play(G, i);
+  window.Sound?.play('write');
   hint = null; lastCpu = -1;
   phase = 'anim';
   if (G.result) return finish(true, i);
@@ -446,6 +449,7 @@ function computerTurn() {
 async function computerPlays(c) {
   const next = Morpion.play(G, c);
   if (!next) return;
+  window.Sound?.play('write');
   G = next; lastCpu = c;
   phase = 'anim';
   if (G.result) return finish(true, c);
@@ -503,6 +507,7 @@ function finish(show, move = -1) {
     renderSide();
   });
   if (!show) return;
+  if (r.winner && move >= 0) later(() => window.Sound?.play(r.winner === X ? 'win' : 'lose'), INK_MS + STRIKE_MS || 300);
   const drawn = move >= 0;
   const wait = !drawn ? 300 : INK_MS + (r.line ? STRIKE_MS + (r.winner === X ? CHEER_MS : 400) : 300);
   if (drawn && r.line && r.winner === X && !REDUCED) later(() => celebrate(r.line), INK_MS + STRIKE_MS);
