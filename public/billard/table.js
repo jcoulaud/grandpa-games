@@ -8,7 +8,7 @@ export const COLOURS = {
   1: [242, 190, 20], 2: [30, 76, 178], 3: [206, 36, 44], 4: [92, 45, 140], 5: [240, 118, 22], 6: [18, 128, 74],
   7: [128, 30, 34], 8: [22, 22, 24]
 };
-const colourOf = (id) => COLOURS[id > 8 ? id - 8 : id] ?? [250, 248, 240];
+export const colourOf = (id) => COLOURS[id > 8 ? id - 8 : id] ?? [250, 248, 240];
 const IVORY = [250, 247, 236];
 
 export function createTable(canvas, T) {
@@ -25,7 +25,7 @@ export function createTable(canvas, T) {
   const state = {
     balls: [],
     cue: null, // { angle, pull (m), alpha }
-    preview: null, // { cue: [{x,y}], object: [{x,y}], ghost: {x,y}, gold: bool }
+    preview: null, // { aim, cue, object: [{x,y}], ghost: {x,y} | null, gold: bool }
     rings: [], // { x, y, r } in metres, yellow
     hand: null, // { x, y, ok } the white under the mouse while he places it
     headLine: false,
@@ -48,14 +48,9 @@ export function createTable(canvas, T) {
     s = Math.min(canvas.width / aw, canvas.height / ah);
     const ox = (canvas.width - aw * s) / 2 + (WOOD + CUSHION) * s,
       oy = (canvas.height - ah * s) / 2 + (WOOD + CUSHION) * s;
-    if (portrait) {
-      // X = ox + y s, Y = oy + (L - x) s: the head rail at the bottom, the top rail on the left.
-      e = ox;
-      f = oy + L * s;
-    } else {
-      e = ox;
-      f = oy;
-    }
+    // Upright, X = ox + y s and Y = oy + (L - x) s: the head rail at the bottom, the top rail on the left.
+    e = ox;
+    f = portrait ? oy + L * s : oy;
     bg = background();
     return true;
   }
@@ -313,14 +308,6 @@ export function createTable(canvas, T) {
       ctx.stroke();
       ctx.setLineDash([]);
     }
-    if (p.end) {
-      // Where the object ball rests, a faint ring.
-      ctx.lineWidth = px(2);
-      ctx.strokeStyle = 'rgba(255,255,255,.55)';
-      ctx.beginPath();
-      ctx.arc(p.end.x, p.end.y, R, 0, Math.PI * 2);
-      ctx.stroke();
-    }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
   function drawRings() {
@@ -392,8 +379,8 @@ export function createTable(canvas, T) {
       ctx.lineWidth = px(2);
       ctx.strokeStyle = 'rgba(255,255,255,.55)';
       ctx.beginPath();
-      ctx.moveTo(T.headString ?? L / 4, 0);
-      ctx.lineTo(T.headString ?? L / 4, W);
+      ctx.moveTo(T.headString, 0);
+      ctx.lineTo(T.headString, W);
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -477,7 +464,7 @@ export function createTable(canvas, T) {
     });
   }
   // The shot itself: the frames of the engine at their own times, then each pocketed ball drops into its pocket.
-  function play(sim, names = {}) {
+  function play(sim) {
     const frames = sim.frames ?? [];
     // Each ball that falls leaves the frames where the engine caught it, at (x, y) with its speed (vx, vy).
     // It keeps rolling into the hole and sinks, slower when it came in slowly.
@@ -488,7 +475,10 @@ export function createTable(canvas, T) {
           drop = { x: h.x, y: h.y },
           d = Math.hypot(drop.x - ev.x, drop.y - ev.y),
           v = Math.max(0.35, Math.hypot(ev.vx ?? 0, ev.vy ?? 0));
-        return { ...ev, drop, id: ev.a, span: Math.min(0.5, Math.max(0.2, (d / v) * 1.6)) };
+        // The curve's middle point: a little way along its speed, never further than half the way in.
+        const reach = Math.min(d * 0.5, v * 0.06),
+          control = { x: ev.x + ((ev.vx ?? 0) / v) * reach, y: ev.y + ((ev.vy ?? 0) / v) * reach };
+        return { ...ev, drop, control, id: ev.a, span: Math.min(0.5, Math.max(0.2, (d / v) * 1.6)) };
       });
     const DROP = drops.reduce((m, d) => Math.max(m, d.span), 0);
     if (reduced() || !frames.length) {
@@ -534,10 +524,17 @@ export function createTable(canvas, T) {
         for (const d of drops) {
           const k2 = (t - d.t) / d.span;
           if (k2 < 0 || k2 >= 1) continue;
-          // A straight start along its speed, bending into the middle of the hole.
-          const lin = { x: d.x + (d.vx ?? 0) * (t - d.t), y: d.y + (d.vy ?? 0) * (t - d.t) },
-            w = ease(k2);
-          state.drops.push({ id: d.id, q: last.get(d.id)?.q, x: lin.x + (d.drop.x - lin.x) * w, y: lin.y + (d.drop.y - lin.y) * w, k: k2 });
+          // It leaves along its own speed and curves into the middle of the hole, never past it.
+          const c = d.control,
+            u = 1 - (1 - k2) * (1 - k2),
+            m = 1 - u;
+          state.drops.push({
+            id: d.id,
+            q: last.get(d.id)?.q,
+            x: m * m * d.x + 2 * m * u * c.x + u * u * d.drop.x,
+            y: m * m * d.y + 2 * m * u * c.y + u * u * d.drop.y,
+            k: k2
+          });
         }
         draw();
         if (t < end) requestAnimationFrame(tick);
@@ -556,7 +553,6 @@ export function createTable(canvas, T) {
       const { X, Y } = toScreen(x, y);
       return { x: X / dpr, y: Y / dpr };
     },
-    portrait: () => portrait,
     turnCue,
     stroke,
     play,
@@ -565,9 +561,6 @@ export function createTable(canvas, T) {
 }
 
 // ---------- Small helpers ----------
-function rgb(c) {
-  return `rgb(${c.map((v) => Math.round(v)).join(',')})`;
-}
 function norm(v) {
   const d = Math.hypot(...v);
   return v.map((x) => x / d);

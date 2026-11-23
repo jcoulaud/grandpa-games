@@ -387,18 +387,84 @@ test('a hint pots the named ball, and the path preview ends at the matching pock
   }
 });
 
-test('Fort selects a legal head-string break and keeps it deterministic', () => {
+test('the player break hint is deterministic and uses the existing cue position', () => {
   const g = B.fresh('fort', 0, seedAt(0));
   const initial = structuredClone(g);
-  const shot = B.cpuShot(g);
-  assert.deepEqual(B.cpuShot(g), shot);
+  const shot = B.hint(g);
+  assert.deepEqual(B.hint(g), shot);
   assert.deepEqual(g, initial);
-  assert.equal(shot.place.x, headString);
+  assert.equal(shot.place, undefined);
   assert.ok(shot.power >= 9.7);
-  const placed = [{ ...g.balls[0], ...shot.place }, ...g.balls.slice(1)];
-  assert.deepEqual(B.play(g, shot).sim, B.simulate(placed, shot));
+  assert.deepEqual(B.play(g, { ...shot, place: { x: headString, y: W / 4 } }).sim, B.simulate(initial.balls, shot));
   assert.ok(B.undo(g));
   assert.deepEqual(g, initial);
+});
+
+test('the default and hinted breaks reload with their opening rack for seeds 0 through 2000', () => {
+  for (let seed = 0; seed <= 2000; seed++) {
+    const initial = B.fresh('moyen', 0, seed);
+    for (const [index, a] of initial.balls.entries()) {
+      for (const b of initial.balls.slice(index + 1)) {
+        assert.ok(distance(a, b) >= diameter, `Seed ${seed} overlaps balls ${a.id} and ${b.id}`);
+      }
+    }
+    for (const [name, shot] of [['default', straight(9)], ['hint', B.hint(initial)]]) {
+      const g = structuredClone(initial);
+      B.play(g, shot);
+      assert.deepEqual(B.restore(JSON.parse(JSON.stringify(g)), 2001), g, `Seed ${seed}, ${name} break`);
+    }
+  }
+});
+
+test('restore accepts tiny overlaps in the current position and in an old opening rack', () => {
+  const current = position([pose(0, 0.4, 0.3), pose(8, 0.4 + diameter - 5e-7, 0.3)]);
+  assert.deepEqual(B.restore(current, 2001), current);
+
+  const g = B.fresh('moyen', 0, 637);
+  assert.deepEqual(B.play(g, straight(9)).pocketed.own, [13]);
+  const oldRack = g.history[0].balls;
+  const a = pick(oldRack, 2), b = pick(oldRack, 6);
+  const scale = (diameter - 5e-6) / distance(a, b);
+  b.x = a.x + (b.x - a.x) * scale;
+  b.y = a.y + (b.y - a.y) * scale;
+  assert.deepEqual(B.restore(JSON.parse(JSON.stringify(g)), 2001), g);
+});
+
+test('a hint and each CPU level can reach a blocked 8 off the cushions', () => {
+  const balls = [pose(0, 0.15, 0.15), pose(9, 0.21, 0.15), pose(8, 1.10, 0.15)];
+  const g = position(balls, { groups: groups() });
+  const cpu = { ...g, turn: 'cpu', groups: { player: 'rayees' } };
+  for (const shot of [B.hint(g), ...B.levels.map((level) => B.cpuShot({ ...cpu, level }))]) {
+    const sim = B.simulate(balls, shot);
+    assert.equal(sim.firstHit, 8);
+    assert.equal(sim.events[0].type, 'cushion');
+    assert.ok(!sim.pocketed.some(({ id }) => id === 0));
+  }
+});
+
+test('seeded hints hit a legal ball first whenever the candidate shots can', () => {
+  let state = 239875;
+  const random = () => ((state = (Math.imul(state, 1664525) + 1013904223) >>> 0) / 4294967296);
+  let reachable = 0;
+  for (let i = 0; i < 64; i++) {
+    const x = 0.15 + random() * 0.4, y = 0.15 + random() * 0.55;
+    const balls = [
+      pose(0, x, y), pose(9, x + diameter + random() * 0.04, y),
+      pose(8, x + 0.5 + random() * 0.8, y + (random() - 0.5) * 0.12)
+    ];
+    for (let id = 10; id <= 12; id++) {
+      const b = pose(id, 0.15 + random() * 1.68, 0.15 + random() * 0.69);
+      if (balls.every((a) => distance(a, b) >= diameter)) balls.push(b);
+    }
+    const g = position(balls, { groups: groups() });
+    const firstHit = (shot) => B.simulate(balls, shot).firstHit;
+    const angles = Array.from({ length: 180 }, (_, j) => j * 2 * radians);
+    if (angles.some((angle) => [4.8, 7].some((power) => firstHit({ angle, power }) === 8))) {
+      reachable++;
+      assert.equal(firstHit(B.hint(g)), 8, `Position ${i}`);
+    }
+  }
+  assert.ok(reachable >= 48, `Only ${reachable} positions had a reachable 8`);
 });
 
 test('stronger levels win more seeded matches and think within the UI budget', (t) => {
@@ -411,19 +477,17 @@ test('stronger levels win more seeded matches and think within the UI budget', (
     for (let i = 0; i < games; i++) {
       const g = B.fresh(strong, 0, seedAt(i));
       const stronger = i % 2 ? 'player' : 'cpu';
-      let pots = 0, visit = false, firstVisit = true;
+      assert.ok(B.play(g, B.hint(g)));
+      let pots = 0, firstVisit = true;
       while (g.shots < shotLimit && !g.over) {
         g.level = g.turn === stronger ? strong : weak;
-        const record = stats[g.level], opening = !g.broken;
+        const record = stats[g.level];
         const start = performance.now(), aim = B.cpuShot(g);
         record.times.push(performance.now() - start);
         const result = B.play(g, aim);
         assert.ok(result);
-        if (!opening) {
-          pots += result.pocketed.own.length;
-          visit = true;
-        }
-        if (!result.keepsTurn && visit) {
+        pots += result.pocketed.own.length;
+        if (!result.keepsTurn) {
           record.pots += pots;
           record.visits++;
           if (firstVisit) {
@@ -432,7 +496,6 @@ test('stronger levels win more seeded matches and think within the UI budget', (
             firstVisit = false;
           }
           pots = 0;
-          visit = false;
         }
       }
       wins += Number(g.over?.winner === stronger);

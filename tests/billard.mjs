@@ -115,7 +115,7 @@ try {
     }, id);
   const one = await ballAt(1);
   await page.mouse.click(one.x, one.y);
-  assert.match(await page.textContent('#aimLabel'), /^\d+ |^Noire|Vers la bande/);
+  assert.match(await page.textContent('#aimLabel'), /La \d+$|La noire$|Vers la bande/);
   assert.match(await page.textContent('#msg'), /Vous visez la 1 jaune/);
 
   // ---------- The break, then René, then his turn again ----------

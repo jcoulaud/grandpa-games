@@ -1,11 +1,11 @@
 // The balls of the trays and the pictures of the rules guide, drawn like the game: the blue cloth, the walnut
 // rails, the balls with their numbers. The pictures are only pictures: nothing in them can be clicked.
-import { COLOURS } from './table.js';
-const rgb = (id) => 'rgb(' + (COLOURS[id > 8 ? id - 8 : id] ?? [250, 247, 236]).join(',') + ')';
+import { colourOf } from './table.js';
+const rgb = (id) => 'rgb(' + colourOf(id).join(',') + ')';
 
 // A ball of a tray: its colour, a white band for a stripe, its number in a white disc.
 export const trayBall = (id, sunk = false, extra = '') =>
-  `<span class="mb${id > 8 ? ' stripe' : ''}${sunk ? ' in' : ''}${extra ? ' ' + extra : ''}" style="--c:${rgb(id)}" title="${id === 8 ? 'La noire' : 'La ' + id}"><b>${id}</b></span>`;
+  `<span class="mb${id > 8 ? ' stripe' : ''}${sunk ? ' in' : ''}${extra ? ' ' + extra : ''}" style="--c:${rgb(id)}"><b>${id}</b></span>`;
 
 // A ball in an SVG picture, r in the units of the picture.
 function ball(id, x, y, r) {
@@ -62,8 +62,7 @@ const PICS = {
         `<path d="M478 64 l18 -14 m0 0 l-4 18" stroke="#FF6B5E" stroke-width="5" fill="none" stroke-linecap="round"/>` +
         `<circle cx="120" cy="150" r="34" fill="none" stroke="#FFC83D" stroke-width="5" stroke-dasharray="10 7"/>` +
         ball(0, 120, 150, 20) +
-        ball(11, 300, 120, 20) +
-        `<text x="120" y="215" font-size="22" text-anchor="middle" fill="#FFF4D6">En main</text>`)
+        ball(11, 300, 120, 20))
 };
 
 export function drawGuide() {

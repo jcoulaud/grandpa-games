@@ -6,6 +6,7 @@ const T = E.table;
 const newSeed = () => crypto.getRandomValues(new Uint32Array(1))[0];
 const STEP = (0.5 * Math.PI) / 180; // one press of ↺ or ↻: half a degree
 const OPPONENT = 'René';
+const BREAK = 'À vous de casser : visez le paquet, puis cliquez sur « Tirer ».';
 let game,
   view,
   aim = { angle: 0, power: 5, spin: 0 },
@@ -32,7 +33,7 @@ const blocked = () => !game || busy || stale || Kit.isOpen() || !myTurn();
 // The balls as he sees them now: with the white where he holds it while it is in his hand.
 function ballsNow() {
   const balls = game.balls.filter((b) => b.id !== 0 || !game.ballInHand);
-  if (game.ballInHand && hand) balls.push({ id: 0, x: hand.x, y: hand.y, q: [1, 0, 0, 0] });
+  if (game.ballInHand && hand && myTurn()) balls.push({ id: 0, x: hand.x, y: hand.y, q: [1, 0, 0, 0] });
   return balls;
 }
 const white = () => ballsNow().find((b) => b.id === 0);
@@ -110,10 +111,9 @@ function preview() {
     ghost: line.hit != null ? contact : null,
     object: line.hit != null ? cut(path.object, show.object) : [],
     cue: line.hit != null ? cut(afterContact(path.cue, contact), show.cue) : [],
-    gold: show.gold && path.potted,
-    end: null
+    gold: show.gold && path.potted
   };
-  $('aimLabel').textContent = line.hit != null ? upper(ballName(line.hit).replace(/^la /, '')) : 'Vers la bande';
+  $('aimLabel').innerHTML = line.hit != null ? trayBall(line.hit) + (line.hit === 8 ? 'La noire' : 'La ' + line.hit) : 'Vers la bande';
   view.draw();
 }
 // The cue ball's path from the contact on: the preview already draws the line up to it.
@@ -145,7 +145,7 @@ function controls() {
   $('panelTitle').textContent = game.turn === 'cpu' && !over() ? 'Au tour de ' + OPPONENT : 'Votre coup';
   $('place').hidden = !(mine && game.ballInHand);
   $('place').classList.toggle('on', placing);
-  $('place').textContent = placing ? 'Garder la blanche ici' : 'Déplacer la blanche';
+  $('place').textContent = placing ? 'Ne pas la déplacer' : 'Déplacer la blanche';
   $('hintBtn').disabled = !mine;
   $('undoBtn').disabled = busy || stale || !game.history?.length;
   $('stage').classList.toggle('wait', busy || !myTurn());
@@ -190,7 +190,7 @@ function click(ev) {
   if (placing) {
     if (!E.canPlace(game, p.x, p.y)) {
       Kit.say(game.behindLine && p.x > T.headString
-        ? 'Après une faute à la casse, la blanche se pose à gauche de la ligne blanche.'
+        ? 'Après une faute à la casse, la blanche se pose derrière la ligne blanche, du côté de la casse.'
         : 'La blanche ne tient pas ici : choisissez une place libre sur le tapis.');
       return;
     }
@@ -269,7 +269,7 @@ function holdable(button, act) {
 function report(res, who) {
   const me = who === 'player',
     by = me ? 'Vous avez' : OPPONENT + ' a',
-    next = me ? OPPONENT + ' pose la blanche où il veut.' : 'Vous posez la blanche où vous voulez.';
+    next = me ? ' ' + OPPONENT + ' pose la blanche où il veut.' : '';
   if (res.foul) {
     const first = res.sim.firstHit;
     const why =
@@ -277,16 +277,17 @@ function report(res, who) {
         ? 'la blanche est tombée dans un trou.'
         : res.foul === 'miss'
           ? 'la blanche n’a touché aucune bille.'
-          : 'la blanche a touché d’abord ' + ballName(first) + (first === 8 ? '.' : me ? ', une bille de ' + OPPONENT + '.' : ', une de vos billes.');
-    return (me ? 'Faute : ' : 'Faute de ' + OPPONENT + ' : ') + why + ' ' + next;
+          : 'la blanche a d’abord touché ' + ballName(first) + (first === 8 ? '.' : me ? ', une bille de ' + OPPONENT + '.' : ', une de vos billes.');
+    return (me ? 'Faute : ' : 'Faute de ' + OPPONENT + ' : ') + why + next;
   }
   const parts = [];
+  if (res.pocketed.eight) parts.push('La noire est tombée à la casse : elle revient sur la table.');
   if (res.assigned)
     parts.push(me ? 'Vous jouez ' + groupName(res.assigned) + '.' : OPPONENT + ' joue ' + groupName(res.assigned) + ', vous ' + groupName(other(res.assigned)) + '.');
   if (res.pocketed.own.length) parts.push(by + ' rentré ' + listOf(res.pocketed.own) + '.');
-  if (res.pocketed.other.length) parts.push(upper(listOf(res.pocketed.other)) + (res.pocketed.other.length > 1 ? ' sont entrées' : ' est entrée') + ' aussi.');
+  if (res.pocketed.other.length) parts.push(upper(listOf(res.pocketed.other)) + (res.pocketed.other.length > 1 ? ' sont rentrées' : ' est rentrée') + ' aussi.');
   if (res.keepsTurn) parts.push(me ? 'Rejouez.' : 'Il rejoue.');
-  else if (!res.pocketed.own.length && !res.pocketed.other.length) parts.push(me ? 'Aucune bille n’est entrée : à ' + OPPONENT + '.' : OPPONENT + ' n’a rien rentré : à vous.');
+  else if (!res.pocketed.own.length && !res.pocketed.other.length) parts.push(me ? 'Aucune bille n’est rentrée : à ' + OPPONENT + '.' : OPPONENT + ' n’a rien rentré : à vous.');
   else parts.push(me ? 'À ' + OPPONENT + ' de jouer.' : 'À vous de jouer.');
   return parts.join(' ');
 }
@@ -319,17 +320,17 @@ async function shoot() {
   });
   await Promise.all([saved, animate(shot, res)]);
   busy = false;
-  if (res.over) return end(res);
+  if (res.over) return end(res, 'player');
   if (game.turn === 'player') newTurn(report(res, 'player'));
   else {
     render(report(res, 'player'));
-    await pause(PACE.read);
+    await pause(PACE.mine);
     opponent();
   }
 }
 // René plays by himself, slowly enough to follow: he thinks, turns his cue, waits, shoots, and the result
 // stays on the line for a while. While the rules or a dialog are open, he waits.
-const PACE = { read: 2400, think: 1500, place: 1300, turn: 1300, settle: 700 };
+const PACE = { mine: 4500, read: 2400, think: 1500, place: 1300, turn: 1300, settle: 700 };
 async function pause(ms) {
   await view.wait(ms);
   while (Kit.isOpen() && !stale) await view.wait(300);
@@ -360,11 +361,15 @@ async function opponent() {
     lastCpuAngle = shot.angle;
     await pause(PACE.settle);
     const res = E.play(game, shot, true);
-    await Promise.all([save(), animate(shot, res)]);
+    const saved = save().then((ok) => {
+      if (ok && res.over?.winner === 'player') GG.track('billard', 'won');
+      return ok;
+    });
+    await Promise.all([saved, animate(shot, res)]);
     panels();
     if (res.over) {
       busy = false;
-      return end(res);
+      return end(res, 'cpu');
     }
     said = report(res, 'cpu');
     Kit.say(said);
@@ -375,17 +380,22 @@ async function opponent() {
 }
 
 // ---------- The end of a game ----------
-function end(res) {
+function end(res, shooter) {
   panels();
   controls();
   preview();
   const o = game.over,
     won = o.winner === 'player',
-    shooter = res?.shooter ?? (won ? (o.reason === 'win' ? 'player' : 'cpu') : o.reason === 'win' ? 'cpu' : 'player');
+    me = shooter === 'player',
+    how = res.foul === 'scratch'
+      ? 'mais la blanche est tombée aussi.'
+      : res.foul === 'miss'
+        ? 'mais la blanche n’avait touché aucune bille.'
+        : 'mais la blanche a d’abord touché ' + ballName(res.sim.firstHit) + '.';
   const why = {
-    win: shooter === 'player' ? 'Vous avez rentré la noire après vos sept billes.' : OPPONENT + ' a rentré la noire après ses sept billes.',
-    '8-early': shooter === 'player' ? 'La noire est tombée avant la fin de vos billes.' : OPPONENT + ' a fait tomber la noire trop tôt.',
-    '8-foul': shooter === 'player' ? 'La noire est entrée, mais la blanche est tombée aussi.' : OPPONENT + ' a rentré la noire, mais la blanche est tombée aussi.'
+    win: me ? 'Vous avez rentré la noire après vos sept billes.' : OPPONENT + ' a rentré la noire après ses sept billes.',
+    '8-early': me ? 'La noire est tombée avant la fin de vos billes.' : OPPONENT + ' a fait tomber la noire trop tôt.',
+    '8-foul': (me ? 'Vous avez rentré la noire, ' : OPPONENT + ' a rentré la noire, ') + how
   }[o.reason] ?? '';
   if (won) {
     const ribbon = $('ribbon');
@@ -395,9 +405,12 @@ function end(res) {
     ribbon.classList.add('on');
     confetti();
   }
-  Kit.say(won ? 'Vous avez gagné la partie : bravo !' : OPPONENT + ' gagne cette partie.');
-  setTimeout(
+  Kit.say(won ? 'Vous avez gagné la partie : bravo !' : OPPONENT + ' a gagné la partie.');
+  const shown = game;
+  clearTimeout(endTimer);
+  endTimer = setTimeout(
     () =>
+      shown === game && game.over && !stale &&
       Kit.dialog(won ? 'Vous avez gagné !' : OPPONENT + ' a gagné', why + (won ? '' : ' Une revanche ?'), [
         ['Nouvelle partie', choose, true],
         ['Revoir la table', null]
@@ -405,6 +418,7 @@ function end(res) {
     won && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 1600 : 300
   );
 }
+let endTimer = 0;
 function confetti() {
   const box = $('confetti');
   box.innerHTML = Array.from({ length: 46 }, (_, i) => `<i style="left:${(i * 37) % 100}%;animation-delay:${(i % 9) * 0.07}s"></i>`).join('');
@@ -414,16 +428,22 @@ function confetti() {
 // ---------- Games ----------
 async function start(level) {
   if (stale || busy) return;
+  clearTimeout(endTimer);
   game = E.fresh(level, game?.wins || 0, newSeed());
   lastCpuAngle = Math.PI;
-  newTurn('À vous de casser : visez le paquet, mettez de la force, puis cliquez sur « Tirer ».');
+  newTurn(BREAK);
   if (await save()) GG.track('billard', 'start');
 }
 function choose() {
+  if (busy && game?.turn === 'cpu') {
+    Kit.say(OPPONENT + ' joue. Attendez la fin de son coup.');
+    return;
+  }
   if (!busy && !stale) Kit.chooseLevel(game?.level, !over(), start);
 }
 async function back() {
   if (!game || busy || stale || Kit.isOpen() || !E.undo(game)) return;
+  clearTimeout(endTimer);
   busy = true;
   await save();
   busy = false;
@@ -475,12 +495,12 @@ function init() {
   $('spinDown').onclick = () => {
     if (blocked()) return;
     aim.spin = Math.max(-1, aim.spin - 1);
-    render(aim.spin < 0 ? 'Rétro : après le choc, la blanche revient en arrière.' : 'Au centre : la blanche frappe tout droit.');
+    render(aim.spin < 0 ? 'Rétro : après le choc, la blanche revient en arrière.' : 'Au centre : après un choc bien plein, la blanche s’arrête presque.');
   };
   $('spinUp').onclick = () => {
     if (blocked()) return;
     aim.spin = Math.min(1, aim.spin + 1);
-    render(aim.spin > 0 ? 'Coulé : après le choc, la blanche suit la bille.' : 'Au centre : la blanche frappe tout droit.');
+    render(aim.spin > 0 ? 'Coulé : après le choc, la blanche suit la bille.' : 'Au centre : après un choc bien plein, la blanche s’arrête presque.');
   };
   $('place').onclick = () => {
     if (blocked()) return;
@@ -492,7 +512,7 @@ function init() {
   $('undoBtn').onclick = back;
   $('newBtn').onclick = choose;
   $('helpBtn').onclick = () => {
-    if (!busy) Kit.openHelp();
+    Kit.openHelp();
   };
   addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -520,6 +540,6 @@ function init() {
   } else if (game.turn === 'cpu') {
     render('C’est au tour de ' + OPPONENT + '.');
     pause(PACE.read).then(opponent);
-  } else newTurn(game.shots ? 'À vous de jouer.' : 'À vous de casser : visez le paquet, puis cliquez sur « Tirer ».');
+  } else newTurn(game.shots ? 'À vous de jouer.' : BREAK);
 }
 init();

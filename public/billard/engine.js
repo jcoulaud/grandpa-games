@@ -113,6 +113,19 @@ export function rack(seed) {
       balls.push(pose(ids[balls.length - 1], x + (row ? (next() - 0.5) * 0.000105 : 0), y + (row ? (next() - 0.5) * 0.000105 : 0)));
     }
   }
+  // Preserve the seeded layout, expanding it about the apex only if the jitter closed a gap.
+  let nearest = Infinity;
+  for (let i = 1; i < balls.length; i++) {
+    for (let j = i + 1; j < balls.length; j++) nearest = Math.min(nearest, dist(balls[i], balls[j]));
+  }
+  const minimum = diameter + 1e-6;
+  if (nearest < minimum) {
+    const scale = minimum / nearest, apex = balls[1];
+    for (const b of balls.slice(2)) {
+      b.x = apex.x + (b.x - apex.x) * scale;
+      b.y = apex.y + (b.y - apex.y) * scale;
+    }
+  }
   return balls;
 }
 
@@ -541,10 +554,6 @@ export function play(g, shot, record = false) {
   if (g.over || !Number.isFinite(shot?.angle) || !Number.isFinite(shot?.power)) return null;
   const shooter = g.turn, before = shooter === 'player' ? snapshot(g) : null;
   if (g.ballInHand && (!shot.place || !placeCue(g, shot.place.x, shot.place.y))) return null;
-  if (shot.place && openingRack(g) && shot.place.x <= table.headString && free(g, shot.place.x, shot.place.y)) {
-    const { x, y } = shot.place;
-    g.balls = [{ ...g.balls[0], x, y }, ...g.balls.slice(1)];
-  }
   if (!g.balls.some((b) => b.id === 0)) return null;
   if (before) {
     g.history.push(before);
@@ -597,11 +606,13 @@ function readPosition(raw) {
       !raw.groups) return null;
   const { player, cpu } = raw.groups;
   if ((player !== null && !validGroup(player)) || (cpu !== undefined && cpu !== oppositeGroup(player))) return null;
+  // Legacy racks allowed up to (sqrt(0.75) + 0.5) * 0.000105 - 0.00012 metres of overlap.
+  const overlapTolerance = raw.broken ? 1e-6 : 24e-6;
   const ids = new Set(), balls = [];
   for (const b of raw.balls) {
     if (!b || !Number.isInteger(b.id) || b.id < 0 || b.id > 15 || ids.has(b.id) ||
         !Number.isFinite(b.x) || !Number.isFinite(b.y) || !inside(b.x, b.y, true) ||
-        balls.some((a) => dist(b, a) < diameter - 1e-7)) return null;
+        balls.some((a) => dist(b, a) < diameter - overlapTolerance)) return null;
     const pose = savedPose(b);
     if (!pose) return null;
     balls.push(pose);
@@ -761,11 +772,14 @@ function basis(g, shot) {
   return shot.place ? [{ id: 0, ...shot.place }, ...g.balls.filter((b) => b.id !== 0)] : g.balls;
 }
 
-function trial(g, who, shot) {
+function trial(g, who, shot, fallbacks) {
+  // Same physics as simulate(), without updating the ball orientations.
   const sim = run(basis(g, shot), shot, false, false);
   const scratch = sim.pocketed.some((b) => b.id === 0);
   const eight = sim.pocketed.some((b) => b.id === 8);
-  const legal = !scratch && canHit(g, who, sim.firstHit) && (!eight || !g.broken || canHit(g, who, 8));
+  const firstLegal = canHit(g, who, sim.firstHit);
+  const legal = firstLegal && !scratch && (!eight || !g.broken || canHit(g, who, 8));
+  if (firstLegal && fallbacks) fallbacks.push({ shot, sim, legal });
   return { sim, legal };
 }
 
@@ -813,14 +827,15 @@ export function suggestPlace(g) {
   return places.sort((a, b) => dist(a, head) - dist(b, head))[0] ?? null;
 }
 
-function breakShot(g, who, level) {
+function breakHint(g) {
+  const who = g.turn;
   const cue = g.balls.find((b) => b.id === 0), apex = g.balls[1];
   const angle = toward(cue, apex);
-  if (level === 'facile') return { angle, power: 9.6, target: apex.id };
   let best = null, score = -Infinity;
+  const fallbacks = [];
   for (const offset of [0, -0.003, 0.003, -0.018, 0.018, -0.04, 0.04]) {
     const shot = { angle: angle + offset, power: 10, target: apex.id };
-    const { sim, legal } = trial(g, who, shot);
+    const { sim, legal } = trial(g, who, shot, fallbacks);
     if (!legal) continue;
     const down = sim.pocketed.find((b) => groupOf(b.id));
     let value = down ? 12 : 0;
@@ -832,16 +847,31 @@ function breakShot(g, who, level) {
       best = { ...shot, target: sim.firstHit, ...(down && { pocket: down.pocket, potted: down.id }) };
     }
   }
-  return best ?? { angle, power: 10, target: apex.id };
+  return best ?? safety(g, who, 'fort', fallbacks);
 }
 
-function safety(g, who, level) {
+function safety(g, who, level, fallbacks) {
   const place = g.ballInHand ? suggestPlace(g) : null;
   const balls = basis(g, { place });
   const cue = balls.find((b) => b.id === 0);
   if (!cue) return { angle: 0, power: 1 };
   const targets = balls.filter((b) => canHit(g, who, b.id)).sort((a, b) => dist(a, cue) - dist(b, cue));
+  const ownPot = (sim) => sim.pocketed.find(({ id }) => canHit(g, who, id));
   let best = null, score = -Infinity, attempts = 0;
+  const rate = ({ shot, sim, legal }) => {
+    if (!legal) {
+      return (sim.pocketed.some(({ id }) => id === 8) && !canHit(g, who, 8) ? -200 : -100) -
+        shot.power;
+    }
+    return (ownPot(sim) ? 10 : 0) + leave(g, other(who), sim) - 0.16 * leave(g, who, sim) - 0.05 * shot.power;
+  };
+  const describe = ({ shot, sim, legal }) => {
+    const pot = legal && ownPot(sim);
+    const bank = sim.events[0]?.type === 'cushion';
+    const { pocket, ...aim } = shot;
+    return { ...aim, target: pot ? pot.id : sim.firstHit,
+      ...(pot && { pocket: pot.pocket, first: sim.firstHit }), ...(bank && { bank }) };
+  };
   const budget = level === 'facile' ? 2 : level === 'moyen' ? 5 : 9;
   for (const b of targets) {
     const direct = toward(cue, b), spread = Math.asin(Math.min(1, diameter / dist(cue, b)));
@@ -851,15 +881,13 @@ function safety(g, who, level) {
       if (aim.hit === null || !canHit(g, who, aim.hit)) continue;
       const power = powerAt(Math.sqrt((dist(cue, aim.contact) + (fraction ? 0.24 : 0.15)) / 2.65));
       const shot = { angle, power, target: aim.hit, ...(place && { place }) };
-      const { legal, sim } = trial(g, who, shot);
+      const { legal, sim } = trial(g, who, shot, fallbacks);
       if (legal) {
-        const pot = sim.pocketed.find((ball) => canHit(g, who, ball.id));
-        if (pot) return { ...shot, target: pot.id, pocket: pot.pocket };
-        const opponent = other(who);
-        const ownLeave = leave(g, who, sim), theirLeave = leave(g, opponent, sim);
-        const value = theirLeave - 0.16 * ownLeave - 0.05 * power;
+        const checked = { shot, sim, legal };
+        if (ownPot(sim)) return describe(checked);
+        const value = rate(checked);
         if (value > score) {
-          best = shot;
+          best = checked;
           score = value;
         }
       }
@@ -867,7 +895,7 @@ function safety(g, who, level) {
     }
     if (attempts >= budget) break;
   }
-  if (best) return best;
+  if (best) return describe(best);
   // An obscured group can still be reached off a cushion. Fan out the first rail contact.
   for (const b of targets.slice(0, 4)) {
     for (const image of [point(-b.x + 2 * R, b.y), point(2 * (L - R) - b.x, b.y),
@@ -875,15 +903,33 @@ function safety(g, who, level) {
       const direct = toward(cue, image);
       for (const offset of [0, -0.04, 0.04, -0.085, 0.085]) {
         const shot = { angle: direct + offset, power: 4.8, target: b.id, ...(place && { place }) };
-        const { legal, sim } = trial(g, who, shot);
-        if (legal) {
-          const pot = sim.pocketed.find((ball) => canHit(g, who, ball.id));
-          return pot ? { ...shot, target: pot.id, pocket: pot.pocket } : { ...shot, target: sim.firstHit };
-        }
+        const { legal, sim } = trial(g, who, shot, fallbacks);
+        if (legal) return describe({ shot, sim, legal });
       }
     }
   }
-  return { angle: targets.length ? toward(cue, targets[0]) : 0, power: 3.5, target: targets[0]?.id, ...(place && { place }) };
+  const chooseFallback = () => {
+    for (const checked of fallbacks) {
+      const value = rate(checked);
+      if (value <= score) continue;
+      best = checked;
+      score = value;
+    }
+  };
+  const lastResort = { angle: targets.length ? toward(cue, targets[0]) : 0, power: 3.5, ...(place && { place }) };
+  trial(g, who, lastResort, fallbacks);
+  chooseFallback();
+  if (best?.legal || !targets.length) return best ? describe(best) : lastResort;
+  // Search multiple-cushion paths when the direct and one-cushion shots fail.
+  fallbacks.length = 0;
+  for (let i = 0; i < 180; i++) {
+    const angle = i * Math.PI / 90;
+    const { hit } = aimLine(balls, angle);
+    if (hit !== null && !canHit(g, who, hit)) continue;
+    for (const power of [4.8, 7]) trial(g, who, { angle, power, ...(place && { place }) }, fallbacks);
+  }
+  chooseFallback();
+  return best ? describe(best) : lastResort;
 }
 
 function indirectRoutes(g, who, hard = false) {
@@ -923,14 +969,14 @@ function indirectRoutes(g, who, hard = false) {
   return choices.sort((a, b) => a.difficulty - b.difficulty);
 }
 
-function indirectPot(g, who) {
+function indirectPot(g, who, fallbacks) {
   const choices = indirectRoutes(g, who);
   let attempts = 0;
   for (const { difficulty, bank, ...shot } of choices) {
     for (const bias of bank ? [0, -0.005, 0.005, -0.012, 0.012, -0.023, 0.023] : [0, -0.004, 0.004, -0.01, 0.01]) {
       for (const scale of [1, 1.27]) {
         const attempt = { ...shot, angle: shot.angle + bias, power: powerAt(speedAt(shot.power) * scale) };
-        const { sim, legal } = trial(g, who, attempt);
+        const { sim, legal } = trial(g, who, attempt, fallbacks);
         if (legal && sim.pocketed.some((b) => b.id === shot.target && b.pocket === shot.pocket)) {
           return { ...attempt, first: sim.firstHit, bank };
         }
@@ -941,8 +987,7 @@ function indirectPot(g, who) {
   return null;
 }
 
-function plan(g, who, level, takesRisk, advice = false) {
-  if (openingRack(g)) return breakShot(g, who, level);
+function planPot(g, who, level, takesRisk, advice, fallbacks) {
   let best = null, bestScore = Infinity, attempts = 0;
   const found = new Set();
   const testLimit = advice ? 90 : level === 'moyen' ? 14 : 5;
@@ -954,7 +999,7 @@ function plan(g, who, level, takesRisk, advice = false) {
     const variations = advice ? [1, 0.84, 1.2] : level !== 'facile' ? [1, 0.88, 1.22] : [1, 1.2];
     for (const scale of variations) {
       const attempt = { ...shot, power: powerAt(speedAt(shot.power) * scale) };
-      const { sim, legal } = trial(g, who, attempt);
+      const { sim, legal } = trial(g, who, attempt, fallbacks);
       attempts++;
       if (legal && sim.pocketed.some((b) => b.id === shot.target && b.pocket === shot.pocket)) {
         if (shot.target === 8 || advice) return attempt;
@@ -972,7 +1017,7 @@ function plan(g, who, level, takesRisk, advice = false) {
     if (found.size >= potLimit || attempts >= testLimit) break;
   }
   const tryBank = !g.ballInHand && (advice || (level === 'moyen' && canHit(g, who, 8)));
-  return best ?? (tryBank ? indirectPot(g, who) : null) ?? safety(g, who, level);
+  return best ?? (tryBank ? indirectPot(g, who, fallbacks) : null);
 }
 
 function spreadScore(g, who) {
@@ -988,46 +1033,6 @@ function spreadScore(g, who) {
   return open;
 }
 
-function breakValue(g, who, sim) {
-  const after = positionAfter(g, who, sim);
-  const group = groupFor(after, who);
-  const own = sim.pocketed.filter((b) => group && groupOf(b.id) === group).length;
-  const spread = spreadScore({ ...after, groups: { player: null } }, who);
-  return 1.5 * spread + Math.min(own, 1) * 0.9 + own * 0.3 - 0.7 * hardLeave(after, who);
-}
-
-function hardBreak(g, who) {
-  const choices = [];
-  for (const fraction of [0.5, 0.25, 0.75, 0.1, 0.9, 0.36, 0.64]) {
-    const place = point(table.headString, W * fraction);
-    if (!free(g, place.x, place.y)) continue;
-    for (const target of g.balls.slice(1, 4)) {
-      for (const offset of [-0.024, -0.012, 0, 0.012, 0.024]) {
-        for (const top of [0, 1]) {
-          const shot = { angle: toward(place, target) + offset, power: 10, spin: { top }, place };
-          const { sim, legal } = trial(g, who, shot);
-          if (legal) choices.push({ shot: { ...shot, target: sim.firstHit }, value: breakValue(g, who, sim) });
-        }
-      }
-    }
-  }
-  choices.sort((a, b) => b.value - a.value);
-  let best = null, bestScore = -Infinity;
-  for (const { shot, value } of choices.slice(0, 15)) {
-    let score = value * 0.4;
-    for (const sign of [-1, 1]) {
-      const variant = { ...shot, angle: shot.angle + sign * 0.0026, power: 9.85 };
-      const { legal, sim } = trial(g, who, variant);
-      score += legal ? 0.3 * breakValue(g, who, sim) : -2;
-    }
-    if (score > bestScore) {
-      best = shot;
-      bestScore = score;
-    }
-  }
-  return best ?? breakShot(g, who, 'moyen');
-}
-
 // Keep routes to distinct pockets near the top of the search. Try the other
 // lines into the same pocket if the first one fails.
 function distinctPots(shots) {
@@ -1040,8 +1045,8 @@ function distinctPots(shots) {
   });
 }
 
-function potResult(g, who, shot) {
-  const { legal, sim } = trial(g, who, shot);
+function potResult(g, who, shot, fallbacks) {
+  const { legal, sim } = trial(g, who, shot, fallbacks);
   return legal && sim.pocketed.some((b) => b.id === shot.target && b.pocket === shot.pocket) ? sim : null;
 }
 
@@ -1125,7 +1130,7 @@ function followingPot(g, who, depth = 1) {
   return value;
 }
 
-function hardPot(g, who) {
+function hardPot(g, who, fallbacks) {
   const ranked = candidates(g, who, true);
   const distinct = distinctPots(ranked);
   const choices = [], tried = new Set();
@@ -1136,7 +1141,7 @@ function hardPot(g, who) {
       const key = [shot.angle, shot.power, ...profile.slice(1), shot.place?.x, shot.place?.y].join();
       if (tried.has(key)) continue;
       tried.add(key);
-      const sim = potResult(g, who, shot);
+      const sim = potResult(g, who, shot, fallbacks);
       if (!sim) continue;
       const after = positionAfter(g, who, sim);
       const group = groupFor(after, who);
@@ -1174,7 +1179,7 @@ function hardPot(g, who) {
     if (risk > 0 && examined <= 12) {
       for (const offset of [-0.0014, 0.0014, -0.003, 0.003]) {
         const aim = { ...shot, angle: shot.angle + offset };
-        const sim = potResult(g, who, aim);
+        const sim = potResult(g, who, aim, fallbacks);
         if (!sim) continue;
         const corrected = positionAfter(g, who, sim);
         const correctedLeave = shot.target === 8 ? undefined : hardLeave(corrected, who);
@@ -1191,7 +1196,7 @@ function hardPot(g, who) {
   if (best) {
     const risk = currentRisk(g, who, best);
     if (risk >= 1.2) {
-      const alternative = hardIndirect(g, who);
+      const alternative = hardIndirect(g, who, fallbacks);
       if (alternative && currentRisk(g, who, alternative) + 0.6 < risk) return alternative;
     }
   }
@@ -1269,7 +1274,7 @@ function railPots(g, who, cue) {
   return choices;
 }
 
-function hardIndirect(g, who) {
+function hardIndirect(g, who, fallbacks) {
   const ranked = indirectRoutes(g, who, true);
   let best = null, bestScore = Infinity, attempts = 0;
   const seen = new Set();
@@ -1280,7 +1285,7 @@ function hardIndirect(g, who) {
     for (const bias of bank ? [0, -0.007, 0.007, -0.016, 0.016, -0.028, 0.028] : [0, -0.004, 0.004, -0.01, 0.01]) {
       for (const scale of [1, 1.23, 0.88]) {
         const aim = { ...shot, angle: shot.angle + bias, power: powerAt(speedAt(shot.power) * scale) };
-        const sim = potResult(g, who, aim);
+        const sim = potResult(g, who, aim, fallbacks);
         attempts++;
         if (sim) {
           const after = positionAfter(g, who, sim);
@@ -1303,15 +1308,15 @@ function hardIndirect(g, who) {
   return best;
 }
 
-function hardSafety(g, who) {
+function hardSafety(g, who, fallbacks) {
   const place = g.ballInHand ? suggestPlace(g) : null;
   const balls = basis(g, { place });
   const cue = balls.find((b) => b.id === 0);
-  if (!cue) return safety(g, who, 'fort');
+  if (!cue) return safety(g, who, 'fort', fallbacks);
   const targets = balls.filter((b) => canHit(g, who, b.id));
   const choices = [];
   const examine = (shot) => {
-    const { sim, legal } = trial(g, who, shot);
+    const { sim, legal } = trial(g, who, shot, fallbacks);
     if (!legal) return;
     const after = positionAfter(g, who, sim);
     const pot = sim.pocketed.find((b) => canHit(g, who, b.id));
@@ -1356,12 +1361,7 @@ function hardSafety(g, who) {
       bestScore = rating;
     }
   }
-  return best ?? safety(g, who, 'fort');
-}
-
-function hardPlan(g, who) {
-  if (openingRack(g)) return hardBreak(g, who);
-  return hardPot(g, who) ?? (!g.ballInHand ? hardIndirect(g, who) : null) ?? hardSafety(g, who);
+  return best ?? safety(g, who, 'fort', fallbacks);
 }
 
 const execution = {
@@ -1371,15 +1371,18 @@ const execution = {
 export function cpuShot(g) {
   const next = random(g.seed ^ Math.imul(g.shots + 1, 0x9e3779b9));
   const settings = execution[g.level] ?? execution.facile;
-  const planned = g.level === 'fort'
-    ? hardPlan(g, g.turn)
-    : plan(g, g.turn, g.level, g.level === 'facile' && next() < 0.64);
-  const { potted, ...shot } = planned;
+  const who = g.turn, hard = g.level === 'fort', fallbacks = [];
+  const pot = hard
+    ? hardPot(g, who, fallbacks) ?? (!g.ballInHand ? hardIndirect(g, who, fallbacks) : null)
+    : planPot(g, who, g.level, g.level === 'facile' && next() < 0.64, false, fallbacks);
+  const { bank, first, ...shot } = pot ?? (hard ? hardSafety(g, who, fallbacks) : safety(g, who, g.level, fallbacks));
   const gaussian = Math.sqrt(-2 * Math.log(Math.max(tiny, next()))) * Math.cos(2 * Math.PI * next());
-  return { ...shot,
+  const aim = { ...shot,
     angle: shot.angle + gaussian * settings.angle * Math.PI / 180,
     power: clamp(shot.power + shot.power * settings.power * (2 * next() - 1), 1, 10)
   };
+  // Keep the execution error on a safety only if the resulting shot is legal.
+  return pot || trial(g, who, aim).legal ? aim : shot;
 }
 
 // A ball as he reads it: « la 3 rouge », « la 11 rouge rayée », « la noire ».
@@ -1388,7 +1391,10 @@ export const ballName = (id) =>
   id === 0 ? 'la blanche' : id === 8 ? 'la noire' : `la ${id} ${COLOUR_NAMES[id > 8 ? id - 8 : id]}${id > 8 ? ' rayée' : ''}`;
 
 export function hint(g) {
-  const { potted, bank, first, ...shot } = plan(g, g.turn, 'fort', false, true);
+  const fallbacks = [];
+  const { potted, bank, first, ...shot } = openingRack(g)
+    ? breakHint(g)
+    : planPot(g, g.turn, 'fort', false, true, fallbacks) ?? safety(g, g.turn, 'fort', fallbacks);
   const target = potted ?? shot.target ?? null, pocket = shot.pocket ?? null;
   let reason;
   if (pocket) {
@@ -1397,7 +1403,8 @@ export function hint(g) {
     else if (bank) reason = `Jouez ${ballName(target)} par la bande vers ${destination}.`;
     else reason = `Visez ${ballName(target)} vers ${destination}.`;
   } else if (!g.broken) reason = 'Visez la première bille du triangle et frappez fort.';
-  else if (target) reason = `Aucune bille ne rentre facilement. Touchez doucement ${ballName(target)}.`;
-  else reason = 'Placez la blanche pour trouver un coup.';
+  else if (bank) reason = `Jouez par la bande pour toucher ${ballName(target)}.`;
+  else if (target) reason = `Aucune bille ne rentre facilement. Touchez ${ballName(target)}.`;
+  else reason = g.ballInHand ? 'Placez la blanche pour trouver un coup.' : 'Aucun coup sûr trouvé.';
   return { ...shot, target, pocket, reason };
 }
