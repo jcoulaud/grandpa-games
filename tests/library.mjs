@@ -52,6 +52,7 @@ try {
   check('tile for dame de pique', await page.locator('a.tile[data-id="dame-de-pique"]').count() === 1);
   check('no "Nouveau" badge on the games', await page.locator('a.tile .badge').count() === 0);
   check('games follow the library header', await page.locator('header + #games').count() === 1);
+  check('no last game before the first game', await page.locator('#last').isHidden());
   check('no line about the saves under the games', await page.locator('#saves').count() === 0 && !(await page.textContent('main')).includes('gardées'));
   check('old backup data is removed', await page.evaluate(() => !localStorage.getItem('gg:cloud:old') && !localStorage.getItem('gg:approved')));
   check('old games are kept', await page.evaluate(() => GG.load('old').n === 1));
@@ -62,21 +63,24 @@ try {
   // 2. Play: open the game from its tile, make a move, come back.
   await page.click('a.tile[data-id="solitaire"]');
   await page.waitForURL(/\/solitaire\//);
+  // The first visit starts a game at Facile at once.
   await page.waitForTimeout(2500);
-  await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Facile', exact: true }).click();
-  await page.waitForTimeout(400);
   await page.evaluate(() => clickStock());
   await page.waitForTimeout(600);
   await page.click('#home');
   await page.waitForSelector('a.tile[data-id="solitaire"]');
   check('the game is saved on the PC', await page.evaluate(() => !!GG.load('solitaire')));
-  check('the tile shows no line about the saved game', !(await page.textContent('a.tile')).includes('Partie en cours') && !(await page.locator('a.tile .status').count()));
-  check('button says resume', (await page.textContent('a.tile .play')).includes('Reprendre'));
+  check('the tile shows no line about the saved game', !(await page.textContent('.family a.tile')).includes('Partie en cours') && !(await page.locator('a.tile .status').count()));
+  check('button says resume', (await page.textContent('.family a.tile .play')).includes('Reprendre'));
+  check('the resume key of a tile is not the yellow one', await page.locator('.family a.tile .play.again svg').count() === 1);
+  // His last game, above the families: its name, its saved line and the yellow key to go on.
+  const last = await page.locator('#last a.last').textContent().catch(() => '');
+  check('the last game shows above the families', /Solitaire/.test(last) && /Votre dernière partie : partie en cours/.test(last) && /Reprendre la partie/.test(last), last);
+  check('the last game key is 44 px high or more', await page.evaluate(() => document.querySelector('#last .play').getBoundingClientRect().height >= 44));
   await page.screenshot({ path: join(OUT, 'library.png') });
   // Three games per row: the fourth one is on a second row, below the fold. The first row must show whole.
-  check('first row of games fits a 1366x680 app window', await page.evaluate(() => document.querySelector('a.tile').getBoundingClientRect().bottom <= innerHeight),
-    String(await page.evaluate(() => document.querySelector('a.tile').getBoundingClientRect().bottom)));
+  check('first row of games fits a 1366x680 app window', await page.evaluate(() => document.querySelector('.family a.tile').getBoundingClientRect().bottom <= innerHeight),
+    String(await page.evaluate(() => document.querySelector('.family a.tile').getBoundingClientRect().bottom)));
   check('no sideways scroll', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   check('one visit a day, however many pages', calls.filter(c => c.includes('"visit"')).length === 1, calls.join('\n'));
   check('no save is ever sent', !calls.some(c => c.includes('"S"') || c.includes('undo')), calls.join('\n'));
@@ -93,8 +97,6 @@ try {
   // The dames were never opened: they still open offline, and the computer answers from its worker.
   await page.goto(BASE + 'dames/');
   await page.waitForTimeout(800);
-  await page.click('#helpClose');
-  await page.getByRole('button', { name: 'Facile', exact: true }).click();
   check('dames open offline before their first visit', await page.locator('#board .pc').count() === 40);
   await page.evaluate(() => { tap(32); tap(28); });
   await page.waitForFunction(() => G.turn === 1 && phase === 'player', null, { timeout: 8000 }).catch(() => {});
@@ -102,8 +104,6 @@ try {
   // The dame de pique was never opened either: it opens offline and deals.
   await page.goto(BASE + 'dame-de-pique/');
   await page.waitForTimeout(800);
-  await page.click('#helpClose');
-  await page.getByRole('button', { name: 'Facile', exact: true }).click();
   check('dame de pique opens offline before its first visit', await page.locator('.card.hand').count() === 13);
   await pc.setOffline(false);
 
@@ -196,6 +196,13 @@ try {
   const phone = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await phone.goto(BASE);
   check('no sideways scroll at 390 px', await phone.evaluate(() => document.documentElement.scrollWidth <= 390));
+  // A phone with a game in progress: the last game fits the width too.
+  await phone.evaluate(() => localStorage.setItem('gg:save:golf', JSON.stringify({ updatedAt: Date.now(), summary: 'Trou 3 sur 9 en cours · 2 parcours finis', data: {} })));
+  await phone.reload();
+  check('the last game fits a phone', await phone.evaluate(() => {
+    const r = document.querySelector('#last a.last').getBoundingClientRect();
+    return r.left >= 0 && r.right <= 390 && document.documentElement.scrollWidth <= 390 && /trou 3 sur 9 en cours/.test(document.querySelector('#last').textContent);
+  }));
   await phone.screenshot({ path: join(OUT, 'library-phone.png'), fullPage: true });
 
   // 8. Ten wrong admin passwords lock this network out, also with the right password. Last, as it locks the admin.

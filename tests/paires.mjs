@@ -19,10 +19,17 @@ const card = i => page.locator(`.card[data-i="${i}"]`);
 const click = async i => { await card(i).click(); await page.mouse.move(5, 5); await wait(700); };
 const cls = i => card(i).getAttribute('class');
 
-// 1. The first visit: the rules open, each page fits without scrolling, then the level.
+// 1. The first visit: a game at Facile starts at once, with the coach on a card. The rules stay on "Règles",
+// and each page fits without scrolling.
 await page.goto(URL);
 await wait(400);
-ok(await g(() => Kit.isOpen()), 'the rules open on the first visit');
+ok(!(await g(() => Kit.isOpen())) && await page.locator('.card').count() === 12, 'the first visit starts a game at Facile at once');
+ok(await g(() => Kit.coaching() && document.querySelectorAll('.card.coach').length === 1 && !document.getElementById('coachHand').hidden), 'the coach rings one card and points the hand at it');
+ok(/Montrer une carte/.test(await page.locator('#hintBtn').textContent()), 'the hint button says « Montrer une carte »');
+const barFits = await g(() => { const b = document.getElementById('bar'); return b.scrollWidth <= b.clientWidth; });
+ok(barFits, 'the bar fits on his laptop');
+await page.click('#helpBtn');
+ok(await g(() => Kit.isOpen()), 'the rules open on « Règles »');
 const pages = await page.locator('#helpText .page').count();
 ok(pages >= 3 && pages <= 5, `the rules have ${pages} pages`);
 for (let n = 0; n < pages; n++) {
@@ -30,6 +37,8 @@ for (let n = 0; n < pages; n++) {
   await page.screenshot({ path: `${OUT}/paires-rules-${n + 1}.png` });
   await page.click('#helpNext');
 }
+ok(!(await g(() => Kit.isOpen())), 'the last page closes the rules');
+await page.click('#newBtn');
 await page.getByRole('button', { name: 'Facile', exact: true }).click();
 ok(await page.locator('.card').count() === 12, 'Facile has 12 cards');
 ok(await g(() => document.getElementById('grid').dataset.board === 'deal'), 'a new game deals the cards in');
@@ -51,7 +60,7 @@ ok(/déjà retournée/.test(await msg()) && await g(() => G.up === 0 && G.turns 
 // 3. A miss: both stay up, framed in red, then turn back by themselves.
 const b = other(0);
 await click(b);
-ok(/miss/.test(await cls(0)) && /miss/.test(await cls(b)) && /ce n'est pas une paire/.test(await msg()), 'two different cards stay up in red and say so');
+ok(/miss/.test(await cls(0)) && /miss/.test(await cls(b)) && /ce n'est pas une paire.*Retournez une nouvelle carte\.$/.test(await msg()), 'two different cards stay up in red and say so, then what to do');
 await page.screenshot({ path: `${OUT}/paires-miss.png` });
 ok(await g(() => G.turns === 1 && G.up === -1), 'the miss counts one turn');
 await wait(1800);
@@ -101,6 +110,8 @@ ok(!(await g(() => Kit.isOpen())), 'the win sheet waits for the wave across the 
 await page.waitForSelector('#over.on', { timeout: 3000 });
 ok(await g(() => G.result === 'won') && /Bravo, vous avez gagné/.test(await g(() => document.getElementById('overTitle').textContent)), 'the last pair wins and shows the win');
 await page.screenshot({ path: `${OUT}/paires-won.png` });
+ok(await g(() => 'nudge' in document.getElementById('newBtn').dataset), 'after the win, « Nouvelle partie » is the next thing to press');
+ok(await g(() => document.getElementById('hintBtn').disabled && /Nouvelle partie/.test(document.getElementById('hintBtn').dataset.why)), 'the grey hint button says why');
 ok(stats.won === 1 && await g(() => stats.won === 1 && stats.best.facile === G.turns && GG.meta('paires').summary === '1 victoire'), 'the win is counted once, with the best score, and the tile says so');
 await page.keyboard.press('Escape');
 await click(3);
@@ -112,9 +123,7 @@ ok(await g(() => G.result === 'won' && !Kit.isOpen()) && /Bravo, vous avez trouv
 await g(() => { const v = GG.load('paires'); v.G.found = '1' + v.G.found.slice(1, -1) + '0'; return GG.save('paires', v); });
 await page.reload();
 await wait(300);
-ok(await g(() => Kit.isOpen()), 'a broken save is not loaded');
-await page.click('#helpClose');
-await page.getByRole('button', { name: 'Facile', exact: true }).click();
+ok(await g(() => !Kit.isOpen() && G.turns === 0 && !G.seen.includes('1') && G.level === 'facile'), 'a broken save is not loaded: a new game starts at Facile');
 // A double-click on a card counts as one click: it does not start the next turn.
 await card(0).dblclick(); await page.mouse.move(5, 5);
 ok(await g(() => G.up === 0 && G.turns === 0 && !/déjà/.test(document.getElementById('msg').textContent)), 'a double-click turns one card only, without a refusal');
@@ -143,7 +152,7 @@ await page.keyboard.press('Escape');
 // 11. A phone stands the grid up: every card is on the screen.
 const phone = await browser.newPage({ viewport: { width: 390, height: 760 }, isMobile: true, hasTouch: true });
 await phone.goto(URL);
-await phone.evaluate(() => { Kit.closeHelp(); });
+await phone.click('#newBtn');
 await phone.getByRole('button', { name: 'Difficile', exact: true }).click();
 const fits = await phone.evaluate(() => [...document.querySelectorAll('.card')].every(e => { const r = e.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.width >= 50; }));
 ok(fits && await phone.evaluate(() => cols === 5), 'on a phone the grid stands up, 5 by 6, and every card fits');

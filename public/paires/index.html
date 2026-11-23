@@ -112,7 +112,7 @@
   #help { --guide-edge: #2A1D33; --guide-more: #3F4520; }
   .gk.here { box-shadow: var(--guide-ring), 0 6px 14px rgba(0,0,0,.35); }
   .gk.here.back { background: #FFF3C4; }
-  /* The card framed by "Aide", as on the table. */
+  /* The card framed by "Montrer une carte", as on the table. */
   .gk.hint::after { content: ""; position: absolute; inset: -9px; border: 5px solid var(--gold); border-radius: calc(var(--k) * .14);
     box-shadow: 0 0 0 1.5px rgba(var(--shade),.8), inset 0 0 0 1.5px rgba(var(--shade),.8), 0 0 22px 6px rgba(255,200,61,.6); }
   .guide-hand { width: 48px; height: 56px; left: 58%; top: 55%; }
@@ -160,7 +160,7 @@
 <body>
 <div id="bar">
   <div id="title"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="11" height="15" rx="2" fill="#F6EFE0" stroke="#5C6B1E" stroke-width="1.6" transform="rotate(-10 7.5 12.5)"/><rect x="11" y="4" width="11" height="15" rx="2" fill="#F6EFE0" stroke="#5C6B1E" stroke-width="1.6" transform="rotate(8 16.5 11.5)"/><circle cx="7.6" cy="12.6" r="2.6" fill="#D2232A"/><circle cx="16.4" cy="11.6" r="2.6" fill="#D2232A"/></svg>Jeu des paires</div>
-  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre une carte à retourner">Aide</button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre une carte à retourner"><span class="long">Montrer une carte</span><span class="short">Montrer une carte</span><span class="tiny">Montrer</span></button>
   <span class="spacer"></span>
   <button id="helpBtn" data-icon="help">Règles</button>
   <button id="newBtn" class="game">Nouvelle partie</button>
@@ -203,11 +203,11 @@
   <section class="page">
     <h3>Demander de l'aide</h3>
     <div class="guide-pic" aria-hidden="true">
-      <span class="guide-btn primary here" data-icon="bulb">Aide</span>
+      <span class="guide-btn primary here" data-icon="bulb">Montrer une carte</span>
       <svg class="garrow" viewBox="0 0 54 40"><path d="M4 20h44M36 8l12 12-12 12"/></svg>
       <span class="gk back hint"></span>
     </div>
-    <p class="guide-lead">Un oubli ? Cliquez sur «&nbsp;Aide&nbsp;».</p>
+    <p class="guide-lead">Un oubli ? Cliquez sur «&nbsp;Montrer une carte&nbsp;».</p>
     <p class="guide-more">Une bonne carte à retourner s'entoure de jaune.</p>
   </section>
 </div>
@@ -232,7 +232,7 @@ for (const [name, ms] of Object.entries({ up: UP_MS, down: DOWN_MS, show: SHOW_M
 
 /* ---------- State ----------
    G: the game (see engine.js). shown: the two cards of a miss, face up for a moment. just: the pair
-   just found, for its little jump. hint: the places framed by "Aide", until his next card.
+   just found, for its little jump. hint: the places framed by "Montrer une carte", until his next card.
    stats: { won, best: { level: fewest turns } }. wonNow: this game is counted as won. */
 let G, level = 'facile', stats = { won: 0, best: {} }, wonNow = false, shown = null, just = null, hint = null, timers = [];
 let stale = false, saved = true;
@@ -361,15 +361,23 @@ async function tap(i) {
   if (G.result) { finish(!stale, record); if (!saved && !stale) say(FULL); return; }
   if (!saved) return;
   const A = pic(i), wait = Math.max(0, motion(UP_MS) - Math.max(0, since));
-  if (r.event === 'first') sayAfter(`${cap(A.one)}. Où se cache l'autre carte ?`, wait);
-  else if (r.event === 'pair') sayAfter(`Bravo, une paire de ${A.many} ! Encore ${plural(left(), 'paire', 'paires')} à trouver.`, wait);
-  else sayAfter(`${cap(pic(r.a).one)} et ${A.one} : ce n'est pas une paire. Retenez bien leur place.`, wait);
+  if (r.event === 'first') sayAfter(`${cap(A.one)}. Où se cache l'autre carte ? Cliquez sur une deuxième carte.`, wait);
+  else if (r.event === 'pair') sayAfter(`Bravo, une paire de ${A.many} ! Encore ${plural(left(), 'paire', 'paires')} à trouver. Retournez une nouvelle carte.`, wait);
+  else sayAfter(`${cap(pic(r.a).one)} et ${A.one} : ce n'est pas une paire. Retenez leur place. Retournez une nouvelle carte.`, wait);
+  coach();
+}
+// During his first game, the hand points at a good card to turn: the card the hint would frame.
+function coach() {
+  if (!Kit.coaching() || !G || G.result) return;
+  const h = P.hint(G);
+  if (h && h.cells.length) Kit.point(cards[h.cells[0]]);
 }
 
 /* ---------- End of the game ---------- */
 function finish(show, record) {
   hint = null; render();
-  const n = P.total(G), text = `Bravo, vous avez trouvé les ${n} paires en ${plural(G.turns, 'coup', 'coups')}.`;
+  Kit.gameOver(true);
+  const n = P.total(G), text = `Bravo, vous avez trouvé les ${n} paires en ${plural(G.turns, 'coup', 'coups')}. Cliquez sur « Nouvelle partie » pour rejouer.`;
   if (!show) { if (saved && !stale) say(text); return; }
   // The last pair lifts, a wave runs across the board, then the win sheet opens.
   sayAfter(text, motion(UP_MS));
@@ -393,10 +401,11 @@ function showHint() {
   if (!h) return;
   hint = h.cells;
   render();
-  if (h.kind === 'match') say(`Vous avez déjà vu la deuxième carte ${pic(G.up).one.replace(/^(un|une|des) /, '')} : c'est la carte encadrée.`);
+  if (h.kind === 'match') say(`Vous avez déjà vu la deuxième carte ${pic(G.up).one.replace(/^(un|une|des) /, '')} : cliquez sur la carte encadrée.`);
   else if (h.kind === 'known') say(`Vous avez déjà vu ces deux cartes : c'est une paire de ${pic(h.cells[0]).many}. Retournez-les.`);
-  else if (G.up >= 0) say("Vous n'avez pas encore vu la deuxième carte : essayez la carte encadrée, jamais retournée.");
-  else say("Aucune paire n'est connue pour le moment : retournez la carte encadrée, jamais retournée.");
+  else if (G.up >= 0) say("Vous n'avez pas encore vu la deuxième carte : cliquez sur la carte encadrée, jamais retournée.");
+  else say("Aucune paire n'est connue pour le moment : cliquez sur la carte encadrée, jamais retournée.");
+  if (Kit.coaching()) Kit.point(cards[h.cells[0]]);
 }
 
 function askNewGame() { stopAll(); render(); Kit.chooseLevel(level, playing(), newGame); }
@@ -413,6 +422,7 @@ async function newGame(lv) {
   boardEffect('deal');
   window.Sound?.play('deal');
   if (!stale) say(`Retrouvez les ${P.total(G)} paires. Cliquez sur une carte pour la retourner.`);
+  coach();
   if (await written) GG.track('paires', 'start');
 }
 
@@ -478,6 +488,7 @@ function render() {
   });
   Kit.showWins(stats.won);
   $('hintBtn').disabled = !!G.result;
+  $('hintBtn').dataset.why = 'La partie est gagnée : cliquez sur « Nouvelle partie » pour en commencer une autre.';
 }
 function shake(i) {
   const e = cards[i];
@@ -497,12 +508,12 @@ $('newBtn').onclick = askNewGame;
 addEventListener('keydown', e => { if (e.key === 'Escape') Kit.escape(); });
 addEventListener('resize', render);
 
-// The rules open by themselves the first time the game is opened.
+// The first visit starts a game at Facile at once, with the coach (lib/kit.js).
 if (load()) {
   Kit.showLevel(level);
   render();
   if (G.result) finish(false);
-  else if (G.up >= 0) say(`${cap(pic(G.up).one)}. Où se cache l'autre carte ?`);
+  else if (G.up >= 0) say(`${cap(pic(G.up).one)}. Où se cache l'autre carte ? Cliquez sur une deuxième carte.`);
   else say(G.seen.includes('1') ? 'À vous : retournez une carte.' : `Retrouvez les ${P.total(G)} paires. Cliquez sur une carte pour la retourner.`);
 } else {
   Kit.firstVisit(newGame);

@@ -112,7 +112,12 @@
   /* Rings around a piece: white on hover, yellow when chosen, dashed yellow when it must take. */
   .pc b { position: absolute; inset: 3%; border-radius: 50%; translate: 0 var(--lift); display: none; }
   .pc.can { pointer-events: auto; cursor: pointer; }
-  .pc.can:hover b { display: block; border: 3px solid #fff; }
+  /* While no piece is chosen, every piece that can move wears a soft gold ring, without hover. After a
+     refused click on a blocked piece, these rings flash for a moment. */
+  #board.pick .pc.can b { display: block; border: 3px solid rgba(255,200,61,.75); box-shadow: 0 0 10px 3px rgba(255,200,61,.35); }
+  #board.pick.show .pc.can b { animation: canFlash .4s ease-in-out 3; }
+  @keyframes canFlash { 50% { border-color: #FFC83D; box-shadow: 0 0 0 2px rgba(var(--shade),.7), 0 0 24px 10px rgba(255,200,61,.8); } }
+  .pc.can:hover b, #board.pick .pc.can:hover b { display: block; border: 3px solid #fff; }
   .pc.must b, .pc.g-must b { display: block; border: 4px dashed var(--gold); box-shadow: 0 0 0 1.5px rgba(var(--shade),.7); }
   .pc.sel b, .pc.hint b, .pc.g-sel b { display: block; border: 5px solid var(--gold); box-shadow: 0 0 0 2px rgba(var(--shade),.8), 0 0 22px 8px rgba(255,200,61,.6); }
   /* A piece the chosen piece will take: a red ring. */
@@ -413,7 +418,28 @@ function turnMessage() {
     const who = from.length > 1 ? 'une des pièces entourées' : Math.abs(G.b[from[0]]) === 2 ? 'la dame entourée' : 'le pion entouré';
     return `Vous devez prendre ${n === 1 ? 'une pièce' : n + ' pièces'} : cliquez sur ${who}.`;
   }
-  return 'À vous : cliquez sur une de vos pièces, puis sur une case entourée de jaune.';
+  return 'À vous : cliquez sur une pièce qui brille, puis sur une case entourée de jaune.';
+}
+// After a refused click on a piece that cannot move, the pieces that can move flash for a moment.
+function showMovable() {
+  boardEl.classList.remove('show'); void boardEl.offsetWidth; boardEl.classList.add('show');
+  clearTimeout(showMovable.t);
+  showMovable.t = setTimeout(() => boardEl.classList.remove('show'), 1300);
+}
+// The coach of his first game points at a piece that can move, then at the square it can go to.
+function coach() {
+  if (!Kit.coaching() || phase !== 'player' || G.result) return;
+  if (sel) {
+    const x = shownRoutes()[0];
+    if (!x) return;
+    const n = x.r.path[sel.path.length];
+    return Kit.point(squares[n]);
+  }
+  // The piece nearest the middle of the board, so the first move opens the game.
+  const ms = legal();
+  if (!ms.length) return;
+  const from = ms.map(m => m.from).sort((a, b) => Math.abs(colOf(a) - 4.5) - Math.abs(colOf(b) - 4.5))[0];
+  Kit.point(boardEl.querySelector(`.pc[data-n="${from}"]`));
 }
 function chosenMessage() {
   const xs = routesFrom(sel.from, sel.path), x = xs[0];
@@ -437,7 +463,8 @@ function select(n) {
       return say(Dames.capturesFrom(G.b, n).length ? `Il faut prendre le plus de pièces possible : cliquez ${where}.`
         : `La prise est obligatoire : cliquez ${where}.`);
     }
-    return say(Math.abs(v) === 2 ? 'Cette dame ne peut pas bouger pour le moment.' : 'Ce pion ne peut pas avancer pour le moment.');
+    showMovable();
+    return say(Math.abs(v) === 2 ? 'Cette dame ne peut pas bouger pour le moment : cliquez sur une pièce qui brille.' : 'Ce pion ne peut pas avancer pour le moment : cliquez sur une pièce qui brille.');
   }
   sel = { from: n, path: [] }; hint = null;
   say(chosenMessage()); render();
@@ -447,6 +474,8 @@ function select(n) {
 function tap(n) {
   if (phase !== 'player') {
     if (phase === 'thinking' || phase === 'anim') say("Attendez un instant : l'ordinateur joue.");
+    else if (phase === 'hint') Kit.tell("Attendez un instant : la recherche d'un bon coup se termine.");
+    else if (phase === 'over') Kit.tell('La partie est finie : cliquez sur « Nouvelle partie ».');
     return;
   }
   const v = G.b[n];
@@ -455,21 +484,22 @@ function tap(n) {
     if (sel.path.length) {
       if (n === selAt()) return say('Continuez la prise : cliquez sur une case entourée de jaune.');
       if (v < 0 && !selTaken().includes(n)) return say('Cliquez sur une case entourée de jaune, derrière la pièce à prendre.');
-      if (v > 0 && n !== sel.from) return say('Continuez la prise avec la même pièce.');
+      if (v > 0 && n !== sel.from) return say('Continuez la prise avec la même pièce : cliquez sur une case entourée de jaune.');
       return say('Cliquez sur une case entourée de jaune.');
     }
     if (n === sel.from) { sel = null; hint = null; say(turnMessage()); return render(); }
     if (v > 0) return select(n);
     if (v < 0 && routesFrom(sel.from, []).some(x => x.r.caps[0] === n)) return say('Cliquez sur une case entourée de jaune, derrière la pièce à prendre.');
-    if (v < 0) { window.Sound?.play('bad'); return say("Cette pièce est à l'ordinateur : vous jouez les blancs."); }
+    if (v < 0) { window.Sound?.play('bad'); return say("Cette pièce est à l'ordinateur : cliquez sur une case entourée de jaune."); }
     if (legal()[0].caps.length) { window.Sound?.play('bad'); return say('Vous devez prendre : cliquez sur une case entourée de jaune.'); }
     return say(Math.abs(G.b[sel.from]) === 1 ? "Un pion avance d'une case en diagonale vers l'avant : cliquez sur une case entourée de jaune." : 'Cliquez sur une case entourée de jaune.');
   }
   if (v > 0) return select(n);
-  if (v < 0) { window.Sound?.play('bad'); return say("Cette pièce est à l'ordinateur : vous jouez les blancs."); }
+  if (v < 0) { window.Sound?.play('bad'); showMovable(); return say("Cette pièce est à l'ordinateur : vous jouez les blancs. Cliquez sur une pièce qui brille."); }
   const must = mustTake();
   if (must.length) { window.Sound?.play('bad'); return say(must.length > 1 ? 'Vous devez prendre : cliquez d\'abord sur une pièce entourée.' : "Vous devez prendre : cliquez d'abord sur la pièce entourée."); }
-  say("Cliquez d'abord sur une de vos pièces.");
+  showMovable();
+  say("Cliquez d'abord sur une de vos pièces qui brillent.");
 }
 
 // A click on a square the chosen piece can reach. The end of a move plays the whole move, every piece
@@ -582,9 +612,12 @@ function computerPlays(m) {
 function computerSaid(before, m) {
   const n = m.caps.length;
   const crowned = Math.abs(before.b[m.from]) === 1 && Math.abs(G.b[m.to]) === 2;
-  let text = n > 1 ? `L'ordinateur a pris ${n} de vos pièces.` : n ? "L'ordinateur a pris une de vos pièces." : "L'ordinateur a joué.";
+  // The move is named with the blue squares where it left and landed.
+  const w = Math.abs(before.b[m.from]) === 2 ? 'sa dame, marquée' : 'un pion, marqué';
+  let text = n > 1 ? `L'ordinateur a pris ${n} de vos pièces avec ${w} en bleu.` : n ? `L'ordinateur a pris une de vos pièces avec ${w} en bleu.`
+    : `L'ordinateur a ${w.startsWith('sa') ? 'déplacé' : 'avancé'} ${w} en bleu.`;
   if (crowned) text += ' Son pion est devenu une dame.';
-  if (!G.result) text += ' ' + (legal()[0]?.caps.length ? turnMessage() : 'À vous de jouer.');
+  if (!G.result) text += ' ' + (legal()[0]?.caps.length ? turnMessage() : 'À vous : cliquez sur une pièce qui brille.');
   say(text);
 }
 
@@ -602,10 +635,11 @@ function resultText() {
 }
 function finish(show) {
   phase = 'over'; sel = null; hint = null;
+  Kit.gameOver(true);
   render();
   const r = G.result;
   const title = r.winner === WHITE ? 'Bravo, vous avez gagné !' : r.winner === BLACK ? "L'ordinateur a gagné" : 'Partie nulle';
-  say(title.replace(/ !$/, '') + ' : ' + resultText().charAt(0).toLowerCase() + resultText().slice(1));
+  say(title.replace(/ !$/, '') + ' : ' + resultText().charAt(0).toLowerCase() + resultText().slice(1) + ' Cliquez sur « Nouvelle partie » pour rejouer.');
   if (!show) return;
   // After the last landing's sound.
   if (r.winner) later(() => window.Sound?.play(r.winner === WHITE ? 'win' : 'lose'), 450);
@@ -738,6 +772,8 @@ const xy = n => [colOf(n) * S, rowOf(n) * S];
 // opts.shown: the board to draw (the one before a move being shown); opts.moving and opts.at: the piece
 // that travels and where it is; opts.taken: the pieces crossed out so far.
 function render(opts = {}) {
+  // While he has chosen a card or a piece, the automatic hint of Facile waits: it would change his choice.
+  if (!!sel) document.getElementById('hintBtn').dataset.auto = 'no'; else delete document.getElementById('hintBtn').dataset.auto;
   if (!G) return;
   $('drawNote').textContent = drawNote();
   layout();
@@ -811,7 +847,13 @@ function render(opts = {}) {
   $('whoW').classList.toggle('turn', phase === 'player' && !G.result);
   Kit.showWins(stats.won);
   $('undoBtn').disabled = !undo.length && !(sel && sel.path.length);
+  $('undoBtn').dataset.why = "Il n'y a pas encore de coup à annuler.";
   $('hintBtn').disabled = phase !== 'player' || !!G.result;
+  $('hintBtn').dataset.why = G.result ? 'La partie est finie : cliquez sur « Nouvelle partie ».'
+    : phase === 'hint' ? "Attendez un instant : la recherche d'un bon coup se termine." : "Attendez un instant : l'ordinateur joue.";
+  // The soft gold rings on the pieces that can move, while none is chosen.
+  boardEl.classList.toggle('pick', !opts.shown && phase === 'player' && !sel && !G.result);
+  if (!opts.shown) coach();
 }
 // A tray of 20 places. The pieces taken since the last drawing drop in.
 const shownTaken = {};
@@ -912,7 +954,7 @@ addEventListener('keydown', e => {
 addEventListener('resize', () => { if (drag && drag.started) drag = null; render(); });
 
 build();
-// The rules open by themselves the first time the game is opened.
+// The first time, a game starts at Facile at once, with the coach.
 if (load()) {
   Kit.showLevel(level);
   if (G.result) finish(false);

@@ -8,14 +8,27 @@ const page = await browser.newPage({ viewport: { width: 1366, height: 680 } });
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));
 await page.goto(URL);
-await page.waitForTimeout(2200);
-ok(await page.evaluate(() => help.classList.contains("on")), "rules open on the first visit");
-await page.keyboard.press("Escape");
-await page.getByRole('button', { name: 'Facile', exact: true }).click();
-await page.waitForFunction(() => !busy);
-ok(!(await page.evaluate(() => dialogOpen())), "Escape closes the rules");
-
+await page.waitForFunction(() => S && !busy);
 const g = fn => page.evaluate(fn);
+ok(await g(() => !Kit.isOpen() && level === 'facile'), 'the first visit starts a game at Facile at once');
+// The coach rings the hint's card, or the stock, for his first move.
+// The cards that go home by themselves come first, and after 10 s idle the automatic hint may show the same
+// move (the coach's card stays ringed, and becomes the chosen card): both count.
+ok(await page.waitForFunction(() => [E[coachMove?.id], E[sel], E[last(S.stock)?.id], slotStock].some(el => el && el.classList.contains('coach')),
+  null, { timeout: 20000 }).then(() => true, () => false), 'the coach rings the first card to play, or the stock');
+await page.keyboard.press('Escape'); // drops the automatic hint, if it showed
+// At Facile, every card that can move has a soft gold edge, and only those.
+ok(await g(() => { const ids = movable(); return ids.length > 0 && E.every((el, id) => el.classList.contains('play') === ids.includes(id)); }),
+  'at Facile, the cards that can move have a gold edge');
+// The grey "Annuler" says why when clicked.
+const undoBox = await page.locator('#undoBtn').boundingBox();
+await page.mouse.click(undoBox.x + undoBox.width / 2, undoBox.y + undoBox.height / 2);
+ok(await g(() => document.getElementById('msg').textContent) === "Il n'y a pas encore de coup à annuler.", 'the grey Annuler says why');
+// A click on a face-down card says it is hidden.
+const hidden = await g(() => { const r = E[S.tab[6][0].id].getBoundingClientRect(); return [r.left + r.width / 2, r.top + 4]; });
+await page.mouse.click(...hidden);
+ok((await g(() => document.getElementById('msg').textContent)).startsWith('Cette carte est cachée'), 'a click on a face-down card says it is hidden');
+
 const L = await g(() => L);
 // The message line and the bottom bar (lib/kit.css) take some height on a 680px window.
 ok(L.w >= 86, `card width at 1366x680 is ${L.w}px, height ${L.h}px`);
@@ -122,7 +135,7 @@ ok(await g(() => S.moves) === moves2 + 1, 'one click on the yellow place follows
 // 6. Undo
 await page.click('#undoBtn'); await page.waitForTimeout(200);
 ok(await g(() => S.moves) === moves2, 'Annuler goes back one move');
-ok(await g(() => document.getElementById('msg').textContent) === 'Coup annulé.', 'undo says so');
+ok((await g(() => document.getElementById('msg').textContent)).startsWith('Coup annulé. Cliquez'), 'undo says so, and what to click next');
 await page.keyboard.press('Control+z'); await page.waitForTimeout(200);
 ok(await g(() => S.moves) < moves2, 'Ctrl+Z goes back one more move');
 // A hint is also followed by a click on the ringed card.
@@ -204,6 +217,7 @@ await g(() => {
 });
 await page.waitForTimeout(3500);
 ok(await g(() => dialogOpen() && document.getElementById('overTitle').textContent.includes('Bravo')), 'win dialog shows');
+ok(await g(() => document.getElementById('newBtn').hasAttribute('data-nudge') && document.getElementById('hintBtn').disabled), 'after a win, "Nouvelle partie" is the next button');
 await page.screenshot({ path: `${OUT}/6-win.png` });
 
 // 10b. Fixes from the review. A position: f = foundation heights, cols = 'down ids / up ids', the other cards in the stock.
@@ -222,8 +236,20 @@ await g(() => checkStuck());
 ok(!(await g(() => dialogOpen())), 'no "Plus aucun coup possible" while a move exists');
 // A search that runs out of time does not suggest the jack of diamonds onto the queen of clubs, which loses.
 await deal([0, 0, 5, 1], ['–/3', '16/23', '44/8', '41/19,5,17,42', '0,15,4,38/2', '31,11,21,34/36', '9,22,40,48,13/50']);
-await g(() => showHint());
+await g(async () => { undo = [JSON.stringify(S)]; await showHint(); });
 ok(await g(() => sel !== 36), 'an unfinished search does not guess a move: ' + await g(() => document.getElementById('msg').textContent));
+if (await g(() => document.getElementById('msg').textContent.startsWith('Je ne trouve'))) {
+  ok(await g(() => document.getElementById('undoBtn').hasAttribute('data-nudge') && document.getElementById('msg').textContent.includes('Annuler')), 'no safe move: "Annuler" is the next button');
+}
+// No card can move, but the stock can help: the stock is framed and the line says to click it.
+await deal([0, 0, 0, 0], ['–/12', '–/25', '–/38', '–/51', '–', '–', '–']);
+ok(await g(() => stockOnly() && marks.some(m => m.dataset.key === 'stock') && hello().endsWith('Cliquez sur la pioche.')), 'only the stock can help: it is framed, ' + await g(() => hello()));
+// The stock and the waste both empty: a click on the stock says so.
+await deal([12, 12, 12, 12], ['–/12', '–/25', '–/38', '–/51', '–', '–', '–']);
+// The cards slide to their new places first: one passing over the stock would take the click.
+await page.waitForFunction(() => !document.getAnimations().some(a => a instanceof CSSTransition));
+await page.mouse.click(...await g(() => [bankX(0) + L.w / 2, L.top + L.h / 2]).then(at));
+ok((await g(() => document.getElementById('msg').textContent)).startsWith('La pioche est vide'), 'a click on the empty stock says so: ' + await g(() => document.getElementById('msg').textContent));
 // The finish also turns the stock: the queen of spades under the king in the waste still goes home.
 const won0 = await g(() => stats.won);
 await g(() => { clearTimeout(autoT); Kit.closeDialog(); clearSel(); undo = [];
@@ -249,16 +275,14 @@ ok(await g(() => lastTap === null), 'undo forgets the last click');
 // 11. Big screen
 const big = await browser.newPage({ viewport: { width: 1920, height: 1000 } });
 big.on('pageerror', e => errors.push(e.message));
-await big.goto(URL); await big.waitForTimeout(2200); await big.keyboard.press("Escape");
-await big.getByRole('button', { name: 'Facile', exact: true }).click();
+await big.goto(URL); await big.waitForFunction(() => S && !busy);
 console.log('     1920x1000 card: ' + JSON.stringify(await big.evaluate(() => [L.w, L.h])));
 await big.screenshot({ path: `${OUT}/7-start-1920x1000.png` });
 
 // 12. A save from before the library shows its wins on the library tile.
 const old = await browser.newPage({ viewport: { width: 1366, height: 680 } });
 old.on('pageerror', e => errors.push(e.message));
-await old.goto(URL); await old.click("#helpClose");
-await old.getByRole('button', { name: 'Facile', exact: true }).click();
+await old.goto(URL); await old.waitForFunction(() => S && !busy);
 await old.evaluate(() => {
   const st = JSON.parse(JSON.stringify(S)); st.moves = 4;
   localStorage.clear();

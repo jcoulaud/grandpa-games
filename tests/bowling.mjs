@@ -57,10 +57,29 @@ try {
     await page.evaluate((z) => localStorage.setItem('gg:size', JSON.stringify(z)), zoom);
     await page.reload();
   };
+  // The first visit starts a game at Facile at once, with the coach on « Lancer la boule ».
   await page.goto('http://localhost/bowling/');
-  await page.locator('#help.on').waitFor();
+  await page.locator('#shoot.coach').waitFor();
+  assert.equal(await page.evaluate(() => Kit.isOpen()), false);
+  assert.match(await page.textContent('#level'), /facile/);
+  assert.match(await page.textContent('#msg'), /puis cliquez sur « Lancer la boule »\.$/);
+  assert.match(await page.getAttribute('#undoBtn', 'data-why'), /pas encore de coup/);
+  // His own setting: « Lancer la boule » is the nudge, and the automatic hint waits.
+  await page.click('#faster');
+  assert.equal(await page.getAttribute('#shoot', 'data-nudge'), '');
+  assert.equal(await page.getAttribute('#hintBtn', 'data-auto'), 'no');
+  assert.match(await page.textContent('#msg'), /^Force 7 sur 10, puis cliquez sur « Lancer la boule »\.$/);
+  await page.locator('#shoot.coach').waitFor();
+  // The hint's throw: still the nudge, and its line ends with the button.
+  await page.click('#hintBtn');
+  assert.match(await page.textContent('#msg'), /poche.*, puis cliquez sur « Lancer la boule »\.$/);
+  assert.equal(await page.getAttribute('#hintBtn', 'data-auto'), null);
+  // A click on the lane says where the throw is set.
+  await page.click('#stage canvas');
+  assert.equal(await page.textContent('#msg'), 'Réglez votre lancer avec les boutons à droite, puis cliquez sur « Lancer la boule ».');
   for (const [width, height, zoom] of sizes) {
     await setSize(width, height, zoom);
+    await page.click('#helpBtn');
     await page.locator('#help.on').waitFor();
     for (let i = 0; i < 3; i++) {
       const fits = await page.evaluate(() => {
@@ -78,8 +97,6 @@ try {
     }
   }
   await setSize(1366, 680, 1);
-  await page.click('#helpClose');
-  await page.getByRole('button', { name: 'Facile', exact: true }).click();
   const saved = () =>
     page.evaluate(async () => {
       await GG.flush();
@@ -141,9 +158,8 @@ try {
     assert.equal(Boolean(phases.pickup), thrown.count !== 10);
     return thrown;
   }
-  const aimMessage = await page.textContent('#msg');
   await page.click('#deckInset');
-  assert.equal(await page.textContent('#msg'), aimMessage);
+  assert.match(await page.textContent('#msg'), /^Réglez votre lancer avec les boutons à droite/);
   const crossShot = { aim: 23.3, speed: 6, curve: -2 };
   const browserPhysics = await page.evaluate(async (shot) => {
     const engine = await import('/bowling/engine.js');
@@ -162,6 +178,7 @@ try {
   await page.reload();
   await page.locator('#roll').waitFor();
   assert.equal(await page.textContent('#roll'), '2e lancer');
+  assert.equal(await page.textContent('#msg'), 'Deuxième lancer : visez les quilles debout, puis cliquez sur « Lancer la boule ».');
   assert.equal(await page.textContent('#score'), String(first.count));
   assert.equal(await page.textContent('#total'), String(first.count));
   assert.deepEqual((await saved()).throws[0], first);
@@ -225,10 +242,13 @@ try {
     await setSize(width, height, zoom);
     await page.waitForFunction(() => document.querySelector('#pins .pin'));
     await page.evaluate(() =>
-      Kit.say('Vous avez fait tomber 1 quille. Il reste les quilles 2, 3, 4, 5, 6, 7, 8, 9 et 10.')
+      Kit.say('Vous avez fait tomber 6 quilles. Il reste les quilles 4, 7, 8 et 10. Deuxième lancer : visez les quilles debout, puis cliquez sur « Lancer la boule ».')
     );
     const problems = await page.evaluate(() => {
       const issue = [];
+      // The longest line fits the message band: two lines at most, nothing cut.
+      const msg = document.querySelector('#msg');
+      if (msg.scrollHeight > msg.clientHeight + 1 || msg.scrollWidth > msg.clientWidth + 1) issue.push(['#msg', 'cut']);
       const r = (e) => e.getBoundingClientRect();
       for (const e of document.querySelectorAll(
         '#bar button,#card,#pins .pin,#strip,#stage,#console button,#console .controls'

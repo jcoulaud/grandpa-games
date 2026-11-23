@@ -22,16 +22,36 @@ const start = async level => {
   await page.locator('#overBtns button', { hasText: { facile: 'Facile', moyen: 'Moyen', fort: 'Difficile' }[level] }).click();
 };
 
-// 1. The first visit: the rules open, and each page fits without scrolling.
+// 1. The first visit: a game at Facile starts at once, with the coach on the middle square. The rules stay
+// on "Règles", and each page fits without scrolling.
 await page.goto(URL);
-await wait(400);
-ok(await g(() => Kit.isOpen()), 'the rules open on the first visit');
+await page.waitForFunction(() => document.querySelector('.c.coach'));
+ok(!(await g(() => Kit.isOpen())) && await g(() => G.level === 'facile' && Kit.coaching()), 'the first visit starts a game at Facile at once, with the coach');
+ok(await g(() => document.querySelector('.c.coach')?.dataset.i === '40'), 'the coach rings the middle square to open first');
+ok(await g(() => document.getElementById('undoBtn').disabled && /annuler/.test(document.getElementById('undoBtn').dataset.why)), 'the grey undo button says why');
+// A press dragged off its square opens nothing and says how to click.
+{
+  const a = await cell(40).boundingBox(), b = await cell(42).boundingBox();
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2); await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 5 }); await page.mouse.up();
+  ok(await g(() => G.first === -1) && await msg() === 'Cliquez sans bouger la souris.', 'a dragged press opens nothing and says to click without moving the mouse');
+  await page.mouse.move(5, 5); await wait(520);
+}
+await click(40);
+ok(await g(() => { const c = document.querySelector('.c.coach'), h = Demineur.hint(G); return !!c && +c.dataset.i === h.cell; }), 'after the first square, the coach rings the square the hint frames');
+ok(await g(() => !document.querySelector('.c.danger') || /point d'exclamation rouge/.test(document.getElementById('msg').textContent) || Demineur.hint(G).kind === 'safe'),
+  'at Facile, a hint about a mine says to click the red « ! »');
+await page.click('#flagBtn');
+ok(await g(() => arming && document.getElementById('hintBtn').dataset.auto === 'no'), 'while « Drapeau » is on, the automatic hint waits');
+await page.click('#flagBtn');
+await page.click('#helpBtn');
+ok(await g(() => Kit.isOpen()), 'the rules open on « Règles »');
 for (let n = 0; n < 5; n++) {
   ok(await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }), `rules page ${n + 1} fits without scrolling`);
   await page.screenshot({ path: `${OUT}/demineur-rules-${n + 1}.png` });
   await page.click('#helpNext');
 }
-await page.getByRole('button', { name: 'Facile', exact: true }).click();
+await start('facile');
 // A fixed seed, so the steps below meet the same board each time. Moyen, because Facile refuses a guess.
 await g(() => { G = Demineur.newGame('moyen', 12345); save(); render(); });
 ok(await page.locator('.c').count() === 140, 'Moyen has 14 by 10 squares');
@@ -97,9 +117,12 @@ await page.mouse.move(5, 5);
 ok(await g(() => G.result === 'lost' && G.boom >= 0), 'a click on a mine loses the game');
 ok(await page.locator('.c.boom svg').count() === 1, 'only the mine that went off is shown');
 ok(await page.locator('#overBtns button.primary').textContent() === 'Annuler le dernier coup', 'the dialog offers "Annuler le dernier coup" first');
+ok(await g(() => 'nudge' in document.getElementById('undoBtn').dataset && /Cliquez sur « Annuler le dernier coup »/.test(document.getElementById('msg').textContent)
+  && /Annuler/.test(document.getElementById('hintBtn').dataset.why)), 'after a loss, « Annuler » is the next thing to press, and the line and the grey hint say so');
 await page.screenshot({ path: `${OUT}/demineur-lost.png` });
 await page.locator('#overBtns button.primary').click();
 ok(await cells() === before && await g(() => G.result === null && G.boom === -1), 'undo takes back the click on the mine and nothing else');
+ok(await g(() => !('nudge' in document.getElementById('undoBtn').dataset) && !('nudge' in document.getElementById('newBtn').dataset)), 'undo after a loss takes the nudge off');
 
 // 8. Saves: a reload brings back the same squares and flags.
 await click(await g(() => G.layout.find(i => G.cells[i] === '.')), 'right');
@@ -133,6 +156,8 @@ ok(await g(() => G.result === 'won'), `following the hint wins, in ${steps} clic
 ok(![...sentences].some(t => t === 'La case encadrée est sûre : ouvrez-la.'), 'the hint always gives its reason: ' + sentences.size + ' sentences');
 ok(await page.locator('#overTitle').textContent() === 'Bravo, vous avez gagné !', 'the win says bravo');
 ok(await g(() => stats.won === 1 && GG.meta('demineur').summary === '1 victoire'), 'the win is counted once and the tile says so');
+ok(await g(() => 'nudge' in document.getElementById('newBtn').dataset), 'after the win, « Nouvelle partie » is the next thing to press');
+
 await page.screenshot({ path: `${OUT}/demineur-won.png` });
 await page.keyboard.press('Escape');
 await page.click('#undoBtn');
@@ -193,7 +218,7 @@ await page.keyboard.press('Escape');
 // 13. A phone: the wide board turns a quarter, so its squares stay large.
 const phone = await browser.newPage({ viewport: { width: 390, height: 760 }, isMobile: true, hasTouch: true });
 await phone.goto(URL);
-await phone.evaluate(() => { Kit.closeHelp(); });
+await phone.click('#newBtn');
 await phone.locator('#overBtns button', { hasText: 'Difficile' }).click();
 const turned = await phone.evaluate(() => ({ turned: document.getElementById('board').classList.contains('turned'), S: S,
   fits: document.getElementById('frame').getBoundingClientRect().right <= innerWidth }));
@@ -204,7 +229,7 @@ await phone.screenshot({ path: `${OUT}/demineur-phone.png` });
 const big = await browser.newPage({ viewport: { width: 1366, height: 680 } });
 await big.addInitScript(() => localStorage.setItem('gg:size', '1.3'));
 await big.goto(URL);
-await big.evaluate(() => { Kit.closeHelp(); });
+await big.click('#newBtn');
 await big.locator('#overBtns button', { hasText: 'Moyen' }).click();
 await big.evaluate(() => { G = Demineur.newGame('moyen', 12345); save(); render(); });
 await big.locator('.c[data-i="40"]').click();
@@ -218,6 +243,27 @@ const b = await mid(big.locator('.blast'));
 const off = { z: await big.evaluate(() => Zoom.z()), d: Math.round(Math.hypot(a[0] - b[0], a[1] - b[1])) };
 ok(off.z === 1.3 && off.d <= 2, `at 130 %, the explosion is centred on the mine (${off.d} px off)`);
 await big.close();
+
+// Moyen seed 1: the hint of two numbers says it in two short sentences.
+{
+  const text = await g(() => {
+    G = Demineur.newGame('moyen', 1); G = Demineur.open(G, 40); undo = []; render();
+    for (let k = 0; k < 300 && !G.result; k++) {
+      const h = Demineur.hint(G);
+      if (h.rule === 'two') { showHint(); return document.getElementById('msg').textContent; }
+      G = h.kind === 'mine' || h.kind === 'wrong' ? Demineur.flag(G, h.cell) : Demineur.open(G, h.cell);
+    }
+    return '';
+  });
+  ok(/^Il manque [^.]+, tous deux entourés\. [^.]+ : [^.]+\.$/.test(text), `a hint with two numbers says it in two sentences: ${text}`);
+}
+// The longest hint of two numbers fits the message line on his laptop and with the text at 125 %.
+for (const [w, h] of [[1366, 680], [1093, 530]]) {
+  await page.setViewportSize({ width: w, height: h });
+  await g(() => Kit.say("Il manque 2 mines de plus au 3 qu'au 1, tous deux entourés. Seules les cases encadrées touchent le 3, pas le 1 : posez un drapeau sur chaque case encadrée."));
+  await wait(100);
+  ok(await g(() => { const m = document.getElementById('msg'); return m.scrollWidth <= m.clientWidth + 1 && m.scrollHeight <= m.clientHeight + 1; }), `${w}x${h}: the longest hint of two numbers fits the message line`);
+}
 
 ok(!errors.length, 'no page error' + (errors.length ? ': ' + errors.join(' | ') : ''));
 await browser.close();

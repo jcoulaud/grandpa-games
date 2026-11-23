@@ -181,7 +181,11 @@
   #todo svg { flex: none; width: calc(48px * var(--k)); height: calc(48px * var(--k)); overflow: visible; }
   #todo.wait { font-weight: 600; font-size: calc(22px * var(--k)); color: #E3F4F3; }
   #todo.wait svg { width: calc(36px * var(--k)); height: calc(36px * var(--k)); }
-  #rollBtn[hidden], #todo[hidden], #pick[hidden] { display: none; }
+  #rollBtn[hidden], #todo[hidden], #pick[hidden], #why[hidden] { display: none; }
+  /* Why his last throw could not move a horse, kept until his next throw. */
+  #why { padding: 8px 12px; border-radius: 14px; background: rgba(0,0,0,.22); color: #FFF4D6; font: 600 calc(20px * var(--k))/1.25 var(--ui); text-wrap: balance; }
+  /* During the coach, the kit's hand points at the die: the die's own hand steps aside. */
+  #die.coach + .hand { display: none !important; }
   /* When his framed horses stand close together, one large button for each under the words. */
   #pick { display: flex; flex-direction: column; gap: calc(10px * var(--k)); }
   #pick button { width: 100%; min-height: calc(54px * var(--k)); padding: 6px 12px; font-size: calc(21px * var(--k)); line-height: 1.15; justify-content: center; text-align: center; white-space: normal; }
@@ -284,6 +288,7 @@
     <div id="act">
       <button id="rollBtn" class="primary" data-nudge hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>Lancer le dé</button>
       <div id="todo"></div>
+      <div id="why" hidden></div>
       <div id="pick" hidden></div>
     </div>
   </div>
@@ -349,6 +354,8 @@ const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
 let G, view, undo = [], level = 'facile', stats = { won: 0 }, wonNow = false, hint = null, timers = [];
 let gameId = 0; // Changes when undo or a new game replaces the turn on screen.
 let showing = false, anim = false, rolling = false, stale = false, saved = true, moved = null;
+// noMove: why his last throw moved no horse, shown beside the die until his next throw.
+let noMove = '';
 addEventListener('gg-stale', () => { stale = true; });
 const say = Kit.say; // Only tell() and save() call it: see tell().
 const busy = () => showing || anim || rolling;
@@ -439,7 +446,7 @@ function moveText(l) {
   if (l.to === FOOT) return `${horse} arrive au pied de son échelle.`;
   return me ? `Votre cheval avance de ${cases(l.die)}.` : `${NAMES[p]} avance un cheval de ${cases(l.die)}.`;
 }
-const againText = p => p === 0 ? ' Vous avez fait 6 : relancez le dé.' : ` ${NAMES[p]} a fait 6 : il rejoue.`;
+const againText = p => p === 0 ? ' Vous avez fait 6 : cliquez sur le dé pour rejouer.' : ` ${NAMES[p]} a fait 6 : il rejoue.`;
 // Why a horse cannot move with this die, in one sentence.
 function blockedText(g, h) {
   const b = PC.blocked(g, 0, h), d = g.die;
@@ -480,7 +487,7 @@ function chooseText(g) {
   if (d === 6 && ms.some(m => m.from < 0)) return "Vous avez fait 6 : sortez un cheval de l'écurie, ou faites avancer un autre cheval qui brille.";
   return `Vous avez fait ${d} : cliquez sur un cheval qui brille. Le rond jaune montre où il ira.`;
 }
-const turnText = () => 'À vous : lancez le dé.';
+const turnText = () => 'À vous : cliquez sur le dé.';
 
 /* ---------- His actions ---------- */
 let lastTap = null;
@@ -500,7 +507,7 @@ async function rollDice() {
   if (Kit.isOpen() || refuseBusy()) return;
   if (anim) return;
   if (G.die !== null) return tell(PC.moves(G).length ? 'Vous avez déjà lancé le dé : cliquez sur un cheval qui brille.' : noMoveText(G));
-  hint = null; moved = null;
+  hint = null; moved = null; noMove = '';
   G = view = PC.roll(G);
   const current = G;
   // The throw is saved before it shows, so a reload cannot throw again.
@@ -517,6 +524,9 @@ function afterThrow() {
   render();
   if (!PC.moves(G).length) {
     tell(noMoveText(G));
+    // The line passes on after 2.2 s: the reason stays beside the die until his next throw.
+    noMove = noMoveText(G).replace(/ (Le tour passe à Rouge|Relancez le dé)\.$/, '');
+    render();
     const current = G;
     later(() => { if (G === current) passTurn(); }, reducedMotion.matches ? 900 : NOMOVE_MS);
     return;
@@ -632,7 +642,8 @@ function computerPlays(first = FIRST_MS) {
     if (stale) return;
     if (G.result !== null) return finish(true);
     const said = hurt || lastText;
-    tell(said && said.length < 80 ? `${said} ${turnText()}` : turnText());
+    // The last thing that happened stays on the line, however long, then what to do.
+    tell(said ? `${said} ${turnText()}` : turnText());
   };
   render();
   later(show, reducedMotion.matches ? 200 : first);
@@ -640,7 +651,8 @@ function computerPlays(first = FIRST_MS) {
 
 /* ---------- End of the game ---------- */
 function finish(fresh) {
-  hint = null;
+  hint = null; noMove = '';
+  Kit.gameOver(true);
   view = G;
   render();
   const id = gameId;
@@ -658,7 +670,7 @@ function finish(fresh) {
   };
   const lost = saved ? '' : ' ' + WARN, all = NUM[count()];
   if (G.result === 0) {
-    tell(`Bravo, vos ${all} chevaux sont au centre : vous avez gagné !`);
+    tell(`Bravo, vos ${all} chevaux sont au centre : vous avez gagné ! Cliquez sur « Nouvelle partie » pour rejouer.`);
     if (!fresh) return;
     later(() => window.Sound?.play('win'), 400);
     party();
@@ -667,7 +679,7 @@ function finish(fresh) {
       [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', Kit.home]], true), reducedMotion.matches ? 0 : 2500);
   } else {
     const w = G.result, mine = G.horses[0].filter(x => x === ARRIVED).length;
-    tell(`${NAMES[w]} a gagné : ses ${all} chevaux sont au centre.`);
+    tell(`${NAMES[w]} a gagné : ses ${all} chevaux sont au centre. Cliquez sur « Nouvelle partie » pour rejouer.`);
     if (!fresh) return;
     later(() => window.Sound?.play('lose'), 400);
     const had = mine === 0 ? "Vous n'aviez encore aucun cheval au centre." : `Vous en aviez ${plural(mine, 'au centre', 'au centre')}.`;
@@ -697,7 +709,7 @@ function doUndo() {
   // His later throws are drawn again, so an undo cannot show him what the die would give. The
   // computer players keep their own numbers.
   G = view = { ...G, rng: [crypto.getRandomValues(new Uint32Array(1))[0], ...G.rng.slice(1)] };
-  hint = null; moved = null;
+  hint = null; moved = null; noMove = '';
   save(); render();
   tell(`Coup annulé : vous avez toujours ${G.die}. ${PC.moves(G).length > 1 ? 'Cliquez sur un cheval qui brille.' : 'Cliquez sur le cheval qui brille.'}`);
 }
@@ -728,7 +740,7 @@ async function newGame(lv) {
   if (lv) level = lv;
   Kit.showLevel(level);
   const seed = crypto.getRandomValues(new Uint32Array(1))[0];
-  G = view = PC.newGame(level, seed); undo = []; hint = null; wonNow = false; moved = null; round++;
+  G = view = PC.newGame(level, seed); undo = []; hint = null; wonNow = false; moved = null; noMove = ''; round++;
   // A stale window cannot save, so it does not count a game either.
   const id = gameId;
   const written = save();
@@ -870,8 +882,16 @@ function render() {
   d.classList.toggle('ready', canRoll);
   const who = `${horseIco(p)}${g.result !== null ? (p === 0 ? 'Vous avez gagné' : NAMES[p] + ' a gagné') : p === 0 ? 'À vous' : NAMES[p] + ' joue'}`;
   if ($('dieWho').dataset.html !== who) { $('dieWho').innerHTML = who; $('dieWho').dataset.html = who; }
-  box.querySelector('.six').classList.toggle('on', !rolling && g.die === 6);
+  // Under the die: "6 : on rejoue" after a 6, and "Il faut un 6" while all his horses wait in the stable.
+  const six = box.querySelector('.six'), stable = canRoll && G.horses[0].every(x => x < 0);
+  six.textContent = stable ? 'Il faut un 6' : '6 : on rejoue';
+  six.classList.toggle('on', stable || (!rolling && g.die === 6));
   d.disabled = !canRoll;
+  // A click on the grey die says why.
+  d.dataset.why = g.result !== null ? 'La partie est finie : cliquez sur « Nouvelle partie ».'
+    : g.turn !== 0 ? `Attendez : c'est à ${NAMES[g.turn]} de jouer.`
+    : rolling ? "Attendez que le dé s'arrête." : !mine ? "Attendez un instant : c'est bientôt à vous."
+    : PC.moves(g).length ? 'Vous avez déjà lancé le dé : cliquez sur un cheval qui brille.' : noMoveText(g);
   // What to do now: the throw button on his turn, else big words. It is never a grey button.
   $('rollBtn').hidden = !canRoll;
   const todo = $('todo');
@@ -888,11 +908,24 @@ function render() {
   if (todo.dataset.html !== html) { todo.innerHTML = html; todo.dataset.html = html; }
   todo.hidden = !words;
   todo.classList.toggle('wait', wait);
+  $('why').textContent = noMove;
+  $('why').hidden = !noMove;
   if (!showing) Kit.showWins(stats.won);
   $('undoBtn').disabled = !undo.length;
+  $('undoBtn').dataset.why = "Il n'y a pas encore de coup à annuler.";
   $('hintBtn').disabled = G.result !== null;
+  $('hintBtn').dataset.why = 'La partie est finie : cliquez sur « Nouvelle partie ».';
   layout();
   drawPick(mine && g.die !== null ? choices(g) : []);
+  if (mine) coach(canRoll, can);
+}
+// The coach of his first game points at the die, then at the horse the hint would move.
+function coach(canRoll, can) {
+  if (!Kit.coaching()) return;
+  if (canRoll) return Kit.point($('die'));
+  if (!can.size) return;
+  const a = PC.advice(G), h = a ? a.horse : [...can][0];
+  Kit.point(crowded ? $('pick').querySelector(`button[data-h="${h}"]`) : horseEl(0, h));
 }
 // When his framed horses stand closer than 44 px, a click on the board could miss: each choice gets
 // a large button under the die. With two, "Le cheval de devant" and "Le cheval de derrière".
@@ -1207,6 +1240,12 @@ $('board').addEventListener('click', e => {
   if (G.die === null) tell("Lancez d'abord le dé : cliquez sur le dé.");
   else if (PC.moves(G).length) tell('Cliquez sur un cheval bleu qui brille.');
 });
+// A click on the board while the others play, or after the end, says why nothing moves.
+$('board').addEventListener('pointerdown', e => {
+  if (!e.isTrusted || e.button !== 0 || Kit.isOpen() || !G || e.target.closest('.horse, .land')) return;
+  if (G.result !== null && !showing) Kit.tell('La partie est finie : cliquez sur « Nouvelle partie ».');
+  else if (showing || G.turn !== 0) Kit.tell(`Attendez : c'est à ${NAMES[view.turn]} de jouer.`);
+});
 // Under the mouse, the nearest framed horse grows and a ring shows where it would land.
 let hovered = null;
 function hoverHorse(h) {
@@ -1242,7 +1281,7 @@ addEventListener('keydown', e => {
 addEventListener('resize', render);
 drawGuide();
 
-// The rules open by themselves the first time the game is opened.
+// The first time, a game starts at Facile at once, with the coach.
 if (load()) {
   Kit.showLevel(level);
   render();

@@ -110,6 +110,15 @@ button.primary:disabled, button.primary:disabled:hover { background: transparent
   50% { scale: 1.06; box-shadow: 0 3px 0 #C9951A, 0 0 0 14px rgba(255, 200, 60, 0); }
 }
 @media (prefers-reduced-motion: reduce) { .nudge:not(:disabled) { animation: none; outline: 5px solid #C9951A; outline-offset: 3px; } }
+/* The coach of the first game (see Kit.point): a yellow ring on the real thing to click and the white hand
+   of the rules guide under it, its finger up, bobbing. The ring is an outline, so the game's own shadows stay. */
+.coach { outline: 5px solid #FFC83D !important; outline-offset: 4px; animation: kitCoach 1.4s ease-in-out infinite; }
+@keyframes kitCoach { 50% { outline-color: rgba(255, 200, 61, .35); outline-offset: 9px; } }
+#coachHand { position: fixed; z-index: 4000; width: 46px; height: 54px; pointer-events: none; animation: kitHand 1.4s ease-in-out infinite; }
+#coachHand[hidden] { display: none; }
+#coachHand .guide-hand { position: static; width: 46px; height: 54px; }
+@keyframes kitHand { 50% { translate: 0 -8px; } }
+@media (prefers-reduced-motion: reduce) { .coach, #coachHand { animation: none; } }
 button.game { --accent: #0B6B5D; background: var(--accent); color: #fff; --edge: color-mix(in srgb, var(--accent), #000 40%); border-color: var(--edge); box-shadow: 0 3px 0 var(--edge); }
 button.game:hover { background: #0E7D6D; }
 button.game:active { background: #095A4E; }

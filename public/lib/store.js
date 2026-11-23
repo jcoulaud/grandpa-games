@@ -142,6 +142,7 @@
     track: (game, kind) => {
       send('/stats', { game, kind });
       PH.capture(kind === 'won' ? 'game won' : 'game started', { game });
+      dispatchEvent(new CustomEvent('gg-track', { detail: { game, kind } }));
     },
     get, set, // small per-PC flags for the library
   };

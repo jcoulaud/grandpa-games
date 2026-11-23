@@ -44,10 +44,21 @@ const setHand = (hands, trump, extra = {}) => g(([hands, trump, extra]) => {
   save(); render(); step();
 }, [hands, trump, extra]);
 
-// 1. The first visit: the rules open, and each page fits without scrolling.
+// 1. The first visit: a game at Facile starts at once, with the coach. At the bids, the coach points at the
+// hint only, then at the bid it advises. The rules stay on "Règles", and each page fits without scrolling.
 await page.goto(URL);
 await wait(400);
-ok(await g(() => Kit.isOpen()), 'the rules open on the first visit');
+ok(!(await g(() => Kit.isOpen())) && await g(() => level === 'facile' && Kit.coaching()), 'the first visit starts a game at Facile at once, with the coach');
+await myTurn();
+await until(() => document.getElementById('msg').textContent.startsWith('À vous'));
+ok(await g(() => document.getElementById('hintBtn').classList.contains('coach') && !document.querySelector('#bidBtns .coach')), 'at his first bid, the coach rings the hint button, not a bid');
+ok(/^Prendre : le \S+ de la retourne devient l'atout\.$/.test(await g(() => document.getElementById('bidNote').textContent)), 'the bid sheet says what taking does');
+ok(/Cliquez sur « Je prends » ou « Je passe »\.$/.test(await msg()), 'the line ends with what to click');
+await page.click('#hintBtn');
+ok(await g(() => { const b = document.querySelector('#bidBtns button.hint'); return !!b && b.classList.contains('coach'); }) && /Cliquez sur/.test(await msg()), 'after the hint, the coach rings the bid it advises');
+ok(await g(() => document.getElementById('undoBtn').disabled && /annuler/.test(document.getElementById('undoBtn').dataset.why)), 'the grey undo button says why');
+await page.click('#helpBtn');
+ok(await g(() => Kit.isOpen()), 'the rules open on « Règles »');
 const pages = await g(() => document.querySelectorAll('#helpText .page').length);
 for (let n = 0; n < pages; n++) {
   ok(await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }), `rules page ${n + 1} fits without scrolling`);
@@ -62,18 +73,21 @@ ok(await g(() => { const ps = [...document.querySelectorAll('#helpText .page')];
   'the guide has 3 to 5 pages, each one picture and a few words');
 ok(await g(() => { const p = document.querySelector('#helpText .page'); return p.textContent.includes('Je prends') && !!p.querySelector('.bp-ring .guide-hand');}),
   'the first page shows the table and rings the first buttons to click');
+await page.click('#newBtn');
 await page.getByRole('button', { name: 'Moyen', exact: true }).click();
-ok(!(await g(() => Kit.isOpen())) && await g(() => level === 'moyen'), 'the level is chosen after the rules');
+ok(!(await g(() => Kit.isOpen())) && await g(() => level === 'moyen'), 'a new game takes the level chosen');
 ok(await g(() => [1, 2, 3].every(s => document.querySelector(`#seat${s} img.ava`).src.endsWith(`/lib/avatars/${['', 'henri', 'andre', 'simone'][s]}.webp`))), 'Henri, André and Simone show their faces');
 
 // 2. The bids. Simone deals, so he speaks first.
 await myTurn();
 ok(await g(() => G.phase === 'bid1' && G.hands[0].length === 5 && document.getElementById('bidBar').classList.contains('on')), 'he speaks first, with 5 cards, and the bid bar shows');
+ok(await g(() => { const b = document.getElementById('bidBar').getBoundingClientRect(), n = document.getElementById('bidNote').getBoundingClientRect();
+  return (n.height > 0 || document.getElementById('bidBar').classList.contains('nonote')) && n.right <= b.right && n.bottom <= b.bottom; }), 'the line under the question fits in the bid sheet, or gives way');
 await g(() => els.get(G.turnup).flight?.finished.catch(() => {}));
 ok(await g(() => { const t = document.querySelector('.card.turnup'), r = t.getBoundingClientRect(), m = document.getElementById('mid').getBoundingClientRect();
   return +t.dataset.c === G.turnup && r.left >= m.left && r.right <= m.right; }), 'the retourne lies face up on the mat');
 ok((await g(() => [...document.querySelectorAll('#bidBtns button')].map(b => b.textContent.trim()).join('|'))) === 'Je prends|Je passe', 'first round: "Je prends" and "Je passe"');
-ok(await until(() => document.getElementById('msg').textContent.startsWith('À vous de parler : prenez-vous à')), 'the line asks whether he takes');
+ok(await until(() => /^À vous de parler\. Si vous prenez, le \S+ devient l'atout\./.test(document.getElementById('msg').textContent)), 'the line asks him to speak and says what taking does');
 await page.screenshot({ path: `${OUT}/belote-bid.png` });
 const hand5 = await g(() => G.hands[0].slice());
 await clickCard(hand5[0]);
@@ -121,7 +135,8 @@ await myTurn();
 ok(await g(() => document.getElementById('mySlot').classList.contains('on') && document.getElementById('seat0').textContent.includes('À vous')), 'his turn shows: his place in the trick and his seat');
 ok(await g(() => { const can = document.querySelector('.card.hand.can'), no = document.querySelector('.card.hand.no');
   const rise = e => new DOMMatrix(getComputedStyle(e).transform).m42;
-  return rise(can) < -5 && (!no || (rise(no) === 0 && getComputedStyle(no).filter.includes('brightness'))); }), 'on his turn, the cards he may play rise and the others are dimmed');
+  return rise(can) < -5 && (!no || (rise(no) === 0 && getComputedStyle(no).filter.includes('brightness') && getComputedStyle(no, '::after').backgroundImage.includes('svg'))); }),
+  'on his turn, the cards he may play rise, and the others are dimmed and crossed');
 const lead = await g(() => G.hands[0][G.hands[0].length - 1]);
 await clickCard(lead);
 ok(await g(c => !G.hands[0].includes(c) && G.log.length === 1, lead), 'a card is played with one click');
@@ -198,6 +213,7 @@ ok(await g(() => G.said === 2) && (await msg()).includes('« Rebelote ! »'), 't
 // 6. The end of a hand: the score sheet, which Escape does not close, then the next hand.
 await until(() => document.getElementById('scoreSheet').classList.contains('on'));
 ok(await g(() => G.phase === 'done' && G.handPts[0] === G.won[0] + 20), 'the hand is scored with the belote');
+ok(await until(() => { const m = document.getElementById('msg').textContent; return m.startsWith('Fin de la manche') && m.endsWith('Cliquez sur « Manche suivante ».'); }), 'the line at the end of a hand names the next button');
 ok((await g(() => document.getElementById('scoreTitle').textContent)) === 'Fin de la manche 1' && (await g(() => document.getElementById('scoreNote').textContent)).includes('contrat réussi'), 'the score sheet says the contract is made');
 await page.screenshot({ path: `${OUT}/belote-scores.png` });
 await page.keyboard.press('Escape');
@@ -238,6 +254,7 @@ if (!(await g(() => motion.matches))) {
 }
 await until(() => document.getElementById('over').classList.contains('on'));
 ok(await g(() => G.phase === 'over' && G.result.winner === 0 && stats.won === 1), 'he wins past 501 points');
+ok(await g(() => 'nudge' in document.getElementById('newBtn').dataset), 'after the win, « Nouvelle partie » is the next thing to press');
 ok((await g(() => document.getElementById('overTitle').textContent)) === 'Bravo, vous avez gagné !', 'the win sheet shows');
 ok(await g(() => /atteignez 501 points[^]*\nLes points : Vous et André 501, Simone et Henri 3\d\d\./.test(document.getElementById('overText').textContent)), 'the win sheet says why the game ended, with both totals');
 await page.screenshot({ path: `${OUT}/belote-won.png` });
@@ -344,6 +361,12 @@ await g(() => { const s = JSON.parse(localStorage.getItem('gg:save:belote')); s.
 await page.reload(); await wait(400);
 ok(await g(() => Belote.check(G) && level === 'facile' && document.getElementById('level').textContent.startsWith('Niveau facile')), 'a save with an unknown level and no version loads, at Facile');
 ok((await g(() => document.getElementById('home').href)).endsWith('/public/index.html'), 'the way back to the games works from a file');
+// The second round says why the suit of the retourne is missing.
+ok(await g(() => { cancelAll(); let x = G; for (let k = 0; k < 8 && !(x.phase === 'bid2' && x.turn === 0); k++) x = Belote.bid(x, 'pass');
+  if (x.phase !== 'bid2' || x.turn !== 0) return false; G = x; render();
+  const s = Cards.SUIT_NAMES[Belote.suit(G.turnup)];
+  return document.getElementById('bidNote').textContent === `Pas de ${s} : il a été refusé au premier tour.`
+    && ![...document.querySelectorAll('#bidBtns button')].some(b => b.textContent.trim().toLowerCase() === s); }), 'the second round says the suit of the retourne was refused');
 
 // 9. The layout at every window size: nothing outside the window, no text cut, buttons of 44 px and more,
 // text of 20 px and more (13 on a phone), and the seats clear of each other and of his hand.

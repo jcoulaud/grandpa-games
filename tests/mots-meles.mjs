@@ -19,10 +19,18 @@ const click = async i => { await cellAt(i).click(); await page.mouse.move(5, 5);
 const ends = w => g(w => { const c = MotsMeles.cells(G, w); return [c[0], c[c.length - 1]]; }, w);
 const cls = i => cellAt(i).getAttribute('class');
 
-// 1. The first visit: the rules open, each page fits without scrolling, then the level.
+// 1. The first visit: a game at Facile starts at once, with the coach on the first letter of a word. The
+// rules stay on "Règles", and each page fits without scrolling.
 await page.goto(URL);
 await wait(400);
-ok(await g(() => Kit.isOpen()), 'the rules open on the first visit');
+ok(!(await g(() => Kit.isOpen())) && await g(() => G.level === 'facile' && Kit.coaching()), 'the first visit starts a game at Facile at once, with the coach');
+ok(await g(() => { const c = document.querySelector('.cell.coach'); return !!c && +c.dataset.i === MotsMeles.cells(G, MotsMeles.hint(G, -1))[0]; }), 'the coach rings the first letter of a word');
+await click(await g(() => +document.querySelector('.cell.coach').dataset.i));
+ok(await g(() => { const c = document.querySelector('.cell.coach'), w = MotsMeles.hint(G, -1), cs = MotsMeles.cells(G, w);
+  return anchor === cs[0] && !!c && +c.dataset.i === cs[cs.length - 1] && document.getElementById('hintBtn').dataset.auto === 'no'; }),
+  'once the first letter is chosen, the coach rings its last letter, and the automatic hint waits');
+await page.click('#helpBtn');
+ok(await g(() => Kit.isOpen()), 'the rules open on « Règles »');
 const pages = await page.locator('#helpText .page').count();
 ok(pages >= 3 && pages <= 5, `the rules have ${pages} pages`);
 for (let n = 0; n < pages; n++) {
@@ -30,6 +38,7 @@ for (let n = 0; n < pages; n++) {
   await page.screenshot({ path: `${OUT}/mots-meles-rules-${n + 1}.png` });
   await page.click('#helpNext');
 }
+await page.click('#newBtn');
 await page.getByRole('button', { name: 'Facile', exact: true }).click();
 ok(await page.locator('.cell').count() >= 64 && await page.locator('#words li').count() === 6, 'Facile has a grid of 8 or 9 letters across and 6 words');
 // A fixed seed, so the steps below meet the same grid each time.
@@ -70,7 +79,7 @@ ok(!/anchor/.test(await cls(s0)) && !(await shown()), 'Escape also cancels the l
 // 3. A word found: the band, the list, the message.
 await click(s0); await click(e0);
 ok(await page.locator('.band:not(.try)').count() === 1 && /found/.test(await page.locator('#words li').nth(0).getAttribute('class')), 'the first and last letter circle the word and strike it in the list');
-ok(await msg() === `Vous avez trouvé ${caps[0]}.`, `the message says "Vous avez trouvé ${caps[0]}."`);
+ok(await msg() === `Vous avez trouvé ${caps[0]}. Encore 5 mots : cliquez sur la première lettre d'un autre mot.`, `the message says "Vous avez trouvé ${caps[0]}." and what to do next`);
 ok(await g(() => document.getElementById('count').textContent) === '1 mot trouvé sur 6', 'the sheet counts the words found');
 ok(await g(() => GG.meta('mots-meles').summary === 'Partie en cours'), 'the tile says a game is in progress');
 await page.screenshot({ path: `${OUT}/mots-meles-found.png` });
@@ -78,7 +87,7 @@ await page.screenshot({ path: `${OUT}/mots-meles-found.png` });
 // 4. From the last letter to the first also finds a word.
 const [s1, e1] = await ends(1);
 await click(e1); await click(s1);
-ok(await msg() === `Vous avez trouvé ${caps[1]}.` && await page.locator('.band:not(.try)').count() === 2, 'the last letter, then the first, also find the word');
+ok((await msg()).startsWith(`Vous avez trouvé ${caps[1]}.`) && await page.locator('.band:not(.try)').count() === 2, 'the last letter, then the first, also find the word');
 
 // 5. Refusals, each with its reason. A refused pair keeps the first letter.
 await click(s0); await click(e0);
@@ -100,14 +109,22 @@ ok((await msg()).startsWith(`« ${none.text} » n'est pas un mot de la liste`), 
 ok(await page.locator('.band.try').count() === 1, 'the line chosen shows dashed for a moment');
 await click(a);
 
-// 6. The hint rings the first letter of a word still to find.
+// 6. The hint rings the first letter of a word still to find. A letter chosen stays chosen.
+await click(a);
 await page.click('#hintBtn');
 const hinted = await g(() => [...document.querySelectorAll('.cell.hint')].map(e => +e.dataset.i));
 const [s2] = await ends(2);
 ok(hinted.length === 1 && hinted[0] === s2 && (await msg()).includes(`Le mot ${caps[2]} commence par la lettre entourée`), 'the hint rings the first letter of the next word to find');
+ok(await g(a => anchor === a, a) && /Enlevez d'abord le/.test(await msg()), 'the hint keeps the letter chosen, and says to take it back first');
+ok(await g(() => { const h = getComputedStyle(document.querySelector('.cell.hint'), '::before'), c = getComputedStyle(document.querySelector('.cell.anchor'), '::before');
+  return h.borderTopStyle === 'dashed' && h.borderTopColor !== c.backgroundColor; }), 'the hint ring is dashed blue, unlike the yellow disc of the letter chosen');
+await page.click('#hintBtn');
+const [, e2] = await ends(2);
+ok(await g(([s2, e2]) => [...document.querySelectorAll('.cell.hint')].map(e => +e.dataset.i).sort((x, y) => x - y).join() === [s2, e2].sort((x, y) => x - y).join(), [s2, e2]),
+  'a second hint on the same word rings its last letter too');
 await page.click('#hintBtn');
 const [s3] = await ends(3);
-ok(await g(s3 => document.querySelector('.cell.hint')?.dataset.i === String(s3), s3), 'a second hint shows the next word');
+ok(await g(s3 => document.querySelectorAll('.cell.hint').length === 1 && document.querySelector('.cell.hint')?.dataset.i === String(s3), s3), 'a third hint shows the next word');
 
 // 7. A drag from the first letter to the last also finds a word.
 const [, e3] = await ends(3);
@@ -117,7 +134,16 @@ await page.mouse.down();
 await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
 await page.mouse.up();
 await page.mouse.move(5, 5); await wait(560);
-ok(await msg() === `Vous avez trouvé ${caps[3]}.` && await page.locator('.cell.hint').count() === 0, 'a drag finds a word, and its hint goes');
+ok((await msg()).startsWith(`Vous avez trouvé ${caps[3]}.`) && await page.locator('.cell.hint').count() === 0, 'a drag finds a word, and its hint goes');
+// A letter chosen at the start of a word: the hint rings its last letter, and keeps the letter.
+{
+  const [s5, e5] = await ends(5);
+  await click(s5);
+  await page.click('#hintBtn');
+  ok(await g(([s5, e5]) => anchor === s5 && document.querySelector(`.cell[data-i="${e5}"]`).classList.contains('hint'), [s5, e5]) && /cliquez sur sa dernière lettre/.test(await msg()),
+    'with the first letter of a word chosen, the hint rings its last letter');
+  await click(s5);
+}
 
 // 8. A double-click on a letter counts as one click.
 const [s4, e4] = await ends(4);
@@ -154,14 +180,14 @@ const c2 = await g(() => MotsMeles.cells(G, 2));
 await drag(c2[0], [await centre(c2[c2.length - 2])]);
 ok(/Presque/.test(await msg()) && /anchor/.test(await cls(c2[0])), 'a refused drag keeps its first letter');
 await click(c2[c2.length - 1]);
-ok(await msg() === `Vous avez trouvé ${caps[2]}.`, 'a click on the right last letter then finds the word');
+ok((await msg()).startsWith(`Vous avez trouvé ${caps[2]}.`), 'a click on the right last letter then finds the word');
 // A press on the last letter that moves 18 px inside it is still a click on it.
 const [w3s, w3e] = await ends(3);
 await click(w3s);
 const [ex, ey] = await centre(w3e);
 await page.mouse.move(ex - 9, ey); await page.mouse.down(); await page.mouse.move(ex + 9, ey, { steps: 4 }); await page.mouse.up();
 await page.mouse.move(5, 5); await wait(560);
-ok(await msg() === `Vous avez trouvé ${caps[3]}.`, 'a small move of the mouse inside the last letter still finds the word');
+ok((await msg()).startsWith(`Vous avez trouvé ${caps[3]}.`), 'a small move of the mouse inside the last letter still finds the word');
 // A drag let go outside the grid finds nothing and keeps its first letter.
 const [w4s, w4e] = await ends(4);
 const gridBox = await page.locator('#board').boundingBox();
@@ -212,6 +238,7 @@ await page.keyboard.press('Escape');
 await click(0);
 ok(/Cette grille est finie/.test(await msg()), 'a click after the win says to start a new grid');
 ok(await g(() => document.getElementById('undoBtn').disabled && document.getElementById('hintBtn').disabled), 'undo and the hint rest after the win');
+ok(await g(() => /Nouvelle partie/.test(document.getElementById('hintBtn').dataset.why) && 'nudge' in document.getElementById('newBtn').dataset), 'the grey hint says why, and « Nouvelle partie » is the next thing to press');
 await page.reload();
 await wait(300);
 ok(await g(() => G.result === 'won' && !Kit.isOpen()) && /Bravo, vous avez trouvé les 6 mots/.test(await msg()), 'a reload after the win shows it without the dialog');
@@ -226,10 +253,7 @@ ok(sent.start === 1 && await g(() => !G.result && G.found.length === 0), 'a new 
 await g(() => { const v = GG.load('mots-meles'); v.G.grid = 'x' + v.G.grid.slice(1); return GG.save('mots-meles', v); });
 await page.reload();
 await wait(300);
-ok(await g(() => Kit.isOpen()), 'a broken save is not loaded: the rules open');
-await page.click('#helpClose');
-await page.getByRole('button', { name: 'Facile', exact: true }).click();
-await wait(200);
+ok(await g(() => !Kit.isOpen() && G.level === 'facile' && G.found.length === 0), 'a broken save is not loaded: a new grid starts at Facile');
 ok(await g(() => stats.won === 1 && GG.load('mots-meles').stats.won === 1), 'a broken grid keeps the count of grids finished');
 // A save with a level this game does not know loads at the level of its size.
 await g(() => { const G0 = MotsMeles.find(MotsMeles.newGame('moyen', 9), 0); return GG.save('mots-meles', { G: { ...G0, level: 'normal' } }); });
@@ -302,6 +326,7 @@ for (const [w, h, z] of WINDOWS) {
   if (h / z >= 620) {
     let fit = true;
     const pages = await p.locator('#helpText .page').count();
+    await p.evaluate(() => Kit.openHelp());
     for (let k = 0; k < pages; k++) {
       fit = fit && await p.evaluate(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; });
       await p.click('#helpNext');
@@ -363,7 +388,7 @@ for (const [label, at] of Object.entries(laptop))
   const p = await browser.newPage({ viewport: { width: 1366, height: 680 } });
   p.on('pageerror', e => errors.push(e.message));
   await p.goto(URL);
-  await p.evaluate(() => Kit.closeHelp());
+  await p.click('#newBtn');
   await p.getByRole('button', { name: 'Facile', exact: true }).click();
   const at = async i => { const b = await p.locator(`.cell[data-i="${i}"]`).boundingBox(); return [b.x + b.width / 2, b.y + b.height / 2]; };
   const pmsg = () => p.evaluate(() => document.getElementById('msg').textContent);
@@ -442,7 +467,7 @@ for (const [label, at] of Object.entries(laptop))
 const calm = await browser.newPage({ viewport: { width: 1366, height: 680 }, reducedMotion: 'reduce' });
 calm.on('pageerror', e => errors.push(e.message));
 await calm.goto(URL);
-await calm.evaluate(() => Kit.closeHelp());
+await calm.click('#newBtn');
 await calm.getByRole('button', { name: 'Facile', exact: true }).click();
 await calm.evaluate(() => { for (let w = 0; w < G.words.length - 1; w++) G = MotsMeles.find(G, w); save(); render(); });
 // The memory is full at the last word: the win dialog says the grid was not saved.

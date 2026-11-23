@@ -114,18 +114,35 @@ const indexCheck = () => g(() => {
 });
 const gauge = () => g(() => { const e = document.getElementById('gauge'); return e.offsetWidth ? e.textContent + (e.classList.contains('full') ? ' (gold)' : '') : null; });
 
-// 1. The first visit: the rules open, and each page fits without scrolling.
+// 1. The first visit: a game at Facile starts at once, with the coach on the pioche. The rules open on
+// "Règles", and each page fits without scrolling.
 await page.goto(URL);
 await wait(400);
-ok(await g(() => Kit.isOpen()), 'the rules open on the first visit');
+ok(!(await g(() => Kit.isOpen())) && await g(() => level === 'facile' && Kit.coaching() && G.phase === 'draw'), 'the first visit starts a game at Facile at once, with the coach');
+ok(await g(() => document.getElementById('stock').classList.contains('coach')), 'the coach points at the pioche first');
+ok(await g(() => ['layBtn', 'throwBtn'].every(id => document.getElementById(id).dataset.why === "Prenez d'abord une carte : la pioche ou la défausse.")),
+  'the grey "Poser" and "Jeter" say to take a card first');
+await clickEl('#stock');
+const coached = await g(() => { const e = document.querySelector('.coach'), b = bestMove(); return e && e.matches('.card.hand') && (b.cards || [b.card]).includes(+e.dataset.c) ? +e.dataset.c : null; });
+ok(coached !== null, 'after the pioche, the coach points at a card of the best move');
+await clickAt(await at(`.card.hand[data-c="${coached}"]`));
+ok(await g(c => { const e = document.querySelector('.coach'); return !!e && e !== document.querySelector(`.card.hand[data-c="${c}"]`); }, coached), 'then at the next thing to click');
+await clickAt(await at(`.card.hand[data-c="${coached}"]`));
+await clickEl('#layBtn');
+ok((await msg()) === 'Choisissez au moins 3 cartes pour poser.', 'a click on the grey "Poser" says why: ' + await msg());
+await clickEl('#throwBtn');
+ok((await msg()).startsWith("Choisissez d'abord la carte à jeter"), 'a click on the grey "Jeter" says why: ' + await msg());
+await page.click('#helpBtn');
 for (let n = 0; n < 5; n++) {
   ok(await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }), `rules page ${n + 1} fits without scrolling`);
   await page.screenshot({ path: `${OUT}/rami-rules-${n + 1}.png` });
   await page.click('#helpNext');
 }
+ok(!(await g(() => Kit.isOpen())), 'the rules close after the last page');
+await page.click('#newBtn');
 await page.getByRole('button', { name: 'Moyen', exact: true }).click();
 await wait(300);
-ok(!(await g(() => Kit.isOpen())) && await g(() => level === 'moyen'), 'the level is chosen after the rules');
+ok(!(await g(() => Kit.isOpen())) && await g(() => level === 'moyen' && !Kit.coaching()), 'a new game at Moyen, and the coach is over');
 ok((await g(() => document.getElementById('level').textContent)) === 'Niveau moyen', 'the level shows under the name');
 ok(await g(() => G.hands.every(h => h.length === 13) && G.pile.length === 1 && G.turn === 0 && G.phase === 'draw'), 'a new game deals 13 cards each, and he starts');
 ok((await msg()) === 'Prenez une carte : la pioche ou la défausse.', 'the line says what to do: ' + await msg());
@@ -178,17 +195,19 @@ await page.mouse.dblclick(...xy); await page.mouse.move(5, 5); await wait(560);
 ok(await g(c => sel.size === 1 && sel.has(c), card('6H')), 'a double-click chooses the card once');
 await clickCard('6H');
 
-// 4. Opening: 39 points are refused with what is missing, then 60 points open.
+// 4. Opening: "Poser" stays grey under 51 points and says why, cards that make no combination are
+// refused, then 60 points open.
 for (const n of ['KS', 'KH', 'KC']) await clickCard(n);
 ok((await gauge()) === 'Ouverture : 30 / 51 points', 'the gauge counts the brelan of rois: ' + await gauge());
-await clickCard('JD');
-ok(await g(() => !document.getElementById('layBtn').disabled && document.getElementById('layBtn').classList.contains('primary')), '"Poser" is yellow once 3 cards are chosen');
+ok((await msg()) === "Ces cartes font 30 points sur 51 : choisissez d'autres cartes pour ouvrir.", 'the line says what is missing: ' + await msg());
+ok(await g(() => document.getElementById('layBtn').disabled), '"Poser" stays grey under 51 points');
 await clickEl('#layBtn');
-ok((await msg()) === 'Ces cartes ne font pas de combinaison : une suite de même couleur, ou des cartes de même valeur.', 'cards that make no combination: ' + await msg());
-await clickCard('JD');
+ok((await msg()) === "Ces cartes font 30 points : il en faut 51 pour ouvrir. Choisissez d'autres cartes." && await g(() => !G.opened[0]), 'a click on it says why: ' + await msg());
+for (const n of ['QD', 'JD', '10D', '2C']) await clickCard(n);
+ok(await g(() => !document.getElementById('layBtn').disabled && document.getElementById('layBtn').classList.contains('primary')), '"Poser" is yellow once the gauge reaches 51');
 await clickEl('#layBtn');
-ok((await msg()) === 'Il manque 21 points pour ouvrir : il en faut 51.' && await g(() => !G.opened[0]), 'a brelan of rois alone: the line says what is missing: ' + await msg());
-for (const n of ['QD', 'JD', '10D']) await clickCard(n);
+ok((await msg()) === 'Ces cartes ne font pas de combinaison : une suite de même couleur, ou des cartes de même valeur. Cliquez sur une carte choisie pour la reprendre.', 'cards that make no combination: ' + await msg());
+await clickCard('2C');
 ok((await gauge()) === 'Ouverture : 60 / 51 points (gold)' && await g(() => document.getElementById('layBtn').hasAttribute('data-nudge')),
   'with the suite of carreau the gauge reads 60, turns gold and "Poser" is the next key: ' + await gauge());
 await clickEl('#layBtn');
@@ -218,7 +237,7 @@ await clickCard('9D');
 const suite = await g(() => G.melds.findIndex(m => m.type === 'run'));
 ok(await g(i => document.querySelector(`.meld[data-m="${i}"]`).classList.contains('can'), suite), 'the combination the card fits is framed in yellow');
 await clickMeld(await g(() => G.melds.findIndex(m => m.type === 'set')));
-ok((await msg()) === 'Le 9 de carreau ne va pas sur cette combinaison.' && await g(c => sel.has(c), card('9D')), 'a card that does not fit says why, and stays chosen: ' + await msg());
+ok((await msg()) === 'Le 9 de carreau ne va pas sur cette combinaison. Cliquez sur une combinaison entourée de jaune.' && await g(c => sel.has(c), card('9D')), 'a card that does not fit says why, and stays chosen: ' + await msg());
 await clickMeld(suite);
 ok(await g(([i, c]) => G.melds[i].slots.length === 4 && G.melds[i].slots[0][0] === c && !sel.size, [suite, card('9D')]), 'a click on his suite adds the 9 de carreau');
 ok((await msg()).startsWith('Vous ajoutez le 9 de carreau à votre suite.'), 'the line says it: ' + await msg());
@@ -273,7 +292,7 @@ ok(await g(() => hint && hint.type === 'lay' && document.querySelectorAll('.card
 await setGame(['8H 2C 3S 9S', '4D 5D 6D 7D'], { melds: [[1, '5H 6H 7H']], extra: { phase: 'play' } });
 await clickCard('8H');
 await clickMeld(0);
-ok((await msg()) === "Ouvrez d'abord avec 51 points : ensuite vous pourrez ajouter des cartes." && await g(() => G.melds[0].slots.length === 3), 'before opening, a card cannot go on the table: ' + await msg());
+ok((await msg()) === "Ouvrez d'abord avec 51 points : ensuite vous pourrez ajouter des cartes. Cliquez sur la défausse pour jeter le 8 de cœur." && await g(() => G.melds[0].slots.length === 3), 'before opening, a card cannot go on the table: ' + await msg());
 
 // 12. The win: his last card thrown. It counts once.
 await setGame(['9S', 'KD 5C JK 2H'], { melds: [[0, 'KS KH KC']], extra: { phase: 'play' } });
@@ -303,7 +322,26 @@ await setGame(['9S 2D 5H', '4D 5D 6D'], { melds: [[1, 'KS KH KC']], stock: 'AC',
 await page.locator('#over.on').waitFor({ timeout: 15000 });
 ok(await g(() => G.phase === 'over' && G.result.winner === 1 && stats.won === 2), 'Odette goes out');
 ok((await g(() => document.getElementById('overTitle').textContent)) === 'Odette a gagné' && /Il vous reste 16 points en main\./.test(await g(() => document.getElementById('overText').textContent)), 'the sheet says she won and his points: ' + await g(() => document.getElementById('overText').textContent));
+ok(await g(() => document.getElementById('newBtn').hasAttribute('data-nudge')) && / Cliquez sur « Nouvelle partie »\.$/.test(await msg()),
+  'at the end, "Nouvelle partie" is the next key, and the line says so: ' + await msg());
 await g(() => Kit.closeDialog());
+
+// 13b. The hint stays while he chooses its cards. Before he can open, the line says to throw. While
+// Odette plays, a click says to wait. At Facile, the cards that go on a combination glow.
+await setGame(['KS KH KC QD JD 10D 2C 3S 9S', '4D 5D 6D 7D'], { extra: { phase: 'play' } });
+await page.click('#hintBtn');
+await clickCard('KS');
+ok(await g(() => hint && hint.type === 'lay' && document.querySelectorAll('.card.hand.hint').length === 5), 'the other cards of the hint stay ringed after his first click');
+await setGame(['2C 3S 9S 5H', '4D 5D 6D 7D'], { extra: { phase: 'play' } });
+ok((await msg()).startsWith('Pas encore 51 points : jetez une carte.'), 'a hand far from 51 points: the line says to throw: ' + await msg());
+await g(() => { G = { ...G, turn: 1, phase: 'draw' }; render(); });
+await clickAt(await g(() => { const r = document.getElementById('zone1').getBoundingClientRect(); return [r.right - 30, r.bottom - 20]; }));
+ok((await msg()) === 'Attendez, Odette joue.', 'a click on the felt while Odette plays says to wait: ' + await msg());
+ok(await g(() => document.getElementById('hintBtn').dataset.why === 'Attendez, Odette joue.'), 'and so does the grey hint key');
+await g(() => { level = 'facile'; });
+await setGame(['8H 2C 3S 9S', '4D 5D 6D 7D'], { melds: [[0, 'KS KH KC'], [1, '5H 6H 7H']], extra: { phase: 'play' } });
+ok(await g(c => [...document.querySelectorAll('.card.hand.can')].map(e => +e.dataset.c).join() === String(c), card('8H')), 'at Facile, the card that goes on a combination glows');
+await g(() => { level = 'moyen'; });
 
 // 14. The levels: "Nouvelle partie" asks, the level is kept.
 await page.click('#newBtn');
@@ -334,13 +372,13 @@ for (const [w, h, z] of sizes) {
   page = p;
   await p.goto(URL); await wait(300);
   const name = `${w}x${h}${z > 1 ? ' at ' + z * 100 + ' %' : ''}`;
+  ok(await g(() => !Kit.isOpen() && level === 'facile' && G.phase === 'draw'), `${name}: the first visit starts a game at Facile`);
   if (h / z >= 620) {
+    await p.click('#helpBtn');
     let fit = true;
     for (let n = 0; n < 5; n++) { fit &&= await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; }); await p.click('#helpNext'); }
     ok(fit, `${name}: every rules page fits without scrolling`);
-  } else await p.click('#helpClose');
-  await p.getByRole('button', { name: 'Facile', exact: true }).click();
-  await wait(300);
+  }
   ok(await g(z => Zoom.z() === z, z), `${name}: the page is at ${z * 100} %`);
   bad = [...await layoutCheck(w < 820 && w > 700), ...await indexCheck()];
   ok(!bad.length, `${name}: the table fits at the deal, every index in view ${bad.join(', ')}`);
@@ -367,7 +405,7 @@ for (const [w, h, z] of sizes) {
 page = await browser.newPage({ viewport: { width: 1366, height: 680 } });
 watch(page);
 await page.goto(URL); await wait(300);
-await page.click('#helpClose');
+await page.click('#newBtn');
 await page.getByRole('button', { name: 'Facile', exact: true }).click();
 await wait(150);
 ok(await g(() => document.querySelectorAll('.card.hand .flipback').length === 13 && document.querySelectorAll('.card.down.fly').length === 13),
@@ -381,12 +419,12 @@ ok(await g(() => { const e = document.querySelector(`.card.hand[data-c="${G.last
   'a card drawn from the pioche turns over during a 520 ms flight');
 await wait(700);
 await setGame(['KS KH KC QD JD 10D 2C 3S 9S', '4D 5D 6D 7D'], { extra: { phase: 'play' } });
-for (const n of ['KS', 'KH', 'KC']) await clickCard(n);
+for (const n of ['KS', 'KH', 'KC', 'QD', 'JD', '10D', '2C']) await clickCard(n);
 await page.click('#layBtn');
 ok(await g(() => [...document.querySelectorAll('.card.hand.sel')].every(e => e.getAnimations().some(a => a.effect.getTiming().duration === 420))),
   'a refused "Poser" rocks the chosen cards for 420 ms');
 await wait(600);
-for (const n of ['QD', 'JD', '10D']) await clickCard(n);
+await clickCard('2C');
 await page.click('#layBtn');
 const lay = await g(() => ({ delays: [...document.querySelectorAll('.card.mc')].map(e => e.flight?.effect.getTiming().delay).sort((a, b) => a - b),
   trays: [...document.querySelectorAll('.meld')].every(e => e.getAnimations().some(a => a.effect.getTiming().duration === 260)),

@@ -73,8 +73,11 @@ function render() {
   }
   Kit.showWins(stats.won);
   $('undoBtn').disabled = !undo.length;
+  $('undoBtn').dataset.why = "Il n'y a pas encore de coup à annuler.";
   $('hintBtn').disabled = !!G.result;
   $('flagBtn').disabled = !!G.result;
+  $('hintBtn').dataset.why = $('flagBtn').dataset.why = G.result === 'won' ? 'La partie est gagnée : cliquez sur « Nouvelle partie ».'
+    : 'Une mine a sauté : cliquez sur « Annuler le dernier coup » pour reprendre.';
 }
 function shake(i) {
   const e = squares[i];
@@ -123,7 +126,9 @@ addEventListener('pointerup', e => {
   if (!press || e.pointerId !== press.pointer || e.button !== press.button) return;
   const p = press; press = null;
   const el = document.elementFromPoint(e.clientX, e.clientY), i = el && el.closest('.c') ? +el.closest('.c').dataset.i : -1;
-  if (p.i < 0 || (i !== p.i && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 16)) return;
+  if (p.i < 0) return;
+  // A press dragged off its square is not a click: it says how to click.
+  if (i !== p.i && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 16) { if (!Kit.isOpen()) Kit.tell('Cliquez sans bouger la souris.'); return; }
   const t = performance.now(), prev = lastTap;
   lastTap = { t, i: p.i, button: p.button };
   if (prev && prev.i === p.i && prev.button === p.button && t - prev.t < 500) return;

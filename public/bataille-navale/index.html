@@ -80,6 +80,10 @@
     --water: radial-gradient(60% 30% at 30% 35%, rgba(255,255,255,.08), transparent), linear-gradient(160deg, #2F80B5, #1D5F8E);
     background: var(--water); box-shadow: inset 0 0 0 1px rgba(10,40,70,.6); }
   #sea1 .q { cursor: crosshair; }
+  /* During his turn his own sea steps back, so the computer's sea is the one to click. */
+  #side0.calm .sea { opacity: .72; filter: saturate(.7); transition: opacity .3s; }
+  /* At Facile, after a hit, the open squares beside it have a soft gold edge: the ship goes on there. */
+  #side1.turn .q.near::before { content: ""; position: absolute; inset: 3px; z-index: 3; border: 3px dashed rgba(255,200,61,.9); border-radius: 6px; pointer-events: none; }
   #side1.turn .q.open:hover { background: linear-gradient(160deg, #FFE08A, #F2C14A); }
   /* The marks of the shots sit above the ships. */
   :is(.q, .guide-shot) > svg { width: 82%; height: 82%; position: relative; z-index: 3; pointer-events: none; }
@@ -295,15 +299,15 @@
 <div id="bar">
   <div id="title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 13.5h19l-2.6 5H5z" fill="#A9B5BE" stroke="#1C2B33" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 13.5V10h6v3.5M10.5 10V6" fill="#8E9BA5" stroke="#1C2B33" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/><path d="M2 21q2.5-1.6 5 0t5 0 5 0 5 0" fill="none" stroke="#2E7DB0" stroke-width="1.6" stroke-linecap="round"/></svg>Bataille navale</div>
   <button id="hintBtn" class="primary" data-icon="bulb" title="Montre une bonne case où tirer et explique pourquoi"><span class="long">Que jouer maintenant ?</span><span class="short">Que jouer ?</span><span class="tiny">Idée</span></button>
-  <button id="moveBtn" title="Place vos bateaux autrement, avant le premier tir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/></svg><span class="long">Placer mes bateaux autrement</span><span class="short">Changer mes bateaux</span><span class="tiny">Bateaux</span></button>
+  <button id="moveBtn" title="Vos bateaux sont déjà placés. Ce bouton les met ailleurs, si vous le voulez, avant le premier tir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/></svg><span class="long">Placer mes bateaux autrement</span><span class="short">Changer mes bateaux</span><span class="tiny">Bateaux</span></button>
   <span class="spacer"></span>
   <button id="helpBtn" data-icon="help">Règles</button>
   <button id="newBtn" class="game">Nouvelle partie</button>
 </div>
 <div id="say"><div id="msg" aria-live="polite"></div></div>
 <div id="table">
-  <section class="side" id="side0" aria-label="Votre flotte">
-    <div class="cap"><span class="turn-tag"><span class="long">L'ordinateur tire…</span><span class="short">Il tire…</span></span><h2>Votre flotte</h2></div>
+  <section class="side" id="side0" aria-label="Vos bateaux">
+    <div class="cap"><span class="turn-tag"><span class="long">L'ordinateur tire…</span><span class="short">Il tire…</span></span><h2>Vos bateaux</h2></div>
     <ul class="roster" id="roster0" aria-label="Vos bateaux"></ul>
     <div class="sea" id="sea0" role="grid" aria-label="Votre mer"><div class="effects" aria-hidden="true"></div></div>
   </section>
@@ -328,10 +332,10 @@
     <p class="guide-more">Coulez ses cinq bateaux avant qu'il coule les vôtres.</p>
   </section>
   <section class="page">
-    <h3>Votre flotte</h3>
+    <h3>Vos bateaux</h3>
     <div class="bn-pic" aria-hidden="true">
       <div class="bn-col">
-        <div class="bn-cap">Votre flotte</div>
+        <div class="bn-cap">Vos bateaux</div>
         <div class="bn" style="--hd: 48px" data-b="......|......|......" data-ships="1 0 0|4 5 0 down|3 1 2"></div>
       </div>
       <span class="guide-btn" id="helpMove">Placer mes bateaux autrement</span>
@@ -435,11 +439,11 @@ async function tap(k, i) {
   if (Kit.isOpen()) return false;
   if (G.result) { say(G.result === 'won' ? 'Cette partie est gagnée : cliquez sur « Nouvelle partie » pour en commencer une autre.'
     : "L'ordinateur a gagné cette partie : cliquez sur « Nouvelle partie » pour prendre votre revanche."); return false; }
-  if (G.turn !== 'me') { say("Attendez : l'ordinateur tire."); return false; }
-  if (k === 0) return refuse(0, i, `C'est votre flotte : tirez sur la mer de l'ordinateur, ${where()}.`);
+  if (G.turn !== 'me') { Kit.tell("Attendez : l'ordinateur tire."); return false; }
+  if (k === 0) return refuse(0, i, `C'est votre mer : tirez dans la mer de l'ordinateur, ${where()}.`);
   const v = B.view(G, 1), at = B.name(i);
-  if (v[i] === 'c') return refuse(1, i, `La case ${at} touche un bateau coulé : elle est vide, car les bateaux ne se touchent jamais.`);
-  if (v[i] !== '.') return refuse(1, i, `Vous avez déjà tiré en ${at} : choisissez une autre case.`);
+  if (v[i] === 'c') return refuse(1, i, `La case ${at} est vide : les bateaux ne se touchent jamais. Cliquez sur une autre case.`);
+  if (v[i] !== '.') return refuse(1, i, `Vous avez déjà tiré en ${at} : cliquez sur une autre case.`);
   const shot = B.fire(G, 1, i);
   told = shot.kind === 'eau' ? `${at} : à l'eau.` : shot.kind === 'touche' ? `${at} : touché !`
     : `${at} : touché, coulé ! C'était son ${shipName(shot.ship)}.`;
@@ -525,14 +529,41 @@ async function fireAt(i) {
   await written;
   if (G !== shot.G) return;
   if (G.result) return finish(!stale);
-  if (saved) say((told ? told + ' ' : '') + theirs + ' À vous.');
+  // His own shot was said while the computer aimed: the line now says its shot, then what he does next.
+  if (saved) say(theirs + ' ' + nextText());
   told = '';
+}
+// What he does next on his turn: after a hit, shoot beside it; else shoot on the computer's sea.
+function nextText() {
+  const v = B.view(G, 1), mine = G.last[1];
+  if (mine >= 0 && v[mine] === 'x') return 'Touché ! Tirez sur une case juste à côté.';
+  if (v.includes('x')) return "Un bateau touché n'est pas coulé : tirez juste à côté.";
+  return `À vous : tirez dans sa mer, ${where()}.`;
+}
+// The open squares beside his hits on ships not yet sunk. Two hits in a row show the way of the ship:
+// then only the squares at its ends.
+function nearHits() {
+  const v = B.view(G, 1), out = new Set(), N = B.N;
+  const hit = (r, c) => r >= 0 && r < N && c >= 0 && c < N && v[r * N + c] === 'x';
+  v.forEach((x, i) => {
+    if (x !== 'x') return;
+    const r = row(i), c = col(i);
+    const across = hit(r, c - 1) || hit(r, c + 1), down = hit(r - 1, c) || hit(r + 1, c);
+    const dirs = across && !down ? [[0, -1], [0, 1]] : down && !across ? [[-1, 0], [1, 0]] : [[0, -1], [0, 1], [-1, 0], [1, 0]];
+    for (const [dr, dc] of dirs) {
+      let rr = r + dr, cc = c + dc;
+      while (hit(rr, cc)) { rr += dr; cc += dc; }
+      if (rr >= 0 && rr < N && cc >= 0 && cc < N && v[rr * N + cc] === '.') out.add(rr * N + cc);
+    }
+  });
+  return out;
 }
 function refuse(k, i, text) { shake(k, i); window.Sound?.play('bad'); say(text); return false; }
 
 /* ---------- End of the game ---------- */
 function finish(show) {
   hint = null;
+  Kit.gameOver(true);
   render();
   // A result shown late does not cover a dialog he opened in between, such as the levels.
   const dialog = (...a) => later(() => { if (!Kit.isOpen()) Kit.dialog(...a); }, REDUCED ? 0 : 2200);
@@ -541,12 +572,12 @@ function finish(show) {
   const tell = text => { if (saved) say(text); };
   if (show) later(() => window.Sound?.play(G.result === 'won' ? 'win' : 'lose'), REDUCED ? 300 : 1200);
   if (G.result === 'won') {
-    tell(`Bravo, vous avez gagné : les cinq bateaux de l'ordinateur sont coulés, en ${fired(1)} tirs.`);
+    tell(`Bravo, vous avez gagné en ${fired(1)} tirs ! Cliquez sur « Nouvelle partie » pour rejouer.`);
     if (show) dialog('Bravo, vous avez gagné !', `Vous avez coulé les cinq bateaux de l'ordinateur en ${fired(1)} tirs.${!wonNow ? '' : stats.won === 1 ? " C'est votre première victoire." : ` C'est votre ${stats.won}e victoire.`}${lost}`,
       [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', home]], true);
   } else {
     const left = B.sunk(G, 1).filter(x => !x).length;
-    tell("L'ordinateur a coulé vos cinq bateaux. Ses bateaux restants sont montrés en pâle.");
+    tell("L'ordinateur a coulé vos cinq bateaux : ses bateaux restants sont en pâle. Cliquez sur « Nouvelle partie ».");
     if (show) dialog("L'ordinateur a gagné", `Il a coulé vos cinq bateaux. Il lui restait ${left === 1 ? 'un bateau' : left + ' bateaux'} : ils sont montrés sur sa mer.${lost}`,
       [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', home]]);
   }
@@ -594,7 +625,7 @@ async function newGame(lv) {
   if (!stale) say(startText());
   if (await written) GG.track('bataille-navale', 'start');
 }
-const startText = () => `Cliquez sur une case de la mer de l'ordinateur, ${where()}, pour tirer.`;
+const startText = () => `Vos bateaux sont déjà placés. Cliquez sur une case de la mer de l'ordinateur, ${where()}, pour tirer.`;
 
 /* ---------- Drawing ---------- */
 const table = $('table'), seas = [$('sea0'), $('sea1')];
@@ -682,6 +713,7 @@ function render() {
   if (!G) return;
   build();
   const framed = new Set(hint ? hint.cells : []), ringed = new Set(hint ? hint.ring : []);
+  const near = level === 'facile' && !G.result && G.turn === 'me' ? nearHits() : new Set();
   for (let k = 0; k < 2; k++) {
     const v = B.view(G, k);
     for (let i = 0; i < B.SIZE; i++) {
@@ -698,6 +730,7 @@ function render() {
       }
       if (k === 1 && framed.has(i)) cls += ' hint';
       if (k === 1 && ringed.has(i)) cls += ' ring';
+      if (k === 1 && near.has(i)) cls += ' near';
       const html = x === 'x' || x === 's' ? Ships.hit : x === 'o' ? Ships.splash : '';
       if (e.className.replace(' shake', '') !== cls) e.className = cls;
       if (e.dataset.html !== html) { e.innerHTML = html; e.dataset.html = html; }
@@ -709,10 +742,14 @@ function render() {
     drawBoats(k); drawRoster(k);
     $('side' + k).classList.toggle('turn', !G.result && (G.turn === 'me') === (k === 1));
   }
+  $('side0').classList.toggle('calm', !G.result && G.turn === 'me');
   layout();
   Kit.showWins(stats.won);
   $('hintBtn').disabled = !!G.result;
+  $('hintBtn').dataset.why = 'La partie est finie : cliquez sur « Nouvelle partie ».';
   $('moveBtn').hidden = started();
+  // The coach of his first game points at the square the hint would choose, on the computer's sea.
+  if (Kit.coaching() && !G.result && G.turn === 'me') { const h = B.hint(G); if (h) Kit.point(squares[1][h.cell]); }
 }
 function shake(k, i) {
   const e = squares[k][i];
@@ -784,14 +821,14 @@ addEventListener('resize', render);
 // The names of the ships take their room once the font is loaded: lay the table out again then.
 if (document.fonts) { document.fonts.ready.then(render); document.fonts.addEventListener('loadingdone', render); }
 
-// The rules open by themselves the first time the game is opened.
+// The first time, a game starts at Facile at once, with the coach.
 if (load()) {
   Kit.showLevel(level);
   if (G.result) finish(false);
   else {
     render();
     if (G.turn === 'them') { say("L'ordinateur tire…"); later(answer, THINK); }
-    else say(started() ? "À vous : cliquez sur une case de la mer de l'ordinateur pour tirer." : startText());
+    else say(started() ? nextText() : startText());
   }
 } else {
   Kit.firstVisit(newGame);

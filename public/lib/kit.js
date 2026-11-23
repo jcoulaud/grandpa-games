@@ -21,6 +21,18 @@
 //   Kit.isOpen()                            true while the rules or a dialog are open
 //   Kit.escape()                            closes the rules or the dialog; false if nothing was open
 //   Kit.icon(name)                          an icon as SVG markup; Kit.icon('hand') is the pointing hand of the rules guide
+//   Kit.firstVisit(start)                   no save yet: starts a game at Facile at once, with the coach on
+//   Kit.point(el, at)                       during the coach, rings el and points the hand at it until he clicks;
+//                                           at: where the finger goes down el; by default .62, or its top strip when
+//                                           another card covers that spot, as in a column of cards
+//   Kit.coaching()                          true during the coach of his first game
+//   Kit.tell(text)                          a short answer in the message line; the line before comes back after 4 s
+//   Kit.gameOver(on)                        the game is over: the nudge goes to "Nouvelle partie"
+//
+// Every click gets an answer. A click on a greyed button says its data-why, or the line flashes and the next
+// button pulses. A click on the table that changes nothing does the same (see "No silent click" below).
+// The automatic hint of Facile never fires while the hint button has data-auto="no": set it while he is in
+// the middle of an action (a chosen letter, a set aim), so the hint never undoes his work.
 (() => {
   'use strict';
   const ICONS = {
@@ -114,12 +126,24 @@
   // A new text flashes once, so his eye goes to the line when it changes.
   const say = text => {
     stir();
+    told = null;
     if (!msg) return;
     const changed = msg.textContent !== text;
     msg.textContent = text; fit();
     if (changed) { msg.classList.remove('flash'); void msg.offsetWidth; msg.classList.add('flash'); }
   };
   addEventListener('resize', fit);
+  // A short answer to a click, such as why a button is grey. The game's own line comes back after 4 s,
+  // unless the game said something new meanwhile.
+  let told = null;
+  function tell(text) {
+    if (!msg) return;
+    const before = told ? told.before : msg.textContent;
+    say(text);
+    const mine = told = { before, text };
+    setTimeout(() => { if (told === mine && msg.textContent === text) { say(before); } }, 4000);
+  }
+  const flashLine = () => { if (!msg) return; msg.classList.remove('flash'); void msg.offsetWidth; msg.classList.add('flash'); };
 
   // Dialog
   if (!$('over')) document.body.insertAdjacentHTML('beforeend',
@@ -254,32 +278,34 @@
   function openHelp() {
     if (!help) return;
     remember(); help.classList.add('on'); showPage(0);
-    PH.capture('rules guide opened', { first_visit: !!firstStart });
+    PH.capture('rules guide opened', { first_visit: false });
   }
-  let firstStart = null;
+  // The first visit starts a game at Facile at once: he learns on the real table, with the coach. The rules
+  // guide stays one click away, on "Règles".
   function firstVisit(start) {
-    firstStart = start;
-    $('table').hidden = true;
-    openHelp();
+    coaching = true; coachStarts = 0; coachSteps = 0;
+    PH.capture('first visit', { coach: true });
+    const size = () => { const t = $('table'); return t ? t.clientWidth + 'x' + t.clientHeight : ''; };
+    start('facile');
+    const before = size();
+    // The level line appears under the name and the bar may change height after the start, without a resize:
+    // a game that lays out from the size of its table measures again, only when the table did change size.
+    let seen = before;
+    const check = () => { const now = size(); if (now !== seen) { seen = now; dispatchEvent(new Event('resize')); } };
+    requestAnimationFrame(check);
+    setTimeout(check, 400);
   }
   function closeHelp() {
     if (!helpOpen()) return;
     PH.capture('rules guide closed', { page: at + 1, pages: pages.length, read_all: at === pages.length - 1 });
     help.classList.remove('on');
     giveBack();
-    if (firstStart) chooseLevel(null, false, level => {
-      const start = firstStart;
-      firstStart = null;
-      $('table').hidden = false;
-      start(level);
-      $('newBtn').focus();
-    });
   }
   const helpOpen = () => !!help && help.classList.contains('on');
   const isOpen = () => over.classList.contains('on') || helpOpen();
   function escape() {
     if (helpOpen()) { closeHelp(); return true; }
-    if (over.classList.contains('on')) { if (!firstStart) closeDialog(); return true; }
+    if (over.classList.contains('on')) { closeDialog(); return true; }
     return false;
   }
 
@@ -299,37 +325,166 @@
   // gold ring: a button the game marks with data-nudge (such as "Manche suivante"), else the hint button.
   // The wait depends on the level. At Facile, the hint then shows by itself, once, unless the hint button
   // has data-auto="no" because its hint plays the move for him (the sudoku fills a cell).
-  const NUDGE = { facile: [15, 40], moyen: [30, 0], fort: [60, 0] };
+  // During the coach of his first game, the nudge comes after 4 s and the hint after 10 s.
+  const NUDGE = { facile: [15, 40], moyen: [30, 0], fort: [60, 0] }, COACH = [4, 10];
   let shownLevel = null, idle = 0, nudged = null, autoDone = false;
   function stir() {
     idle = 0;
-    if (nudged) { nudged.classList.remove('nudge'); nudged = null; }
+    if (nudged) { nudged.classList.remove('nudge'); if (pointed === nudged) unpoint(); nudged = null; }
+  }
+
+  // The coach of the first game. Kit.point(el) rings the real thing to click and points the white hand of the
+  // rules guide at it, until his next click. The kit also points the hand at the nudged button. The coach ends
+  // after his first 8 actions, a new game or a win.
+  const COACH_STEPS = 8;
+  let coaching = false, coachStarts = 0, coachSteps = 0, pointed = null, pointAt = .62, hand = null;
+  function point(el, at) {
+    unpoint();
+    if (!coaching || !el || !el.isConnected) return;
+    if (at === undefined) {
+      const r = el.getBoundingClientRect(), top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height * .62);
+      at = !top || el.contains(top) ? .62 : Math.min(.12, 22 / Math.max(r.height, 1));
+    }
+    pointed = el; pointAt = at;
+    el.classList.add('coach');
+    if (!hand) {
+      document.body.insertAdjacentHTML('beforeend', `<div id="coachHand" aria-hidden="true">${icon('hand')}</div>`);
+      hand = $('coachHand');
+    }
+    hand.hidden = false;
+    if (!placing) place();
+  }
+  function unpoint() {
+    if (pointed) pointed.classList.remove('coach');
+    pointed = null;
+    if (hand) hand.hidden = true;
+  }
+  // The hand follows the element, under it, its finger on the lower half. The page may be zoomed (lib/zoom.js).
+  // One loop of frames at a time, however often the game points.
+  let placing = false;
+  function place() {
+    placing = false;
+    if (!pointed || !hand || hand.hidden) return;
+    if (!pointed.isConnected || pointed.offsetParent === null) { unpoint(); return; }
+    // A game that draws again may reset the classes of the element: the ring comes back.
+    if (!pointed.classList.contains('coach')) pointed.classList.add('coach');
+    const z = window.Zoom ? Zoom.z() : 1, r = pointed.getBoundingClientRect();
+    const x = (r.left + r.width / 2) / z, y = (r.top + Math.min(r.height * pointAt, r.height - 6)) / z;
+    const bottom = innerHeight / z - 70;
+    hand.style.left = `${x - 22}px`;
+    hand.style.top = `${Math.min(y, bottom)}px`;
+    placing = true;
+    requestAnimationFrame(place);
+  }
+  function endCoach() { coaching = false; unpoint(); }
+  addEventListener('gg-track', e => {
+    if (e.detail.kind === 'start') { gameOver(false); if (coaching && ++coachStarts > 1) endCoach(); }
+    else endCoach();
+  });
+  addEventListener('pointerdown', e => {
+    if (!e.isTrusted || !coaching) return;
+    unpoint();
+    if (e.target.closest && e.target.closest('#table, #bar button, #over button') && ++coachSteps >= COACH_STEPS) endCoach();
+  }, true);
+
+  // An undo, from the bar or from a result dialog, takes the game back into play: the end-of-game mark goes.
+  addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('#undoBtn, #overBtns button');
+    if (b && (b.id === 'undoBtn' || /^Annuler/.test(b.textContent.trim()))) gameOver(false);
+  }, true);
+  // The game is over: "Nouvelle partie" becomes the next thing to press.
+  function gameOver(on) {
+    const b = $('newBtn');
+    if (!b) return;
+    if (on) b.dataset.nudge = ''; else delete b.dataset.nudge;
   }
   const visible = e => e && !e.disabled && !e.hidden && e.offsetParent !== null;
   function nudgeTarget() {
-    const marked = [...document.querySelectorAll('[data-nudge]')].find(visible);
-    if (marked) return marked;
+    // A button of the game, such as "Partie suivante", comes before "Nouvelle partie" of Kit.gameOver.
+    const marked = [...document.querySelectorAll('[data-nudge]')].filter(visible);
     const hint = $('hintBtn');
-    return visible(hint) ? hint : null;
+    // "Nouvelle partie" of Kit.gameOver waits while the hint can still help: after an undo, the game goes on.
+    const game = marked.find(e => e.id !== 'newBtn');
+    if (game) return game;
+    if (visible(hint)) return hint;
+    return marked[0] || null;
   }
   function tick() {
     if (document.hidden || isOpen() || ($('table') && $('table').hidden)) { stir(); return; }
     idle++;
-    const [pulse, auto] = NUDGE[shownLevel] || NUDGE.moyen;
+    const [pulse, auto] = coaching ? COACH : NUDGE[shownLevel] || NUDGE.moyen;
     const target = nudgeTarget();
     if (!target) { stir(); return; }
-    if (idle >= pulse && target !== nudged) {
-      if (nudged) nudged.classList.remove('nudge');
-      target.classList.add('nudge');
-      nudged = target;
-      PH.capture('nudge shown', { button: target.id || target.textContent.trim().slice(0, 40) });
-    }
-    if (auto && idle >= auto && !autoDone && target.id === 'hintBtn' && target.dataset.auto !== 'no') {
+    if (idle >= pulse && target !== nudged) nudge(target);
+    if (coaching && nudged && !pointed) point(nudged);
+    if (auto && idle >= auto && !autoDone && target.id === 'hintBtn' && target.dataset.auto !== 'no' && !target.disabled) {
       autoDone = true;
       target.click();
     }
   }
+  function nudge(target) {
+    if (nudged) nudged.classList.remove('nudge');
+    target.classList.add('nudge');
+    nudged = target;
+    PH.capture('nudge shown', { button: target.id || target.textContent.trim().slice(0, 40) });
+  }
   setInterval(tick, 1000);
+
+  // No silent click. A click on a greyed button says why (its data-why), else the message line flashes and the
+  // next button pulses at once. A click on the table that changes nothing on the page within 0.45 s gets the
+  // same answer. The canvas of the skill games draws without changing the page, so the games answer those
+  // clicks themselves. Each silent click is counted, so the admin can see where he gets lost.
+  const label = e => (e.id || e.getAttribute('aria-label') || e.textContent.trim()).slice(0, 40);
+  function answer(why) {
+    if (why) tell(why); else flashLine();
+    const target = nudgeTarget();
+    if (target) { idle = 0; nudge(target); }
+  }
+  // The second click of a double-click is not a silent click: the games ignore it on purpose.
+  let watch = null, lastDown = { t: 0, x: 0, y: 0 };
+  addEventListener('pointerdown', e => {
+    if (!e.isTrusted || e.button !== 0 || isOpen()) return;
+    const table = $('table');
+    if (!table || !table.contains(e.target) || e.target.closest('canvas')) return;
+    const again = e.timeStamp - lastDown.t < 500 && Math.hypot(e.clientX - lastDown.x, e.clientY - lastDown.y) < 24;
+    lastDown = { t: e.timeStamp, x: e.clientX, y: e.clientY };
+    if (watch) watch.obs.disconnect();
+    if (again) { watch = null; return; }
+    // The kit's own marks (the nudge, the coach ring and hand, the flash of the line) are not an answer of the game.
+    const KIT = new Set(['nudge', 'coach', 'flash', 'long']);
+    const rest = v => (v || '').split(/\s+/).filter(c => c && !KIT.has(c)).sort().join(' ');
+    const own = r => r.type === 'attributes' && (r.target.id === 'coachHand' ||
+      r.attributeName === 'class' && rest(r.oldValue) === rest(r.target.getAttribute('class')));
+    const w = watch = { changed: false, obs: new MutationObserver(list => { if (list.some(r => !own(r))) w.changed = true; }) };
+    w.obs.observe(document.body, { subtree: true, childList: true, attributes: true, attributeOldValue: true, characterData: true });
+  }, true);
+  addEventListener('pointerup', e => {
+    if (!e.isTrusted || e.button !== 0 || isOpen()) return;
+    const btn = e.target.closest && e.target.closest('button');
+    if (btn && btn.disabled) {
+      PH.capture('dead click', { target: 'grey ' + label(btn) });
+      answer(btn.dataset.why);
+      return;
+    }
+    const w = watch;
+    if (!w) return;
+    setTimeout(() => {
+      w.obs.disconnect();
+      if (watch === w) watch = null;
+      if (w.changed || isOpen()) return;
+      PH.capture('dead click', { target: label(e.target.closest('[id], [class]') || e.target) });
+      answer();
+    }, 450);
+  }, true);
+
+  // The time from the start of a game to his first action on it, to see where he does not know what to do.
+  let startedAt = 0;
+  addEventListener('gg-track', e => { if (e.detail.kind === 'start') startedAt = Date.now(); });
+  addEventListener('pointerdown', e => {
+    if (!e.isTrusted || !startedAt || !e.target.closest || !e.target.closest('#table, #bar button:not(#quit)')) return;
+    PH.capture('first action', { seconds: Math.round((Date.now() - startedAt) / 1000), coach: coaching });
+    startedAt = 0;
+  }, true);
   // A hint asked by his hand, or shown by itself at Facile.
   addEventListener('click', e => {
     if (e.target.closest && e.target.closest('#hintBtn')) PH.capture('hint used', { automatic: !e.isTrusted });
@@ -346,11 +501,12 @@
   // A window that is behind (another window or the backup saved a newer game) cannot save:
   // it asks to reload, at each refused save, until it is reloaded.
   addEventListener('gg-stale', () => {
-    if (firstStart || quitting || !over.classList.contains('on')) dialog('Le jeu a changé ailleurs',
+    if (quitting || !over.classList.contains('on')) dialog('Le jeu a changé ailleurs',
       'Ce jeu a été enregistré dans une autre fenêtre. Rechargez-le pour continuer la partie à jour.',
       [['Recharger le jeu', () => location.reload(), true]]);
     if (quitting) staleHeld = true;
   });
 
-  window.Kit = { home, firstVisit, levelNames, showLevel, showWins, chooseLevel, say, dialog, closeDialog, openHelp, closeHelp, isOpen, escape, icon };
+  window.Kit = { home, firstVisit, levelNames, showLevel, showWins, chooseLevel, say, tell, dialog, closeDialog, openHelp, closeHelp, isOpen, escape, icon,
+    point, coaching: () => coaching, gameOver };
 })();

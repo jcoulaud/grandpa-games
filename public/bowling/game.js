@@ -25,6 +25,29 @@ addEventListener('gg-stale', () => {
   stale = true;
 });
 const blocked = () => busy || stale || !game || Kit.isOpen() || sheet(game).done;
+const THROW = 'cliquez sur « Lancer la boule ».',
+  OVER = 'La partie est terminée : cliquez sur « Nouvelle partie ».';
+// What he does next, said at the end of each line of his turn.
+function next(s = sheet(game)) {
+  if (s.done) return OVER;
+  const which = ['Premier', 'Deuxième', 'Troisième'][s.roll] + ' lancer : ';
+  return which + (s.freshRack ? THROW : 'visez les quilles debout, puis ' + THROW);
+}
+// A throw he set himself, or the hint's: « Lancer la boule » is the next thing to press. His own setting
+// also stops the automatic hint of Facile, so it never replaces his throw.
+function chosen(his) {
+  $('shoot').dataset.nudge = '';
+  if (his) $('hintBtn').dataset.auto = 'no';
+  else delete $('hintBtn').dataset.auto;
+  Kit.point($('shoot'));
+}
+// Why each grey button is grey: the kit says it when he clicks one.
+function why(text) {
+  for (const b of document.querySelectorAll('#console button,#undoBtn,#hintBtn')) {
+    if (!b.disabled) delete b.dataset.why;
+    else b.dataset.why = b.id === 'undoBtn' && !game.throws.length ? 'Il n’y a pas encore de coup à annuler.' : text;
+  }
+}
 async function save() {
   const s = sheet(game),
     summary =
@@ -139,22 +162,31 @@ function render(msg, previous) {
   $('hintBtn').disabled = s.done;
   $('shoot').textContent = s.done ? 'Voir le résultat' : 'Lancer la boule';
   for (const b of $('console').querySelectorAll('button')) b.disabled = s.done && b.id !== 'shoot';
+  why(OVER);
+  delete $('shoot').dataset.nudge;
+  delete $('hintBtn').dataset.auto;
   Kit.showLevel(game.level);
   Kit.showWins(game.wins);
+  Kit.gameOver(s.done);
   preview();
-  Kit.say(msg || 'Réglez votre lancer à droite, puis cliquez sur « Lancer la boule ».');
+  Kit.say(msg || (s.done ? OVER : game.throws.length ? next(s) : 'Réglez votre lancer à droite, puis ' + THROW));
   fitLayout();
+  // The coach of his first game: the throw as it is set is a fine first try.
+  if (!s.done) Kit.point($('shoot'));
 }
 function message(result) {
   if (result.gutter) return 'La boule est tombée dans la rigole.';
   const n = result.count,
     ids = result.standing.map((p) => p.id);
+  // Many pins: their count only, so the next step still fits on the line; the plan shows which ones.
   const left =
     ids.length === 1
       ? ' Il reste la quille ' + ids[0] + '.'
-      : ids.length > 1
-        ? ' Il reste les quilles ' + ids.slice(0, -1).join(', ') + ' et ' + ids.at(-1) + '.'
-        : '';
+      : ids.length > 4
+        ? ' Il reste ' + ids.length + ' quilles.'
+        : ids.length > 1
+          ? ' Il reste les quilles ' + ids.slice(0, -1).join(', ') + ' et ' + ids.at(-1) + '.'
+          : '';
   if (!n && ids.length === 10) return 'Aucune quille n’est tombée. Les dix quilles sont encore debout.';
   return 'Vous avez fait tomber ' + n + (n > 1 ? ' quilles.' : ' quille.') + left;
 }
@@ -199,6 +231,7 @@ async function shoot() {
     s = sheet(game),
     mark = s.frames[before.next].marks.at(-1);
   for (const b of document.querySelectorAll('#console button,#undoBtn,#hintBtn')) b.disabled = true;
+  why('La boule roule, attendez.');
   Kit.say('La boule roule…');
   window.Sound?.play('roll');
   const won = s.done && s.total >= game.goal && !game.reported;
@@ -218,7 +251,7 @@ async function shoot() {
   const [ok] = await Promise.all([write, view.animate(result, announce, pinsFor(game), s.freshRack && !s.done)]);
   busy = false;
   if (stale) return;
-  render(ok ? message(result) : 'La partie ne peut pas être enregistrée sur cet appareil.', before.total);
+  render(ok ? message(result) + ' ' + next(s) : 'La partie ne peut pas être enregistrée sur cet appareil.', before.total);
   if (s.done && ok) {
     window.Sound?.play(s.total >= game.goal ? 'win' : 'lose');
     end();
@@ -239,7 +272,7 @@ function choose() {
 async function back() {
   if (busy || stale || Kit.isOpen() || !undo(game)) return;
   busy = true;
-  render('Votre dernier coup est annulé.');
+  render('Votre dernier coup est annulé. ' + next());
   await save();
   busy = false;
 }
@@ -277,20 +310,22 @@ function init() {
   ]) {
     $(id).onclick = () => {
       if (blocked()) return;
-      const next = key === 'aim' ? onLane(shot.aim + by) : clamp(shot.speed + by, 1, 10);
-      if (next === shot[key]) {
+      const to = key === 'aim' ? onLane(shot.aim + by) : clamp(shot.speed + by, 1, 10);
+      if (to === shot[key]) {
         window.Sound?.play('bad');
-        Kit.say(key === 'aim' ? 'C’est le bord de la piste : vous ne pouvez pas viser plus loin.' : next === 10 ? 'C’est déjà la force la plus grande.' : 'C’est déjà la force la plus petite.');
+        Kit.say((key === 'aim' ? 'C’est le bord de la piste : vous ne pouvez pas viser plus loin.' : to === 10 ? 'C’est déjà la force la plus grande.' : 'C’est déjà la force la plus petite.') + ' Cliquez sur « Lancer la boule ».');
+        chosen(true);
         return;
       }
-      shot[key] = next;
+      shot[key] = to;
       preview();
       Kit.say(
         key === 'aim'
           ? gutterWarning() ??
-            'Vous visez ' + spoken(shot.aim, 'le milieu') + '.'
-          : 'Force ' + shot.speed + ' sur 10.'
+            'Vous visez ' + spoken(shot.aim, 'le milieu') + ', puis ' + THROW
+          : 'Force ' + shot.speed + ' sur 10, puis ' + THROW
       );
+      chosen(true);
     };
   }
   for (const [id, step] of [['curveLeft', -1], ['curveRight', 1]]) {
@@ -298,7 +333,8 @@ function init() {
       if (blocked()) return;
       shot.curve = clamp(shot.curve + step, -3, 3);
       preview();
-      Kit.say(gutterWarning() ?? $('curveLabel').textContent + '.');
+      Kit.say(gutterWarning() ?? $('curveLabel').textContent + ', puis ' + THROW);
+      chosen(true);
     };
   }
   // The start spot on the foul line, one board per press. The aim keeps its board at the pins.
@@ -308,22 +344,37 @@ function init() {
       const next = onLane((shot.start ?? 20) + step);
       if (next === shot.start) {
         window.Sound?.play('bad');
-        Kit.say('C’est le bord de la piste : la boule ne peut pas partir plus loin.');
+        Kit.say('C’est le bord de la piste : la boule ne peut pas partir plus loin. Cliquez sur « Lancer la boule ».');
+        chosen(true);
         return;
       }
       shot.start = next;
       preview();
-      Kit.say(gutterWarning() ?? 'La boule part ' + spoken(shot.start, 'du milieu', 'à ') + '.');
+      Kit.say(gutterWarning() ?? 'La boule part ' + spoken(shot.start, 'du milieu', 'à ') + ', puis ' + THROW);
+      chosen(true);
     };
   }
   $('hintBtn').onclick = () => {
     if (!blocked()) {
       shot = hint(game);
       preview();
-      Kit.say(shot.reason);
+      Kit.say(shot.reason.replace(' : elle est seule.', ', seule debout.').replace(/\.$/, ', puis ') + THROW);
+      chosen(false);
     }
   };
   $('shoot').onclick = shoot;
+  // The lane and the plan of the pins take no mouse input: a click on them says where to set the throw.
+  for (const id of ['stage', 'pins'])
+    $(id).addEventListener('click', () => {
+      if (!game || stale || Kit.isOpen()) return;
+      Kit.tell(
+        busy
+          ? 'La boule roule, attendez.'
+          : sheet(game).done
+            ? OVER
+            : 'Réglez votre lancer avec les boutons à droite, puis ' + THROW
+      );
+    });
   $('undoBtn').onclick = back;
   $('helpBtn').onclick = () => {
     if (!busy) Kit.openHelp();

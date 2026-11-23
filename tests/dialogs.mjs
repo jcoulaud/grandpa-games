@@ -9,6 +9,9 @@ const page = await browser.newPage({ viewport: { width: 1366, height: 680 } });
 page.on('pageerror', e => errors.push(e.message));
 const g = fn => page.evaluate(fn);
 await page.goto(URL); await page.waitForTimeout(2200);
+// The first visit starts a game at Facile at once, with the coach; the guide opens on "Règles".
+ok(!(await g(() => Kit.isOpen())) && await g(() => Kit.coaching()), 'the first visit opens on the table, with the coach');
+await page.click('#helpBtn');
 const pages = await g(() => document.querySelectorAll('#helpText .page').length);
 for (let n = 0; n < pages; n++) {
   const fit = await g(() => { const t = document.getElementById('helpText'); return t.scrollHeight <= t.clientHeight + 1; });
@@ -16,8 +19,7 @@ for (let n = 0; n < pages; n++) {
   await page.screenshot({ path: `${OUT}/a-rules-${n + 1}.png` });
   await page.click('#helpNext');
 }
-await page.getByRole('button', { name: 'Facile', exact: true }).click();
-await page.waitForTimeout(1800);
+await page.waitForFunction(() => !dialogOpen());
 ok(!(await g(() => dialogOpen())), '"J\'ai compris" closes the rules');
 
 // The close cross asks first: "Continuer la partie" stays, "Fermer le jeu" goes back to the library.
@@ -193,10 +195,6 @@ await ctx.close();
 // The cross, then "Fermer le jeu": back to the library.
 const quit = await browser.newPage({ viewport: { width: 1366, height: 680 } });
 await quit.goto(URL); await quit.waitForTimeout(1500);
-if (await quit.locator('#help.on').count()) await quit.click('#helpClose');
-await quit.waitForTimeout(300);
-const facile = quit.getByRole('button', { name: 'Facile', exact: true });
-if (await facile.count()) await facile.click();
 await quit.waitForTimeout(800);
 await quit.click('#quit');
 await Promise.all([quit.waitForURL((u) => !u.pathname.includes('solitaire')), quit.click('#overBtns .leave')]);

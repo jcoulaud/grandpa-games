@@ -24,7 +24,7 @@
      sheet, and each word found gets a band of felt-pen colour around it. */
   :root {
     --felt-top: #C8576B; --felt: #6E2234; --shade: 60,14,26; --accent: #A63A50;
-    --paper: #FBF6EA; --ink: #211A17; --rule: #2E2522;
+    --hint: #1F5FA8; --paper: #FBF6EA; --ink: #211A17; --rule: #2E2522;
     --c: 40px; --n: 13; --f: 30px; --pad: 14px; --gap: 26px; --lf: 24px;
   }
   #title svg { width: 32px; height: 32px; }
@@ -59,8 +59,10 @@
   .cell.lane:hover::after { inset: 8%; background: rgba(255,200,61,.6); }
   /* The first letter chosen: a yellow disc in a dark hairline, with a glow. */
   .cell.anchor::before { inset: 3%; background: #FFE08A; box-shadow: 0 0 0 4px var(--gold), 0 0 0 5.5px #5A4300, 0 0 16px 5px rgba(255,200,61,.8); z-index: -1; }
-  /* "Où chercher ?": a thick yellow ring that glows around the first letter of a word. */
-  .cell.hint::before { inset: -2px; border: 5px solid var(--gold); box-shadow: 0 0 0 1.5px #5A4300, inset 0 0 0 1.5px #5A4300; }
+  /* "Où chercher ?": a thick dashed blue ring, in the ink of a felt pen, around the first letter of a word,
+     and its last letter at the second press. Blue and dashed, so it never looks like the yellow disc of
+     the letter he chose. */
+  .cell.hint::before { inset: -2px; border: 5px dashed var(--hint); box-shadow: 0 0 0 1.5px #FFFDF6, inset 0 0 0 1.5px #FFFDF6; }
   .cell.hint.anchor::before { background: #FFE08A; }
   .cell.wrong::before { inset: 4%; box-shadow: 0 0 0 4px #C4122F; }
 
@@ -87,7 +89,7 @@
   #words li.found .dot { background: var(--fill); border-color: var(--edge); }
   /* The word found is struck through with its own colour. */
   #words li.found .w::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 4px; border-radius: 2px; background: var(--edge); }
-  #words li.hinted .w { text-decoration: underline 3px var(--gold); text-underline-offset: 5px; }
+  #words li.hinted .w { text-decoration: underline 3px dashed var(--hint); text-underline-offset: 5px; }
   /* "Enlever le A": under the list while a first letter is chosen. Its place stays when it is hidden, so
      nothing moves. A white key with a coral edge, as the ink of the sheet. */
   #drop { align-self: stretch; justify-content: center; margin-top: 18px; font-size: 22px;
@@ -119,7 +121,7 @@
   .gw > i::before, .gw > i::after { content: ""; position: absolute; border-radius: 50%; z-index: -1; }
   .gw > i.l::after { inset: 18%; background: rgba(255,200,61,.6); }
   .gw > i.a::before { inset: 3%; background: #FFE08A; box-shadow: 0 0 0 4px var(--gold), 0 0 0 5.5px #5A4300, 0 0 14px 4px rgba(255,200,61,.8); }
-  .gw > i.t::before { inset: -2px; border: 5px solid var(--gold); box-shadow: 0 0 0 1.5px #5A4300, inset 0 0 0 1.5px #5A4300; }
+  .gw > i.t::before { inset: -2px; border: 5px dashed var(--hint); box-shadow: 0 0 0 1.5px #FFFDF6, inset 0 0 0 1.5px #FFFDF6; }
   /* "Click here": a yellow ring with a dark edge and a pointing hand. */
   #help { --guide-edge: #2A1D33; --guide-more: #4A3A3E; }
   .gw > i.h::before { inset: 0; background: #FFF1C7; box-shadow: var(--guide-ring); }
@@ -267,7 +269,7 @@
       <div class="gpaper"><div class="gw" data-g="RAVIS|PECHE|LUNOT|AMIRE|GOBAC" data-t="5"></div></div>
     </div>
     <p class="guide-lead">Un mot introuvable ? Cliquez sur «&nbsp;Où chercher&nbsp;?&nbsp;».</p>
-    <p class="guide-more">Sa première lettre s'entoure de jaune.</p>
+    <p class="guide-more">Sa première lettre s'entoure de bleu.</p>
   </section>
 </div>
 
@@ -299,9 +301,9 @@ const pen = k => PENS[k % PENS.length];
 
 /* ---------- State ----------
    G: the game (see engine.js). anchor: the first letter chosen, or -1. hintW: the word shown by
-   "Où chercher ?", or -1. stats: { won }: the grids finished. recent: the last themes, not to come back
+   "Où chercher ?", or -1; hintMore: a second press shows its last letter too. stats: { won }: the grids finished. recent: the last themes, not to come back
    too soon. wonNow: this grid is counted as won. */
-let G, level = 'facile', stats = { won: 0 }, recent = [], wonNow = false, anchor = -1, hintW = -1, timers = [];
+let G, level = 'facile', stats = { won: 0 }, recent = [], wonNow = false, anchor = -1, hintW = -1, hintMore = false, timers = [];
 let stale = false, saved = true;
 addEventListener('gg-stale', () => { stale = true; });
 
@@ -378,7 +380,7 @@ async function pair(a, b) {
   if (r.kind === 'found') {
     G = M.find(G, r.w); anchor = -1;
     const mine = G;
-    if (hintW === r.w) hintW = -1;
+    if (hintW === r.w) { hintW = -1; hintMore = false; }
     const firstWin = G.result === 'won' && !wonNow;
     if (firstWin) { wonNow = true; stats.won++; }
     // A win that could not be saved is not counted.
@@ -388,18 +390,20 @@ async function pair(a, b) {
     render(r.w, a);
     if (G.result) return finish(!stale);
     window.Sound?.play('good');
-    if (saved) Kit.say(`Vous avez trouvé ${name(r.w)}.`);
+    const left = G.words.length - G.found.length;
+    if (saved) Kit.say(`Vous avez trouvé ${name(r.w)}. Encore ${plural(left, 'mot', 'mots')} : cliquez sur la première lettre d'un autre mot.`);
     return;
   }
   // A refusal keeps the first letter chosen, by a click or a drag, so he can try another last letter.
   render();
   showWrong(a, b, r.kind === 'none' || r.kind === 'almost');
   window.Sound?.play('bad');
-  if (r.kind === 'already') Kit.say(`Vous avez déjà trouvé ${name(r.w)} : cherchez un autre mot.`);
-  else if (r.kind === 'notAligned') Kit.say("Ces deux lettres ne sont pas sur une même ligne : un mot se lit tout droit.");
-  else if (r.kind === 'direction') Kit.say('Au niveau facile, les mots se lisent seulement vers la droite ou vers le bas.');
-  else if (r.kind === 'almost' && r.end === 'start') Kit.say(`Presque : ${name(r.w)} commence bien ici, mais sa dernière lettre est ailleurs.`);
-  else if (r.kind === 'almost') Kit.say(`Presque : ${name(r.w)} finit bien ici, mais sa première lettre est ailleurs.`);
+  const L = G.grid[a];
+  if (r.kind === 'already') Kit.say(`Vous avez déjà trouvé ${name(r.w)}. Cliquez encore sur le ${L} pour l'enlever, puis cherchez un autre mot.`);
+  else if (r.kind === 'notAligned') Kit.say('Ces deux lettres ne sont pas sur une même ligne : un mot se lit tout droit. Cliquez sur une lettre à point jaune.');
+  else if (r.kind === 'direction') Kit.say('Au niveau facile, les mots se lisent vers la droite ou vers le bas. Cliquez sur une lettre à point jaune.');
+  else if (r.kind === 'almost' && r.end === 'start') Kit.say(`Presque : ${name(r.w)} commence bien ici, mais sa dernière lettre est ailleurs. Essayez une autre lettre.`);
+  else if (r.kind === 'almost') Kit.say(`Presque : ${name(r.w)} finit bien ici, mais sa première lettre est ailleurs. Essayez une autre lettre.`);
   else Kit.say(`« ${r.text} » n'est pas un mot de la liste : essayez une autre dernière lettre.`);
 }
 
@@ -450,7 +454,7 @@ async function undo() {
   // A new grid started while the save was on its way: the message is no longer about it.
   if (G !== mine) return;
   render();
-  if (saved) Kit.say(`Vous avez annulé ${w} : il est de nouveau à chercher.`);
+  if (saved) Kit.say(`Vous avez annulé ${w} : il est de nouveau à chercher. Cliquez sur la première lettre d'un mot.`);
 }
 // A double-click on the button takes back one word, not two.
 let lastUndo = -Infinity;
@@ -460,11 +464,46 @@ function undoClick() {
   lastUndo = t;
   undo();
 }
+// The hint never takes back the letter he chose. A letter chosen at one end of a word: the other end is
+// shown. A second press on the same word shows its last letter too; a third press goes to the next word.
 function showHint() {
   if (!G || G.result || Kit.isOpen()) return;
-  hintW = M.hint(G, hintW); anchor = -1; lastTap = null;
+  lastTap = null;
+  const ends = w => { const c = M.cells(G, w); return [c[0], c[c.length - 1]]; };
+  const own = anchor < 0 ? -1 : G.words.findIndex((x, w) => !G.found.includes(w) && ends(w).includes(anchor));
+  const L = anchor >= 0 ? G.grid[anchor] : '';
+  let text;
+  if (own >= 0) {
+    hintW = own; hintMore = true;
+    text = ends(own)[0] === anchor ? `Le ${L} choisi commence le mot ${name(own)} : cliquez sur sa dernière lettre, entourée de bleu.`
+      : `Le ${L} choisi finit le mot ${name(own)} : cliquez sur sa première lettre, entourée de bleu.`;
+  } else if (hintW >= 0 && !hintMore && !G.found.includes(hintW)) {
+    hintMore = true;
+    text = `Le mot ${name(hintW)} va d'une lettre entourée de bleu à l'autre : cliquez sur la première, puis sur la dernière.`;
+  } else {
+    hintW = M.hint(G, hintW); hintMore = false;
+    text = `Le mot ${name(hintW)} commence par la lettre entourée de bleu. Cliquez dessus.`;
+  }
+  // Another letter is chosen: it must go first, or the next click would end a word at it.
+  if (anchor >= 0 && own < 0) text = text.replace(/ Cliquez dessus\.$| : cliquez sur la première, puis sur la dernière\.$/, '.') + ` Enlevez d'abord le ${L} : cliquez encore dessus.`;
   render();
-  Kit.say(`Le mot ${name(hintW)} commence par la lettre entourée de jaune.`);
+  Kit.say(text);
+}
+// During his first game, the hand points at the letter to click: the first letter of the word the hint
+// would show, the other end of a word whose letter he chose, or the chosen letter to take it back.
+function coach() {
+  if (!Kit.coaching() || !G || G.result || Kit.isOpen()) return;
+  let at;
+  if (anchor >= 0) {
+    const w = G.words.findIndex((x, k) => { if (G.found.includes(k)) return false; const c = M.cells(G, k); return c[0] === anchor || c[c.length - 1] === anchor; });
+    const c = w >= 0 ? M.cells(G, w) : null;
+    at = c ? (c[0] === anchor ? c[c.length - 1] : c[0]) : anchor;
+  } else {
+    const w = hintW >= 0 && !G.found.includes(hintW) ? hintW : M.hint(G, -1);
+    if (w < 0) return;
+    at = M.cells(G, w)[0];
+  }
+  Kit.point(cellEls[at]);
 }
 
 function askNewGame() { stopAll(); Kit.chooseLevel(level, playing(), newGame); }
@@ -475,7 +514,7 @@ async function newGame(lv) {
   Kit.showLevel(level);
   G = M.newGame(level, crypto.getRandomValues(new Uint32Array(1))[0], recent);
   recent = [G.theme, ...recent.filter(t => t !== G.theme)].slice(0, 6);
-  anchor = -1; hintW = -1; wonNow = false;
+  anchor = -1; hintW = -1; hintMore = false; wonNow = false;
   // A stale window cannot save, so it does not count a game either.
   const written = save();
   render();
@@ -486,7 +525,8 @@ async function newGame(lv) {
 
 /* ---------- End of the grid ---------- */
 function finish(show) {
-  const text = `Bravo, vous avez trouvé les ${G.words.length} mots de la grille « ${G.theme} ».`;
+  const text = `Bravo, vous avez trouvé les ${G.words.length} mots de la grille « ${G.theme} ». Cliquez sur « Nouvelle partie » pour rejouer.`;
+  Kit.gameOver(true);
   if (saved && !stale) Kit.say(text);
   if (!show) return;
   const wait = showWin();
@@ -683,7 +723,7 @@ function render(just, start) {
   $('count').textContent = `${G.found.length} ${G.found.length > 1 ? 'mots trouvés' : 'mot trouvé'} sur ${G.words.length}`;
   Kit.showWins(stats.won);
   layout();
-  const lane = lanes(), hintCell = hintW >= 0 ? M.cells(G, hintW)[0] : -1;
+  const lane = lanes(), hc = hintW >= 0 ? M.cells(G, hintW) : [], hinted = new Set(hintMore ? [hc[0], hc[hc.length - 1]] : hc.slice(0, 1));
   cellEls.forEach((e, i) => {
     e.classList.toggle('anchor', i === anchor);
     if (lane.has(i)) {
@@ -691,9 +731,9 @@ function render(just, start) {
       e.style.setProperty('--lane-delay', steps * 18 + 'ms');
     }
     e.classList.toggle('lane', lane.has(i));
-    e.classList.toggle('hint', i === hintCell);
+    e.classList.toggle('hint', hinted.has(i));
     const r = Math.floor(i / G.size) + 1, k = i % G.size + 1;
-    e.setAttribute('aria-label', `Ligne ${r}, colonne ${k} : ${G.grid[i]}${i === anchor ? ', choisie' : ''}${i === hintCell ? ", entourée par l'aide" : ''}`);
+    e.setAttribute('aria-label', `Ligne ${r}, colonne ${k} : ${G.grid[i]}${i === anchor ? ', choisie' : ''}${hinted.has(i) ? ", entourée par l'aide" : ''}`);
   });
   drawBands(just, start);
   [...wordsEl.children].forEach((li, w) => {
@@ -705,9 +745,14 @@ function render(just, start) {
     if (k >= 0) { li.style.setProperty('--fill', pen(k)[0]); li.style.setProperty('--edge', pen(k)[1]); }
   });
   $('undoBtn').disabled = !G.found.length || !!G.result;
+  $('undoBtn').dataset.why = G.result ? 'Cette grille est finie : cliquez sur « Nouvelle partie ».' : "Aucun mot n'est encore trouvé : il n'y a rien à annuler.";
   $('hintBtn').disabled = !!G.result;
+  $('hintBtn').dataset.why = 'Cette grille est finie : cliquez sur « Nouvelle partie ».';
+  // The automatic hint of Facile waits while a letter is chosen: he is in the middle of a word.
+  if (anchor >= 0) $('hintBtn').dataset.auto = 'no'; else delete $('hintBtn').dataset.auto;
   $('drop').classList.toggle('on', anchor >= 0 && !G.result);
   if (anchor >= 0) $('drop').querySelector('b').textContent = G.grid[anchor];
+  coach();
 }
 
 $('undoBtn').onclick = undoClick;
@@ -757,7 +802,7 @@ addEventListener('keydown', e => {
 });
 addEventListener('resize', () => render());
 
-// The rules open by themselves the first time the game is opened.
+// The first visit starts a game at Facile at once, with the coach (lib/kit.js).
 if (load()) {
   Kit.showLevel(level);
   render();

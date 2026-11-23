@@ -39,10 +39,33 @@ try {
     await page.evaluate((z) => localStorage.setItem('gg:size', JSON.stringify(z)), zoom);
     await page.reload();
   };
+  // The first visit starts a game at Facile at once, with the coach: a ring on « Que jouer maintenant ? ».
   await page.goto('http://localhost/golf/');
-  await page.locator('#help.on').waitFor();
+  await page.locator('#hintBtn.coach').waitFor();
+  assert.equal(await page.evaluate(() => Kit.isOpen()), false);
+  assert.match(await page.textContent('#level'), /facile/);
+  assert.match(await page.textContent('#msg'), /Cliquez sur le gazon, là où la balle doit s’arrêter/);
+  // The grey yellow button says why it is grey, and the empty undo too.
+  assert.ok(await page.locator('#shoot').isDisabled());
+  assert.equal(await page.getAttribute('#shoot', 'data-why'), 'Cliquez d’abord sur le gazon, là où la balle doit s’arrêter.');
+  assert.match(await page.getAttribute('#undoBtn', 'data-why'), /pas encore de coup/);
+  {
+    // The hint's shot: the ring moves to « Taper la balle », which becomes the nudge, and the automatic hint may come again.
+    await page.click('#hintBtn');
+    await page.locator('#shoot.coach').waitFor();
+    assert.match(await page.textContent('#msg'), /puis cliquez sur « Taper la balle »\.$/);
+    assert.equal(await page.getAttribute('#hintBtn', 'data-auto'), null);
+    assert.equal(await page.getAttribute('#shoot', 'data-nudge'), '');
+    // His own aim on the turf: still the nudge, and the automatic hint waits.
+    const c = await page.locator('canvas').boundingBox();
+    await page.mouse.click(c.x + c.width / 2, c.y + c.height * 0.35);
+    await page.waitForFunction(() => !document.getElementById('shoot').disabled);
+    assert.equal(await page.getAttribute('#shoot', 'data-nudge'), '');
+    assert.equal(await page.getAttribute('#hintBtn', 'data-auto'), 'no', await page.textContent('#msg'));
+  }
   for (const [width, height, zoom] of sizes) {
     await setSize(width, height, zoom);
+    await page.click('#helpBtn');
     await page.locator('#help.on').waitFor();
     for (let i = 0; i < 5; i++) {
       const fits = await page.evaluate(() => {
@@ -55,8 +78,8 @@ try {
     }
   }
   await setSize(1366, 680, 1);
-  await page.click('#helpClose');
-  await page.getByRole('button', { name: 'Facile', exact: true }).click();
+  // The save of the first visit: no coach after a reload.
+  assert.equal(await page.evaluate(() => Kit.coaching()), false);
   const strokes = () => page.textContent('#strokes');
   // Where the ball is on the screen: the game says where it draws it in the canvas.
   const ball = () =>
@@ -93,7 +116,9 @@ try {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await pull(110);
   await page.waitForFunction(() => document.querySelector('#strokes').textContent === '1');
-  await page.waitForFunction(() => /arrête|trou/.test(document.querySelector('#msg').textContent), null, { timeout: 15000 });
+  await page.waitForFunction(() => /s’arrête à|Dans le trou|premier coup/.test(document.querySelector('#msg').textContent), null, { timeout: 15000 });
+  // Every result says what to click next.
+  assert.match(await page.textContent('#msg'), /cliquez sur le gazon\.$|Cliquez sur « Trou suivant »\.$/);
   assert.equal(await page.evaluate(() => document.querySelector('#force b').style.width), '0%');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   // 2. Back on the ball, the pull is cancelled.
@@ -166,6 +191,12 @@ try {
       assert.ok(+(await strokes()) <= +(await page.textContent('#par')), 'the hint makes par on hole ' + (i + 1));
     }
     if (i < 8) {
+      // The hole is over: the line ends with the next button, and a click on the turf says it again.
+      assert.match(await page.textContent('#msg'), /Cliquez sur « Trou suivant »\.$/);
+      assert.match(await page.getAttribute('#hintBtn', 'data-why'), /Trou suivant/);
+      const lane = await page.locator('canvas').boundingBox();
+      await page.mouse.click(lane.x + lane.width / 2, lane.y + lane.height / 2);
+      assert.match(await page.textContent('#msg'), /Le trou est terminé : cliquez sur « Trou suivant »/);
       await page.getByRole('button', { name: 'Trou suivant' }).click();
       await page.waitForFunction((n) => document.querySelector('#holeOf').textContent === 'Trou ' + n + ' sur 9', i + 2);
       await flush();
@@ -173,6 +204,8 @@ try {
   }
   await page.waitForSelector('#over.on .scores');
   assert.equal(await page.locator('.scores tbody tr').count(), 9);
+  // The course is over: « Nouvelle partie » is the nudge.
+  assert.equal(await page.getAttribute('#newBtn', 'data-nudge'), '');
   assert.match(await page.textContent('#overText'), /gagné/);
   // The score card fits without scrolling in the laptop window, at 125 % text and on a phone.
   for (const [width, height] of [

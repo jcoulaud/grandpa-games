@@ -45,16 +45,28 @@ const page = await browser.newPage({ viewport: { width: 1366, height: 680 } });
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));
 await page.goto(gameUrl('freecell'));
-await page.waitForTimeout(2600);
-ok(await page.evaluate(() => help.classList.contains('on')), 'rules open on the first visit');
-await page.keyboard.press('Escape');
-await page.getByRole('button', { name: 'Facile', exact: true }).click();
-
+await page.waitForFunction(() => S && !busy);
 const g = fn => page.evaluate(fn);
+ok(await g(() => !Kit.isOpen() && level === 'facile'), 'the first visit starts a game at Facile at once');
+// The coach rings the hint's card for his first move, once the solver has found it.
+// The aces go home by themselves first, and after 10 s idle the automatic hint may show the same move
+// (the coach's card stays ringed, and becomes the chosen card): both count.
+ok(await page.waitForFunction(() => [E[coachMove?.id], E[sel]].some(el => el && el.classList.contains('coach')), null, { timeout: 20000 }).then(() => true, () => false),
+  'the coach rings the first card to play');
+await page.keyboard.press('Escape'); // drops the automatic hint, if it showed
+// At Facile, every card that can move has a soft gold edge, and only those.
+ok(await g(() => { const ids = movable().ids; return ids.length > 0 && E.every((el, id) => el.classList.contains('play') === ids.includes(id)); }),
+  'at Facile, the cards that can move have a gold edge');
+// The grey "Annuler" says why when clicked.
+const undoBox = await page.locator('#undoBtn').boundingBox();
+await page.mouse.click(undoBox.x + undoBox.width / 2, undoBox.y + undoBox.height / 2);
+ok(await g(() => document.getElementById('msg').textContent) === "Il n'y a pas encore de coup à annuler.", 'the grey Annuler says why');
+
 const L = await g(() => L);
 // The space above and below the board (row-gap in lib/kit.css) takes some height on a 680px window.
 ok(L.w >= 85, `card width at 1366x680 is ${L.w}px, height ${L.h}px`);
-ok(await g(() => S.tab.flat().length === 52 && S.tab.map(p => p.length).join() === '7,7,7,7,6,6,6,6'), 'the deal has 8 columns of 7 and 6 cards');
+// The game has started already, and an ace may have gone home: check a fresh deal.
+ok(await g(() => { const d = freshDeal(); return d.tab.flat().length === 52 && d.tab.map(p => p.length).join() === '7,7,7,7,6,6,6,6'; }), 'the deal has 8 columns of 7 and 6 cards');
 const deepest = await g(() => Math.max(...S.tab.map(p => last(colY(p)) + L.h)) - L.H);
 ok(deepest <= 0, `the dealt columns fit in the table (${deepest}px past it)`);
 const strip = await g(() => { const ys = colY([0, 1, 2, 3, 4, 5, 6]); return ys[1] - ys[0]; });
@@ -80,6 +92,10 @@ const setup = (tab, found, full) => g(`(() => { const tab = ${JSON.stringify(tab
   tab[7].push(...rest);
   clearSel(); clearTimeout(autoT); render({ instant: true });
 })()`);
+// A click on an empty free cell with no card chosen says what to do.
+const [cx, cy] = await g(() => { const r = slotCell[0].getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+await page.mouse.click(cx, cy);
+ok((await g(() => document.getElementById('msg').textContent)).startsWith("Choisissez d'abord une carte."), 'a click on an empty free cell says to choose a card first');
 const below = i => g(`[colX(${i}) + L.w/2, pos[last(S.tab[${i}])][1] + L.h + 30]`).then(at);
 const msg = () => g(() => document.getElementById('msg').textContent);
 
@@ -115,6 +131,10 @@ await setup([[12, 8, 20, 6], [25, 35], [38], [51], [], [], [], []], [5, 7, 7, 12
 await page.waitForTimeout(500);
 await page.mouse.click(...await cardPt(8));
 ok(await g(() => sel) === null && (await msg()).includes('une seule carte à la fois'), 'three cards with room for one cannot move: ' + await msg());
+ok(await g(() => marks.filter(m => m.classList.contains('room')).length) === 4, 'the free cells to empty are framed');
+// The last free cell taken: the line says so, and how to take it back.
+await g(() => { const id = S.cells[0]; S.cells[0] = null; S.tab[7].push(id); clearSel(); render({ instant: true }); moveCards(locate(last(S.tab[0])), { a: 'cell', i: 0 }); clearTimeout(autoT); });
+ok((await msg()).includes('Plus de case libre') && (await msg()).includes('« Annuler »'), 'the last free cell taken warns: ' + await msg());
 ok(await g(() => !E[8].classList.contains('can') && E.every((el, id) => el.classList.contains('can') === (selectable(id) && destinations(locate(id)).length > 0))), 'only a card with a place to go is outlined under the mouse');
 await page.waitForTimeout(600);
 // A card under cards out of order cannot be taken, and the line says why.
@@ -164,10 +184,11 @@ ok(await g(() => isWon()), 'following the hints wins the deal');
 await g(() => { autoStep(); });
 await page.waitForTimeout(2200);
 ok(await g(() => dialogOpen() && document.getElementById('overTitle').textContent.includes('Bravo')), 'the win dialog shows');
+ok(await g(() => document.getElementById('newBtn').hasAttribute('data-nudge') && document.getElementById('hintBtn').disabled), 'after a win, "Nouvelle partie" is the next button');
 await page.screenshot({ path: `${OUT}/freecell-4-win.png` });
 await page.keyboard.press('Escape');
 await page.click('#undoBtn'); await page.waitForTimeout(200);
-ok(await g(() => !isWon() && document.getElementById('msg').textContent === 'Coup annulé.'), 'Annuler goes back one move');
+ok(await g(() => !isWon() && document.getElementById('msg').textContent.startsWith('Coup annulé. Cliquez')), 'Annuler goes back one move, and says what to click next');
 ok(await g(() => stats.won) === 1, 'the win stays counted after undo');
 
 // 7. Fixes from the logic review.
@@ -225,8 +246,7 @@ await page.keyboard.press('Escape');
 // 8. Big screen
 const big = await browser.newPage({ viewport: { width: 1920, height: 1000 } });
 big.on('pageerror', e => errors.push(e.message));
-await big.goto(gameUrl('freecell')); await big.waitForTimeout(2600); await big.keyboard.press('Escape');
-await big.getByRole('button', { name: 'Facile', exact: true }).click();
+await big.goto(gameUrl('freecell')); await big.waitForFunction(() => S && !busy);
 console.log('     1920x1000 card: ' + JSON.stringify(await big.evaluate(() => [L.w, L.h])));
 await big.screenshot({ path: `${OUT}/freecell-5-1920x1000.png` });
 

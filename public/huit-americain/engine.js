@@ -41,6 +41,7 @@
 //   HA.draw(G)                   the game after the seat to play draws
 //   HA.pass(G)                   the game after the seat to play keeps the card drawn and passes
 //   HA.choose(G, level, rnd)     what a computer does: { type: 'play', card, suit } | { type: 'draw' } | { type: 'pass' }
+//   HA.bestSuit(hand, without)   the colour a hand holds most of, without the 8s and without one card
 //   HA.apply(G, action)          the game after that action
 //   HA.valid(G)                  true when a saved game holds together
 (function factory(root) {
@@ -341,6 +342,6 @@
   }
 
   const api = { HAND, suit, rank, points, handPoints, special, sortHand, seeded, newGame, nextRound, legal, refusal, canDraw,
-    play, draw, pass, choose, apply, valid, next, top, LEVELS };
+    play, draw, pass, choose, bestSuit, apply, valid, next, top, LEVELS };
   root.HA = api;
 })(typeof self !== 'undefined' ? self : globalThis);

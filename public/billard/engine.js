@@ -1459,3 +1459,32 @@ export function hint(g) {
   else reason = g.ballInHand ? 'Placez la blanche pour trouver un coup.' : 'Aucun coup sûr trouvé.';
   return { ...shot, target, pocket, reason };
 }
+
+// A ball he may touch first without a foul.
+export const legalFirst = (g, id) => canHit(g, g.turn, id);
+
+// At Facile, a click on a ball aims the cue so that this ball goes toward its easiest pocket: the
+// direct lines are tried from the easiest, and the first one the physics pots wins. Null when no
+// pocket is in line, and the game then aims at the middle of the ball.
+export function aimFor(g, id, cue) {
+  const target = g.balls.find((b) => b.id === id);
+  if (!target || !cue) return null;
+  const shots = [];
+  for (const pocket of pockets) {
+    for (const fraction of [0, -0.5, 0.5]) {
+      const route = pocketRoute(target, pocket, (pocket.width - R - jawRadius) * fraction, g.balls);
+      const shot = route && candidate(g, cue, route, { x: cue.x, y: cue.y });
+      if (shot) shots.push(shot);
+    }
+  }
+  shots.sort((a, b) => a.difficulty - b.difficulty);
+  for (const { difficulty, ...shot } of shots.slice(0, 6)) {
+    for (const scale of [1, 1.2]) {
+      const attempt = { ...shot, power: Math.min(10, powerAt(speedAt(shot.power) * scale)) };
+      const sim = run(basis(g, attempt), attempt, false, false);
+      if (sim.pocketed.some((b) => b.id === id && b.pocket === shot.pocket) && !sim.pocketed.some((b) => b.id === 0))
+        return { angle: attempt.angle, power: attempt.power, pocket: shot.pocket };
+    }
+  }
+  return shots.length ? { angle: shots[0].angle, power: Math.min(10, shots[0].power), pocket: shots[0].pocket, unsure: true } : null;
+}

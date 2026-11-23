@@ -43,6 +43,11 @@
   .card.hand.can:hover { transform: translateY(calc(var(--h) * -.13)); outline: 4px solid #fff; }
   /* A card he may not play now: dimmed, still readable and still clickable for the reason. */
   .card.hand.no { cursor: pointer; filter: brightness(.52) saturate(.55); }
+  /* A second mark, by shape: fine stripes over the card and a crossed disc in its lower left corner,
+     the part that stays in view under the next card. */
+  .card.hand.no::after, #help .bp-hand .card.no::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='17' fill='%23201A12' stroke='%23fff' stroke-width='3.5'/%3E%3Cpath d='M13 13l14 14M27 13L13 27' stroke='%23fff' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E") left 6% bottom 4% / 40% auto no-repeat,
+      repeating-linear-gradient(135deg, rgba(20,14,6,.34) 0 3px, transparent 3px 10px); }
   .card.hand.hint, .card.hand.hint:hover { transform: translateY(calc(var(--h) * -.13)); outline: 5px solid var(--gold);
     box-shadow: 0 0 0 2px rgba(var(--shade),.8), 0 0 26px 8px rgba(255,200,61,.7); }
   .card.trick.won { outline: 5px solid var(--turn); }
@@ -151,7 +156,9 @@
   #bidBar.nocard #bidSlot { display: none; }
   #bidBar .ask { display: flex; flex-direction: column; gap: 10px; }
   #bidBar h2 { margin: 0; padding: 0 4px; font: 700 26px/1.2 var(--ui); text-align: center; white-space: nowrap; }
-  #bidBar.bare h2 { display: none; }
+  #bidBar.bare h2, #bidBar.bare #bidNote, #bidBar.nonote #bidNote { display: none; }
+  /* One line under the question that says what the answer does. It takes the width of the buttons. */
+  #bidNote { margin: -4px 0 0; padding: 0 4px; width: 0; min-width: 100%; font: 500 20px/1.25 var(--ui); color: #3A4542; text-align: center; }
   #bidBtns { display: flex; gap: 12px; }
   #bidBar.col #bidBtns { flex-direction: column; }
   #bidBar.grid #bidBtns { display: grid; grid-template-columns: 1fr 1fr; }
@@ -357,7 +364,7 @@
   <div class="seat" id="seat3"></div>
   <div id="strip"></div>
   <div id="retLabel">La retourne</div>
-  <div id="bidBar" role="group" aria-labelledby="bidTitle"><div id="bidSlot"></div><div class="ask"><h2 id="bidTitle"></h2><div id="bidBtns"></div></div></div>
+  <div id="bidBar" role="group" aria-labelledby="bidTitle"><div id="bidSlot"></div><div class="ask"><h2 id="bidTitle"></h2><p id="bidNote"></p><div id="bidBtns"></div></div></div>
   <div class="sheet" id="scoreSheet" role="group" aria-labelledby="scoreTitle">
     <h2 id="scoreTitle"></h2>
     <p class="note" id="scoreNote"></p>
@@ -534,8 +541,8 @@ function refuseText(why) {
   return "Vous devez surcouper : jouez un atout plus fort que celui posé.";
 }
 function turnMessage() {
-  if (G.phase === 'bid1' && G.turn === 0) return `À vous de parler : prenez-vous ${SUIT_DE(suit(G.turnup))} ?`;
-  if (G.phase === 'bid2' && G.turn === 0) return "Deuxième tour : choisissez l'atout, ou passez.";
+  if (G.phase === 'bid1' && G.turn === 0) return `À vous de parler. Si vous prenez, le ${sname(suit(G.turnup))} devient l'atout. Cliquez sur « Je prends » ou « Je passe ».`;
+  if (G.phase === 'bid2' && G.turn === 0) return `Deuxième tour, sans le ${sname(suit(G.turnup))} : cliquez sur une couleur pour l'atout, ou sur « Je passe ».`;
   if (G.phase !== 'play' || G.turn !== 0) return '';
   if (!G.trick.length) return 'À vous de commencer le pli : cliquez sur une carte.';
   const hand = G.hands[0], led = suit(G.trick[0]), T = G.trump;
@@ -683,7 +690,7 @@ function step() {
     window.Sound?.play('turn');
     say((note ? note + ' ' : '') + turnMessage());
     note = '';
-    render();
+    render(); coach();
     return;
   }
   render();
@@ -722,7 +729,9 @@ function handOver(fresh) {
   if (G.phase === 'over') {
     const won = G.result.winner === 0;
     if (fresh) window.Sound?.play(won ? 'win' : 'lose');
-    say(won ? 'Bravo, André et vous avez gagné la partie !' : 'Simone et Henri ont gagné la partie.');
+    say(won ? 'Bravo, André et vous avez gagné la partie ! Cliquez sur « Nouvelle partie » pour rejouer.'
+      : 'Simone et Henri ont gagné la partie. Cliquez sur « Nouvelle partie » pour rejouer.');
+    Kit.gameOver(true);
     const games = ['Retour aux jeux', Kit.home];
     const totals = `\nLes points : ${US} ${G.scores[0]}, ${THEM} ${G.scores[1]}.`;
     if (won) {
@@ -736,7 +745,7 @@ function handOver(fresh) {
       [['Nouvelle partie', askNewGame, true], games]), !fresh || motion.matches ? 0 : 500);
     return;
   }
-  say(`Fin de la manche : ${outcomeText()}${tieText()}`);
+  say(`Fin de la manche : ${outcomeText()}${tieText()} Cliquez sur « Manche suivante ».`);
 }
 // Both teams on the same total at 501 or more: the game goes on.
 const tieText = () => G.phase === 'done' && G.scores[0] === G.scores[1] && G.scores[0] >= G.target
@@ -760,6 +769,24 @@ function nextHandNow() {
   later(step, 1400);
 }
 
+// Who the table waits for: "Henri joue.", "Simone parle."
+function waitText() {
+  if (busy || G.turn === 0) return 'les cartes arrivent.';
+  return `${PLAYERS[G.turn].name} ${bidding() ? 'parle' : 'joue'}.`;
+}
+// During his first game, the hand points at what to press. At the bids, the hint button only: he chooses
+// to take or not after its advice. Then the bid it advised, or a card he may play.
+function coach() {
+  if (!Kit.coaching() || stale || busy || G.turn !== 0 || Kit.isOpen()) return;
+  if (bidding()) {
+    const b = hint && hint.bid !== undefined && $('bidBtns').querySelector(`button[data-bid="${hint.bid}"]`);
+    return Kit.point(b || $('hintBtn'));
+  }
+  if (G.phase !== 'play') return;
+  const c = hint && hint.card !== undefined ? hint.card : choosePlay(G, 'moyen');
+  Kit.point(els.get(c));
+}
+
 /* ---------- Buttons ---------- */
 function cancelAll() {
   gen++; timers.forEach(clearTimeout); timers = [];
@@ -777,6 +804,7 @@ function doUndo() {
   Kit.closeDialog();
   const before = G;
   G = JSON.parse(undo.pop()); hint = null; note = '';
+  Kit.gameOver(false);
   // The turn comes back: a click on the same card right after is a new choice, not a double-click.
   lastTap = null;
   // A win taken back is no longer counted.
@@ -795,7 +823,7 @@ function doUndo() {
   }
   save(); window.Sound?.play('card');
   say('Coup annulé. ' + turnMessage());
-  render();
+  render(); coach();
 }
 
 function showHint() {
@@ -803,9 +831,9 @@ function showHint() {
   if (G.phase === 'bid1' || G.phase === 'bid2') {
     const b = chooseBid(G, 'fort', Belote.seeded(G.seed ^ 0x5bd1e995 ^ G.bids.length));
     hint = { bid: b };
-    say(b === 'pass' ? 'Conseil : passez, votre jeu est trop faible pour prendre.'
-      : `Conseil : prenez ${SUIT_DE(b === 'take' ? suit(G.turnup) : b)}, avec le bouton jaune.`);
-    render();
+    say(b === 'pass' ? 'Conseil : votre jeu est trop faible pour prendre. Cliquez sur « Je passe ».'
+      : `Conseil : prenez ${SUIT_DE(b === 'take' ? suit(G.turnup) : b)}. Cliquez sur le bouton jaune.`);
+    render(); coach();
     return;
   }
   if (G.phase !== 'play') return;
@@ -816,8 +844,8 @@ function showHint() {
     if (my !== gen) return;
     const c = choosePlay(G, 'fort', Belote.seeded(G.seed ^ 0x5bd1e995 ^ G.log.length), { trials: 60 });
     busy = false; hint = { card: c };
-    say(`Posez ${cardName(c)} : la carte entourée de jaune.`);
-    render();
+    say(`Posez ${cardName(c)} : cliquez sur la carte entourée de jaune.`);
+    render(); coach();
   }, 40);
 }
 
@@ -1063,6 +1091,7 @@ function render() {
   renderSide();
   Kit.showWins(stats.won);
   $('undoBtn').disabled = stale || !undo.length;
+  $('undoBtn').dataset.why = "Il n'y a pas encore de coup à annuler dans cette manche.";
   // During the bids the hint says whether to take.
   const hb = $('hintBtn'), mode = bidding() ? 'bid' : 'play';
   if (hb.dataset.mode !== mode) {
@@ -1072,6 +1101,9 @@ function render() {
     hb.title = mode === 'bid' ? 'Conseille de prendre ou de passer' : 'Montre une bonne carte à jouer maintenant';
   }
   $('hintBtn').disabled = stale || busy || G.turn !== 0 || !(bidding() || G.phase === 'play');
+  $('hintBtn').dataset.why = G.phase === 'done' ? 'La manche est finie : cliquez sur « Manche suivante ».'
+    : G.phase === 'over' ? 'La partie est finie : cliquez sur « Nouvelle partie ».'
+    : `Attendez votre tour : ${waitText()}`;
 }
 
 // The bids: the retourne on the mat. On his turn, his answer beside it: the question and one big
@@ -1083,6 +1115,8 @@ function renderBids(fresh) {
   if (mineNow) {
     const s = suit(G.turnup);
     $('bidTitle').textContent = G.phase === 'bid1' ? `Prenez-vous ${SUIT_DE(s)} ?` : "Choisissez l'atout :";
+    $('bidNote').textContent = G.phase === 'bid1' ? `Prendre : le ${sname(s)} de la retourne devient l'atout.`
+      : `Pas de ${sname(s)} : il a été refusé au premier tour.`;
     const key = G.phase + ':' + s + ':' + (hint && hint.bid !== undefined ? hint.bid : '');
     const box = $('bidBtns');
     if (box.dataset.key !== key) {
@@ -1112,8 +1146,11 @@ function placeTurnup(fresh) {
     const shapes = bidOptions(G).length > 2
       ? ['', 'grid', 'col', 'nocard', 'nocard grid', 'bare', 'bare grid', 'nocard bare', 'nocard bare grid', 'nocard bare col']
       : ['', 'col', 'bare', 'bare col', 'nocard', 'nocard col', 'nocard bare col'];
-    let pick = shapes[shapes.length - 1];
-    for (const shape of shapes) {
+    // The line under the question goes first, before the retourne and the question: the message line says it too.
+    const full = shapes.filter(s => !/nocard|bare/.test(s));
+    const order = [...full, ...full.map(s => s + ' nonote'), ...shapes.filter(s => !full.includes(s)).flatMap(s => [s, s + ' nonote'])];
+    let pick = order[order.length - 1];
+    for (const shape of order) {
       bar.className = 'on ' + shape;
       if (bar.offsetWidth <= L.gapW && bar.offsetHeight <= bandBot - bandTop) { pick = shape; break; }
     }
@@ -1314,6 +1351,12 @@ table.addEventListener('keydown', e => {
   e.preventDefault();
   tapCard(+el.dataset.c);
 });
+// A click on the felt while the others play says who the table waits for.
+table.addEventListener('click', e => {
+  // The second click of a double-click is part of the first: it lands where a button just went.
+  if (stale || Kit.isOpen() || e.detail > 1 || e.target.closest('.card, button, .sheet, #side, #bidBar, .seat')) return;
+  if ((busy || G.turn !== 0) && (bidding() || G.phase === 'play')) Kit.tell(`Attendez, ${waitText()}`);
+});
 $('bidBtns').addEventListener('click', e => {
   const b = e.target.closest('button[data-bid]');
   if (!b || b.disabled) return;
@@ -1334,13 +1377,13 @@ addEventListener('resize', () => render());
 
 // The way of play in the rules guide, drawn as on the mat.
 document.querySelectorAll('#help .bp-ways').forEach(svg => { svg.innerHTML = waysHtml(120, 68, 104, 54, 5, 20); });
-// The rules open by themselves the first time the game is opened.
+// The first visit starts a game at Facile at once, with the coach (lib/kit.js).
 const found = load();
 if (found === 'game') {
   Kit.showLevel(level);
   if (G.phase === 'done' || G.phase === 'over') handOver(false);
   else if (G.turn !== 0) { render(); later(step, 600); }
-  else { say(turnMessage()); render(); }
+  else { say(turnMessage()); render(); coach(); }
 } else if (found === 'broken') {
   newGame(level);
   note = "La partie enregistrée n'a pas pu être relue : voici une nouvelle partie.";
