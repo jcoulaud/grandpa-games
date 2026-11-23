@@ -2,7 +2,6 @@
    the same width, the same coloured header, the contents on the left and the text in cards on the right.
    This file adds only what a rules page does not have. */
 
-.blog-kicker { margin: 0 0 .5rem; font-size: 20px; font-weight: 600; }
 
 /* The article as a card in the list. The title is the one link, and it covers the whole card. */
 .feature {
@@ -13,7 +12,6 @@
   background: var(--card);
 }
 .feature > :last-child { margin-bottom: 0; }
-.feature .blog-kicker { color: var(--guide-ink); }
 .feature h2 { margin-bottom: 1rem; font-size: clamp(1.7rem, 2.8vw, 2.4rem); }
 .feature h2 a { color: #1b2422; text-decoration: none; }
 .feature h2 a::after { content: ""; position: absolute; inset: 0; border-radius: 16px; }
