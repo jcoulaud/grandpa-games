@@ -767,6 +767,8 @@ function hitPile(x, y) {
 }
 
 function render(opts = {}) {
+  // While he has chosen a card or a piece, the automatic hint of Facile waits: it would change his choice.
+  if (sel !== null) document.getElementById('hintBtn').dataset.auto = 'no'; else delete document.getElementById('hintBtn').dataset.auto;
   if (!S) return;
   layout();
   put(slotStock, bankX(0), L.top); put(slotWaste, bankX(1), L.top);

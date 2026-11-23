@@ -39,9 +39,9 @@ try {
     await page.evaluate((z) => localStorage.setItem('gg:size', JSON.stringify(z)), zoom);
     await page.reload();
   };
-  // The first visit starts a game at Facile at once, with the coach: a ring on a good spot of the turf.
+  // The first visit starts a game at Facile at once, with the coach: a ring on « Que jouer maintenant ? ».
   await page.goto('http://localhost/golf/');
-  await page.locator('#spot.coach').waitFor();
+  await page.locator('#hintBtn.coach').waitFor();
   assert.equal(await page.evaluate(() => Kit.isOpen()), false);
   assert.match(await page.textContent('#level'), /facile/);
   assert.match(await page.textContent('#msg'), /Cliquez sur le gazon, là où la balle doit s’arrêter/);
@@ -50,17 +50,18 @@ try {
   assert.equal(await page.getAttribute('#shoot', 'data-why'), 'Cliquez d’abord sur le gazon, là où la balle doit s’arrêter.');
   assert.match(await page.getAttribute('#undoBtn', 'data-why'), /pas encore de coup/);
   {
-    // A click on the coach's spot aims there: the ring moves to « Taper la balle », which becomes the nudge.
-    const spot = await page.locator('#spot').boundingBox();
-    await page.mouse.click(spot.x + spot.width / 2, spot.y + spot.height / 2);
-    await page.locator('#shoot.coach').waitFor();
-    assert.equal(await page.getAttribute('#shoot', 'data-nudge'), '');
-    assert.equal(await page.getAttribute('#hintBtn', 'data-auto'), 'no', await page.textContent('#msg'));
-    // The hint's shot: still the nudge, and the automatic hint may come again.
+    // The hint's shot: the ring moves to « Taper la balle », which becomes the nudge, and the automatic hint may come again.
     await page.click('#hintBtn');
+    await page.locator('#shoot.coach').waitFor();
     assert.match(await page.textContent('#msg'), /puis cliquez sur « Taper la balle »\.$/);
     assert.equal(await page.getAttribute('#hintBtn', 'data-auto'), null);
     assert.equal(await page.getAttribute('#shoot', 'data-nudge'), '');
+    // His own aim on the turf: still the nudge, and the automatic hint waits.
+    const c = await page.locator('canvas').boundingBox();
+    await page.mouse.click(c.x + c.width / 2, c.y + c.height * 0.35);
+    await page.waitForFunction(() => !document.getElementById('shoot').disabled);
+    assert.equal(await page.getAttribute('#shoot', 'data-nudge'), '');
+    assert.equal(await page.getAttribute('#hintBtn', 'data-auto'), 'no', await page.textContent('#msg'));
   }
   for (const [width, height, zoom] of sizes) {
     await setSize(width, height, zoom);
@@ -78,7 +79,7 @@ try {
   }
   await setSize(1366, 680, 1);
   // The save of the first visit: no coach after a reload.
-  assert.equal(await page.locator('#spot').isVisible(), false);
+  assert.equal(await page.evaluate(() => Kit.coaching()), false);
   const strokes = () => page.textContent('#strokes');
   // Where the ball is on the screen: the game says where it draws it in the canvas.
   const ball = () =>

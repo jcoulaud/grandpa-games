@@ -47,25 +47,11 @@ function why(text) {
     else b.dataset.why = id === 'undoBtn' && !sum() ? 'Il n’y a pas encore de coup à annuler.' : text;
   }
 }
-// The coach of his first game: a ring on a good spot of the turf, then on the yellow button.
+// The coach of his first game: a ring on « Que jouer maintenant ? », whose shot drops, then on the yellow button.
+// A spot of the turf is not enough: the hint's ball may stop short of a shot that sinks.
 function coachSpot() {
-  const spot = $('spot');
-  spot.hidden = true;
   if (!Kit.coaching() || !game || stale || current(game).done) return;
-  const { h, ball } = current(game),
-    // Where the hint's ball stops: always on the turf, unlike its target, which may lie past an edge.
-    p = simulate(h, ball, hint(h, ball)).end;
-  spot.hidden = false;
-  // The view may still be settling: the ring follows the spot on the screen while it shows.
-  const follow = () => {
-    if (spot.hidden) return;
-    const at = view.screen(p, 0);
-    spot.style.left = at.x + 'px';
-    spot.style.top = at.y + 'px';
-    requestAnimationFrame(follow);
-  };
-  follow();
-  Kit.point(spot);
+  Kit.point($('hintBtn'));
 }
 // A click on the turf while it cannot take a shot.
 function refuse() {
@@ -142,7 +128,6 @@ function aim(p, advice = false) {
   $('shoot').disabled = false;
   why();
   aimed(true, !advice);
-  $('spot').hidden = true;
   Kit.say(
     advice
       ? shot.sunk
@@ -240,7 +225,6 @@ function move(e) {
     press.dragging = true;
     target = null;
     aimed(false);
-    $('spot').hidden = true;
     $('shoot').disabled = true;
     why('Cliquez d’abord sur le gazon, là où la balle doit s’arrêter.');
     e.target.style.cursor = 'grabbing';
@@ -378,7 +362,6 @@ async function shoot() {
   window.Sound?.play('hit');
   target = null;
   aimed(false);
-  $('spot').hidden = true;
   $('shoot').disabled = true;
   $('undoBtn').disabled = $('hintBtn').disabled = true;
   why('La balle roule, attendez.');

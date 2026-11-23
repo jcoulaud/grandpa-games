@@ -25,7 +25,7 @@ const start = async level => {
 // 1. The first visit: a game at Facile starts at once, with the coach on the middle square. The rules stay
 // on "Règles", and each page fits without scrolling.
 await page.goto(URL);
-await wait(400);
+await page.waitForFunction(() => document.querySelector('.c.coach'));
 ok(!(await g(() => Kit.isOpen())) && await g(() => G.level === 'facile' && Kit.coaching()), 'the first visit starts a game at Facile at once, with the coach');
 ok(await g(() => document.querySelector('.c.coach')?.dataset.i === '40'), 'the coach rings the middle square to open first');
 ok(await g(() => document.getElementById('undoBtn').disabled && /annuler/.test(document.getElementById('undoBtn').dataset.why)), 'the grey undo button says why');

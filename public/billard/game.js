@@ -272,7 +272,8 @@ function click(ev) {
   const pot = b && game.level === 'facile' && game.broken ? E.aimFor(game, b.id, cue) : null;
   if (pot) {
     aim.angle = pot.angle;
-    aim.power = Math.max(1, Math.min(10, Math.round(pot.power)));
+    // The power the engine found, not rounded: a rounded power can scratch. The force line shows it rounded.
+    aim.power = Math.max(1, Math.min(10, pot.power));
   }
   aimed(true, true);
   render(

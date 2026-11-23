@@ -713,7 +713,7 @@ function render() {
     const parts = partsOf(last.meta), now = parts[0] ? parts[0][0].toLowerCase() + parts[0].slice(1) : '';
     box.innerHTML = `<a class="last" href="${last.g.id}/" data-id="${last.g.id}">${art(last.g)}
       <span class="what"><b>${esc(last.g.title)}</b><span>Votre dernière partie${now ? ' : ' + esc(now) : ''}</span></span>
-      <span class="play">${PLAY}${inProgress(parts) ? 'Reprendre la partie' : 'Rejouer'}</span></a>`;
+      <span class="play">${PLAY}${inProgress(parts) ? 'Reprendre la partie' : 'Ouvrir le jeu'}</span></a>`;
   }
   document.getElementById('games').innerHTML = FAMILIES.map(([id, name]) => {
     const games = GAMES.filter(g => g.family === id);

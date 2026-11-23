@@ -79,9 +79,6 @@
   #band circle { fill: #fff; stroke: #1F1A00; stroke-width: 3; }
   #band.cancel line + line { stroke: #C9D1CE; }
   #band[hidden] { display: none; }
-  /* The coach of his first game rings a good spot of the turf: the kit draws the ring and the hand. */
-  #spot { position: absolute; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; pointer-events: none; }
-  #spot[hidden] { display: none; }
   /* The strength, in the card: filled live during a pull, and set by « − » and « + » after a click. */
   #force { display: flex; align-items: center; gap: 8px; }
   #force button { flex: none; width: 48px; min-height: 48px; padding: 0; justify-content: center; font: 700 28px/1 var(--ui); }
@@ -289,7 +286,7 @@
   </aside>
   <div id="stage">
     <canvas aria-label="Le trou de golf. Cliquez sur le gazon, là où la balle doit s’arrêter, ou tirez la balle vers l’arrière."></canvas>
-    <svg id="band" hidden aria-hidden="true"><line/><line/><circle r="9"/></svg><div id="spot" hidden aria-hidden="true"></div>
+    <svg id="band" hidden aria-hidden="true"><line/><line/><circle r="9"/></svg>
     <div id="ribbon" aria-hidden="true"></div>
   </div>
 </main>

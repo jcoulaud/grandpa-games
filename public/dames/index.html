@@ -772,6 +772,8 @@ const xy = n => [colOf(n) * S, rowOf(n) * S];
 // opts.shown: the board to draw (the one before a move being shown); opts.moving and opts.at: the piece
 // that travels and where it is; opts.taken: the pieces crossed out so far.
 function render(opts = {}) {
+  // While he has chosen a card or a piece, the automatic hint of Facile waits: it would change his choice.
+  if (!!sel) document.getElementById('hintBtn').dataset.auto = 'no'; else delete document.getElementById('hintBtn').dataset.auto;
   if (!G) return;
   $('drawNote').textContent = drawNote();
   layout();

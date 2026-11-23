@@ -278,38 +278,34 @@
   function openHelp() {
     if (!help) return;
     remember(); help.classList.add('on'); showPage(0);
-    PH.capture('rules guide opened', { first_visit: !!firstStart });
+    PH.capture('rules guide opened', { first_visit: false });
   }
   // The first visit starts a game at Facile at once: he learns on the real table, with the coach. The rules
-  // guide stays one click away, on "Règles". firstStart stays for a game that opens the guide itself first.
-  let firstStart = null;
+  // guide stays one click away, on "Règles".
   function firstVisit(start) {
     coaching = true; coachStarts = 0; coachSteps = 0;
     PH.capture('first visit', { coach: true });
+    const size = () => { const t = $('table'); return t ? t.clientWidth + 'x' + t.clientHeight : ''; };
     start('facile');
+    const before = size();
     // The level line appears under the name and the bar may change height after the start, without a resize:
-    // a game that lays out from the size of its table measures again.
-    requestAnimationFrame(() => dispatchEvent(new Event('resize')));
-    setTimeout(() => dispatchEvent(new Event('resize')), 400);
+    // a game that lays out from the size of its table measures again, only when the table did change size.
+    let seen = before;
+    const check = () => { const now = size(); if (now !== seen) { seen = now; dispatchEvent(new Event('resize')); } };
+    requestAnimationFrame(check);
+    setTimeout(check, 400);
   }
   function closeHelp() {
     if (!helpOpen()) return;
     PH.capture('rules guide closed', { page: at + 1, pages: pages.length, read_all: at === pages.length - 1 });
     help.classList.remove('on');
     giveBack();
-    if (firstStart) chooseLevel(null, false, level => {
-      const start = firstStart;
-      firstStart = null;
-      $('table').hidden = false;
-      start(level);
-      $('newBtn').focus();
-    });
   }
   const helpOpen = () => !!help && help.classList.contains('on');
   const isOpen = () => over.classList.contains('on') || helpOpen();
   function escape() {
     if (helpOpen()) { closeHelp(); return true; }
-    if (over.classList.contains('on')) { if (!firstStart) closeDialog(); return true; }
+    if (over.classList.contains('on')) { closeDialog(); return true; }
     return false;
   }
 
@@ -401,9 +397,12 @@
   function nudgeTarget() {
     // A button of the game, such as "Partie suivante", comes before "Nouvelle partie" of Kit.gameOver.
     const marked = [...document.querySelectorAll('[data-nudge]')].filter(visible);
-    if (marked.length) return marked.find(e => e.id !== 'newBtn') || marked[0];
     const hint = $('hintBtn');
-    return visible(hint) ? hint : null;
+    // "Nouvelle partie" of Kit.gameOver waits while the hint can still help: after an undo, the game goes on.
+    const game = marked.find(e => e.id !== 'newBtn');
+    if (game) return game;
+    if (visible(hint)) return hint;
+    return marked[0] || null;
   }
   function tick() {
     if (document.hidden || isOpen() || ($('table') && $('table').hidden)) { stir(); return; }
@@ -446,8 +445,13 @@
     lastDown = { t: e.timeStamp, x: e.clientX, y: e.clientY };
     if (watch) watch.obs.disconnect();
     if (again) { watch = null; return; }
-    const w = watch = { changed: false, obs: new MutationObserver(() => { w.changed = true; }) };
-    w.obs.observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true });
+    // The kit's own marks (the nudge, the coach ring and hand, the flash of the line) are not an answer of the game.
+    const KIT = new Set(['nudge', 'coach', 'flash', 'long']);
+    const rest = v => (v || '').split(/\s+/).filter(c => c && !KIT.has(c)).sort().join(' ');
+    const own = r => r.type === 'attributes' && (r.target.id === 'coachHand' ||
+      r.attributeName === 'class' && rest(r.oldValue) === rest(r.target.getAttribute('class')));
+    const w = watch = { changed: false, obs: new MutationObserver(list => { if (list.some(r => !own(r))) w.changed = true; }) };
+    w.obs.observe(document.body, { subtree: true, childList: true, attributes: true, attributeOldValue: true, characterData: true });
   }, true);
   addEventListener('pointerup', e => {
     if (!e.isTrusted || e.button !== 0 || isOpen()) return;
@@ -492,7 +496,7 @@
   // A window that is behind (another window or the backup saved a newer game) cannot save:
   // it asks to reload, at each refused save, until it is reloaded.
   addEventListener('gg-stale', () => {
-    if (firstStart || quitting || !over.classList.contains('on')) dialog('Le jeu a changé ailleurs',
+    if (quitting || !over.classList.contains('on')) dialog('Le jeu a changé ailleurs',
       'Ce jeu a été enregistré dans une autre fenêtre. Rechargez-le pour continuer la partie à jour.',
       [['Recharger le jeu', () => location.reload(), true]]);
     if (quitting) staleHeld = true;
