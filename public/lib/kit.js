@@ -190,6 +190,7 @@
   }
   function showLevel(level) {
     shownLevel = level;
+    PH.register({ level });
     levelLine();
     $('levelName').textContent = 'Niveau ' + levelNames[level].toLowerCase();
     fitBar();
@@ -250,7 +251,11 @@
     next.focus();
     $('helpText').scrollTop = 0;
   }
-  function openHelp() { if (!help) return; remember(); help.classList.add('on'); showPage(0); }
+  function openHelp() {
+    if (!help) return;
+    remember(); help.classList.add('on'); showPage(0);
+    PH.capture('rules guide opened', { first_visit: !!firstStart });
+  }
   let firstStart = null;
   function firstVisit(start) {
     firstStart = start;
@@ -259,6 +264,7 @@
   }
   function closeHelp() {
     if (!helpOpen()) return;
+    PH.capture('rules guide closed', { page: at + 1, pages: pages.length, read_all: at === pages.length - 1 });
     help.classList.remove('on');
     giveBack();
     if (firstStart) chooseLevel(null, false, level => {
@@ -316,6 +322,7 @@
       if (nudged) nudged.classList.remove('nudge');
       target.classList.add('nudge');
       nudged = target;
+      PH.capture('nudge shown', { button: target.id || target.textContent.trim().slice(0, 40) });
     }
     if (auto && idle >= auto && !autoDone && target.id === 'hintBtn' && target.dataset.auto !== 'no') {
       autoDone = true;
@@ -323,6 +330,10 @@
     }
   }
   setInterval(tick, 1000);
+  // A hint asked by his hand, or shown by itself at Facile.
+  addEventListener('click', e => {
+    if (e.target.closest && e.target.closest('#hintBtn')) PH.capture('hint used', { automatic: !e.isTrusted });
+  }, true);
   // Only his own hand or keys allow a new automatic hint.
   for (const type of ['pointerdown', 'keydown', 'wheel'])
     addEventListener(type, e => { stir(); if (e.isTrusted) autoDone = false; }, { capture: true, passive: true });
