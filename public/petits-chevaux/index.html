@@ -161,15 +161,21 @@
   #dieBox.ready .hand { display: block; animation: poke 1.4s ease-in-out infinite; }
   @keyframes poke { 50% { translate: -6% -10%; } }
   /* A throw: the die tumbles, bounces and settles while its face changes (see rollAnim()). */
-  #die.rolling svg { animation: tumble .9s cubic-bezier(.25,.8,.35,1) both; }
+  #die.rolling svg { animation: tumble var(--roll) linear both; }
   @keyframes tumble {
-    0% { transform: none; }
-    24% { transform: translate(-8%, -24%) rotate(-32deg); }
-    40% { transform: translate(8%, 6%) rotate(40deg) scale(1.05); }
-    62% { transform: translate(-4%, -14%) rotate(-12deg) scale(1); }
-    80% { transform: translate(2%, 2%) rotate(5deg); }
-    100% { transform: none; }
+    0% { transform: none; animation-timing-function: cubic-bezier(.3,.6,.5,1); }
+    16% { transform: translate(-10%, -16%) rotate(-70deg) scale(1.08); animation-timing-function: cubic-bezier(.5,0,.8,.5); }
+    32% { transform: translate(6%, 4%) rotate(-150deg) scale(1.08, .92); animation-timing-function: cubic-bezier(.3,.6,.5,1); }
+    46% { transform: translate(10%, -11%) rotate(-215deg) scale(1.04); animation-timing-function: cubic-bezier(.5,0,.8,.5); }
+    60% { transform: translate(2%, 3%) rotate(-280deg) scale(1.06, .94); animation-timing-function: cubic-bezier(.3,.6,.5,1); }
+    72% { transform: translate(-4%, -6%) rotate(-318deg); animation-timing-function: cubic-bezier(.5,0,.8,.5); }
+    84% { transform: translate(-1%, 1%) rotate(-352deg) scale(1.04, .96); animation-timing-function: ease-out; }
+    92% { transform: translate(0, -2%) rotate(-359deg); }
+    100% { transform: rotate(-360deg); }
   }
+  /* The die lands: a short bump and a gold flash, so his eye goes to the number. */
+  #die.landed { animation: landed .45s ease-out; }
+  @keyframes landed { 0% { box-shadow: 0 0 0 0 rgba(255,200,61,.95); } 30% { scale: 1.1; } 100% { scale: 1; box-shadow: 0 0 0 calc(22px * var(--k)) rgba(255,200,61,0); } }
   #dieBox .six { position: absolute; left: 50%; bottom: calc(-18px * var(--k)); translate: -50% 0; padding: 2px 14px; border-radius: 10px; background: var(--gold); color: #2B2000;
     font: 700 calc(21px * var(--k))/1.3 var(--ui); white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,.35); display: none; }
   #dieBox .six.on { display: block; animation: pop .35s cubic-bezier(.2,1.4,.4,1); }
@@ -184,8 +190,13 @@
   #todo.wait { font-weight: 600; font-size: calc(22px * var(--k)); color: #E3F4F3; }
   #todo.wait svg { width: calc(36px * var(--k)); height: calc(36px * var(--k)); }
   #rollBtn[hidden], #todo[hidden], #pick[hidden], #why[hidden] { display: none; }
-  /* Why his last throw could not move a horse, kept until his next throw. */
-  #why { padding: 8px 12px; border-radius: 14px; background: rgba(0,0,0,.22); color: #FFF4D6; font: 600 calc(20px * var(--k))/1.25 var(--ui); text-wrap: balance; }
+  /* Why his last throw could not move a horse, kept until his next throw: one cream card, the die he threw
+     and a short title, then the reason. */
+  #why { padding: 10px 14px 12px; border-radius: 16px; background: #FFF4D6; color: var(--text); border: 2px solid #E9C46A; box-shadow: 0 4px 14px rgba(0,0,0,.3);
+    font: 600 calc(20px * var(--k))/1.3 var(--ui); text-wrap: balance; }
+  #why .head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; font: 700 calc(22px * var(--k))/1.2 var(--ui); }
+  #why .head svg { flex: none; width: calc(46px * var(--k)); height: calc(46px * var(--k)); }
+  #why p { margin: 0; }
   /* During the coach, the kit's hand points at the die: the die's own hand steps aside. */
   #die.coach + .hand { display: none !important; }
   /* When his framed horses stand close together, one large button for each under the words. */
@@ -339,7 +350,7 @@ const { FOOT, ARRIVED } = PC;
 const $ = id => document.getElementById(id);
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 // The pace, slow enough for his eyes to follow (see PACE in engine.js).
-const { ROLL: ROLL_MS, SHOW: SHOW_MS, HOP: HOP_MS, ARRIVE: ARRIVE_MS, HIT: HIT_MS, FLY: FLY_MS, LAND: LAND_MS, PASS: PASS_MS,
+const { ROLL: ROLL_MS, CPU_ROLL: CPU_ROLL_MS, SHOW: SHOW_MS, HOP: HOP_MS, ARRIVE: ARRIVE_MS, HIT: HIT_MS, FLY: FLY_MS, LAND: LAND_MS, PASS: PASS_MS,
   NOMOVE: NOMOVE_MS, FIRST: FIRST_MS, QUICK: QUICK_MS, HURT: HURT_MS } = PC.PACE;
 const WARN = "La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.";
 
@@ -356,7 +367,7 @@ const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
 let G, view, undo = [], level = 'facile', stats = { won: 0 }, wonNow = false, hint = null, timers = [];
 let gameId = 0; // Changes when undo or a new game replaces the turn on screen.
 let showing = false, anim = false, rolling = false, stale = false, saved = true, moved = null;
-// noMove: why his last throw moved no horse, shown beside the die until his next throw.
+// noMove: why his last throw moved no horse, shown beside the die until his next throw: { die, text }, or ''.
 let noMove = '';
 addEventListener('gg-stale', () => { stale = true; });
 const say = Kit.say; // Only tell() and save() call it: see tell().
@@ -527,7 +538,8 @@ function afterThrow() {
   if (!PC.moves(G).length) {
     tell(noMoveText(G));
     // The line passes on after 2.2 s: the reason stays beside the die until his next throw.
-    noMove = noMoveText(G).replace(/ (Le tour passe à Rouge|Relancez le dé)\.$/, '');
+    const why = noMoveText(G).replace(/^Vous avez fait \d : /, '').replace(/ (Le tour passe à Rouge|Relancez le dé)\.$/, '');
+    noMove = { die: G.die, text: why[0].toUpperCase() + why.slice(1) };
     render();
     const current = G;
     later(() => { if (G === current) passTurn(); }, reducedMotion.matches ? 900 : NOMOVE_MS);
@@ -606,7 +618,7 @@ function computerPlays(first = FIRST_MS) {
       moved = null;
       tell(`${NAMES[p]} lance le dé.`);
       render();
-      await rollAnim(me.die);
+      await rollAnim(me.die, CPU_ROLL_MS);
       if (id !== gameId) return;
       rolling = false;
       render();
@@ -905,12 +917,13 @@ function render() {
   else if (!mine) words = 'Un instant…';
   else if (g.die === null) words = '';
   else if (can.size) { words = 'Cliquez sur un cheval bleu'; wait = false; }
-  else words = 'Aucun cheval ne peut bouger.';
+  else words = noMove ? '' : 'Aucun cheval ne peut bouger.';
   const html = words ? (wait ? (g.turn !== 0 && g.result === null ? horseIco(g.turn) : '') : pickIco) + `<span>${words}</span>` : '';
   if (todo.dataset.html !== html) { todo.innerHTML = html; todo.dataset.html = html; }
   todo.hidden = !words;
   todo.classList.toggle('wait', wait);
-  $('why').textContent = noMove;
+  const whyHtml = noMove ? `<div class="head">${dieSvg(noMove.die)}<span>Aucun cheval ne bouge</span></div><p>${noMove.text}</p>` : '';
+  if ($('why').dataset.html !== whyHtml) { $('why').innerHTML = whyHtml; $('why').dataset.html = whyHtml; }
   $('why').hidden = !noMove;
   if (!showing) Kit.showWins(stats.won);
   $('undoBtn').disabled = !undo.length;
@@ -992,7 +1005,7 @@ function stopAnim() {
   anim = false;
 }
 // The die tumbles for a moment while its face changes, then shows the number thrown.
-async function rollAnim(value) {
+async function rollAnim(value, ms = ROLL_MS) {
   const d = $('die');
   d.classList.remove('blank');
   // The face changes while the die rolls: a redraw after an undo must draw the face again.
@@ -1000,17 +1013,26 @@ async function rollAnim(value) {
   window.Sound?.play('dice');
   if (!reducedMotion.matches) {
     d.innerHTML = dieSvg(1 + Math.floor(Math.random() * 6));
+    d.style.setProperty('--roll', ms + 'ms');
+    d.classList.remove('landed');
     d.classList.add('rolling');
     const pips = d.querySelector('.pips');
-    for (let i = 0; i < 3; i++) {
-      await tick(ROLL_MS / 3);
+    // The face changes quickly at first, then slower and slower as the die stops.
+    const steps = [1, 1, 1.2, 1.4, 1.7, 2.1, 2.6], sum = steps.reduce((a, b) => a + b);
+    let last = 0;
+    for (let i = 0; i < steps.length; i++) {
+      await tick(ms * steps[i] / sum);
       if (reducedMotion.matches) break;
-      if (i < 2) pips.innerHTML = pipsSvg(1 + Math.floor(Math.random() * 6));
+      if (i < steps.length - 1) {
+        let n; do n = 1 + Math.floor(Math.random() * 6); while (n === last);
+        last = n; pips.innerHTML = pipsSvg(n);
+      }
     }
   }
   d.innerHTML = dieSvg(value);
   d.dataset.face = String(value);
   d.classList.remove('rolling');
+  if (!reducedMotion.matches) { d.classList.remove('landed'); void d.offsetWidth; d.classList.add('landed'); }
 }
 // A move: the horse hops square by square, leaves a dot of its colour on each, and a horse taken
 // shakes and flies home. A horse that arrives at the centre jumps in a gold ring.

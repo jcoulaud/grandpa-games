@@ -69,7 +69,7 @@ await setGame([S, S, S, S], 3);
 ok(/il faut un 6 pour sortir/.test(await msg()) && /Rouge/.test(await msg()), 'no move: the message says why and who plays next');
 await page.waitForFunction(() => G.turn !== 0 || showing, null, { timeout: 5000 });
 ok(true, 'the turn passes after a pause');
-ok(await g(() => /il faut un 6 pour sortir/.test(document.getElementById('why').textContent) && !document.getElementById('why').hidden), 'the reason stays beside the die while the others play');
+ok(await g(() => /Il faut un 6 pour sortir/.test(document.getElementById('why').textContent) && !document.getElementById('why').hidden), 'the reason stays beside the die while the others play');
 ok(await g(() => document.getElementById('die').disabled && /^Attendez : c'est à (Rouge|Vert|Jaune) de jouer\.$/.test(document.getElementById('die').dataset.why)), 'the grey die names who plays');
 await myTurn();
 ok(/À vous : cliquez sur le dé\.$/.test(await msg()), 'after the computer players, the message gives him the hand: ' + await msg());

@@ -266,7 +266,7 @@ ok(fort > .53, `Difficile wins ${(fort * 100).toFixed(1)} % of the games against
         continue;
       }
       // A computer throw: the die, then its move and a pause, or at once the pass and a shorter pause.
-      g = P.roll(g); ms += T.ROLL;
+      g = P.roll(g); ms += T.CPU_ROLL;
       const h = P.choose(g, g.level);
       if (h === null) { g = P.pass(g); ms += T.PASS; continue; }
       g = P.play(g, h);
