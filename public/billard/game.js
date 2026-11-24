@@ -4,7 +4,7 @@ import { drawGuide, trayBall } from './guide.js';
 const $ = (id) => document.getElementById(id);
 const T = E.table;
 const newSeed = () => crypto.getRandomValues(new Uint32Array(1))[0];
-const STEP = (0.5 * Math.PI) / 180; // one press of ↺ or ↻: half a degree
+const STEP = (0.5 * Math.PI) / 180; // one press of ← or →: half a degree
 const OPPONENT = 'René';
 const BREAK = 'À vous de casser : visez le paquet, puis cliquez sur « Tirer ».';
 let game,
@@ -306,7 +306,7 @@ function turn(dir) {
   if ($('hintBtn').dataset.auto !== 'no') aimed(true, true); // once: the hand is not pointed again at each step
   preview();
 }
-// Holding ↺ or ↻ keeps turning, slowly at first.
+// Holding ← or → keeps turning, slowly at first.
 function holdable(button, act) {
   let timer = null;
   const stop = () => {
