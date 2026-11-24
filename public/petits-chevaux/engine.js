@@ -53,7 +53,8 @@
   // The pace of the page, slow enough for his eyes to follow. A computer throw that no horse can use
   // is quicker: there is nothing to watch.
   const PACE = {
-    ROLL: 900,     // the die tumbles
+    ROLL: 1400,    // his die tumbles
+    CPU_ROLL: 900, // a computer player's die: quicker, there are three of them
     SHOW: 450,     // a computer player's number stays alone before its horse moves
     HOP: 360,      // each square a horse passes
     ARRIVE: 700,   // a horse jumps at the centre

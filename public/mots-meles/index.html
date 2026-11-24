@@ -59,11 +59,13 @@
   .cell.lane:hover::after { inset: 8%; background: rgba(255,200,61,.6); }
   /* The first letter chosen: a yellow disc in a dark hairline, with a glow. */
   .cell.anchor::before { inset: 3%; background: #FFE08A; box-shadow: 0 0 0 4px var(--gold), 0 0 0 5.5px #5A4300, 0 0 16px 5px rgba(255,200,61,.8); z-index: -1; }
-  /* "Où chercher ?": a thick dashed blue ring, in the ink of a felt pen, around the first letter of a word,
+  /* "Montrer un mot": a thick dashed blue ring, in the ink of a felt pen, around the first letter of a word,
      and its last letter at the second press. Blue and dashed, so it never looks like the yellow disc of
      the letter he chose. */
   .cell.hint::before { inset: -2px; border: 5px dashed var(--hint); box-shadow: 0 0 0 1.5px #FFFDF6, inset 0 0 0 1.5px #FFFDF6; }
   .cell.hint.anchor::before { background: #FFE08A; }
+  /* The next letters of the word, clicked one by one: the yellow of the first letter, without its ring. */
+  .cell.part::before { inset: 6%; background: #FFE08A; box-shadow: 0 0 0 3px var(--gold); }
   .cell.wrong::before { inset: 4%; box-shadow: 0 0 0 4px #C4122F; }
 
   /* A word found: a rounded band of felt-pen colour, from its first letter to its last. */
@@ -205,7 +207,7 @@
 <div id="bar">
   <div id="title"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="3" fill="#FBF6EA" stroke="#6E2234" stroke-width="1.4"/><g fill="#211A17" font-family="Lexend, Segoe UI, sans-serif" font-weight="700" font-size="6.4" text-anchor="middle"><text x="7" y="9.4">M</text><text x="12" y="9.4">O</text><text x="17" y="9.4">T</text><text x="7" y="17">A</text><text x="12" y="17">I</text><text x="17" y="17">E</text></g><rect x="3.6" y="4.2" width="16.8" height="6.6" rx="3.3" fill="none" stroke="#D9435E" stroke-width="1.6"/></svg>Mots mêlés</div>
   <button id="undoBtn" data-icon="undo" title="Reprend le dernier mot trouvé"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span><span class="tiny">Annuler</span></button>
-  <button id="hintBtn" class="primary" data-icon="bulb" title="Entoure la première lettre d'un mot à trouver"><span class="long">Où chercher ?</span><span class="short">Où chercher ?</span><span class="tiny">Aide</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Entoure la première lettre d'un mot à trouver"><span class="long">Montrer un mot</span><span class="short">Montrer un mot</span><span class="tiny">Aide</span></button>
   <span class="spacer"></span>
   <button id="helpBtn" data-icon="help">Règles</button>
   <button id="newBtn" class="game">Nouvelle partie</button>
@@ -264,11 +266,11 @@
   <section class="page">
     <h3>Demander de l'aide</h3>
     <div class="guide-pic to-grid" aria-hidden="true">
-      <span class="guide-btn primary here" data-icon="bulb">Où chercher&nbsp;?</span>
+      <span class="guide-btn primary here" data-icon="bulb">Montrer un mot</span>
       <svg class="garrow" viewBox="0 0 54 40"><path d="M4 20h44M36 8l12 12-12 12"/></svg>
       <div class="gpaper"><div class="gw" data-g="RAVIS|PECHE|LUNOT|AMIRE|GOBAC" data-t="5"></div></div>
     </div>
-    <p class="guide-lead">Un mot introuvable ? Cliquez sur «&nbsp;Où chercher&nbsp;?&nbsp;».</p>
+    <p class="guide-lead">Un mot introuvable ? Cliquez sur «&nbsp;Montrer un mot&nbsp;».</p>
     <p class="guide-more">Sa première lettre s'entoure de bleu.</p>
   </section>
 </div>
@@ -301,9 +303,9 @@ const pen = k => PENS[k % PENS.length];
 
 /* ---------- State ----------
    G: the game (see engine.js). anchor: the first letter chosen, or -1. hintW: the word shown by
-   "Où chercher ?", or -1; hintMore: a second press shows its last letter too. stats: { won }: the grids finished. recent: the last themes, not to come back
+   "Montrer un mot", or -1; hintMore: a second press shows its last letter too. stats: { won }: the grids finished. recent: the last themes, not to come back
    too soon. wonNow: this grid is counted as won. */
-let G, level = 'facile', stats = { won: 0 }, recent = [], wonNow = false, anchor = -1, hintW = -1, hintMore = false, timers = [];
+let G, level = 'facile', stats = { won: 0 }, recent = [], wonNow = false, anchor = -1, part = [], hintW = -1, hintMore = false, timers = [];
 let stale = false, saved = true;
 addEventListener('gg-stale', () => { stale = true; });
 
@@ -352,7 +354,7 @@ function load() {
    where the button is let go. A second click within half a second on the same letter, or within 24 px,
    is a double-click: it counts as one click. */
 let lastTap = null, press = null;
-const chosen = i => `Vous avez choisi le ${G.grid[i]}. Cliquez sur la dernière lettre du mot, ou encore sur le ${G.grid[i]} pour l'enlever.`;
+const chosen = i => `Cliquez sur la dernière lettre du mot que vous avez trouvé.\nPour annuler, cliquez encore sur le ${G.grid[i]}.`;
 // A click on the chosen letter, "Enlever le A" or Escape takes the first letter back.
 function drop() {
   if (anchor < 0 || !G || Kit.isOpen()) return;
@@ -394,6 +396,17 @@ async function pair(a, b) {
     if (saved) Kit.say(`Vous avez trouvé ${name(r.w)}. Encore ${plural(left, 'mot', 'mots')} : cliquez sur la première lettre d'un autre mot.`);
     return;
   }
+  // Letter by letter: a letter of the word that starts at the first letter keeps the word going, in yellow,
+  // up to its last letter.
+  for (let w = 0; w < G.words.length; w++) {
+    if (G.found.includes(w)) continue;
+    let c = M.cells(G, w);
+    if (c[c.length - 1] === a) c = [...c].reverse();
+    if (c[0] !== a || !c.includes(b)) continue;
+    part = c.slice(1, c.indexOf(b) + 1);
+    render();
+    return Kit.say(`Bien : « ${[a, ...part].map(i => G.grid[i]).join('')} ». Cliquez sur la lettre suivante, ou directement sur la dernière lettre du mot.`);
+  }
   // A refusal keeps the first letter chosen, by a click or a drag, so he can try another last letter.
   render();
   showWrong(a, b, r.kind === 'none' || r.kind === 'almost');
@@ -425,7 +438,7 @@ addEventListener('pointermove', e => {
   if (at < 0 || at === press.i) return;
   press.moved = true;
   // A drag starts at its first letter, whatever was chosen before.
-  if (!Kit.isOpen() && G && !G.result) { anchor = press.i; render(); }
+  if (!Kit.isOpen() && G && !G.result) { anchor = press.i; part = []; render(); }
 });
 addEventListener('pointerup', e => {
   if (!press) return;
@@ -437,7 +450,7 @@ addEventListener('pointerup', e => {
   if (Kit.isOpen() || !G || G.result) return;
   if (end >= 0 && end !== p.i) return pair(p.i, end);
   // Let go outside the grid or back on the first letter: the first letter stays chosen.
-  if (anchor !== p.i) { anchor = p.i; render(); }
+  if (anchor !== p.i) { anchor = p.i; part = []; render(); }
   Kit.say(chosen(p.i));
 });
 addEventListener('pointercancel', () => { press = null; });
@@ -719,6 +732,7 @@ function lanes() {
 function render(just, start) {
   if (!G) return;
   build();
+  if (anchor < 0) part = [];
   // The counts first: on two rows, the bottom bar leaves the grid less height.
   $('count').textContent = `${G.found.length} ${G.found.length > 1 ? 'mots trouvés' : 'mot trouvé'} sur ${G.words.length}`;
   Kit.showWins(stats.won);
@@ -726,6 +740,7 @@ function render(just, start) {
   const lane = lanes(), hc = hintW >= 0 ? M.cells(G, hintW) : [], hinted = new Set(hintMore ? [hc[0], hc[hc.length - 1]] : hc.slice(0, 1));
   cellEls.forEach((e, i) => {
     e.classList.toggle('anchor', i === anchor);
+    e.classList.toggle('part', part.includes(i));
     if (lane.has(i)) {
       const steps = Math.max(Math.abs(i % G.size - anchor % G.size), Math.abs(Math.floor(i / G.size) - Math.floor(anchor / G.size)));
       e.style.setProperty('--lane-delay', steps * 18 + 'ms');
@@ -759,7 +774,7 @@ $('undoBtn').onclick = undoClick;
 /* ---------- The pictures of the rules ----------
    Each grid of the guide is written as rows of letters in data-g. The other data give places in the grid,
    counted from 0 at the top left: h the letter to click (a yellow ring and a hand), a the first letter
-   chosen, l the yellow dots of its lines, t the ring of "Où chercher ?", band the first and last letter of
+   chosen, l the yellow dots of its lines, t the ring of "Montrer un mot", band the first and last letter of
    a word found. Each sheet of data-dirs draws the directions of a level, as row and column steps. */
 for (const b of document.querySelectorAll('#help .gw')) {
   const rows = b.dataset.g.split('|'), n = rows[0].length, d = b.dataset;

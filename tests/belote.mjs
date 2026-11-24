@@ -13,7 +13,7 @@ const watch = p => p.on('pageerror', e => errors.push(e.message));
 watch(page);
 const g = (fn, arg) => page.evaluate(fn, arg);
 const wait = ms => page.waitForTimeout(ms);
-const msg = () => g(() => document.getElementById('msg').textContent);
+const msg = () => g(() => document.getElementById('msg').textContent.replace(/\u00a0/g, ' '));
 const until = async (fn, arg, tries = 150) => { for (let i = 0; i < tries; i++) { if (await g(fn, arg)) return true; await wait(100); } return false; };
 // Clicks a card of his hand where it shows, then moves the mouse away and waits past the double-click time.
 const clickCard = async c => {
@@ -50,7 +50,7 @@ await page.goto(URL);
 await wait(400);
 ok(!(await g(() => Kit.isOpen())) && await g(() => level === 'facile' && Kit.coaching()), 'the first visit starts a game at Facile at once, with the coach');
 await myTurn();
-await until(() => document.getElementById('msg').textContent.startsWith('À vous'));
+await until(() => document.getElementById('msg').textContent.replace(/\u00a0/g, ' ').startsWith('À vous'));
 ok(await g(() => document.getElementById('hintBtn').classList.contains('coach') && !document.querySelector('#bidBtns .coach')), 'at his first bid, the coach rings the hint button, not a bid');
 ok(/^Prendre : le \S+ de la retourne devient l'atout\.$/.test(await g(() => document.getElementById('bidNote').textContent)), 'the bid sheet says what taking does');
 ok(/Cliquez sur « Je prends » ou « Je passe »\.$/.test(await msg()), 'the line ends with what to click');
@@ -87,7 +87,7 @@ await g(() => els.get(G.turnup).flight?.finished.catch(() => {}));
 ok(await g(() => { const t = document.querySelector('.card.turnup'), r = t.getBoundingClientRect(), m = document.getElementById('mid').getBoundingClientRect();
   return +t.dataset.c === G.turnup && r.left >= m.left && r.right <= m.right; }), 'the retourne lies face up on the mat');
 ok((await g(() => [...document.querySelectorAll('#bidBtns button')].map(b => b.textContent.trim()).join('|'))) === 'Je prends|Je passe', 'first round: "Je prends" and "Je passe"');
-ok(await until(() => /^À vous de parler\. Si vous prenez, le \S+ devient l'atout\./.test(document.getElementById('msg').textContent)), 'the line asks him to speak and says what taking does');
+ok(await until(() => /^À vous de parler\. Si vous prenez, le \S+ devient l'atout\./.test(document.getElementById('msg').textContent.replace(/\u00a0/g, ' '))), 'the line asks him to speak and says what taking does');
 await page.screenshot({ path: `${OUT}/belote-bid.png` });
 const hand5 = await g(() => G.hands[0].slice());
 await clickCard(hand5[0]);
@@ -213,7 +213,7 @@ ok(await g(() => G.said === 2) && (await msg()).includes('« Rebelote ! »'), 't
 // 6. The end of a hand: the score sheet, which Escape does not close, then the next hand.
 await until(() => document.getElementById('scoreSheet').classList.contains('on'));
 ok(await g(() => G.phase === 'done' && G.handPts[0] === G.won[0] + 20), 'the hand is scored with the belote');
-ok(await until(() => { const m = document.getElementById('msg').textContent; return m.startsWith('Fin de la manche') && m.endsWith('Cliquez sur « Manche suivante ».'); }), 'the line at the end of a hand names the next button');
+ok(await until(() => { const m = document.getElementById('msg').textContent.replace(/\u00a0/g, ' '); return m.startsWith('Fin de la manche') && m.endsWith('Cliquez sur « Manche suivante ».'); }), 'the line at the end of a hand names the next button');
 ok((await g(() => document.getElementById('scoreTitle').textContent)) === 'Fin de la manche 1' && (await g(() => document.getElementById('scoreNote').textContent)).includes('contrat réussi'), 'the score sheet says the contract is made');
 await page.screenshot({ path: `${OUT}/belote-scores.png` });
 await page.keyboard.press('Escape');
@@ -252,11 +252,15 @@ if (!(await g(() => motion.matches))) {
   ok(await g(() => !!document.querySelector('#help.on')), 'the rules stay open when the win animation ends');
   await page.click('#helpClose');
 }
-await until(() => document.getElementById('over').classList.contains('on'));
+await until(() => G.phase === 'over' && document.getElementById('scoreSheet').classList.contains('on'));
 ok(await g(() => G.phase === 'over' && G.result.winner === 0 && stats.won === 1), 'he wins past 501 points');
 ok(await g(() => 'nudge' in document.getElementById('newBtn').dataset), 'after the win, « Nouvelle partie » is the next thing to press');
-ok((await g(() => document.getElementById('overTitle').textContent)) === 'Bravo, vous avez gagné !', 'the win sheet shows');
-ok(await g(() => /atteignez 501 points[^]*\nLes points : Vous et André 501, Simone et Henri 3\d\d\./.test(document.getElementById('overText').textContent)), 'the win sheet says why the game ended, with both totals');
+ok((await g(() => document.getElementById('scoreTitle').textContent)) === 'Bravo, vous avez gagné !' && await g(() => document.getElementById('scoreSheet').classList.contains('won')), 'the score sheet becomes the win sheet');
+ok(await g(() => /atteignez les 501 points\./.test(document.getElementById('scoreNote').textContent)
+  && /^GagnantsVous et André501ptsSimone et Henri3\d\dpts$/.test(document.getElementById('scoreTeams').textContent)
+  && document.getElementById('scoreWins').textContent === "C'est votre première victoire."), 'the win sheet says why the game ended, with both totals and the count of wins');
+await wait(3000);
+ok(await g(() => !Kit.isOpen() && document.getElementById('scoreSheet').classList.contains('on') && !document.getElementById('leaveBtn').hidden), 'no dialog jumps over the win sheet, and it offers « Fermer le jeu »');
 await page.screenshot({ path: `${OUT}/belote-won.png` });
 ok((await g(() => GG.meta('belote').summary)) === '1 victoire', 'the library tile shows the win');
 await page.evaluate(() => GG.flush());
@@ -293,7 +297,7 @@ await clickCard(card('AS'));
 await until(() => G.phase === 'over' && !busy);
 await page.evaluate(() => GG.flush());
 ok(await g(() => sentWins === 1 && stats.won === 1), 'won again after that undo: the statistics do not get it twice');
-await until(() => document.getElementById('over').classList.contains('on'));
+await until(() => G.phase === 'over' && document.getElementById('scoreSheet').classList.contains('on'));
 await g(() => Kit.closeDialog());
 
 // A capot: the dix de der is 100, so the tricks show 252 on the score sheet (FFB 9.2).
@@ -341,8 +345,8 @@ await wait(560);
 await setHand(['7S', '8S', '9S', 'AS'], 1, { scores: [300, 450], won: [40, 100], tricksWon: [3, 4], taker: 1 });
 await myTurn();
 await clickCard(card('7S'));
-await until(() => document.getElementById('over').classList.contains('on'));
-ok(await g(() => G.result.winner === 1 && stats.won === 1 && document.getElementById('overTitle').textContent === 'Simone et Henri ont gagné'), 'the other team wins: the sheet says so, and no win is counted');
+await until(() => G.phase === 'over' && document.getElementById('scoreSheet').classList.contains('on'));
+ok(await g(() => G.result.winner === 1 && stats.won === 1 && document.getElementById('scoreTitle').textContent === 'Simone et Henri ont gagné' && !document.getElementById('scoreWins').textContent), 'the other team wins: the sheet says so, and no win is counted');
 await g(() => Kit.closeDialog());
 
 // An undo step from another deal is dropped when the save is read: undo would wait for Henri forever.

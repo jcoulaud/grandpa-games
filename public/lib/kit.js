@@ -14,7 +14,7 @@
 // This file adds the "Jeux" button that goes back to the library, the credit in the bottom bar, the button icons, the frame and
 // the page buttons of the rules guide, and the dialog. The game then calls:
 //
-//   Kit.say(text)                           the message line
+//   Kit.say(text)                           the message line; a \n starts a second line
 //   Kit.showLevel(level), Kit.showWins(n)   the level line under the name: "Niveau facile · 3 victoires"
 //   Kit.dialog(title, text, [[label, fn, primary]], soft)   text: a string or a node; soft: the win sheet, with a light backdrop
 //   Kit.closeDialog(), Kit.openHelp(), Kit.closeHelp()
@@ -121,7 +121,8 @@
   const fit = () => {
     if (!msg) return;
     msg.classList.remove('long');
-    if (msg.scrollWidth > msg.clientWidth + 1) msg.classList.add('long');
+    // A text with a line break shows on two lines.
+    if (msg.textContent.includes('\n') || msg.scrollWidth > msg.clientWidth + 1) msg.classList.add('long');
   };
   // A new text flashes once, so his eye goes to the line when it changes.
   const say = text => {
@@ -227,18 +228,29 @@
     $('wins').textContent = text;
     fitBar();
   }
-  // The levels, one under the other, each with a line that says what it means. During a game the safe
-  // choice comes first and is yellow: "Continuer la partie". Otherwise the last level played is yellow,
-  // or Facile the first time.
+  // The levels, one under the other: bars for how hard it is, the name, and a line that says what it means.
+  // During a game the dialog asks a question, says plainly in a cream band that the game will be erased,
+  // and the safe choice, the yellow "Continuer la partie", comes last under a line, with the focus.
+  // Otherwise the last level played is yellow, or Facile the first time.
+  const meter = n => '<svg class="lvl" viewBox="0 0 30 24" aria-hidden="true">'
+    + [0, 1, 2].map(i => `<rect x="${i * 10 + 1}" y="${15 - i * 7}" width="8" height="${8 + i * 7}" rx="2"${i < n ? ' class="on"' : ''}/>`).join('') + '</svg>';
   function chooseLevel(level, playing, start) {
-    const levels = Object.entries(levelNames).map(([key, label]) =>
-      [label, () => start(key), !playing && key === (level || 'facile'), levelNotes[key]]);
-    const buttons = playing ? [['Continuer la partie', null, true], ...levels]
+    const keys = Object.keys(levelNames);
+    const levels = keys.map(key =>
+      [levelNames[key], () => start(key), !playing && key === (level || 'facile'), levelNotes[key]]);
+    const buttons = playing ? [...levels, ['Continuer la partie', null, true]]
       : [...levels, level ? ['Continuer la partie', null] : ['Retour aux jeux', home]]; // shown as "Fermer le jeu"
-    dialog('Nouvelle partie', playing ? 'Attention : la partie en cours sera effacée si vous choisissez un niveau.'
-      : 'Choisissez le niveau de difficulté.', buttons);
+    dialog(playing ? 'Commencer une nouvelle partie\u00a0?' : 'Nouvelle partie',
+      playing ? 'La partie en cours sera effacée.' : 'Choisissez le niveau de difficulté.', buttons);
     $('box').classList.add('levels');
     $('overText').classList.toggle('warn', playing);
+    [...$('overBtns').querySelectorAll('button.choice')].forEach((b, k) => {
+      b.insertAdjacentHTML('afterbegin', meter(k + 1));
+      if (playing && keys[k] === level) {
+        b.classList.add('current');
+        b.setAttribute('aria-description', b.dataset.note + '. Le niveau de la partie en cours.');
+      }
+    });
   }
 
   // Rules guide: short pages, so they never need scrolling. "Fermer" works from every page.

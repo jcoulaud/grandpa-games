@@ -45,6 +45,9 @@
       defaults: '2025-05-24',
       person_profiles: 'always',
       bootstrap: { distinctID: id },
+      // The billard, bowling and golf games draw on a canvas. A replay shows them only when
+      // PostHog records the canvas, here 4 images a second at low quality.
+      session_recording: { captureCanvas: { recordCanvas: true, canvasFps: 4, canvasQuality: '0.4' } },
       // PostHog keeps registered props for the next pages. A game and a level belong to one page only.
       loaded: p => { p.unregister('game'); p.unregister('level'); p.register({ ...page, installed }); },
     }, 'posthog']];

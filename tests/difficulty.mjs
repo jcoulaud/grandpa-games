@@ -14,11 +14,11 @@ try {
     const choices = page.locator('#overBtns button');
     for (const label of ['Facile', 'Moyen', 'Difficile']) {
       await page.click('#newBtn');
-      // During a game "Continuer la partie" comes first, and it is the yellow one.
+      // During a game "Continuer la partie" comes after the levels, and it is the yellow one.
       const texts = await choices.allTextContents();
       const back = 'Continuer la partie';
       assert.ok([['Facile', 'Moyen', 'Difficile', back], [back, 'Facile', 'Moyen', 'Difficile']].some(o => o.join() === texts.join()), texts.join());
-      if (texts[0] === back) assert.equal(await page.locator('#overBtns button.primary').textContent(), back);
+      if (await page.locator('#overText.warn').count()) assert.equal(await page.locator('#overBtns button.primary').textContent(), back);
       const choice = choices.getByText(label, { exact: true });
       if (game === 'dames' || game === 'dame-de-pique' || game === 'demineur' || game === 'yams' || game === 'bataille-navale' || game === 'paires' || game === 'huit-americain' || game === 'rami' || game === 'belote' || game === 'morpion' || game === 'petits-chevaux' || game === 'mots-meles' || game === 'sudoku') {
         await choice.click();

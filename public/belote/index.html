@@ -163,15 +163,48 @@
   #bidBar.col #bidBtns { flex-direction: column; }
   #bidBar.grid #bidBtns { display: grid; grid-template-columns: 1fr 1fr; }
   #bidBtns button { flex: 1; min-height: 66px; padding: 6px 22px; font: 700 26px var(--ui); justify-content: center; white-space: nowrap;
-    border: 3px solid #26302D; }
+    border: 3px solid #26302D; background: #CFE4EE; box-shadow: 0 5px 0 #26302D; }
+  /* On the white card, a pale blue key with a deep dark edge, so each answer reads as a button. */
+  #bidBtns button:hover { background: #BBD8E6; }
+  #bidBtns button:active { translate: 0 3px; box-shadow: 0 2px 0 #26302D; }
   #bidBtns button svg { width: 32px; height: 32px; stroke: none; }
-  #bidBtns button.hint { background: var(--gold); border-color: #8A5F00; box-shadow: 0 3px 0 #8A5F00, 0 0 0 5px rgba(255,200,61,.5); }
+  #bidBtns button.hint { background: var(--gold); border-color: #8A5F00; box-shadow: 0 5px 0 #8A5F00, 0 0 0 5px rgba(255,200,61,.5); }
   #table.low #bidBtns button { min-height: 58px; padding-inline: 16px; font-size: 24px; }
   body.phone #bidBar { padding: 8px; gap: 10px; }
   body.phone #bidBar h2 { font-size: 20px; white-space: normal; width: 0; min-width: 100%; }
   body.phone #bidBtns { gap: 8px; }
   body.phone #bidBtns button { font-size: 20px; padding: 4px 10px; min-height: 54px; }
   #scoreSheet table { border-collapse: collapse; font: 600 22px/1.2 var(--ui); }
+  /* The end of the game is this sheet, not a dialog after it (.end): a gold trophy for a win, the result as
+     a large title, one short line, the two teams side by side with their faces and their total in large
+     digits, the winners in gold, the count of wins in a gold chip, then the two keys side by side. */
+  #scoreSheet .trophy, #scoreTeams { display: none; }
+  #scoreSheet.end { gap: 16px; padding: 26px 32px 28px; min-width: min(600px, 92vw); }
+  #scoreSheet.end table { display: none; }
+  #scoreSheet.won .trophy { display: block; width: 84px; height: 84px; margin-bottom: -6px; filter: drop-shadow(0 4px 6px rgba(120,80,0,.35)); animation: pop .5s cubic-bezier(.2,1.4,.4,1) both; }
+  #scoreSheet.end h2 { font-size: 34px; }
+  #scoreSheet.end .note { font: 500 21px/1.35 var(--ui); color: #4E5A57; margin-top: -8px; }
+  #scoreSheet.end #scoreTeams { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; margin-top: 4px; }
+  .team { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 12px 14px; border-radius: 18px;
+    background: #F3F1EA; border: 2px solid #DCD6C6; color: #4E5A57; }
+  .team.win { background: #FFF4D6; border: 3px solid #E9B200; color: var(--text); box-shadow: 0 6px 16px rgba(160,110,0,.22); }
+  .team .avs { display: flex; }
+  .team .avs img { width: 52px; height: 52px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,.2); background: #fff; }
+  .team .avs img + img { margin-left: -12px; }
+  .team .who { font: 700 20px/1.2 var(--ui); }
+  .team .pts { font: 800 46px/1 var(--ui); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .team .pts small { font: 600 18px var(--ui); margin-left: 4px; }
+  .team .tag { position: absolute; top: -15px; left: 50%; translate: -50% 0; padding: 3px 14px; border-radius: 999px; white-space: nowrap;
+    background: #E9B200; color: #2B1D00; font: 800 16px/1.3 var(--ui); letter-spacing: .02em; text-transform: uppercase; }
+  #scoreSheet.end .wins { padding: 6px 18px; border-radius: 999px; background: #FFF4D6; color: #5A3A10; font-weight: 700; }
+  #scoreSheet.end .btns { flex-direction: row; width: 100%; gap: 12px; margin-top: 2px; }
+  #scoreSheet.end .btns button { flex: 1 1 0; min-height: 62px; font-size: 23px; }
+  #scoreSheet .wins { margin: 0; font: 600 21px/1.3 var(--ui); color: #3A4542; }
+  #scoreSheet .wins:empty { display: none; }
+  #scoreSheet .btns { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
+  #scoreSheet .btns button[hidden] { display: none; }
+  #leaveBtn { justify-content: center; background: #26302D; color: #fff; border-color: #111816; box-shadow: 0 3px 0 #111816; }
+  #leaveBtn:hover { background: #3A4542; }
   #scoreSheet th { font: 600 20px var(--ui); color: #5A6461; padding: 0 16px 8px; }
   #scoreSheet td { padding: 8px 16px; border-top: 1px solid #E6E0D2; }
   #scoreSheet td:first-child { text-align: left; color: #3A4542; }
@@ -184,7 +217,15 @@
   #table.low #scoreSheet.on { display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto 1fr; gap: 10px 26px; align-items: center; text-align: left; }
   #table.low #scoreSheet h2 { grid-area: 1 / 1; }
   #table.low #scoreSheet .note { grid-area: 2 / 1; max-width: 340px; }
-  #table.low #scoreSheet button { grid-area: 3 / 1; justify-self: start; align-self: start; }
+  #table.low #scoreSheet .btns { grid-area: 3 / 1; justify-self: start; align-self: start; }
+  #table.low #scoreSheet.won .trophy { display: none; }
+  #table.low #scoreSheet.end #scoreTeams { grid-area: 1 / 2 / 4 / 3; align-self: center; width: 380px; }
+  #table.low #scoreSheet.end .btns { flex-direction: column; width: 100%; }
+  #table.low #scoreSheet.end { min-width: 0; }
+  body.phone #scoreSheet.end { min-width: 0; padding: 18px 14px; }
+  body.phone #scoreSheet.end .btns { flex-direction: column; }
+  body.phone .team .pts { font-size: 36px; } body.phone .team .avs img { width: 40px; height: 40px; }
+  #table.low #scoreSheet .wins { grid-area: 2 / 1; align-self: end; }
   #table.low #scoreSheet table { grid-area: 1 / 2 / 4 / 3; }
   #table.low #scoreSheet td { padding-block: 6px; }
   body.phone #scoreSheet { padding: 16px 12px 18px; }
@@ -272,7 +313,7 @@
   #help .bp-ring { outline: 5px solid var(--gold); outline-offset: 3px; box-shadow: 0 0 20px 6px rgba(255,200,61,.75); z-index: 2; }
   .guide-hand { z-index: 5; left: calc(100% - 22px); top: calc(100% - 16px); width: 40px; height: 50px; rotate: -16deg; filter: drop-shadow(0 3px 3px rgba(0,0,0,.45)); }
   .bp-btn { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 14px; white-space: nowrap;
-    background: #fff; color: var(--text); border: 3px solid #26302D; box-shadow: 0 3px 0 #8E9A96; font: 700 min(23px, 4.4cqw)/1.2 var(--ui); }
+    background: #CFE4EE; color: var(--text); border: 3px solid #26302D; box-shadow: 0 4px 0 #26302D; font: 700 min(23px, 4.4cqw)/1.2 var(--ui); }
   .bp-btn .s, .bp-pts b .s { width: 1.1em; height: 1.1em; }
   .bp-seat { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; border-radius: 14px; white-space: nowrap;
     background: #FFFDF6; color: var(--text); border: 2px solid #E4D3AE; box-shadow: 0 4px 10px rgba(30,12,0,.4); font: 700 min(21px, 4.2cqw)/1.2 var(--ui); }
@@ -366,10 +407,13 @@
   <div id="retLabel">La retourne</div>
   <div id="bidBar" role="group" aria-labelledby="bidTitle"><div id="bidSlot"></div><div class="ask"><h2 id="bidTitle"></h2><p id="bidNote"></p><div id="bidBtns"></div></div></div>
   <div class="sheet" id="scoreSheet" role="group" aria-labelledby="scoreTitle">
+    <svg class="trophy" viewBox="0 0 64 64" aria-hidden="true"><path d="M20 8h24v14c0 8-5.4 14-12 14s-12-6-12-14z" fill="#FFC83D" stroke="#7A5200" stroke-width="2.4" stroke-linejoin="round"/><path d="M20 13h-7c0 8 3 12 8 13M44 13h7c0 8-3 12-8 13" fill="none" stroke="#7A5200" stroke-width="2.6" stroke-linecap="round"/><path d="M28 36h8v8h-8z" fill="#E9A800" stroke="#7A5200" stroke-width="2.2"/><rect x="20" y="44" width="24" height="9" rx="2.5" fill="#FFC83D" stroke="#7A5200" stroke-width="2.4"/><path d="M26 13.5c-.6 4 0 8 2 11" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="2.4" stroke-linecap="round"/></svg>
     <h2 id="scoreTitle"></h2>
     <p class="note" id="scoreNote"></p>
     <table id="scoreTable"></table>
-    <button id="nextBtn" class="primary" data-nudge></button>
+    <div id="scoreTeams"></div>
+    <p class="wins" id="scoreWins"></p>
+    <div class="btns"><button id="nextBtn" class="primary" data-nudge></button><button id="leaveBtn" class="leave" hidden>Fermer le jeu</button></div>
   </div>
   <aside id="side">
     <div class="box" id="atoutBox"></div>
@@ -558,7 +602,9 @@ function turnMessage() {
   }
   return `Vous n'avez ni ${sname(led)} ni atout : jouez la carte de votre choix.`;
 }
-const say = Kit.say;
+// French spacing: a non-breaking space inside « » and before : ? ! ;, so a quote mark or a sign never
+// starts a line on its own.
+const say = t => Kit.say(t.replace(/« /g, '«\u00a0').replace(/ »/g, '\u00a0»').replace(/ ([:?!;])/g, '\u00a0$1'));
 // What a player said: "Henri passe.", "André prend à cœur."
 function bidLine(seat, choice) {
   const who = PLAYERS[seat].name, verb = seat === 0;
@@ -688,7 +734,8 @@ function step() {
   if (G.phase === 'done' || G.phase === 'over') return handOver(true);
   if (G.turn === 0) {
     window.Sound?.play('turn');
-    say((note ? note + ' ' : '') + turnMessage());
+    // The last trick goes before his turn in play. At the bids of a new hand it is old news: the line only asks.
+    say((note && G.phase === 'play' ? note + ' ' : '') + turnMessage());
     note = '';
     render(); coach();
     return;
@@ -732,17 +779,7 @@ function handOver(fresh) {
     say(won ? 'Bravo, André et vous avez gagné la partie ! Cliquez sur « Nouvelle partie » pour rejouer.'
       : 'Simone et Henri ont gagné la partie. Cliquez sur « Nouvelle partie » pour rejouer.');
     Kit.gameOver(true);
-    const games = ['Retour aux jeux', Kit.home];
-    const totals = `\nLes points : ${US} ${G.scores[0]}, ${THEM} ${G.scores[1]}.`;
-    if (won) {
-      if (fresh) celebrate();
-      resultAfter(() => Kit.dialog('Bravo, vous avez gagné !',
-        `André et vous ${G.scores[0] > G.target ? 'dépassez' : 'atteignez'} ${G.target} points : la partie est finie.` + totals +
-        (!wonNow ? '' : stats.won === 1 ? "\nC'est votre première victoire." : `\nC'est votre ${stats.won}e victoire.`),
-        [['Nouvelle partie', askNewGame, true], games], true), !fresh || motion.matches ? 0 : 2600);
-    } else resultAfter(() => Kit.dialog('Simone et Henri ont gagné',
-      `Simone et Henri ${G.scores[1] > G.target ? 'dépassent' : 'atteignent'} ${G.target} points : la partie est finie.` + totals,
-      [['Nouvelle partie', askNewGame, true], games]), !fresh || motion.matches ? 0 : 500);
+    if (won && fresh) celebrate();
     return;
   }
   say(`Fin de la manche : ${outcomeText()}${tieText()} Cliquez sur « Manche suivante ».`);
@@ -750,14 +787,6 @@ function handOver(fresh) {
 // Both teams on the same total at 501 or more: the game goes on.
 const tieText = () => G.phase === 'done' && G.scores[0] === G.scores[1] && G.scores[0] >= G.target
   ? ` Égalité à ${G.scores[0]} points : on joue une manche de plus.` : '';
-// Keep the result pending if he reads the rules or checks the levels.
-function resultAfter(open, delay) {
-  function show() {
-    if (Kit.isOpen()) later(show, 120);
-    else open();
-  }
-  later(show, delay);
-}
 function nextHandNow() {
   if (busy || stale || G.phase !== 'done') return;
   cancelAll();
@@ -1173,17 +1202,30 @@ function renderScoreSheet() {
   ss.classList.toggle('on', ended);
   if (!ended) return;
   const over = G.phase === 'over';
-  $('scoreTitle').textContent = over ? 'Fin de la partie' : `Fin de la manche ${G.handNo + 1}`;
+  const won = over && G.result.winner === 0;
+  ss.classList.toggle('won', won);
+  ss.classList.toggle('end', over);
+  $('scoreTitle').textContent = !over ? `Fin de la manche ${G.handNo + 1}` : won ? 'Bravo, vous avez gagné !' : 'Simone et Henri ont gagné';
   const note = $('scoreNote');
-  note.textContent = outcomeText() + tieText();
-  note.classList.toggle('bad', G.outcome === 'dedans' && team(G.taker) === 0);
+  note.textContent = !over ? outcomeText() + tieText() : won
+    ? `André et vous ${G.scores[0] > G.target ? 'dépassez' : 'atteignez'} les ${G.target} points.`
+    : `Simone et Henri ${G.scores[1] > G.target ? 'dépassent' : 'atteignent'} les ${G.target} points.`;
+  const teamCard = (t, names, faces) => `<div class="team${G.result.winner === t ? ' win' : ''}">`
+    + (G.result.winner === t ? '<span class="tag">Gagnants</span>' : '')
+    + `<span class="avs">${faces.map(f => `<img src="../lib/avatars/${f}.webp" alt="">`).join('')}</span>`
+    + `<span class="who">${names}</span><span class="pts">${G.scores[t]}<small>pts</small></span></div>`;
+  $('scoreTeams').innerHTML = over ? teamCard(0, US, ['vous', 'andre']) + teamCard(1, THEM, ['simone', 'henri']) : '';
+  note.classList.toggle('bad', !over && G.outcome === 'dedans' && team(G.taker) === 0);
+  $('scoreWins').textContent = !won || !wonNow ? '' : stats.won === 1 ? "C'est votre première victoire." : `C'est votre ${stats.won}e victoire.`;
+  $('leaveBtn').hidden = !over;
   const bel = [0, 1].map(t => G.belote !== null && team(G.belote) === t ? 20 : 0);
   const row = (label, a, b, cls = '') => `<tr class="${cls}"><td>${label}</td><td class="n us">${a}</td><td class="n">${b}</td></tr>`;
   const [a, b] = L.narrow ? ['Nous', 'Eux'] : [US, THEM];
+  // The end of the game shows the totals only: the last hand stays in the side column.
   $('scoreTable').innerHTML = `<tr><th><span class="sr">Ligne</span></th><th>${a}</th><th>${b}</th></tr>`
-    + row('Les plis', G.won[0], G.won[1])
-    + row('Belote', bel[0] ? '20' : '–', bel[1] ? '20' : '–')
-    + row('Cette manche', '+' + G.handPts[0], '+' + G.handPts[1], 'sum')
+    + (over ? '' : row('Les plis', G.won[0], G.won[1])
+      + row('Belote', bel[0] ? '20' : '–', bel[1] ? '20' : '–')
+      + row('Cette manche', '+' + G.handPts[0], '+' + G.handPts[1], 'sum'))
     + row('Total', G.scores[0], G.scores[1], 'sum');
   $('nextBtn').textContent = over ? 'Nouvelle partie' : 'Manche suivante';
   place(ss, L.cx, L.cy);
@@ -1369,6 +1411,8 @@ $('hintBtn').onclick = showHint;
 $('helpBtn').onclick = () => Kit.openHelp();
 $('newBtn').onclick = askNewGame;
 $('nextBtn').onclick = () => G.phase === 'over' ? askNewGame() : nextHandNow();
+$('leaveBtn').insertAdjacentHTML('afterbegin', Kit.icon('close'));
+$('leaveBtn').onclick = () => Kit.home();
 addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (!Kit.isOpen()) doUndo(); }
   else if (e.key === 'Escape' && !Kit.escape() && hint) { hint = null; say(turnMessage()); render(); }

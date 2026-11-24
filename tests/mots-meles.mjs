@@ -65,7 +65,7 @@ const still = await listBox();
 await click(s0);
 const letter = await g(i => G.grid[i], s0);
 ok(await shown() && (await drop.textContent()).trim() === `Enlever le ${letter}` && (await drop.boundingBox()).height >= 54, `a letter chosen shows "Enlever le ${letter}", 54 px high`);
-ok(await msg() === `Vous avez choisi le ${letter}. Cliquez sur la dernière lettre du mot, ou encore sur le ${letter} pour l'enlever.`, 'the message says both what to do next and how to take the letter back');
+ok(await msg() === `Cliquez sur la dernière lettre du mot que vous avez trouvé.\nPour annuler, cliquez encore sur le ${letter}.`, 'the message says both what to do next and how to take the letter back');
 ok(await listBox() === still, 'the grid and the list do not move when the button shows');
 const db = await drop.boundingBox(), wb = await page.locator('#words').boundingBox();
 ok(db.y >= wb.y + wb.height, 'the button is under the word list');
@@ -178,9 +178,19 @@ const drag = async (from, points) => {
 };
 const c2 = await g(() => MotsMeles.cells(G, 2));
 await drag(c2[0], [await centre(c2[c2.length - 2])]);
-ok(/Presque/.test(await msg()) && /anchor/.test(await cls(c2[0])), 'a refused drag keeps its first letter');
+ok(/^Bien/.test(await msg()) && /anchor/.test(await cls(c2[0])) && /part/.test(await cls(c2[c2.length - 2])), 'a drag that stops short of the last letter keeps the word going');
 await click(c2[c2.length - 1]);
 ok((await msg()).startsWith(`Vous avez trouvé ${caps[2]}.`), 'a click on the right last letter then finds the word');
+// Letter by letter: each click on the next letter keeps the word going, the last one finds it.
+const c3 = await g(() => MotsMeles.cells(G, 3));
+await click(c3[0]);
+for (const i of c3.slice(1, -1)) {
+  await click(i);
+  ok(/^Bien/.test(await msg()) && /part/.test(await cls(i)) && !(await g(() => G.found.includes(3))), 'a click on the next letter keeps the word going');
+}
+await click(c3[c3.length - 1]);
+ok((await msg()).startsWith(`Vous avez trouvé ${caps[3]}.`) && !(await page.locator('#grid .cell.part').count()), 'the last letter finds the word clicked letter by letter');
+await g(() => { G = MotsMeles.undo(G); render(); });
 // A press on the last letter that moves 18 px inside it is still a click on it.
 const [w3s, w3e] = await ends(3);
 await click(w3s);
@@ -192,7 +202,7 @@ ok((await msg()).startsWith(`Vous avez trouvé ${caps[3]}.`), 'a small move of t
 const [w4s, w4e] = await ends(4);
 const gridBox = await page.locator('#board').boundingBox();
 await drag(w4s, [await centre(w4e), [gridBox.x + gridBox.width + 60, gridBox.y + gridBox.height + 60]]);
-ok(await g(() => !G.found.includes(4)) && /anchor/.test(await cls(w4s)) && /Vous avez choisi/.test(await msg()), 'a drag let go outside the grid finds nothing and keeps its first letter');
+ok(await g(() => !G.found.includes(4)) && /anchor/.test(await cls(w4s)) && /dernière lettre du mot que vous avez trouvé/.test(await msg()), 'a drag let go outside the grid finds nothing and keeps its first letter');
 await click(w4e);
 ok(await g(() => G.found.includes(4)), 'a click on the last letter then finds the word');
 // A double-click that lands in the next letter is one click.
@@ -201,7 +211,7 @@ const eb = await cellAt(edge).boundingBox();
 await page.mouse.click(eb.x + eb.width - 3, eb.y + eb.height / 2); await wait(120);
 await page.mouse.click(eb.x + eb.width + 3, eb.y + eb.height / 2);
 await page.mouse.move(5, 5);
-ok(/anchor/.test(await cls(edge)) && /Vous avez choisi/.test(await msg()), 'a double-click across two letters chooses the first one only');
+ok(/anchor/.test(await cls(edge)) && /dernière lettre du mot que vous avez trouvé/.test(await msg()), 'a double-click across two letters chooses the first one only');
 await wait(560); await click(edge);
 // A double-click on "Annuler le dernier coup" takes back one word.
 const foundBefore = await g(() => G.found.length);
@@ -305,7 +315,7 @@ await page.click('#newBtn');
 ok(/Attention/.test(await g(() => document.getElementById('overText').textContent)), 'a new game during a game warns first');
 await page.keyboard.press('Escape');
 // The longest message fits in the line.
-await g(() => Kit.say("Vous avez choisi le W. Cliquez sur la dernière lettre du mot, ou encore sur le W pour l'enlever."));
+await g(() => Kit.say("Cliquez sur la dernière lettre du mot que vous avez trouvé.\nPour annuler, cliquez encore sur le W."));
 ok(await g(() => { const m = document.getElementById('msg'); return m.scrollHeight <= m.clientHeight + 1 && m.scrollWidth <= m.clientWidth + 1; }), 'the longest message fits in the line');
 await page.close();
 
@@ -339,7 +349,7 @@ for (const [w, h, z] of WINDOWS) {
     await p.waitForTimeout(150);
     // One word found and one letter chosen, so the band and the ring are measured too.
     // A count of grids finished too, so both chips of the bottom bar are measured.
-    await p.evaluate(() => { stats.won = 14; G = MotsMeles.find(G, 0); anchor = MotsMeles.cells(G, 1)[0]; render(); Kit.say("Vous avez choisi le W. Cliquez sur la dernière lettre du mot, ou encore sur le W pour l'enlever."); });
+    await p.evaluate(() => { stats.won = 14; G = MotsMeles.find(G, 0); anchor = MotsMeles.cells(G, 1)[0]; render(); Kit.say("Cliquez sur la dernière lettre du mot que vous avez trouvé.\nPour annuler, cliquez encore sur le W."); });
     const r = await p.evaluate(phone => {
       const inside = (e, box) => { const a = e.getBoundingClientRect(), b = box.getBoundingClientRect(); return a.left >= b.left - 1 && a.right <= b.right + 1 && a.top >= b.top - 1 && a.bottom <= b.bottom + 1; };
       const sheet = document.getElementById('sheet'), table = document.getElementById('table');
@@ -399,7 +409,7 @@ for (const [label, at] of Object.entries(laptop))
   await p.mouse.move(...await at(b)); await p.mouse.down();
   await p.mouse.move(board.x + board.width + 80, board.y - 40, { steps: 1 }); await p.mouse.up();
   await p.mouse.move(5, 5); await p.waitForTimeout(560);
-  ok(await p.evaluate(b => !G.found.includes(0) && anchor === b, b) && /Vous avez choisi/.test(await pmsg()), 'a press dragged out of the grid finds nothing: its letter becomes the first letter');
+  ok(await p.evaluate(b => !G.found.includes(0) && anchor === b, b) && /dernière lettre du mot que vous avez trouvé/.test(await pmsg()), 'a press dragged out of the grid finds nothing: its letter becomes the first letter');
   await p.locator(`.cell[data-i="${b}"]`).click(); await p.mouse.move(5, 5); await p.waitForTimeout(560);
   // A press that goes 40 px away and comes back to its letter is a drag, not a click on that letter.
   await p.evaluate(() => { anchor = -1; lastTap = null; render(); });
@@ -459,7 +469,7 @@ for (const [label, at] of Object.entries(laptop))
   const width = await tapAt(0);
   await ph.waitForTimeout(150);
   await tapAt(1);
-  ok(width < 24 && await ph.evaluate(() => !/Vous avez choisi/.test(document.getElementById('msg').textContent)), `on a 280 px phone, squares of ${width.toFixed(0)} px: a tap on the next square within half a second counts`);
+  ok(width < 24 && await ph.evaluate(() => !/dernière lettre du mot que vous avez trouvé/.test(document.getElementById('msg').textContent)), `on a 280 px phone, squares of ${width.toFixed(0)} px: a tap on the next square within half a second counts`);
   await ph.close();
 }
 
