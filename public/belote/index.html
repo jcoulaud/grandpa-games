@@ -163,9 +163,12 @@
   #bidBar.col #bidBtns { flex-direction: column; }
   #bidBar.grid #bidBtns { display: grid; grid-template-columns: 1fr 1fr; }
   #bidBtns button { flex: 1; min-height: 66px; padding: 6px 22px; font: 700 26px var(--ui); justify-content: center; white-space: nowrap;
-    border: 3px solid #26302D; }
+    border: 3px solid #26302D; background: #CFE4EE; box-shadow: 0 5px 0 #26302D; }
+  /* On the white card, a pale blue key with a deep dark edge, so each answer reads as a button. */
+  #bidBtns button:hover { background: #BBD8E6; }
+  #bidBtns button:active { translate: 0 3px; box-shadow: 0 2px 0 #26302D; }
   #bidBtns button svg { width: 32px; height: 32px; stroke: none; }
-  #bidBtns button.hint { background: var(--gold); border-color: #8A5F00; box-shadow: 0 3px 0 #8A5F00, 0 0 0 5px rgba(255,200,61,.5); }
+  #bidBtns button.hint { background: var(--gold); border-color: #8A5F00; box-shadow: 0 5px 0 #8A5F00, 0 0 0 5px rgba(255,200,61,.5); }
   #table.low #bidBtns button { min-height: 58px; padding-inline: 16px; font-size: 24px; }
   body.phone #bidBar { padding: 8px; gap: 10px; }
   body.phone #bidBar h2 { font-size: 20px; white-space: normal; width: 0; min-width: 100%; }
@@ -272,7 +275,7 @@
   #help .bp-ring { outline: 5px solid var(--gold); outline-offset: 3px; box-shadow: 0 0 20px 6px rgba(255,200,61,.75); z-index: 2; }
   .guide-hand { z-index: 5; left: calc(100% - 22px); top: calc(100% - 16px); width: 40px; height: 50px; rotate: -16deg; filter: drop-shadow(0 3px 3px rgba(0,0,0,.45)); }
   .bp-btn { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 14px; white-space: nowrap;
-    background: #fff; color: var(--text); border: 3px solid #26302D; box-shadow: 0 3px 0 #8E9A96; font: 700 min(23px, 4.4cqw)/1.2 var(--ui); }
+    background: #CFE4EE; color: var(--text); border: 3px solid #26302D; box-shadow: 0 4px 0 #26302D; font: 700 min(23px, 4.4cqw)/1.2 var(--ui); }
   .bp-btn .s, .bp-pts b .s { width: 1.1em; height: 1.1em; }
   .bp-seat { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; border-radius: 14px; white-space: nowrap;
     background: #FFFDF6; color: var(--text); border: 2px solid #E4D3AE; box-shadow: 0 4px 10px rgba(30,12,0,.4); font: 700 min(21px, 4.2cqw)/1.2 var(--ui); }
