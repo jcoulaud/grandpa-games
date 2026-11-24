@@ -13,7 +13,7 @@ const watch = p => p.on('pageerror', e => errors.push(e.message));
 watch(page);
 const g = (fn, arg) => page.evaluate(fn, arg);
 const wait = ms => page.waitForTimeout(ms);
-const msg = () => g(() => document.getElementById('msg').textContent);
+const msg = () => g(() => document.getElementById('msg').textContent.replace(/\u00a0/g, ' '));
 const until = async (fn, arg, tries = 150) => { for (let i = 0; i < tries; i++) { if (await g(fn, arg)) return true; await wait(100); } return false; };
 // Clicks a card of his hand where it shows, then moves the mouse away and waits past the double-click time.
 const clickCard = async c => {
@@ -50,7 +50,7 @@ await page.goto(URL);
 await wait(400);
 ok(!(await g(() => Kit.isOpen())) && await g(() => level === 'facile' && Kit.coaching()), 'the first visit starts a game at Facile at once, with the coach');
 await myTurn();
-await until(() => document.getElementById('msg').textContent.startsWith('À vous'));
+await until(() => document.getElementById('msg').textContent.replace(/\u00a0/g, ' ').startsWith('À vous'));
 ok(await g(() => document.getElementById('hintBtn').classList.contains('coach') && !document.querySelector('#bidBtns .coach')), 'at his first bid, the coach rings the hint button, not a bid');
 ok(/^Prendre : le \S+ de la retourne devient l'atout\.$/.test(await g(() => document.getElementById('bidNote').textContent)), 'the bid sheet says what taking does');
 ok(/Cliquez sur « Je prends » ou « Je passe »\.$/.test(await msg()), 'the line ends with what to click');
@@ -87,7 +87,7 @@ await g(() => els.get(G.turnup).flight?.finished.catch(() => {}));
 ok(await g(() => { const t = document.querySelector('.card.turnup'), r = t.getBoundingClientRect(), m = document.getElementById('mid').getBoundingClientRect();
   return +t.dataset.c === G.turnup && r.left >= m.left && r.right <= m.right; }), 'the retourne lies face up on the mat');
 ok((await g(() => [...document.querySelectorAll('#bidBtns button')].map(b => b.textContent.trim()).join('|'))) === 'Je prends|Je passe', 'first round: "Je prends" and "Je passe"');
-ok(await until(() => /^À vous de parler\. Si vous prenez, le \S+ devient l'atout\./.test(document.getElementById('msg').textContent)), 'the line asks him to speak and says what taking does');
+ok(await until(() => /^À vous de parler\. Si vous prenez, le \S+ devient l'atout\./.test(document.getElementById('msg').textContent.replace(/\u00a0/g, ' '))), 'the line asks him to speak and says what taking does');
 await page.screenshot({ path: `${OUT}/belote-bid.png` });
 const hand5 = await g(() => G.hands[0].slice());
 await clickCard(hand5[0]);
@@ -213,7 +213,7 @@ ok(await g(() => G.said === 2) && (await msg()).includes('« Rebelote ! »'), 't
 // 6. The end of a hand: the score sheet, which Escape does not close, then the next hand.
 await until(() => document.getElementById('scoreSheet').classList.contains('on'));
 ok(await g(() => G.phase === 'done' && G.handPts[0] === G.won[0] + 20), 'the hand is scored with the belote');
-ok(await until(() => { const m = document.getElementById('msg').textContent; return m.startsWith('Fin de la manche') && m.endsWith('Cliquez sur « Manche suivante ».'); }), 'the line at the end of a hand names the next button');
+ok(await until(() => { const m = document.getElementById('msg').textContent.replace(/\u00a0/g, ' '); return m.startsWith('Fin de la manche') && m.endsWith('Cliquez sur « Manche suivante ».'); }), 'the line at the end of a hand names the next button');
 ok((await g(() => document.getElementById('scoreTitle').textContent)) === 'Fin de la manche 1' && (await g(() => document.getElementById('scoreNote').textContent)).includes('contrat réussi'), 'the score sheet says the contract is made');
 await page.screenshot({ path: `${OUT}/belote-scores.png` });
 await page.keyboard.press('Escape');

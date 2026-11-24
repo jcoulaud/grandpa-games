@@ -561,7 +561,9 @@ function turnMessage() {
   }
   return `Vous n'avez ni ${sname(led)} ni atout : jouez la carte de votre choix.`;
 }
-const say = Kit.say;
+// French spacing: a non-breaking space inside « » and before : ? ! ;, so a quote mark or a sign never
+// starts a line on its own.
+const say = t => Kit.say(t.replace(/« /g, '«\u00a0').replace(/ »/g, '\u00a0»').replace(/ ([:?!;])/g, '\u00a0$1'));
 // What a player said: "Henri passe.", "André prend à cœur."
 function bidLine(seat, choice) {
   const who = PLAYERS[seat].name, verb = seat === 0;
@@ -691,7 +693,8 @@ function step() {
   if (G.phase === 'done' || G.phase === 'over') return handOver(true);
   if (G.turn === 0) {
     window.Sound?.play('turn');
-    say((note ? note + ' ' : '') + turnMessage());
+    // The last trick goes before his turn in play. At the bids of a new hand it is old news: the line only asks.
+    say((note && G.phase === 'play' ? note + ' ' : '') + turnMessage());
     note = '';
     render(); coach();
     return;
