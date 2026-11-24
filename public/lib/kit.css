@@ -191,6 +191,8 @@ html.short #rail { margin-top: 0; }
 #help { --guide-ring: 0 0 0 5px var(--gold), 0 0 0 7px var(--guide-edge, #1B2422); }
 #help .guide-ring { box-shadow: var(--guide-ring); z-index: 2; }
 .guide-hand { position: absolute; z-index: 3; width: 46px; height: 54px; pointer-events: none; filter: drop-shadow(0 3px 3px rgba(0,0,0,.35)); }
+/* On a copy of a button, the hand points at its right end, clear of the words. A game may place it elsewhere. */
+:where(.guide-btn) > .guide-hand { left: calc(100% - 26px); top: 50%; }
 /* A copy of a real button of the bar, white or yellow (primary). data-icon gives it its icon. */
 .guide-btn { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 54px; padding: 6px 20px; border-radius: 15px;
   font: 600 21px var(--ui); color: var(--text); background: #fff; border: 2px solid #9AA6A1; box-shadow: 0 3px 0 #9AA6A1; white-space: nowrap; }

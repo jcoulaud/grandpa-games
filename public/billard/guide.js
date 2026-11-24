@@ -33,12 +33,15 @@ const dots = (x1, y1, x2, y2, colour) =>
 const ring = (x, y, r) =>
   `<circle cx="${x}" cy="${y}" r="${r + 2}" fill="none" stroke="#1B2422" stroke-width="8"/><circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="#FFC83D" stroke-width="6"/>`;
 const hand = (x, y) => `<use href="#kit-hand" x="${x}" y="${y}" width="40" height="48"/>`;
-const svg = (w, h, inner) => `<svg class="bl-cloth" viewBox="0 0 ${w} ${h}">${DEFS}${inner}</svg>`;
+// Each picture gets its own ids. The pages of the guide are hidden, and Chrome does not paint a gradient
+// whose element sits in a hidden page: with shared ids, the cloth of the later pictures lost its blue.
+const svg = (name, w, h, inner) =>
+  `<svg class="bl-cloth" viewBox="0 0 ${w} ${h}">${DEFS}${inner}</svg>`.replaceAll('id="', `id="${name}-`).replaceAll('url(#', `url(#${name}-`);
 
 const PICS = {
   // Click on the 3: the cue turns to it, the white dots lead to it and the gold dots to the pocket.
   aim: () =>
-    svg(520, 230,
+    svg('aim', 520, 230,
       corner(520, 230) +
         dots(130, 170, 344, 104, '#fff') +
         `<circle cx="344" cy="104" r="20" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="6 5"/>` +
@@ -53,16 +56,17 @@ const PICS = {
     `<div class="bl-row">Pleines ${[1, 2, 3, 4, 5, 6, 7].map((id) => trayBall(id)).join('')}</div>` +
     `<div class="bl-row">Rayées ${[9, 10, 11, 12, 13, 14, 15].map((id) => trayBall(id)).join('')}</div>` +
     `<div class="bl-row">Puis ${trayBall(8)}</div>`,
-  // The white falls into the pocket: a foul. The other player then places it where he wants.
+  // The white misses the 11 and runs into the pocket: a foul, marked by a red cross.
   foul: () =>
-    svg(520, 230,
+    svg('foul', 520, 230,
       corner(520, 230) +
-        dots(230, 200, 470, 52, '#fff') +
-        `<circle cx="494" cy="26" r="16" fill="#FAF7EC" opacity=".55"/>` +
-        `<path d="M478 64 l18 -14 m0 0 l-4 18" stroke="#FF6B5E" stroke-width="5" fill="none" stroke-linecap="round"/>` +
-        `<circle cx="120" cy="150" r="34" fill="none" stroke="#FFC83D" stroke-width="5" stroke-dasharray="10 7"/>` +
-        ball(0, 120, 150, 20) +
-        ball(11, 300, 120, 20))
+        dots(150, 160, 470, 35, '#fff') +
+        cue(150, 160, -21) +
+        ball(0, 150, 160, 20) +
+        ball(11, 300, 160, 20) +
+        ball(0, 494, 30, 15) +
+        `<circle cx="452" cy="96" r="22" fill="#D93A2B" stroke="#fff" stroke-width="4"/>` +
+        `<path d="M443 87l18 18m0-18l-18 18" stroke="#fff" stroke-width="5" stroke-linecap="round"/>`)
 };
 
 export function drawGuide() {
