@@ -136,7 +136,7 @@ button.game:active { background: #095A4E; }
 #msg:empty { visibility: hidden; }
 /* A text too long for one line: two lines, a little smaller, in the same height, so the board never moves
    (see Kit.say). Only a phone lets the band grow. */
-#msg.long { white-space: normal; font-size: 20px; line-height: 22px; height: auto; min-height: 52px; }
+#msg.long { white-space: pre-line; font-size: 20px; line-height: 22px; height: auto; min-height: 52px; }
 #msg.flash { animation: flash 1s; }
 @keyframes flash { 25% { background: #FFD666; } }
 @media (prefers-reduced-motion: reduce) { #msg.flash { animation: none; } }

@@ -352,7 +352,7 @@ function load() {
    where the button is let go. A second click within half a second on the same letter, or within 24 px,
    is a double-click: it counts as one click. */
 let lastTap = null, press = null;
-const chosen = i => `Vous avez choisi le ${G.grid[i]}. Cliquez sur la dernière lettre du mot, ou encore sur le ${G.grid[i]} pour l'enlever.`;
+const chosen = i => `Cliquez sur la dernière lettre du mot que vous avez trouvé.\nPour annuler, cliquez encore sur le ${G.grid[i]}.`;
 // A click on the chosen letter, "Enlever le A" or Escape takes the first letter back.
 function drop() {
   if (anchor < 0 || !G || Kit.isOpen()) return;

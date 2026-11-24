@@ -14,7 +14,7 @@
 // This file adds the "Jeux" button that goes back to the library, the credit in the bottom bar, the button icons, the frame and
 // the page buttons of the rules guide, and the dialog. The game then calls:
 //
-//   Kit.say(text)                           the message line
+//   Kit.say(text)                           the message line; a \n starts a second line
 //   Kit.showLevel(level), Kit.showWins(n)   the level line under the name: "Niveau facile · 3 victoires"
 //   Kit.dialog(title, text, [[label, fn, primary]], soft)   text: a string or a node; soft: the win sheet, with a light backdrop
 //   Kit.closeDialog(), Kit.openHelp(), Kit.closeHelp()
@@ -121,7 +121,8 @@
   const fit = () => {
     if (!msg) return;
     msg.classList.remove('long');
-    if (msg.scrollWidth > msg.clientWidth + 1) msg.classList.add('long');
+    // A text with a line break shows on two lines.
+    if (msg.textContent.includes('\n') || msg.scrollWidth > msg.clientWidth + 1) msg.classList.add('long');
   };
   // A new text flashes once, so his eye goes to the line when it changes.
   const say = text => {
