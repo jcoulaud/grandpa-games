@@ -141,7 +141,7 @@ await g(() => { GG.save = realSave; save(); });
 await g(() => { for (const i of G.fleets[1].flat().filter(j => G.shots[1][j] === '.').slice(0, -1)) G = Bataille.fire(G, 1, i).G; G.turn = 'me'; save(); render(); });
 await g(() => { tap(1, G.fleets[1].flat().find(i => G.shots[1][i] === '.')); askNewGame(); });
 await wait(900);
-ok(await page.textContent('#overTitle') === 'Nouvelle partie', 'the win dialog does not replace the levels');
+ok(/nouvelle partie/i.test(await page.textContent('#overTitle')) && await page.locator('#box.levels').count() === 1, 'the win dialog does not replace the levels');
 await page.keyboard.press('Escape');
 
 // 11d. A press made during the computer's turn, released after its shot, does not fire.

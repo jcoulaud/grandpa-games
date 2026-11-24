@@ -244,8 +244,29 @@ html.low #helpBox > .end { padding-block: 8px 12px; }
 #overBtns button.choice { flex-direction: column; gap: 2px; padding-block: 8px; font-size: 24px; font-weight: 700; }
 #overBtns button.choice::after { content: attr(data-note); font: 500 20px var(--ui); color: #4E5A57; }
 #overBtns button.choice.primary::after { color: #3D3000; }
-/* "La partie en cours sera effacée": said plainly, in bold. */
-#box p.warn { font-weight: 700; color: #8A1C1C; }
+/* "La partie en cours sera effacée": a cream band with a warning sign, in bold, before the choices. */
+#box p.warn { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px 18px; border-radius: 14px;
+  background: #FFF4D6; border: 2px solid #E9C46A; font-weight: 700; color: #4A2B00; }
+#box p.warn::before { content: ""; flex: none; width: 30px; height: 30px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.8 1.6 20.6h20.8z' fill='%23F2B705' stroke='%234A2B00' stroke-width='1.6' stroke-linejoin='round'/%3E%3Cpath d='M12 9v5.2' stroke='%234A2B00' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='12' cy='17.4' r='1.4' fill='%234A2B00'/%3E%3C/svg%3E") center / contain no-repeat; }
+/* A level: a pale blue key with a dark edge. The bars on the left say how hard it is; the name and its
+   meaning read from the left. The level of the game in progress has a dark "Actuel" tag. */
+#box.levels #overBtns button.choice { position: relative; display: grid; grid-template-columns: 44px 1fr; column-gap: 18px; justify-items: start; align-items: center;
+  padding: 10px 24px; text-align: left; background: #DDEBF1; border: 2px solid #26302D; box-shadow: 0 4px 0 #26302D; }
+#box.levels #overBtns button.choice:hover { background: #C9DFE9; }
+#box.levels #overBtns button.choice.primary { background: var(--gold); border-color: #8A5F00; box-shadow: 0 4px 0 #8A5F00; }
+#box.levels #overBtns button.choice.primary:hover { background: #FFD666; }
+#box.levels #overBtns button.choice::after { grid-column: 2; }
+#box.levels .lvl { grid-row: 1 / 3; width: 44px; height: 36px; }
+#box.levels .lvl rect { fill: #fff; stroke: #26302D; stroke-width: 1.6; }
+#box.levels .lvl rect.on { fill: #1F6F8B; }
+#box.levels .primary .lvl rect.on { fill: #4A2B00; }
+#box.levels .current::before { content: "Actuel"; position: absolute; right: 14px; top: -13px; padding: 2px 12px; border-radius: 999px;
+  background: #26302D; color: #fff; font: 700 17px/1.2 var(--ui); }
+/* The way back to the game, under a line, apart from the levels. */
+#box.levels #overBtns button:not(.choice):last-child { margin-top: 14px; }
+#box.levels #overBtns button:not(.choice):last-child::before { content: ""; position: absolute; left: 0; right: 0; top: -16px; border-top: 2px solid #E1E6E4; }
+#box.levels #overBtns button:not(.choice):last-child { position: relative; }
 /* A low page, 600 px high or less (lib/zoom.js sets the class): the dialog closes up, and a level's
    meaning goes beside its name. */
 html.low #box { padding: 22px 32px 24px; }
@@ -253,6 +274,15 @@ html.low #box p { margin-bottom: 14px; }
 html.low #overBtns { gap: 10px; }
 html.low #box.levels #overBtns button { min-height: 54px; }
 html.low #overBtns button.choice { flex-direction: row; gap: 14px; padding-block: 4px; }
+html.low #box.levels #overBtns button.choice { padding-block: 4px; }
+html.low #box.levels .lvl { width: 36px; height: 30px; }
+html.low #box p.warn { padding-block: 6px; }
+/* A phone: narrower bars and padding, so the meaning of a level keeps its width. */
+@media (max-width: 560px) {
+  #box.levels #overBtns button.choice { grid-template-columns: 30px 1fr; column-gap: 12px; padding: 8px 14px; }
+  #box.levels .lvl { width: 30px; height: 26px; }
+  #box p.warn { text-align: left; padding-inline: 14px; }
+}
 /* The win: a yellow badge with a check mark grows in once. */
 #over.soft #box::before {
   content: ""; display: block; width: 84px; height: 84px; margin: 0 auto 18px; border-radius: 50%;
