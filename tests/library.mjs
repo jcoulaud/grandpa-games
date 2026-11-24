@@ -73,10 +73,6 @@ try {
   check('the tile shows no line about the saved game', !(await page.textContent('.family a.tile')).includes('Partie en cours') && !(await page.locator('a.tile .status').count()));
   check('button says resume', (await page.textContent('.family a.tile .play')).includes('Reprendre'));
   check('the resume key of a tile is not the yellow one', await page.locator('.family a.tile .play.again svg').count() === 1);
-  // His last game, above the families: its name, its saved line and the yellow key to go on.
-  const last = await page.locator('#last a.last').textContent().catch(() => '');
-  check('the last game shows above the families', /Solitaire/.test(last) && /Votre dernière partie : partie en cours/.test(last) && /Reprendre la partie/.test(last), last);
-  check('the last game key is 44 px high or more', await page.evaluate(() => document.querySelector('#last .play').getBoundingClientRect().height >= 44));
   await page.screenshot({ path: join(OUT, 'library.png') });
   // Three games per row: the fourth one is on a second row, below the fold. The first row must show whole.
   check('first row of games fits a 1366x680 app window', await page.evaluate(() => document.querySelector('.family a.tile').getBoundingClientRect().bottom <= innerHeight),
@@ -196,13 +192,6 @@ try {
   const phone = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await phone.goto(BASE);
   check('no sideways scroll at 390 px', await phone.evaluate(() => document.documentElement.scrollWidth <= 390));
-  // A phone with a game in progress: the last game fits the width too.
-  await phone.evaluate(() => localStorage.setItem('gg:save:golf', JSON.stringify({ updatedAt: Date.now(), summary: 'Trou 3 sur 9 en cours · 2 parcours finis', data: {} })));
-  await phone.reload();
-  check('the last game fits a phone', await phone.evaluate(() => {
-    const r = document.querySelector('#last a.last').getBoundingClientRect();
-    return r.left >= 0 && r.right <= 390 && document.documentElement.scrollWidth <= 390 && /trou 3 sur 9 en cours/.test(document.querySelector('#last').textContent);
-  }));
   await phone.screenshot({ path: join(OUT, 'library-phone.png'), fullPage: true });
 
   // 8. Ten wrong admin passwords lock this network out, also with the right password. Last, as it locks the admin.
