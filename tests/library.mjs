@@ -72,7 +72,7 @@ try {
   check('the game is saved on the PC', await page.evaluate(() => !!GG.load('solitaire')));
   check('the tile shows no line about the saved game', !(await page.textContent('.family a.tile')).includes('Partie en cours') && !(await page.locator('a.tile .status').count()));
   check('button says resume', (await page.textContent('.family a.tile .play')).includes('Reprendre'));
-  check('the resume key of a tile is not the yellow one', await page.locator('.family a.tile .play.again svg').count() === 1);
+  check('the resume key of a tile is yellow with the play triangle', await page.locator('.family a.tile .play svg').count() === 1 && await page.evaluate(() => getComputedStyle(document.querySelector('.family a.tile .play')).backgroundColor !== 'rgb(255, 255, 255)'));
   await page.screenshot({ path: join(OUT, 'library.png') });
   // Three games per row: the fourth one is on a second row, below the fold. The first row must show whole.
   check('first row of games fits a 1366x680 app window', await page.evaluate(() => document.querySelector('.family a.tile').getBoundingClientRect().bottom <= innerHeight),
