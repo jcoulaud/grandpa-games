@@ -178,9 +178,19 @@ const drag = async (from, points) => {
 };
 const c2 = await g(() => MotsMeles.cells(G, 2));
 await drag(c2[0], [await centre(c2[c2.length - 2])]);
-ok(/Presque/.test(await msg()) && /anchor/.test(await cls(c2[0])), 'a refused drag keeps its first letter');
+ok(/^Bien/.test(await msg()) && /anchor/.test(await cls(c2[0])) && /part/.test(await cls(c2[c2.length - 2])), 'a drag that stops short of the last letter keeps the word going');
 await click(c2[c2.length - 1]);
 ok((await msg()).startsWith(`Vous avez trouvé ${caps[2]}.`), 'a click on the right last letter then finds the word');
+// Letter by letter: each click on the next letter keeps the word going, the last one finds it.
+const c3 = await g(() => MotsMeles.cells(G, 3));
+await click(c3[0]);
+for (const i of c3.slice(1, -1)) {
+  await click(i);
+  ok(/^Bien/.test(await msg()) && /part/.test(await cls(i)) && !(await g(() => G.found.includes(3))), 'a click on the next letter keeps the word going');
+}
+await click(c3[c3.length - 1]);
+ok((await msg()).startsWith(`Vous avez trouvé ${caps[3]}.`) && !(await page.locator('#grid .cell.part').count()), 'the last letter finds the word clicked letter by letter');
+await g(() => { G = MotsMeles.undo(G); render(); });
 // A press on the last letter that moves 18 px inside it is still a click on it.
 const [w3s, w3e] = await ends(3);
 await click(w3s);
