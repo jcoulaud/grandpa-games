@@ -175,11 +175,30 @@
   body.phone #bidBtns { gap: 8px; }
   body.phone #bidBtns button { font-size: 20px; padding: 4px 10px; min-height: 54px; }
   #scoreSheet table { border-collapse: collapse; font: 600 22px/1.2 var(--ui); }
-  /* The end of the game is this sheet, not a dialog after it: the result as its title, a gold badge for a
-     win, the totals, the count of wins, then « Nouvelle partie » and the dark « Fermer le jeu ». */
-  #scoreSheet.won::before { content: ""; display: block; width: 72px; height: 72px; margin: 0 auto 4px; border-radius: 50%;
-    background: var(--gold) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231F1A00' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 42px no-repeat;
-    animation: pop .45s cubic-bezier(.2,1.4,.4,1) both; }
+  /* The end of the game is this sheet, not a dialog after it (.end): a gold trophy for a win, the result as
+     a large title, one short line, the two teams side by side with their faces and their total in large
+     digits, the winners in gold, the count of wins in a gold chip, then the two keys side by side. */
+  #scoreSheet .trophy, #scoreTeams { display: none; }
+  #scoreSheet.end { gap: 16px; padding: 26px 32px 28px; min-width: min(600px, 92vw); }
+  #scoreSheet.end table { display: none; }
+  #scoreSheet.won .trophy { display: block; width: 84px; height: 84px; margin-bottom: -6px; filter: drop-shadow(0 4px 6px rgba(120,80,0,.35)); animation: pop .5s cubic-bezier(.2,1.4,.4,1) both; }
+  #scoreSheet.end h2 { font-size: 34px; }
+  #scoreSheet.end .note { font: 500 21px/1.35 var(--ui); color: #4E5A57; margin-top: -8px; }
+  #scoreSheet.end #scoreTeams { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; margin-top: 4px; }
+  .team { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 12px 14px; border-radius: 18px;
+    background: #F3F1EA; border: 2px solid #DCD6C6; color: #4E5A57; }
+  .team.win { background: #FFF4D6; border: 3px solid #E9B200; color: var(--text); box-shadow: 0 6px 16px rgba(160,110,0,.22); }
+  .team .avs { display: flex; }
+  .team .avs img { width: 52px; height: 52px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,.2); background: #fff; }
+  .team .avs img + img { margin-left: -12px; }
+  .team .who { font: 700 20px/1.2 var(--ui); }
+  .team .pts { font: 800 46px/1 var(--ui); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .team .pts small { font: 600 18px var(--ui); margin-left: 4px; }
+  .team .tag { position: absolute; top: -15px; left: 50%; translate: -50% 0; padding: 3px 14px; border-radius: 999px; white-space: nowrap;
+    background: #E9B200; color: #2B1D00; font: 800 16px/1.3 var(--ui); letter-spacing: .02em; text-transform: uppercase; }
+  #scoreSheet.end .wins { padding: 6px 18px; border-radius: 999px; background: #FFF4D6; color: #5A3A10; font-weight: 700; }
+  #scoreSheet.end .btns { flex-direction: row; width: 100%; gap: 12px; margin-top: 2px; }
+  #scoreSheet.end .btns button { flex: 1 1 0; min-height: 62px; font-size: 23px; }
   #scoreSheet .wins { margin: 0; font: 600 21px/1.3 var(--ui); color: #3A4542; }
   #scoreSheet .wins:empty { display: none; }
   #scoreSheet .btns { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
@@ -199,7 +218,13 @@
   #table.low #scoreSheet h2 { grid-area: 1 / 1; }
   #table.low #scoreSheet .note { grid-area: 2 / 1; max-width: 340px; }
   #table.low #scoreSheet .btns { grid-area: 3 / 1; justify-self: start; align-self: start; }
-  #table.low #scoreSheet.won::before { display: none; }
+  #table.low #scoreSheet.won .trophy { display: none; }
+  #table.low #scoreSheet.end #scoreTeams { grid-area: 1 / 2 / 4 / 3; align-self: center; width: 380px; }
+  #table.low #scoreSheet.end .btns { flex-direction: column; width: 100%; }
+  #table.low #scoreSheet.end { min-width: 0; }
+  body.phone #scoreSheet.end { min-width: 0; padding: 18px 14px; }
+  body.phone #scoreSheet.end .btns { flex-direction: column; }
+  body.phone .team .pts { font-size: 36px; } body.phone .team .avs img { width: 40px; height: 40px; }
   #table.low #scoreSheet .wins { grid-area: 2 / 1; align-self: end; }
   #table.low #scoreSheet table { grid-area: 1 / 2 / 4 / 3; }
   #table.low #scoreSheet td { padding-block: 6px; }
@@ -382,9 +407,11 @@
   <div id="retLabel">La retourne</div>
   <div id="bidBar" role="group" aria-labelledby="bidTitle"><div id="bidSlot"></div><div class="ask"><h2 id="bidTitle"></h2><p id="bidNote"></p><div id="bidBtns"></div></div></div>
   <div class="sheet" id="scoreSheet" role="group" aria-labelledby="scoreTitle">
+    <svg class="trophy" viewBox="0 0 64 64" aria-hidden="true"><path d="M20 8h24v14c0 8-5.4 14-12 14s-12-6-12-14z" fill="#FFC83D" stroke="#7A5200" stroke-width="2.4" stroke-linejoin="round"/><path d="M20 13h-7c0 8 3 12 8 13M44 13h7c0 8-3 12-8 13" fill="none" stroke="#7A5200" stroke-width="2.6" stroke-linecap="round"/><path d="M28 36h8v8h-8z" fill="#E9A800" stroke="#7A5200" stroke-width="2.2"/><rect x="20" y="44" width="24" height="9" rx="2.5" fill="#FFC83D" stroke="#7A5200" stroke-width="2.4"/><path d="M26 13.5c-.6 4 0 8 2 11" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="2.4" stroke-linecap="round"/></svg>
     <h2 id="scoreTitle"></h2>
     <p class="note" id="scoreNote"></p>
     <table id="scoreTable"></table>
+    <div id="scoreTeams"></div>
     <p class="wins" id="scoreWins"></p>
     <div class="btns"><button id="nextBtn" class="primary" data-nudge></button><button id="leaveBtn" class="leave" hidden>Fermer le jeu</button></div>
   </div>
@@ -1177,11 +1204,17 @@ function renderScoreSheet() {
   const over = G.phase === 'over';
   const won = over && G.result.winner === 0;
   ss.classList.toggle('won', won);
+  ss.classList.toggle('end', over);
   $('scoreTitle').textContent = !over ? `Fin de la manche ${G.handNo + 1}` : won ? 'Bravo, vous avez gagné !' : 'Simone et Henri ont gagné';
   const note = $('scoreNote');
   note.textContent = !over ? outcomeText() + tieText() : won
-    ? `André et vous ${G.scores[0] > G.target ? 'dépassez' : 'atteignez'} ${G.target} points : la partie est finie.`
-    : `Simone et Henri ${G.scores[1] > G.target ? 'dépassent' : 'atteignent'} ${G.target} points : la partie est finie.`;
+    ? `André et vous ${G.scores[0] > G.target ? 'dépassez' : 'atteignez'} les ${G.target} points.`
+    : `Simone et Henri ${G.scores[1] > G.target ? 'dépassent' : 'atteignent'} les ${G.target} points.`;
+  const teamCard = (t, names, faces) => `<div class="team${G.result.winner === t ? ' win' : ''}">`
+    + (G.result.winner === t ? '<span class="tag">Gagnants</span>' : '')
+    + `<span class="avs">${faces.map(f => `<img src="../lib/avatars/${f}.webp" alt="">`).join('')}</span>`
+    + `<span class="who">${names}</span><span class="pts">${G.scores[t]}<small>pts</small></span></div>`;
+  $('scoreTeams').innerHTML = over ? teamCard(0, US, ['vous', 'andre']) + teamCard(1, THEM, ['simone', 'henri']) : '';
   note.classList.toggle('bad', !over && G.outcome === 'dedans' && team(G.taker) === 0);
   $('scoreWins').textContent = !won || !wonNow ? '' : stats.won === 1 ? "C'est votre première victoire." : `C'est votre ${stats.won}e victoire.`;
   $('leaveBtn').hidden = !over;

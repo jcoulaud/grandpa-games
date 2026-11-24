@@ -256,8 +256,8 @@ await until(() => G.phase === 'over' && document.getElementById('scoreSheet').cl
 ok(await g(() => G.phase === 'over' && G.result.winner === 0 && stats.won === 1), 'he wins past 501 points');
 ok(await g(() => 'nudge' in document.getElementById('newBtn').dataset), 'after the win, « Nouvelle partie » is the next thing to press');
 ok((await g(() => document.getElementById('scoreTitle').textContent)) === 'Bravo, vous avez gagné !' && await g(() => document.getElementById('scoreSheet').classList.contains('won')), 'the score sheet becomes the win sheet');
-ok(await g(() => /atteignez 501 points : la partie est finie\./.test(document.getElementById('scoreNote').textContent)
-  && /Total5013\d\d/.test(document.getElementById('scoreTable').textContent)
+ok(await g(() => /atteignez les 501 points\./.test(document.getElementById('scoreNote').textContent)
+  && /^GagnantsVous et André501ptsSimone et Henri3\d\dpts$/.test(document.getElementById('scoreTeams').textContent)
   && document.getElementById('scoreWins').textContent === "C'est votre première victoire."), 'the win sheet says why the game ended, with both totals and the count of wins');
 await wait(3000);
 ok(await g(() => !Kit.isOpen() && document.getElementById('scoreSheet').classList.contains('on') && !document.getElementById('leaveBtn').hidden), 'no dialog jumps over the win sheet, and it offers « Fermer le jeu »');
