@@ -175,6 +175,17 @@
   body.phone #bidBtns { gap: 8px; }
   body.phone #bidBtns button { font-size: 20px; padding: 4px 10px; min-height: 54px; }
   #scoreSheet table { border-collapse: collapse; font: 600 22px/1.2 var(--ui); }
+  /* The end of the game is this sheet, not a dialog after it: the result as its title, a gold badge for a
+     win, the totals, the count of wins, then « Nouvelle partie » and the dark « Fermer le jeu ». */
+  #scoreSheet.won::before { content: ""; display: block; width: 72px; height: 72px; margin: 0 auto 4px; border-radius: 50%;
+    background: var(--gold) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231F1A00' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 42px no-repeat;
+    animation: pop .45s cubic-bezier(.2,1.4,.4,1) both; }
+  #scoreSheet .wins { margin: 0; font: 600 21px/1.3 var(--ui); color: #3A4542; }
+  #scoreSheet .wins:empty { display: none; }
+  #scoreSheet .btns { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
+  #scoreSheet .btns button[hidden] { display: none; }
+  #leaveBtn { justify-content: center; background: #26302D; color: #fff; border-color: #111816; box-shadow: 0 3px 0 #111816; }
+  #leaveBtn:hover { background: #3A4542; }
   #scoreSheet th { font: 600 20px var(--ui); color: #5A6461; padding: 0 16px 8px; }
   #scoreSheet td { padding: 8px 16px; border-top: 1px solid #E6E0D2; }
   #scoreSheet td:first-child { text-align: left; color: #3A4542; }
@@ -187,7 +198,9 @@
   #table.low #scoreSheet.on { display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto 1fr; gap: 10px 26px; align-items: center; text-align: left; }
   #table.low #scoreSheet h2 { grid-area: 1 / 1; }
   #table.low #scoreSheet .note { grid-area: 2 / 1; max-width: 340px; }
-  #table.low #scoreSheet button { grid-area: 3 / 1; justify-self: start; align-self: start; }
+  #table.low #scoreSheet .btns { grid-area: 3 / 1; justify-self: start; align-self: start; }
+  #table.low #scoreSheet.won::before { display: none; }
+  #table.low #scoreSheet .wins { grid-area: 2 / 1; align-self: end; }
   #table.low #scoreSheet table { grid-area: 1 / 2 / 4 / 3; }
   #table.low #scoreSheet td { padding-block: 6px; }
   body.phone #scoreSheet { padding: 16px 12px 18px; }
@@ -372,7 +385,8 @@
     <h2 id="scoreTitle"></h2>
     <p class="note" id="scoreNote"></p>
     <table id="scoreTable"></table>
-    <button id="nextBtn" class="primary" data-nudge></button>
+    <p class="wins" id="scoreWins"></p>
+    <div class="btns"><button id="nextBtn" class="primary" data-nudge></button><button id="leaveBtn" class="leave" hidden>Fermer le jeu</button></div>
   </div>
   <aside id="side">
     <div class="box" id="atoutBox"></div>
@@ -738,17 +752,7 @@ function handOver(fresh) {
     say(won ? 'Bravo, André et vous avez gagné la partie ! Cliquez sur « Nouvelle partie » pour rejouer.'
       : 'Simone et Henri ont gagné la partie. Cliquez sur « Nouvelle partie » pour rejouer.');
     Kit.gameOver(true);
-    const games = ['Retour aux jeux', Kit.home];
-    const totals = `\nLes points : ${US} ${G.scores[0]}, ${THEM} ${G.scores[1]}.`;
-    if (won) {
-      if (fresh) celebrate();
-      resultAfter(() => Kit.dialog('Bravo, vous avez gagné !',
-        `André et vous ${G.scores[0] > G.target ? 'dépassez' : 'atteignez'} ${G.target} points : la partie est finie.` + totals +
-        (!wonNow ? '' : stats.won === 1 ? "\nC'est votre première victoire." : `\nC'est votre ${stats.won}e victoire.`),
-        [['Nouvelle partie', askNewGame, true], games], true), !fresh || motion.matches ? 0 : 2600);
-    } else resultAfter(() => Kit.dialog('Simone et Henri ont gagné',
-      `Simone et Henri ${G.scores[1] > G.target ? 'dépassent' : 'atteignent'} ${G.target} points : la partie est finie.` + totals,
-      [['Nouvelle partie', askNewGame, true], games]), !fresh || motion.matches ? 0 : 500);
+    if (won && fresh) celebrate();
     return;
   }
   say(`Fin de la manche : ${outcomeText()}${tieText()} Cliquez sur « Manche suivante ».`);
@@ -756,14 +760,6 @@ function handOver(fresh) {
 // Both teams on the same total at 501 or more: the game goes on.
 const tieText = () => G.phase === 'done' && G.scores[0] === G.scores[1] && G.scores[0] >= G.target
   ? ` Égalité à ${G.scores[0]} points : on joue une manche de plus.` : '';
-// Keep the result pending if he reads the rules or checks the levels.
-function resultAfter(open, delay) {
-  function show() {
-    if (Kit.isOpen()) later(show, 120);
-    else open();
-  }
-  later(show, delay);
-}
 function nextHandNow() {
   if (busy || stale || G.phase !== 'done') return;
   cancelAll();
@@ -1179,17 +1175,24 @@ function renderScoreSheet() {
   ss.classList.toggle('on', ended);
   if (!ended) return;
   const over = G.phase === 'over';
-  $('scoreTitle').textContent = over ? 'Fin de la partie' : `Fin de la manche ${G.handNo + 1}`;
+  const won = over && G.result.winner === 0;
+  ss.classList.toggle('won', won);
+  $('scoreTitle').textContent = !over ? `Fin de la manche ${G.handNo + 1}` : won ? 'Bravo, vous avez gagné !' : 'Simone et Henri ont gagné';
   const note = $('scoreNote');
-  note.textContent = outcomeText() + tieText();
-  note.classList.toggle('bad', G.outcome === 'dedans' && team(G.taker) === 0);
+  note.textContent = !over ? outcomeText() + tieText() : won
+    ? `André et vous ${G.scores[0] > G.target ? 'dépassez' : 'atteignez'} ${G.target} points : la partie est finie.`
+    : `Simone et Henri ${G.scores[1] > G.target ? 'dépassent' : 'atteignent'} ${G.target} points : la partie est finie.`;
+  note.classList.toggle('bad', !over && G.outcome === 'dedans' && team(G.taker) === 0);
+  $('scoreWins').textContent = !won || !wonNow ? '' : stats.won === 1 ? "C'est votre première victoire." : `C'est votre ${stats.won}e victoire.`;
+  $('leaveBtn').hidden = !over;
   const bel = [0, 1].map(t => G.belote !== null && team(G.belote) === t ? 20 : 0);
   const row = (label, a, b, cls = '') => `<tr class="${cls}"><td>${label}</td><td class="n us">${a}</td><td class="n">${b}</td></tr>`;
   const [a, b] = L.narrow ? ['Nous', 'Eux'] : [US, THEM];
+  // The end of the game shows the totals only: the last hand stays in the side column.
   $('scoreTable').innerHTML = `<tr><th><span class="sr">Ligne</span></th><th>${a}</th><th>${b}</th></tr>`
-    + row('Les plis', G.won[0], G.won[1])
-    + row('Belote', bel[0] ? '20' : '–', bel[1] ? '20' : '–')
-    + row('Cette manche', '+' + G.handPts[0], '+' + G.handPts[1], 'sum')
+    + (over ? '' : row('Les plis', G.won[0], G.won[1])
+      + row('Belote', bel[0] ? '20' : '–', bel[1] ? '20' : '–')
+      + row('Cette manche', '+' + G.handPts[0], '+' + G.handPts[1], 'sum'))
     + row('Total', G.scores[0], G.scores[1], 'sum');
   $('nextBtn').textContent = over ? 'Nouvelle partie' : 'Manche suivante';
   place(ss, L.cx, L.cy);
@@ -1375,6 +1378,8 @@ $('hintBtn').onclick = showHint;
 $('helpBtn').onclick = () => Kit.openHelp();
 $('newBtn').onclick = askNewGame;
 $('nextBtn').onclick = () => G.phase === 'over' ? askNewGame() : nextHandNow();
+$('leaveBtn').insertAdjacentHTML('afterbegin', Kit.icon('close'));
+$('leaveBtn').onclick = () => Kit.home();
 addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (!Kit.isOpen()) doUndo(); }
   else if (e.key === 'Escape' && !Kit.escape() && hint) { hint = null; say(turnMessage()); render(); }

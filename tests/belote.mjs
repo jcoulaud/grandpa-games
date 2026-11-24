@@ -252,11 +252,15 @@ if (!(await g(() => motion.matches))) {
   ok(await g(() => !!document.querySelector('#help.on')), 'the rules stay open when the win animation ends');
   await page.click('#helpClose');
 }
-await until(() => document.getElementById('over').classList.contains('on'));
+await until(() => G.phase === 'over' && document.getElementById('scoreSheet').classList.contains('on'));
 ok(await g(() => G.phase === 'over' && G.result.winner === 0 && stats.won === 1), 'he wins past 501 points');
 ok(await g(() => 'nudge' in document.getElementById('newBtn').dataset), 'after the win, « Nouvelle partie » is the next thing to press');
-ok((await g(() => document.getElementById('overTitle').textContent)) === 'Bravo, vous avez gagné !', 'the win sheet shows');
-ok(await g(() => /atteignez 501 points[^]*\nLes points : Vous et André 501, Simone et Henri 3\d\d\./.test(document.getElementById('overText').textContent)), 'the win sheet says why the game ended, with both totals');
+ok((await g(() => document.getElementById('scoreTitle').textContent)) === 'Bravo, vous avez gagné !' && await g(() => document.getElementById('scoreSheet').classList.contains('won')), 'the score sheet becomes the win sheet');
+ok(await g(() => /atteignez 501 points : la partie est finie\./.test(document.getElementById('scoreNote').textContent)
+  && /Total5013\d\d/.test(document.getElementById('scoreTable').textContent)
+  && document.getElementById('scoreWins').textContent === "C'est votre première victoire."), 'the win sheet says why the game ended, with both totals and the count of wins');
+await wait(3000);
+ok(await g(() => !Kit.isOpen() && document.getElementById('scoreSheet').classList.contains('on') && !document.getElementById('leaveBtn').hidden), 'no dialog jumps over the win sheet, and it offers « Fermer le jeu »');
 await page.screenshot({ path: `${OUT}/belote-won.png` });
 ok((await g(() => GG.meta('belote').summary)) === '1 victoire', 'the library tile shows the win');
 await page.evaluate(() => GG.flush());
@@ -293,7 +297,7 @@ await clickCard(card('AS'));
 await until(() => G.phase === 'over' && !busy);
 await page.evaluate(() => GG.flush());
 ok(await g(() => sentWins === 1 && stats.won === 1), 'won again after that undo: the statistics do not get it twice');
-await until(() => document.getElementById('over').classList.contains('on'));
+await until(() => G.phase === 'over' && document.getElementById('scoreSheet').classList.contains('on'));
 await g(() => Kit.closeDialog());
 
 // A capot: the dix de der is 100, so the tricks show 252 on the score sheet (FFB 9.2).
@@ -341,8 +345,8 @@ await wait(560);
 await setHand(['7S', '8S', '9S', 'AS'], 1, { scores: [300, 450], won: [40, 100], tricksWon: [3, 4], taker: 1 });
 await myTurn();
 await clickCard(card('7S'));
-await until(() => document.getElementById('over').classList.contains('on'));
-ok(await g(() => G.result.winner === 1 && stats.won === 1 && document.getElementById('overTitle').textContent === 'Simone et Henri ont gagné'), 'the other team wins: the sheet says so, and no win is counted');
+await until(() => G.phase === 'over' && document.getElementById('scoreSheet').classList.contains('on'));
+ok(await g(() => G.result.winner === 1 && stats.won === 1 && document.getElementById('scoreTitle').textContent === 'Simone et Henri ont gagné' && !document.getElementById('scoreWins').textContent), 'the other team wins: the sheet says so, and no win is counted');
 await g(() => Kit.closeDialog());
 
 // An undo step from another deal is dropped when the save is read: undo would wait for Henri forever.
