@@ -56,6 +56,17 @@ async function save() {
   return ok;
 }
 
+// Saves after a throw. A throw that ends the game with his win, his own or Marius's last one, counts the
+// win in the statistics once.
+function saveAndReport(res) {
+  const won = res.after.over?.winner === 'you' && !game.reported;
+  if (won) game.reported = true;
+  return save().then((ok) => {
+    if (ok && won && !stale) GG.track('petanque', 'won');
+    return ok;
+  });
+}
+
 // ---------- His throw ----------
 // The other player's boules he can shoot, nearest the cochonnet first.
 function targets() {
@@ -368,13 +379,8 @@ async function shoot() {
   panel();
   view.clearPreview();
   Kit.say(t.kind === 'cochonnet' ? 'Le cochonnet part…' : c.style === 'tir' ? 'Votre boule part au tir…' : 'Votre boule part en ' + E.STYLE_NAMES[c.style].toLowerCase() + '…');
-  const won = res.after.over?.winner === 'you' && !game.reported;
-  if (won) game.reported = true;
   if (res.after.over) game.ack = res.after.menes.length;
-  const write = save().then((ok) => {
-    if (ok && won && !stale) GG.track('petanque', 'won');
-    return ok;
-  });
+  const write = saveAndReport(res);
   const [, line] = await Promise.all([write, perform(res)]);
   busy = false;
   if (stale) return;
@@ -426,7 +432,7 @@ async function opponent() {
     const res = E.play(game, c, true);
     if (res.after.over) game.ack = res.after.menes.length;
     Kit.say(t.kind === 'cochonnet' ? NAME + ' lance le cochonnet…' : c.style === 'tir' ? NAME + ' tire votre boule…' : NAME + ' pointe en ' + E.STYLE_NAMES[c.style].toLowerCase() + '…');
-    const [, said] = await Promise.all([save(), perform(res)]);
+    const [, said] = await Promise.all([saveAndReport(res), perform(res)]);
     if (stale) return;
     line = said;
     card();
@@ -492,6 +498,8 @@ function choose() {
 }
 async function back() {
   if (!game || busy || stale || Kit.isOpen()) return;
+  // Ctrl+Z goes past the greyed « Annuler » key: a finished game cannot be taken back.
+  if (sit().over) return Kit.tell(OVER);
   if (!E.undo(game)) return;
   clearTimeout(endTimer);
   busy = true;

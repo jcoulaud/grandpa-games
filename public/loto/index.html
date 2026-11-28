@@ -106,6 +106,9 @@
   .box.blank { background: repeating-linear-gradient(45deg, rgba(255,255,255,.3) 0 3px, transparent 3px 8px); }
   .box.num { background: #FFFEF8; cursor: pointer; font: 700 max(20px, calc(var(--cell) * .5))/1 var(--ui); color: var(--ink); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
   .box.num:hover { background: #FFF6D8; }
+  /* The keyboard: Tab goes from number to number, and the one with the focus has a dark ring with a white edge. */
+  .box.num:focus { outline: none; }
+  .box.num:focus-visible { z-index: 4; outline: 4px solid #1B2422; outline-offset: 1px; box-shadow: 0 0 0 7px #fff; }
   .box.num b { position: relative; z-index: 2; font: inherit; }
   /* The jeton: a round amber glass counter. The number shows through it. */
   .box .jeton { position: absolute; inset: 9%; border-radius: 50%; z-index: 1; pointer-events: none;
@@ -348,6 +351,8 @@ const COLORS = { jeanne: '#F2B8A8', louise: '#BFE3C0', simone: '#B9D7F0', odette
   paul: '#B4CCE8', marcel: '#E8D5B0', rene: '#B0E0DA', andre: '#CDE6B8', henri: '#F0C6D0', gaston: '#D6CCEE' };
 const PHASE_NAME = ['la quine', 'la double quine', 'le carton plein'];
 const CALL_LABEL = ['Quine !', 'Double quine !', 'Carton plein !'];
+// When to call, for the phase in play: one row, two rows on one carton, or a whole carton.
+const CALL_WHEN = ['si une ligne est pleine', 'si deux lignes d’un même carton sont pleines', 'si un carton est plein'];
 
 /* ---------- The lots, drawn ---------- */
 const LOT_ART = {
@@ -516,7 +521,7 @@ async function tapBox(c, n) {
   const a = L.advice(G);
   if (L.LEVELS[G.level].light && a.kind === 'call') say(`Jeton posé sur le ${n}. ${turnText()}`);
   else if (L.LEVELS[G.level].light && a.kind === 'cover') say(`Jeton posé sur le ${n}. Le ${a.n} est aussi sorti : cliquez dessus.`);
-  else say(`Jeton posé sur le ${n}. Cliquez sur « Tirer le numéro », ou sur « ${CALL_LABEL[G.phase]} » si une ligne est pleine.`);
+  else say(`Jeton posé sur le ${n}. Cliquez sur « Tirer le numéro », ou sur « ${CALL_LABEL[G.phase]} » ${CALL_WHEN[G.phase]}.`);
   coach();
 }
 function refuse(el, text, soft) {
@@ -634,7 +639,7 @@ const boxEl = (c, n) => boxEls.find(e => +e.dataset.c === c && +e.dataset.n === 
 function cartonHtml(rows, c, label) {
   let html = `<div class="carton c${c % 4}" style="--tilt:${[-.6, .5, -.3, .4][c % 4]}deg"><div class="stub" aria-hidden="true"><i>LOTO</i></div>`;
   for (const row of rows) for (const n of row)
-    html += n ? `<div class="box num" data-c="${c}" data-n="${n}" role="button"><b>${n}</b></div>` : '<div class="box blank"></div>';
+    html += n ? `<div class="box num" data-c="${c}" data-n="${n}" role="button" tabindex="0"><b>${n}</b></div>` : '<div class="box blank"></div>';
   return html + '</div>';
 }
 function buildCartons() {

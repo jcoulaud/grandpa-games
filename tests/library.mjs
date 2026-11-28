@@ -216,7 +216,7 @@ try {
     check('new games: one plain sentence', (await p.textContent('#news p')).trim() === (expected.length > 1 ? 'Nouveaux jeux :' : 'Nouveau jeu :'));
     const id0 = expected[0];
     check('new games: a name opens the game, like its tile', await p.getAttribute(`#news a[data-id="${id0}"]`, 'href') === await p.getAttribute(`a.tile[data-id="${id0}"]`, 'href'));
-    check('new games: the first row of games shows whole at 1366x680', await p.evaluate(() => document.querySelector('.family a.tile').getBoundingClientRect().bottom <= document.querySelector('main').getBoundingClientRect().bottom + .5),
+    check('new games: the first row of games shows whole at 1366x680', await p.evaluate(() => document.querySelector('.family a.tile').getBoundingClientRect().bottom <= Math.min(innerHeight, document.querySelector('main').getBoundingClientRect().bottom, document.querySelector('footer')?.getBoundingClientRect().top ?? innerHeight) + .5),
       String(await p.evaluate(() => [document.querySelector('.family a.tile').getBoundingClientRect().bottom, document.querySelector('main').getBoundingClientRect().bottom])));
     // Every window size: no text under 20 px, keys 44 px high or more, nothing past the sides.
     const layout = () => p.evaluate(() => {
@@ -279,6 +279,14 @@ try {
     await ctx.clock.setFixedTime(t0 + 61 * DAY);
     await p.reload();
     check('new games: nothing is new 60 days after it was added', (await band()).length === 0 && (await tags()).length === 0);
+
+    // A game first shown on day 59 keeps its 3 days, past the 60.
+    await p.evaluate(() => localStorage.removeItem('gg:news-seen'));
+    await ctx.clock.setFixedTime(t0 + 59 * DAY);
+    await p.reload();
+    await ctx.clock.setFixedTime(t0 + 61 * DAY);
+    await p.reload();
+    check('new games: a game first shown on day 59 still shows on day 61', (await band()).length > 0);
     await ctx.close();
 
     // Without storage, the library still shows the band, and « Masquer » hides it in this window.

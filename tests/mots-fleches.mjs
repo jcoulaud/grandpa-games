@@ -98,6 +98,39 @@ await page.mouse.click(cb.x + cb.width / 2, cb.y + cb.height * .2); await page.m
 ok((await state()).word === top, 'the top half takes the other word');
 ok(await g(t => document.querySelector(`#grid .part[data-w="${t}"]`).classList.contains('on'), top), 'the definition of the word he is on is lit in the grid');
 
+// 5b. A word whose last letter is given: a click on that given letter, then a key, fills the first empty
+// cell of the word, and never says the letters are all given (review: KOALA on Facile grid 0).
+{
+  const k = ws.findIndex(w => w.word === 'KOALA');
+  ok(k >= 0, 'Facile grid 0 has KOALA');
+  const cells = ws[k].cells;
+  const kb = await cellAt(ws[k].clue).boundingBox(), parts = await g(c => document.querySelector(`#grid [data-i="${c}"]`).children.length, ws[k].clue);
+  await page.mouse.click(kb.x + kb.width / 2, kb.y + kb.height * (parts > 1 ? (ws[k].part ? .8 : .2) : .5)); await page.mouse.move(5, 5); await wait(560);
+  ok((await state()).word === k, 'a click on its definition takes KOALA');
+  const last = cells[cells.length - 1];
+  ok(await g(i => G.given[i] === '1', last), 'the last A of KOALA is given by the game');
+  await click(last);
+  await g(([w, c]) => { word = w; at = c; render(); }, [k, last]);
+  const empty = await g(c => c.find(i => G.typed[i] === ' '), cells);
+  await page.keyboard.press(grid[empty]);
+  ok(await g(([i, L]) => G.typed[i] === L, [empty, grid[empty]]) && !/déjà données/.test(await msg()), `a key on the given last letter fills the first empty cell of KOALA with ${grid[empty]}`);
+}
+
+// 5c. Space presses a focused button, as everywhere: a letter key writes its letter, « Règles » opens.
+{
+  const target = await g(() => { const ws = M.wordsOf(G); for (let k = 0; k < ws.length; k++) { const i = ws[k].cells.find(c => G.typed[c] === ' '); if (i !== undefined) { word = k; at = i; render(); return i; } } return -1; });
+  const L = grid[target];
+  await page.focus(`#keys button[data-k="${L}"]`);
+  await page.keyboard.press('Space');
+  ok(await g(([i, L]) => G.typed[i] === L, [target, L]), `Space on the focused key ${L} writes ${L}`);
+  await page.focus('#helpBtn');
+  await page.keyboard.press('Space');
+  await wait(200);
+  ok(await g(() => Kit.isOpen()), 'Space on the focused « Règles » opens the rules');
+  await page.keyboard.press('Escape');
+  await g(() => document.activeElement.blur());
+}
+
 // 6. « Vérifier » strikes the wrong letters in red and says how many.
 const free = ws[across].cells.find(i => !(ws.some(w => w.cells[0] === i)));
 await g(([w, c]) => { word = w; at = c; render(); }, [across, free]);

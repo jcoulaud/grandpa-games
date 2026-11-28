@@ -164,6 +164,27 @@ for (const [level, n] of [['facile', 200], ['moyen', 150], ['fort', 25]]) {
   ok(ms < 2500, `the slowest hint after the first row of Difficile takes ${Math.round(ms)} ms`);
 }
 
+// 9b. The colour the coach points at always fits the row: at Facile, never a colour already in another hole.
+// (A regression: with blue in the first hole, the coach pointed at blue again for the second.)
+{
+  let G = C.place(C.newGame('facile', 1), 0, 1);
+  const c = C.suggest(G, 1);
+  ok(c >= 0 && c !== 1 && !C.refusal(G, 1, c), `with blue in the first hole, the coach suggests ${C.COLORS[c].name} for the second, not blue`);
+  const rnd = C.random(17);
+  let bad = 0, n = 0;
+  for (const level of ['facile', 'moyen', 'fort']) for (let seed = 1; seed <= 40; seed++) {
+    let G = C.newGame(level, seed);
+    for (let step = 0; step < 12 && !G.result; step++) {
+      // A row with random pegs in it, then every empty or full hole asked.
+      for (let i = 0; i < G.holes; i++) if (rnd() < .5) { const g = C.place(G, i, Math.floor(rnd() * G.colors)); if (g) G = g; }
+      for (let i = 0; i < G.holes; i++) { n++; const s = C.suggest(G, i); if (s < 0 || C.refusal(G, i, s)) bad++; }
+      G = C.submit(C.hint(G).guess.reduce((g, c, i) => C.place({ ...g, cur: g.cur.map((x, k) => k === i ? -1 : x) }, i, c), { ...G, cur: Array(G.holes).fill(-1), order: [] }));
+    }
+  }
+  ok(!bad, `${n} rows half filled at every level: the coach's colour is always allowed`, `${bad} refused`);
+  ok(C.suggest(C.submit(C.newGame('facile', 3).code.reduce((g, c, i) => C.place(g, i, c), C.newGame('facile', 3))), 0) === -1, 'a finished game has no colour to suggest');
+}
+
 // 10. A save read back is checked whole.
 {
   const G = C.submit(fill(C.newGame('moyen', 8), [0, 0, 1, 1]));

@@ -433,10 +433,14 @@ async function save() {
   if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
   const data = { v: 1, G, cast, undo, level, stats, wonNow };
   if (await GG.save('dominos', data, { summary: parts.join(' · '), undoLimits: [Infinity, 8, 2, 0] })) return (saved = true);
-  if (stale) return (saved = false);
   saved = false;
-  say("La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.");
   return false;
+}
+// A failed save: the game goes on, and the line says so with the next step.
+function warnSave() {
+  if (stale || G.result) return;
+  const next = G.end ? 'Cliquez sur « Manche suivante ».' : mine() ? turnText() : `${who(G.turn)} joue.`;
+  say(`La partie n'a pas pu être enregistrée, la mémoire de l'ordinateur est pleine. Le jeu continue.\n${next}`);
 }
 function load() {
   try {
@@ -533,7 +537,9 @@ async function lay(t, side) {
   const done = commit();
   render();
   say(side === 'C' ? `Vous commencez avec ${tname(t)}.` : G.end ? `Vous posez ${tname(t)}.` : `Vous posez ${tname(t)}. ${who(G.turn)} joue.`);
-  if (!(await done) || G !== current) return;
+  // A save that fails (a full or blocked memory) never stops the game: it goes on in this window.
+  await done;
+  if (G !== current) return;
   if (G.end) return later(endManche, REDUCED ? 0 : END_MS);
   runComputers();
 }
@@ -549,7 +555,8 @@ async function doDraw() {
     const current = G, done = commit();
     render();
     say('Vous passez votre tour.');
-    if (!(await done) || G !== current) return;
+    await done;
+    if (G !== current) return;
     if (G.end) return later(endManche, REDUCED ? 0 : END_MS);
     return runComputers();
   }
@@ -558,13 +565,13 @@ async function doDraw() {
   hint = null; drawn = t;
   fresh = { t, from: $('stack').getBoundingClientRect(), hand: true };
   window.Sound?.play('piece');
-  save(); render();
-  if (!saved) return;
+  const written = save(); render();
   const fits = D.fits(G, t).length;
   say(fits ? `Vous piochez ${tname(t)} : il se pose. Cliquez dessus.`
     : G.stock.length ? `Vous piochez ${tname(t)} : il ne se pose pas. Cliquez encore sur « Piocher ».`
     : `Vous piochez ${tname(t)} : il ne se pose pas, et la pioche est vide. Cliquez sur « Passer mon tour ».`);
   coach();
+  if (!(await written) && !stale && G.last && G.last.t === t) warnSave();
 }
 // Counts a win once, and saves.
 async function commit() {
@@ -597,9 +604,8 @@ function runComputers() {
   };
   const done = async s => {
     G = s.G; view = G;
-    const ok = await commit();
+    await commit();
     if (G !== s.G) return;
-    if (!ok) { showing = false; render(); return; }
     if (G.end) { showing = false; return endManche(); }
     runComputers();
   };
@@ -613,6 +619,7 @@ function afterComputers() {
     const s = last.kind === 'play' ? `${who(last.p)} pose ${tname(last.t)}.` : last.kind === 'pass' ? stepText({ did: 'pass' }, last.p) : '';
     say((s ? s + '\n' : '') + turnText());
   } else say(turnText());
+  if (!saved) warnSave();
   window.Sound?.play('turn');
   coach();
 }
@@ -630,7 +637,7 @@ function endManche(show = true) {
   const head = e.winner === null ? 'Ligne bloquée, égalité : personne ne marque.'
     : e.blocked ? (e.winner === 0 ? `Ligne bloquée : vous avez le plus petit total et marquez ${pts(e.points)}.` : `Ligne bloquée : ${who(e.winner)} a le plus petit total et marque ${pts(e.points)}.`)
     : e.winner === 0 ? `Domino ! Vous avez posé tous vos dominos : vous marquez ${pts(e.points)}.` : `Domino ! ${who(e.winner)} a posé tous ses dominos et marque ${pts(e.points)}.`;
-  if (!G.result) return say(`${head} Cliquez sur « Manche suivante ».`);
+  if (!G.result) return say(`${head}${saved || stale ? '' : "\nLa partie n'a pas pu être enregistrée."} Cliquez sur « Manche suivante ».`);
   const order = [0, 1, 2].sort((a, b) => G.scores[b] - G.scores[a]);
   const lines = order.map(p => `${p === 0 ? 'Vous' : who(p)} : ${pts(G.scores[p])}`).join('\n');
   const nth = !wonNow ? '' : stats.won === 1 ? "\nC'est votre première victoire." : `\nC'est votre ${stats.won}e victoire.`;
@@ -654,13 +661,16 @@ async function nextManche() {
   lineU = Infinity;
   window.Sound?.play('shuffle');
   const current = G;
-  const ok = await save();
   render();
-  if (!ok || G !== current) return;
+  await save();
+  if (G !== current) return;
   startManche();
+  if (!saved && !stale) warnSave();
 }
 // The first player of a manche: him, or the computer players until his turn.
 function startManche() {
+  // Only at the start of a manche: a late call after his opening domino does nothing.
+  if (G.end || G.line.length || busy()) return;
   const p = G.turn;
   if (p === 0) { say(`Manche ${G.manche}. ${turnText()}`); return coach(); }
   say(`Manche ${G.manche}. ${who(p)} a ${tname(G.opening)}, le plus gros : il commence.`);
@@ -675,9 +685,10 @@ function doUndo() {
   calm();
   Kit.closeDialog();
   G = view = JSON.parse(undo.pop()); pick = null; hint = null; fresh = null; drawn = null;
-  save(); render();
-  if (saved) say(`Coup annulé : votre domino est revenu dans votre main.\n${turnText()}`);
+  const written = save(); render();
+  say(`Coup annulé : votre domino est revenu dans votre main.\n${turnText()}`);
   coach();
+  written.then(ok => { if (!ok && !stale) warnSave(); });
 }
 function showHint() {
   if (Kit.isOpen() || refuseBusy()) return;
@@ -703,9 +714,11 @@ async function newGame(lv) {
   const written = save();
   render();
   if (!stale) {
-    say(`Vous jouez contre ${who(1)} et ${who(2)}, en ${D.TARGET} points.`);
-    // The names stay in the message line a moment before the first domino, even without motion.
-    later(() => startManche(), 1600);
+    const names = `Vous jouez contre ${who(1)} et ${who(2)}, en ${D.TARGET} points.`;
+    // He opens: he may play at once. A computer player opens: the names stay in the message line a moment
+    // before its first domino, even without motion.
+    if (G.turn === 0) say(`${names}\n${turnText()}`);
+    else { say(names); later(() => startManche(), 1600); }
   }
   coach();
   if (await written) GG.track('dominos', 'start');

@@ -37,6 +37,15 @@ for (let n = 0; n < pages; n++) {
 }
 ok(!(await g(() => Kit.isOpen())), 'the last page closes the rules');
 
+// 1b. Regression: during the coach, blue in the first hole must not make the coach point at blue again.
+await pick(1);
+await wait(200);
+const coached = await g(() => { const e = document.querySelector('.pick.coach'); return e ? +e.dataset.c : -1; });
+ok(await g(() => Kit.coaching() && G.cur[0] === 1 && sel === 1), 'with the coach on, blue goes in the first hole');
+ok(coached >= 0 && coached !== 1, `the coach then points at a colour the row accepts, not blue: ${coached}`);
+await page.locator(`.pick[data-c="${coached}"]`).click(); await page.mouse.move(5, 5); await wait(100);
+ok(await g(c => G.cur[1] === c, coached) && !/ne sert qu’une fois/.test(await msg()), 'the colour the coach shows is taken, with no refusal');
+
 // 2. A fixed code: rouge, bleu, jaune, vert.
 await g(() => { G = { ...CodeSecret.newGame('facile', 1), code: [0, 1, 2, 3] }; sel = 0; save(); render(); });
 await pick(0);

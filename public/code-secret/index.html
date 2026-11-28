@@ -20,7 +20,7 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../lib/kit.css">
 <style>
-  /* The code secret plays on a aubergine felt, the cloth of a games table in a parlour. The board is an old
+  /* The code secret plays on an aubergine felt, the cloth of a games table in a parlour. The board is an old
      parlour game in honey beech inside a walnut rim, with brass numbers, painted wooden pegs and, at its end,
      the hidden code under a hinged lid. */
   :root {
@@ -30,8 +30,8 @@
   }
   #title svg { width: 32px; height: 32px; }
   button.game { --accent: #6E3A68; }
-  button.game:hover { background: #4A7A68; }
-  button.game:active { background: #2F5446; }
+  button.game:hover { background: #84507C; }
+  button.game:active { background: #57284F; }
 
   #table { position: relative; overflow: hidden; display: flex; }
   #stage { margin: auto; display: flex; align-items: center; gap: var(--gap, 28px); padding: 8px 16px 12px; }
@@ -140,13 +140,13 @@
   #tray { flex: none; display: flex; flex-direction: column; align-items: stretch; gap: 14px; padding: 14px; border-radius: 20px;
     background: linear-gradient(160deg, #75451F, #4A2A10 70%); box-shadow: 0 16px 32px rgba(0,0,0,.4), inset 0 2px 0 rgba(255,230,190,.25); }
   #palette { display: grid; grid-template-columns: repeat(var(--pc, 2), auto); gap: 10px; justify-content: center; padding: 10px; border-radius: 13px;
-    background: radial-gradient(130% 100% at 50% 0%, #3E5E50, #1F3229); box-shadow: inset 0 3px 8px rgba(0,0,0,.5); }
+    background: radial-gradient(130% 100% at 50% 0%, #5A3055, #2A1027); box-shadow: inset 0 3px 8px rgba(0,0,0,.5); }
   /* A colour: its peg in a round cup of felt, and its name. */
   .pick { min-height: 0; width: calc(var(--q) + 26px); padding: 6px 4px 4px; flex-direction: column; gap: 3px; border-radius: 14px;
     background: transparent; border: 0; box-shadow: none; color: #FFF6E2; font: 600 20px/1.1 var(--ui); }
   .pick:hover { background: rgba(255,255,255,.1); }
   .pick:active { background: rgba(255,255,255,.16); transform: none; box-shadow: none; }
-  .pick .cup { width: var(--q); height: var(--q); border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 50% 60%, #0F1C16, #1D2F27 70%);
+  .pick .cup { width: var(--q); height: var(--q); border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 50% 60%, #1A0818, #33152F 70%);
     box-shadow: inset 0 3px 5px rgba(0,0,0,.6), 0 1px 0 rgba(255,255,255,.12); }
   .pick .peg { width: 88%; height: 88%; transition: transform .15s; }
   .pick:hover .peg { transform: translateY(-3px); box-shadow: 0 7px 9px rgba(0,0,0,.5), 0 0 0 3px #fff; }
@@ -170,7 +170,7 @@
   /* ---------- The rules guide ----------
      Each page: one picture on the aubergine felt, made of the same board, pegs and pins as the game, then one or two
      short sentences. Their columns are .gcol, outside #board, so only the real board plays. */
-  #help { --guide-edge: #1F3229; --guide-more: #34483F; }
+  #help { --guide-edge: #2A1027; --guide-more: #4A2E46; }
   .guide-pic { --s: 32px; --g: 4px; --cw: 52px; --p: 13px; --q: 48px; position: relative; display: flex; align-items: center; justify-content: center; gap: 22px;
     margin: 2px 0 8px; padding: 9px; border-radius: 18px; background: radial-gradient(120% 100% at 50% 0%, var(--felt-top), var(--felt) 80%); }
   .guide-pic .count { display: none; }
@@ -180,8 +180,8 @@
   .guide-pic .vault .lid { top: 6px; }
   .guide-pic .surface { padding: 6px; }
   .guide-pic .gtray { display: grid; grid-template-columns: repeat(3, auto); gap: 6px; padding: 10px; border-radius: 14px;
-    background: radial-gradient(130% 100% at 50% 0%, #3E5E50, #1F3229); box-shadow: inset 0 3px 8px rgba(0,0,0,.5), 0 0 0 8px #5A3317; }
-  .guide-pic .gtray .cup { width: var(--q); height: var(--q); border-radius: 50%; display: grid; place-items: center; background: #13221B; position: relative; }
+    background: radial-gradient(130% 100% at 50% 0%, #5A3055, #2A1027); box-shadow: inset 0 3px 8px rgba(0,0,0,.5), 0 0 0 8px #5A3317; }
+  .guide-pic .gtray .cup { width: var(--q); height: var(--q); border-radius: 50%; display: grid; place-items: center; background: #22091F; position: relative; }
   .guide-pic .gtray .cup.here { box-shadow: var(--guide-ring); }
   .guide-pic .gtray .cup .guide-hand { left: 50%; top: 58%; }
   .garrow { flex: none; width: 54px; height: 40px; fill: none; stroke: #FFFDF6; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round;
@@ -542,9 +542,8 @@ async function newGame(lv) {
 function coach() {
   if (!Kit.coaching() || !G || G.result) return;
   if (G.cur.every(c => c >= 0)) { Kit.point($('okBtn')); return; }
-  const h = C.hint(G);
-  const c = h && sel >= 0 ? h.guess[sel] : 0;
-  Kit.point(pickEls[c]);
+  const c = C.suggest(G, Math.max(0, sel));
+  if (c >= 0) Kit.point(pickEls[c]);
 }
 
 /* ---------- Drawing ---------- */

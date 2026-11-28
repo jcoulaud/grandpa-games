@@ -866,7 +866,7 @@ function codeArt() {
     : k === 'w' ? `<circle cx="${x}" cy="${y}" r="2.5" fill="#FFFDF6" stroke="#2A1D10" stroke-width="1"/><circle cx="${x}" cy="${y}" r=".9" fill="#3A2A1A"/>`
     : `<circle cx="${x}" cy="${y}" r="1.1" fill="#8A6A48"/>`;
   const code = [0, 1, 2, 3];
-  const rows = [[[4, 0, 5, 1], 'bwwe'], [[0, 2, 1, 3], 'bbww'], [code, 'bbbb']];
+  const rows = [[[4, 0, 5, 1], 'wwee'], [[0, 2, 1, 3], 'bbww'], [code, 'bbbb']];
   let out = '';
   rows.forEach(([g, clue], k) => {
     const x = 30 + k * 26;
@@ -937,11 +937,16 @@ let newsSeen = asObject(GG.get('news-seen'));
 let newsHidden = Array.isArray(GG.get('news-hidden')) ? GG.get('news-hidden') : [];
 function newGames() {
   const now = Date.now();
+  // Another tab may have changed them: read them again.
+  newsSeen = { ...newsSeen, ...asObject(GG.get('news-seen')) };
+  const stored = GG.get('news-hidden');
+  if (Array.isArray(stored)) newsHidden = [...new Set([...newsHidden, ...stored])];
   const fresh = GAMES.filter(g => {
-    const added = g.added ? new Date(g.added + 'T00:00').getTime() : NaN;
-    if (!(now - added < 60 * DAY) || GG.meta(g.id)) return false;
+    if (!g.added || GG.meta(g.id)) return false;
+    // A game already shown keeps its 3 days, even past the 60 days: the 60 days only decide the first showing.
     const seen = newsSeen[g.id];
-    return !(typeof seen === 'number' && now - seen >= 3 * DAY);
+    if (typeof seen === 'number') return now - seen < 3 * DAY;
+    return now - new Date(g.added + 'T00:00').getTime() < 60 * DAY;
   });
   const unseen = fresh.filter(g => typeof newsSeen[g.id] !== 'number');
   if (unseen.length) {
@@ -1000,6 +1005,8 @@ function opening(e) {
 document.getElementById('games').addEventListener('click', opening);
 // Safari keeps the page in memory when Papi goes into a game. Coming back, redraw the tiles.
 addEventListener('pageshow', e => { if (e.persisted) render(); });
+// Back from a game in another tab, or after a long time open, the band and the tags follow what changed.
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') render(); });
 
 
 // Chrome and Edge offer to install the site as an app. Show the offer as a plain button.

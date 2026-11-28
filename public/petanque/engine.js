@@ -535,6 +535,8 @@ export function play(g, choice, record = false) {
 }
 // Takes back his last throw and Marius's throws after it. False when he has not thrown yet.
 export function undo(g) {
+  // A finished game stays finished: taking back its last throw would let the same win count again.
+  if (situation(g).over) return false;
   let i = g.actions.length - 1;
   while (i >= 0 && g.actions[i].who !== 'you') i--;
   if (i < 0) return false;
@@ -628,10 +630,11 @@ function judge(g, m, who, choice, samples, salt) {
   return total / samples;
 }
 // The best throw for a player, by trying each choice with his own hand. Used by Difficile and the hint.
-function best(g, who, samples = 8) {
+// shoot: whether a tir is among the choices. Marius may always shoot; his panel has no « Tir » at Facile.
+function best(g, who, samples = 8, shoot = true) {
   const m = situation(g).mene;
   const salt = mix(g.seed ^ 0xbee5, g.actions.length);
-  const choices = [...pointing(m, [0, -0.2, 0.2]), ...targets(m, who)];
+  const choices = [...pointing(m, [0, -0.2, 0.2]), ...(shoot ? targets(m, who) : [])];
   let top = null;
   for (const [i, c] of choices.entries()) {
     const v = judge(g, m, who, c, samples, mix(salt, i));
@@ -672,7 +675,7 @@ export function hint(g) {
   if (t.kind === 'cochonnet') return { aim: { x: 0, z: COCHONNET.start }, reason: 'Lancez le cochonnet à 7,5 m, une bonne longueur pour commencer.' };
   const s = situation(g),
     m = s.mene,
-    pick = best(g, 'you');
+    pick = best(g, 'you', 8, levelOf(g) !== 'facile');
   const p = point(m);
   let reason;
   if (pick.style === 'tir') reason = 'Tirez la boule de ' + NAME + ' : elle tient le point de trop près pour pointer.';

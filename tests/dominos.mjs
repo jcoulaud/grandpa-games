@@ -176,7 +176,40 @@ await g(() => { const v = GG.load('dominos'); delete v.G.level; localStorage.set
 await page.reload(); await wait(400);
 ok(await g(() => G.level === 'facile' && level === 'facile'), 'a save without a level loads at Facile');
 
-// 13. The sizes. A long line of 23 dominoes and a full hand, at every window of docs/design.md.
+// 13. He opens the manche at once: with seed 0 he holds the double six. The opening must not wait for the
+// names to leave the message line, and no late call may name a domino already played.
+await g(() => { crypto.getRandomValues = a => { a[0] = 0; return a; }; });
+await g(() => newGame('facile'));
+ok(await g(() => G.turn === 0 && !G.line.length && G.opening === Dominos.TILES.length - 1), 'with seed 0 he starts with the double six');
+ok(/Vous jouez contre .*\n.*double six/.test(await msg()), 'the line names the players, then says to lay the double six: ' + await msg());
+await click(page.locator(`#hand .dom[data-t="${27}"]`));
+await wait(1800);
+await myTurn();
+ok(await g(() => G.line.some(x => x.t === 27) && G.line.length >= 2 && !showing), 'he lays it within 1.6 s, and the others play after it');
+ok(!errors.length, 'no error from a late opening call' + (errors.length ? ': ' + errors.join(' | ') : ''));
+
+// 14. A memory that is full or blocked never stops the game: the move, the others' turn, a pass and the
+// next manche all go on, and the line says the game could not be saved.
+await page.reload(); await wait(400);
+await g(() => { Storage.prototype.setItem = function () { throw new DOMException('full', 'QuotaExceededError'); }; });
+await setGame([[[6, 2], [3, 3], [5, 0]], [[1, 0], [2, 2], [5, 5]], [[0, 0]]], [[4, 1], [1, 6]]);
+await click(tile(6, 2));
+await myTurn();
+ok(await g(() => G.line.length >= 3 && G.last && G.last.p !== 0), 'with no room to save, his move still hands over to the others, who play');
+ok(/n'a pas pu être enregistrée.*Le jeu continue/s.test(await msg()), 'the line says the game could not be saved, and goes on: ' + await msg());
+await setGame([[[3, 3], [5, 0]], [[1, 0], [2, 2]], []], [[4, 1], [1, 6]], { stock: null });
+await click(page.locator('#drawBtn'));
+await page.waitForFunction(() => !showing && (G.turn === 0 || !!G.end), null, { timeout: 20000 });
+ok(await g(() => G.last && G.last.p !== 0 || !!G.end), 'a pass with no room to save still lets the others play');
+await setGame([[[6, 2]], [[1, 0], [5, 5]], [[0, 0]]], [[4, 1], [1, 6]]);
+await click(tile(6, 2));
+await page.waitForFunction(() => !document.getElementById('sheet').hidden, null, { timeout: 5000 });
+await click(page.locator('#nextBtn'));
+await page.waitForFunction(() => G.manche === 2 && !showing && G.turn === 0 && G.line.length > 0 || (G.manche === 2 && G.turn === 0 && !showing), null, { timeout: 20000 });
+ok(await g(() => G.manche === 2 && G.hands.flat().length + G.stock.length + G.line.length === 28), 'with no room to save, the next manche is dealt and the others open it');
+ok(!errors.length, 'no page error with the memory full' + (errors.length ? ': ' + errors.join(' | ') : ''));
+
+// 15. The sizes. A long line of 23 dominoes and a full hand, at every window of docs/design.md.
 const LONG = [[0, 0], [0, 1], [1, 1], [1, 2], [2, 2], [2, 3], [3, 3], [3, 4], [4, 4], [4, 5], [5, 5], [5, 6], [6, 6], [6, 0], [0, 2], [2, 4], [4, 6], [6, 1], [1, 3], [3, 5], [5, 0], [0, 3], [3, 6]];
 const longLine = async p => p.evaluate(LONG => {
   const id = ([a, b]) => Dominos.TILES.findIndex(([x, y]) => x === Math.min(a, b) && y === Math.max(a, b));

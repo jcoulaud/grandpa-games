@@ -59,15 +59,8 @@
   // Two small tables, reused, so the hint can score a million rows quickly.
   const ca = new Uint8Array(8), cb = new Uint8Array(8);
   function score(code, guess) {
-    let black = 0;
-    ca.fill(0); cb.fill(0);
-    for (let i = 0; i < code.length; i++) {
-      if (code[i] === guess[i]) black++;
-      else { ca[code[i]]++; cb[guess[i]]++; }
-    }
-    let white = 0;
-    for (let c = 0; c < 8; c++) white += ca[c] < cb[c] ? ca[c] : cb[c];
-    return [black, white];
+    const k = key(code, guess);
+    return [k >> 3, k & 7];
   }
   // The same clue as one number, black * 8 + white, with no array made.
   function key(code, guess) {
@@ -188,6 +181,16 @@
     return { guess: best.slice(), left: S.length, worst: Math.max(1, Math.round(bestWorst * scale)), first: false };
   }
 
+  // A colour for hole i that the row accepts now: the hint's colour for that hole when it fits, else another
+  // colour of the hint, else the first colour allowed. -1 when the game is over. The coach points at it.
+  function suggest(G, i) {
+    if (G.result) return -1;
+    const h = hint(G);
+    const order = [h.guess[i], ...h.guess, ...Array.from({ length: G.colors }, (_, c) => c)];
+    const c = order.find(c => !refusal(G, i, c));
+    return c === undefined ? -1 : c;
+  }
+
   // A save read back must be a game this file could have made.
   function valid(G) {
     const L = G && LEVELS[G.level];
@@ -213,6 +216,6 @@
     return !result || set.length === 0;
   }
 
-  root.CodeSecret = { COLORS, LEVELS, OPENING, newGame, score, sentence, refusal, place, remove, submit, undo, full, playing,
+  root.CodeSecret = { COLORS, LEVELS, OPENING, newGame, score, sentence, refusal, suggest, place, remove, submit, undo, full, playing,
     allCodes, possible, fits, hint, valid, random };
 })(typeof window !== 'undefined' ? window : globalThis);

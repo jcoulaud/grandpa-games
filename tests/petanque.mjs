@@ -287,6 +287,40 @@ try {
     );
   }
   await setSize(1366, 680, 1);
+  // Ctrl+Z after the result goes past the greyed « Annuler » key: the game stays won, the win counts once.
+  const ended = (await saved()).actions.length;
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !Kit.isOpen());
+  await page.keyboard.press('Control+z');
+  assert.match(await msg(), /La partie est terminée/);
+  assert.equal((await saved()).actions.length, ended);
+  assert.equal((await saved()).wins, 3);
+  assert.equal(stats.filter((k) => k === 'won').length, 1);
+  // A game that ends on Marius's last throw with his win still sends the win to the statistics, once.
+  await page.evaluate(async () => {
+    const E = await import('/petanque/engine.js');
+    const g = E.fresh('facile', 0, 20);
+    const play = () => {
+      const t = E.turn(g);
+      E.play(g, t.who === 'cpu' ? E.cpuChoice(g) : t.kind === 'cochonnet' ? { aim: { x: 0, z: 7.5 } } : { style: 'demi', aim: E.situation(g).mene.cochonnet });
+      g.ack = E.situation(g).menes.length;
+    };
+    while (E.turn(g)) play();
+    const all = g.actions.length;
+    const h = E.fresh('facile', 0, 20);
+    h.actions = g.actions.slice(0, all - 1);
+    h.ack = E.situation(h).menes.length;
+    await GG.save('petanque', h, { summary: '' });
+  });
+  await page.reload();
+  await page.waitForSelector('#over.on', { timeout: 60000 });
+  assert.match(await page.textContent('#overTitle'), /gagné/);
+  assert.equal((await saved()).wins, 1);
+  await page.waitForFunction(() => GG.load('petanque').reported === true);
+  assert.equal(stats.filter((k) => k === 'won').length, 2);
+  await page.reload();
+  await page.waitForSelector('#over.on');
+  assert.equal(stats.filter((k) => k === 'won').length, 2);
   // A broken save starts a new game and keeps the wins.
   await page.evaluate(async () => {
     await GG.save('petanque', { v: 1, level: 'fort', wins: 4, seed: 44, actions: [null] }, { summary: '' });
@@ -307,7 +341,7 @@ try {
   await page.getByRole('heading', { name: 'Le jeu a changé ailleurs' }).waitFor();
   assert.equal(stats.filter((k) => k === 'start').length, starts);
   assert.deepEqual(errors, []);
-  assert.equal(stats.filter((k) => k === 'won').length, 1);
+  assert.equal(stats.filter((k) => k === 'won').length, 2);
   console.log('PASS petanque');
 } catch (e) {
   failed = true;

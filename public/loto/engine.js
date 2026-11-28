@@ -196,8 +196,11 @@
     const { mine } = setup(G), has = out(G);
     for (let c = 0; c < mine.length; c++)
       if (fullRows(mine[c], new Set(G.covered[c])) >= ROWS[G.phase]) return { G: win(G, -1, c), carton: c, phase: G.phase };
-    // The carton closest to the phase with his jetons, and what it lacks.
+    // Every carton is looked at. A carton whose rows are all out, only waiting for jetons, comes first (the
+    // one that lacks the fewest); otherwise the carton closest to the phase with his jetons.
     let best = null;
+    const better = (a, b) => (a.open.length > 0) !== (b.open.length > 0) ? a.open.length > 0
+      : a.open.length ? a.open.length < b.open.length : a.left < b.left;
     mine.forEach((carton, c) => {
       const set = new Set(G.covered[c]);
       const left = missing(carton, set, G.phase);
@@ -206,7 +209,8 @@
       const outRows = carton.filter(row => row.every(n => !n || has.has(n)))
         .map(row => row.filter(n => n && !set.has(n))).sort((a, b) => a.length - b.length);
       const open = outRows.length >= ROWS[G.phase] ? outRows.slice(0, ROWS[G.phase]).flat().sort((a, b) => a - b) : [];
-      if (!best || left < best.left) best = { carton: c, left, rows: fullRows(carton, set), open };
+      const mineNow = { carton: c, left, rows: fullRows(carton, set), open };
+      if (!best || better(mineNow, best)) best = mineNow;
     });
     return { why: best.open.length ? 'uncovered' : 'notyet', ...best, phase: G.phase };
   }

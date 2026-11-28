@@ -145,16 +145,45 @@ test('undo takes back his throw and Marius’s answers, and the same throw repla
   assert.equal(E.undo(E.fresh('facile', 0, 1)), false);
 });
 
-test('the hint and Marius only choose legal throws', () => {
-  const g = E.fresh('fort', 0, 77);
-  for (let guard = 0; E.turn(g) && guard < 40; guard++) {
-    const t = E.turn(g);
-    const c = t.who === 'you' ? E.hint(g) : E.cpuChoice(g);
-    if (t.who === 'you') assert.match(c.reason, /\.$/);
-    if (t.kind === 'boule') assert.ok(E.STYLES.includes(c.style));
-    if (c.style === 'tir') assert.ok(E.situation(g).mene.boules.some((b) => b.id === c.target && !b.dead && b.owner !== t.who));
-    E.play(g, c);
+test('the hint and Marius only choose legal throws, and the hint never shoots at Facile', () => {
+  for (const [level, seeds] of [['fort', [77]], ['facile', [77, 20, 31, 45, 58]]]) {
+    let targets = 0;
+    for (const seed of seeds) {
+      const g = E.fresh(level, 0, seed);
+      for (let guard = 0; E.turn(g) && guard < 60; guard++) {
+        const t = E.turn(g);
+        const c = t.who === 'you' ? E.hint(g) : E.cpuChoice(g);
+        if (t.who === 'you') assert.match(c.reason, /\.$/);
+        if (t.kind === 'boule') assert.ok(E.STYLES.includes(c.style));
+        if (c.style === 'tir') assert.ok(E.situation(g).mene.boules.some((b) => b.id === c.target && !b.dead && b.owner !== t.who));
+        // Facile has no « Tir » key, so its hint only points.
+        if (level === 'facile' && t.who === 'you' && t.kind === 'boule') {
+          assert.notEqual(c.style, 'tir', 'facile hint ' + seed);
+          if (E.situation(g).mene.boules.some((b) => !b.dead && b.owner === 'cpu')) targets++;
+        }
+        E.play(g, c);
+      }
+    }
+    if (level === 'facile') assert.ok(targets > 10, 'the hint met boules of Marius it could have shot');
   }
+});
+
+test('a finished game cannot be taken back, so its win counts once, also when Marius throws last', () => {
+  // Facile, seed 20, the default throw each time: he wins 7 to 1 on Marius's last throw.
+  const g = E.fresh('facile', 0, 20);
+  let last;
+  while (E.turn(g)) {
+    const t = E.turn(g);
+    last = t.who;
+    E.play(g, t.who === 'cpu' ? E.cpuChoice(g) : t.kind === 'cochonnet' ? { aim: { x: 0, z: 7.5 } } : { style: 'demi', aim: E.situation(g).mene.cochonnet });
+  }
+  assert.deepEqual(E.situation(g).score, { you: 7, cpu: 1 });
+  assert.equal(last, 'cpu');
+  assert.equal(g.wins, 1);
+  const n = g.actions.length;
+  assert.equal(E.undo(g), false);
+  assert.equal(g.actions.length, n);
+  assert.equal(g.wins, 1);
 });
 
 test('each level of Marius beats the level below, and a steady player wins less often at each level', () => {

@@ -389,9 +389,14 @@ function type(letter) {
   stay();
   if (G.result) return Kit.say('Cette grille est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.');
   const ws = WS()[word];
-  // The cell he is on holds a letter of the game: the letter goes in the next cell he can write.
   let i = at;
-  if (G.given[i] === '1') i = ws.cells.slice(ws.cells.indexOf(at)).find(k => G.given[k] !== '1') ?? -1;
+  // The cell he is on holds a letter of the game: the letter goes in the next empty cell he can write,
+  // after it in the word, else before it, else in a written cell after it.
+  if (G.given[i] === '1') {
+    const k0 = ws.cells.indexOf(at), free = ws.cells.filter(k => G.given[k] !== '1');
+    const after = k => ws.cells.indexOf(k) > k0;
+    i = free.find(k => after(k) && !filled(k)) ?? free.find(k => !filled(k)) ?? free.find(after) ?? free[0] ?? -1;
+  }
   if (i < 0) { window.Sound?.play('bad'); return Kit.say(`Les lettres de ce mot sont déjà données. Cliquez sur une autre case blanche.`); }
   const before = G, wasEmpty = !filled(i);
   G = M.write(G, i, letter);
@@ -849,6 +854,8 @@ addEventListener('keydown', e => {
   if (k === 'ArrowRight') { e.preventDefault(); return move(0, 1); }
   if (k === 'ArrowUp') { e.preventDefault(); return move(-1, 0); }
   if (k === 'ArrowDown') { e.preventDefault(); return move(1, 0); }
+  // Space presses a focused button or link, as everywhere; on the grid it takes the other word of the cell.
+  if (k === ' ' && e.target instanceof Element && e.target.closest('button, a, input, select, textarea, summary, [role="button"]')) return;
   if (k === ' ' && G) { e.preventDefault(); const o = wordsAt(at).find(w => w !== word); if (o !== undefined) choose(o, at); return; }
   if (k.length === 1) {
     const L = M.key(k);

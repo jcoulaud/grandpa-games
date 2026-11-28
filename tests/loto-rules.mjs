@@ -212,3 +212,19 @@ test('each level is harder than the one below', () => {
     assert.ok(s[a].now.firstCall > s[b].now.firstCall + 1, `the first neighbour of ${b} calls sooner`);
   }
 });
+
+// Review fix: a call looks at every carton. At Moyen with seed 2 and 67 numbers out, carton one has 4 jetons and
+// carton two has a row all out with only the 13 covered: the call names that row's numbers, not « pas encore ».
+test('a call that is not ready names the uncovered numbers on any carton, not only the first', () => {
+  let G = { ...L.newGame('moyen', 2), drawn: 67 };
+  for (const n of [20, 44, 60, 87]) G = L.cover(G, 0, n).G;
+  G = L.cover(G, 1, 13).G;
+  const r = L.call(G);
+  assert.equal(r.why, 'uncovered');
+  assert.equal(r.carton, 1);
+  assert.deepEqual(r.open, [23, 35, 46, 74]);
+  // Covering them makes the quine on carton two.
+  for (const n of r.open) G = L.cover(G, 1, n).G;
+  const won = L.call(G);
+  assert.ok(won.G && won.carton === 1);
+});

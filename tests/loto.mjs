@@ -172,9 +172,29 @@ await page.getByRole('button', { name: 'Difficile', exact: true }).click();
 await wait(200);
 ok(await page.locator('#cartons .carton').count() === 3, 'Difficile deals three cartons');
 
+// 14b. Review fixes. The keyboard alone can play: Tab reaches the numbers of the carton, which show a focus
+// ring, and Enter or Space puts a jeton. And after a jeton, the line names what the phase in play needs.
+await g(() => { G = Loto.newGame('moyen', 2); for (let i = 0; i < 67; i++) G = { ...G, drawn: G.drawn + 1 }; save(); render(); });
+await page.locator('#cartons .box.num').first().focus();
+await page.keyboard.press('Tab');
+const focused = await g(() => { const e = document.activeElement; return e && e.matches('#cartons .box.num') ? { c: +e.dataset.c, n: +e.dataset.n, ring: getComputedStyle(e).outlineStyle, tab: e.tabIndex } : null; });
+ok(focused && focused.tab === 0 && focused.ring === 'solid', 'Tab moves from number to number on the carton, with a visible ring');
+const kbN = await g(() => { const s = new Set(Loto.setup(G).order.slice(0, G.drawn)); const e = [...document.querySelectorAll('#cartons .box.num')].find(b => s.has(+b.dataset.n)); e.focus(); return +e.dataset.n; });
+await page.keyboard.press('Enter');
+ok(await g(n => G.covered.some(c => c.includes(n)), kbN), 'Enter puts a jeton on the focused number');
+const kbM = await g(() => { const s = new Set(Loto.setup(G).order.slice(0, G.drawn)); const e = [...document.querySelectorAll('#cartons .box.num')].find(b => s.has(+b.dataset.n) && !G.covered[+b.dataset.c].includes(+b.dataset.n)); e.focus(); return +e.dataset.n; });
+await page.keyboard.press(' ');
+ok(await g(n => G.covered.some(c => c.includes(n)), kbM), 'Space puts a jeton too');
+for (const [phase, words] of [[0, 'si une ligne est pleine'], [1, 'si deux lignes d’un même carton sont pleines'], [2, 'si un carton est plein']]) {
+  await g(p => { G = { ...Loto.newGame('moyen', 2), drawn: 67, phase: p, starts: Array(p + 1).fill(0), winners: Array.from({ length: p }, () => ({ who: 0, carton: 0, at: 0 })) }; save(); render(); }, phase);
+  const n = await g(() => Loto.numbersOf(Loto.setup(G).mine[0]).find(x => Loto.setup(G).order.slice(0, G.drawn).includes(x)));
+  await click(box(0, n));
+  ok((await msg()).endsWith(`« ${['Quine !', 'Double quine !', 'Carton plein !'][phase]} » ${words}.`), `after a jeton in phase ${phase + 1}, the line says when to call: ` + await msg());
+}
+
 // 15. Every window and size of docs/design.md: the table fits, the boxes and the board are large enough,
 // the text is 20 px or more, the buttons 44 px or more, the longest message fits, and the end dialog fits.
-const LONG = 'Presque ! Le 12, le 47 et le 88 sont sortis mais n’ont pas de jeton : couvrez-les, puis criez.';
+const LONG = 'Jeton posé sur le 88. Cliquez sur « Tirer le numéro », ou sur « Double quine ! » si deux lignes d’un même carton sont pleines.';
 const sizes = [[1366, 680, 1], [1093, 530, 1], [1920, 1000, 1], [1280, 620, 1], [1366, 680, 1.3], [1920, 1000, 1.75], [390, 760, 1]];
 for (const [w, h, z] of sizes) for (const lv of ['facile', 'fort']) {
   const p = await browser.newPage({ viewport: { width: w, height: h }, reducedMotion: 'reduce', ...(w < 700 ? { isMobile: true, hasTouch: true } : {}) });
