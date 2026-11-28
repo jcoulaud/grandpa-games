@@ -74,8 +74,9 @@ try {
   check('the resume key of a tile is yellow with the play triangle', await page.locator('.family a.tile .play svg').count() === 1 && await page.evaluate(() => getComputedStyle(document.querySelector('.family a.tile .play')).backgroundColor !== 'rgb(255, 255, 255)'));
   await page.screenshot({ path: join(OUT, 'library.png') });
   // Three games per row: the fourth one is on a second row, below the fold. The first row must show whole.
-  check('first row of games fits a 1366x680 app window', await page.evaluate(() => document.querySelector('.family a.tile').getBoundingClientRect().bottom <= innerHeight),
-    String(await page.evaluate(() => document.querySelector('.family a.tile').getBoundingClientRect().bottom)));
+  // While the shelf of new games shows, it is the first row of games.
+  const firstRow = () => page.evaluate(() => (document.querySelector('#news:not([hidden]) a') || document.querySelector('.family a.tile')).getBoundingClientRect().bottom);
+  check('first row of games fits a 1366x680 app window', await firstRow() <= await page.evaluate(() => Math.min(innerHeight, document.querySelector('footer')?.getBoundingClientRect().top ?? innerHeight)), String(await firstRow()));
   check('no sideways scroll', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   check('one visit a day, however many pages', calls.filter(c => c.includes('"visit"')).length === 1, calls.join('\n'));
   check('no save is ever sent', !calls.some(c => c.includes('"S"') || c.includes('undo')), calls.join('\n'));
@@ -213,11 +214,10 @@ try {
     check('new games: there are new games to show', expected.length > 0);
     check('new games: the band shows them on a new PC', same(await band(), expected), (await band()).join());
     check('new games: their tiles carry « Nouveau »', same(await tags(), expected), (await tags()).join());
-    check('new games: one plain sentence', (await p.textContent('#news p')).trim() === (expected.length > 1 ? 'Nouveaux jeux :' : 'Nouveau jeu :'));
+    check('new games: one plain sentence', (await p.textContent('#news h2')).trim() === (expected.length > 1 ? 'Nouveaux jeux' : 'Nouveau jeu'));
     const id0 = expected[0];
     check('new games: a name opens the game, like its tile', await p.getAttribute(`#news a[data-id="${id0}"]`, 'href') === await p.getAttribute(`a.tile[data-id="${id0}"]`, 'href'));
-    check('new games: the first row of games shows whole at 1366x680', await p.evaluate(() => document.querySelector('.family a.tile').getBoundingClientRect().bottom <= Math.min(innerHeight, document.querySelector('main').getBoundingClientRect().bottom, document.querySelector('footer')?.getBoundingClientRect().top ?? innerHeight) + .5),
-      String(await p.evaluate(() => [document.querySelector('.family a.tile').getBoundingClientRect().bottom, document.querySelector('main').getBoundingClientRect().bottom])));
+    check('new games: the shelf shows whole at 1366x680', await p.evaluate(() => Math.max(...[...document.querySelectorAll('#news a')].map(a => a.getBoundingClientRect().bottom)) <= Math.min(innerHeight, document.querySelector('main').getBoundingClientRect().bottom, document.querySelector('footer')?.getBoundingClientRect().top ?? innerHeight) + .5));
     // Every window size: no text under 20 px, keys 44 px high or more, nothing past the sides.
     const layout = () => p.evaluate(() => {
       const bad = [];

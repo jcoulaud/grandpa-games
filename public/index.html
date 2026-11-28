@@ -122,34 +122,44 @@
 
   a.tile.opening { opacity: .85; transform: none; }
 
-  /* New games: one slim band between the intro line and the games, and a « Nouveau » tag on their tiles.
-     It names each new game with its icon, opens it in one click, and « Masquer » puts it away for good. */
-  #news { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 6px; margin-top: calc(-10px - var(--air) / 2); padding: 4px 4px 4px 16px;
-    border-radius: 20px; background: rgb(255 255 255 / .09); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .18); }
+  /* New games: a shelf above the families, built like one: a heading with its line, then one card per new game in
+     the felt of its table, which opens it in one click. « Masquer » puts the shelf away for good. The tiles of the
+     new games below carry a « Nouveau » tag. */
+  #news { margin: 0 0 calc(clamp(18px, 3vh, 30px) * var(--k) + var(--air)); }
   #news[hidden] { display: none; }
-  #news p { margin: 0 8px 0 0; font: 500 20px/1.3 var(--ui); color: #fff; }
-  #news p b { font-weight: 700; color: var(--gold); }
-  #news a { display: flex; align-items: center; gap: 7px; min-height: 44px; padding: 4px 12px 4px 5px; border-radius: 14px;
-    background: var(--face); color: var(--text); font: 600 20px/1.2 var(--ui); text-decoration: none; box-shadow: 0 2px 0 rgb(0 0 0 / .28); }
-  #news a img { width: 32px; height: 32px; flex: none; border-radius: 9px; }
-  #news a:hover { background: #fff; }
-  #news a:focus-visible, #news button:focus-visible { outline: 4px solid var(--gold); outline-offset: 3px; }
-  #news button { margin-left: auto; min-height: 44px; padding: 0 14px; border: 0; border-radius: 14px; cursor: pointer;
-    background: rgb(0 0 0 / .34); color: #fff; font: 600 20px var(--ui); }
-  #news button:hover { background: rgb(0 0 0 / .5); }
-  .art .new { position: absolute; left: 12px; top: 12px; z-index: 1; padding: 3px 12px; border-radius: 999px;
-    background: var(--face); color: #0B5A4E; font: 700 20px/1.25 var(--ui); box-shadow: 0 2px 6px rgb(0 0 0 / .3); }
-  /* A laptop: the band takes the place of the line under the heading, so the first row of games stays whole
-     at 1366 by 680. */
+  #news .head { margin: 0 0 calc(14px * var(--k)); display: flex; align-items: center; gap: 14px; }
+  #news h2 { margin: 0; display: flex; align-items: center; gap: 12px; font: 700 calc(28px * var(--k)) var(--title); color: #fff; white-space: nowrap; }
+  #news h2 svg { width: calc(34px * var(--k)); height: calc(34px * var(--k)); flex: none; }
+  #news .rule { flex: 1; min-width: 12px; border-top: 2px solid rgb(255 200 61 / .45); }
+  #news .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(196px * var(--k))), 1fr)); gap: calc(14px * var(--k)); }
+  #news a { position: relative; display: flex; align-items: center; gap: 12px; min-height: calc(76px * var(--k)); padding: 10px 14px 10px 10px;
+    border-radius: 20px; background: radial-gradient(130% 160% at 0% 0%, var(--c1), var(--c2) 62%);
+    color: #fff; font: 700 calc(22px * var(--k))/1.15 var(--ui); text-decoration: none; text-shadow: 0 1px 2px rgb(0 0 0 / .35);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / .2), 0 2px 4px rgb(0 0 0 / .2), 0 10px 22px rgb(0 0 0 / .24); transition: transform .14s, box-shadow .14s; }
+  #news a img { width: calc(52px * var(--k)); height: calc(52px * var(--k)); flex: none; border-radius: 14px; box-shadow: 0 0 0 2px rgb(255 255 255 / .9), 0 3px 8px rgb(0 0 0 / .3); }
+  #news a:hover { transform: translateY(-2px); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .3), 0 4px 8px rgb(0 0 0 / .22), 0 16px 30px rgb(0 0 0 / .3); }
+  #news a:focus-visible, #news button:focus-visible { outline: 5px solid var(--gold); outline-offset: 4px; }
+  #news button { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px 0 10px; border: 0; border-radius: 14px; cursor: pointer;
+    background: rgb(0 0 0 / .2); color: #fff; font: 600 20px var(--ui); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .3); }
+  #news button svg { width: 18px; height: 18px; flex: none; }
+  #news button:hover { background: rgb(0 0 0 / .38); }
+  @media (prefers-reduced-motion: reduce) { #news a { transition: none; } #news a:hover { transform: none; } }
+  .art .new { position: absolute; left: 12px; top: 12px; z-index: 1; display: flex; align-items: center; gap: 6px; padding: 3px 12px 3px 8px; border-radius: 999px;
+    background: var(--gold); color: #2A2000; font: 700 20px/1.25 var(--ui); box-shadow: 0 2px 6px rgb(0 0 0 / .3); }
+  .art .new svg { width: 18px; height: 18px; flex: none; }
+  /* A laptop: the shelf takes the place of the line under the heading. */
   @media (min-width: 700px) and (max-height: 760px) {
-    main:has(#news:not([hidden])) { padding-top: calc(8px + var(--air)); }
-    main:has(#news:not([hidden])) .greeting { margin-bottom: 0; }
+    main:has(#news:not([hidden])) .greeting { margin-bottom: calc(14px + var(--air)); }
     main:has(#news:not([hidden])) #tagline { display: none; }
   }
   @media (max-width: 699px) {
-    #news { margin-top: 0; padding: 10px; }
-    #news p { flex-basis: 100%; }
-    #news button { margin-left: 0; }
+    #news .head { gap: 8px; }
+    #news h2 { font-size: 22px; gap: 8px; }
+    #news h2 svg { width: 28px; height: 28px; }
+    #news .rule { display: none; }
+    #news button { margin-left: auto; padding: 0 12px 0 9px; }
+    #news .cards { grid-template-columns: 1fr 1fr; gap: 10px; }
+    #news a { flex-direction: column; justify-content: center; gap: 8px; padding: 12px 8px; text-align: center; }
   }
 
   /* Keep the desktop controls in one row while the library scrolls. */
@@ -923,7 +933,9 @@ function petanqueArt() {
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 const PLAY = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3.2v13.6a1 1 0 0 0 1.5.86l11-6.8a1 1 0 0 0 0-1.72l-11-6.8A1 1 0 0 0 5 3.2z"/></svg>';
-const art = (g, isNew) => `<div class="art" style="background: radial-gradient(90% 120% at 50% 0%, ${g.felt[0]}, ${g.felt[1]})">${isNew ? '<span class="new">Nouveau</span>' : ''}${g.scene()}</div>`;
+// A four-point star, the mark of what is new: on the band and on the tiles.
+const SPARK = 'M12 1.5c.5 4.9 2.6 8 8.5 10.5-5.9 2.5-8 5.6-8.5 10.5-.5-4.9-2.6-8-8.5-10.5C9.4 9.5 11.5 6.4 12 1.5z';
+const art = (g, isNew) => `<div class="art" style="background: radial-gradient(90% 120% at 50% 0%, ${g.felt[0]}, ${g.felt[1]})">${isNew ? `<span class="new"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${SPARK}" fill="currentColor"/></svg>Nouveau</span>` : ''}${g.scene()}</div>`;
 // The line a game saved for the library, such as "Trou 3 sur 9 en cours · 2 parcours finis".
 const partsOf = meta => typeof meta?.summary === 'string' && meta.summary ? meta.summary.split(' · ') : [];
 const inProgress = parts => parts.some(p => /en cours/i.test(p));
@@ -963,10 +975,11 @@ function renderNews(fresh) {
   const shown = fresh.filter(g => !newsHidden.includes(g.id)).sort((a, b) => order(a) - order(b));
   box.hidden = !shown.length;
   if (!shown.length) { box.textContent = ''; return; }
-  const lead = shown.length === 1 ? '<b>Nouveau jeu :</b>' : '<b>Nouveaux jeux :</b>';
-  box.innerHTML = `<p id="news-title">${lead}</p>
-    ${shown.map(g => `<a href="${g.id}/" data-id="${g.id}"><img src="${g.id}/icon.svg" width="32" height="32" alt="">${esc(g.title)}</a>`).join('')}
-    <button type="button">Masquer</button>`;
+  const lead = shown.length === 1 ? 'Nouveau jeu' : 'Nouveaux jeux';
+  const seal = `<svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="17" fill="#FFC83D"/><path d="${SPARK}" fill="#2A2000" transform="translate(7 7) scale(.92)"/></svg>`;
+  box.innerHTML = `<div class="head"><h2 id="news-title">${seal}${lead}</h2><span class="rule"></span>
+      <button type="button"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>Masquer</button></div>
+    <div class="cards">${shown.map(g => `<a href="${g.id}/" data-id="${g.id}" style="--c1: ${g.felt[0]}; --c2: ${g.felt[1]}"><img src="${g.id}/icon.svg" width="52" height="52" alt="">${esc(g.title)}</a>`).join('')}</div>`;
   box.querySelector('button').onclick = () => {
     newsHidden = [...new Set([...newsHidden, ...shown.map(g => g.id)])];
     GG.set('news-hidden', newsHidden);
