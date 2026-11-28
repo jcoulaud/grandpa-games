@@ -118,8 +118,7 @@ try {
     }, id);
   const one = await ballAt(1);
   await page.mouse.click(one.x, one.y);
-  assert.match(await page.getAttribute('#aimLabel', 'aria-label'), /^La \d+ |^La noire$|^La bande$/);
-  assert.match(await page.textContent('#msg'), /^Vous visez la 1 jaune : cliquez sur « Tirer »\.$/);
+  assert.match(await page.textContent('#msg'), /^Vous visez la jaune pleine : cliquez sur « Tirer »\.$/);
   // His own aim: « Tirer » is the nudge, and the automatic hint waits.
   assert.equal(await page.getAttribute('#shoot', 'data-nudge'), '');
   assert.equal(await page.getAttribute('#hintBtn', 'data-auto'), 'no');
@@ -191,7 +190,7 @@ try {
   assert.equal(await page.textContent('#msg'), 'C’est une bille de René : la toucher d’abord est une faute. Cliquez sur une de vos billes.');
   const three = await ballAt(3);
   await page.mouse.click(three.x, three.y);
-  assert.match(await page.textContent('#msg'), /^Vous visez la 3 rouge vers le trou du coin en bas à droite : cliquez sur « Tirer »\.$/);
+  assert.match(await page.textContent('#msg'), /^Vous visez la rouge pleine vers le trou du coin en bas à droite : cliquez sur « Tirer »\.$/);
   await page.click('#shoot');
   await page.waitForFunction(() => GG.load('billard').shots > 4);
   assert.ok(!(await saved()).balls.some((b) => b.id === 3), 'the aimed ball drops');

@@ -71,9 +71,6 @@
   .keys .arrow { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
   .meter { flex: 1; min-width: 0; text-align: center; color: var(--ink); font: 600 20px/1.1 var(--ui); }
   .meter > span { display: block; min-height: 1.1em; }
-  /* The ball he aims at: a small copy of it, so the panel never moves. */
-  #aimLabel { display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
-  #aimLabel .mb { width: 30px; height: 30px; } #aimLabel .mb b { width: 19px; height: 19px; font-size: 13px; }
   #segments { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; margin-bottom: 4px; }
   #segments i { height: 14px; border-radius: 2px; background: #DED4C2; }
   #segments i.on, .bl-seg i.on { background: #438251; }
@@ -83,7 +80,11 @@
   #spinBall { display: block; position: relative; width: 30px; height: 30px; margin: 0 auto 2px; border-radius: 50%;
     background: radial-gradient(circle at 35% 30%, #fff, #E6E1D4 70%, #BDB6A6); box-shadow: 0 1px 3px rgba(0,0,0,.4); }
   #spinBall i { position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; margin: -4.5px; border-radius: 50%; background: #C8202B; transition: translate .15s; }
-  #aimArrow { display: block; height: 22px; margin-bottom: 2px; }
+  /* The aim: five notches on each side of the straight line, lit from the middle as the arrows turn the cue. */
+  #aimScale { display: grid; grid-template-columns: repeat(11, 1fr); align-items: center; gap: 2px; margin-bottom: 2px; }
+  #aimScale i { height: 14px; border-radius: 2px; background: #DED4C2; }
+  #aimScale i.mid { height: 18px; background: #2A2420; }
+  #aimScale i.on { background: #2F6FA8; }
   /* « Déplacer la blanche » shows beside « Tirer » only while he has the white in hand, so the panel never grows. */
   .actions { display: flex; gap: 8px; margin-top: clamp(0px, 1.6vh - 10px, 8px); }
   .actions button { flex: 1 1 0; min-width: 0; }
@@ -178,9 +179,9 @@
     <aside id="console" aria-labelledby="panelTitle">
       <h2 id="panelTitle">Votre coup</h2>
       <div class="controls"><h3>Visée</h3><div class="keys">
-        <button id="turnLeft" aria-label="Tourner la queue un peu vers la gauche"><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H5M11 5l-7 7 7 7"/></svg></button>
-        <div class="meter"><span id="aimLabel">Bande</span></div>
-        <button id="turnRight" aria-label="Tourner la queue un peu vers la droite"><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 5l7 7-7 7"/></svg></button></div></div>
+        <button id="turnLeft" aria-label="Tourner la queue un peu vers la gauche"><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 15a8 8 0 0 0-14-5M4 4v6h6"/></svg></button>
+        <div class="meter"><div id="aimScale" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i class="mid"></i><i></i><i></i><i></i><i></i><i></i></div><span id="aimLabel">Tout droit</span></div>
+        <button id="turnRight" aria-label="Tourner la queue un peu vers la droite"><svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 15a8 8 0 0 1 14-5M20 4v6h-6"/></svg></button></div></div>
       <div class="controls"><h3>Force</h3><div class="keys">
         <button id="weaker" aria-label="Moins de force">−</button>
         <div class="meter"><div id="segments" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span id="forceLabel">5 sur 10</span></div>
@@ -203,7 +204,7 @@
     <div class="bl-pic" aria-hidden="true"><div class="bl-keys"><span>−</span><span class="bl-seg"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></span><span>+</span></div>
       <span class="guide-btn primary here">Tirer</span></div>
     <p class="guide-lead">Réglez la force, puis cliquez sur « Tirer ».</p>
-    <p class="guide-more">Les flèches ← et → tournent la queue un tout petit peu, pour viser juste.</p></section>
+    <p class="guide-more">Les deux flèches de « Visée » tournent la queue un tout petit peu, pour viser juste.</p></section>
   <section class="page"><h3>Vos billes, puis la noire</h3>
     <div class="bl-pic" aria-hidden="true" data-pic="groups"></div>
     <p class="guide-lead">Rentrez vos sept billes, puis la noire.</p>

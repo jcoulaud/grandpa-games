@@ -1436,10 +1436,11 @@ export function cpuShot(g) {
   return legal ? aim : shot;
 }
 
-// A ball as he reads it: « la 3 rouge », « la 11 rouge rayée », « la noire ».
+// A ball as he sees it: « la rouge pleine », « la rouge rayée », « la noire ». No number: he can hardly read
+// the small digits, and the colour and the family tell each ball apart.
 const COLOUR_NAMES = { 1: 'jaune', 2: 'bleue', 3: 'rouge', 4: 'violette', 5: 'orange', 6: 'verte', 7: 'bordeaux' };
 export const ballName = (id) =>
-  id === 0 ? 'la blanche' : id === 8 ? 'la noire' : `la ${id} ${COLOUR_NAMES[id > 8 ? id - 8 : id]}${id > 8 ? ' rayée' : ''}`;
+  id === 0 ? 'la blanche' : id === 8 ? 'la noire' : `la ${COLOUR_NAMES[id > 8 ? id - 8 : id]} ${id > 8 ? 'rayée' : 'pleine'}`;
 
 export function hint(g) {
   const fallbacks = [];

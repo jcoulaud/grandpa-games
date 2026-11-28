@@ -120,6 +120,7 @@ function preview() {
     path = E.previewPath(s.balls, shotOf()),
     contact = line.contact;
   s.cue = { angle: aim.angle, pull: 0.02 + aim.power * 0.006, alpha: 1 };
+  aimScale();
   s.preview = {
     aim: [cue, contact],
     ghost: line.hit != null ? contact : null,
@@ -127,9 +128,6 @@ function preview() {
     cue: line.hit != null ? cut(afterContact(path.cue, contact), show.cue) : [],
     gold: show.gold && path.potted
   };
-  // The ball the cue points at, as a small copy of it, or « Bande »: short enough for the narrowest panel.
-  $('aimLabel').innerHTML = line.hit != null ? trayBall(line.hit) : 'Bande';
-  $('aimLabel').setAttribute('aria-label', line.hit != null ? upper(ballName(line.hit)) : 'La bande');
   view.draw();
 }
 // The cue ball's path from the contact on: the preview already draws the line up to it.
@@ -145,6 +143,17 @@ function afterContact(pts, contact) {
     }
   });
   return [contact, ...pts.slice(best + 1)];
+}
+// The scale of « Visée »: the middle notch is the line he chose by a click, each press of an arrow lights one
+// notch to its side, so he sees that the arrows move the cue. Past five presses the scale stays full.
+function aimScale() {
+  const n = aim.nudge ?? 0,
+    side = Math.max(-5, Math.min(5, n));
+  [...$('aimScale').children].forEach((cell, i) => {
+    const k = i - 5;
+    cell.classList.toggle('on', k !== 0 && Math.sign(k) === Math.sign(side) && Math.abs(k) <= Math.abs(side));
+  });
+  $('aimLabel').textContent = n === 0 ? 'Tout droit' : Math.abs(n) + (Math.abs(n) > 1 ? ' crans' : ' cran') + (n < 0 ? ' à gauche' : ' à droite');
 }
 function controls() {
   const shown = Math.round(aim.power);
@@ -242,6 +251,7 @@ function click(ev) {
     hand = { x: p.x, y: p.y };
     placing = false;
     aim.angle = aimAtNearest();
+    aim.nudge = 0;
     render('La blanche est posée. Cliquez sur une bille pour viser, puis sur « Tirer ».');
     Kit.point($('shoot'));
     return;
@@ -259,6 +269,7 @@ function click(ev) {
     to = b ?? p;
   view.state.rings = [];
   aim.angle = Math.atan2(to.y - cue.y, to.x - cue.x);
+  aim.nudge = 0;
   // A ball he may not touch first: aimed at as he asked, with a warning.
   if (b && !E.legalFirst(game, b.id)) {
     aimed(true, true);
@@ -302,6 +313,7 @@ function hover(ev) {
 function turn(dir) {
   if (blocked() || placing) return;
   aim.angle += dir * STEP;
+  aim.nudge = (aim.nudge ?? 0) + dir;
   view.state.rings = [];
   if ($('hintBtn').dataset.auto !== 'no') aimed(true, true); // once: the hand is not pointed again at each step
   preview();
