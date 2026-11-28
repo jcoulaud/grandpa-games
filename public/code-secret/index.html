@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code secret · Jeux de Papi</title>
+<meta name="description" content="Le jeu du code secret en grand, pour les grands-parents : devinez la combinaison de couleurs cachée grâce aux indices, avec des pions marqués d’un symbole, une aide qui explique et trois niveaux. Sans publicité ni compte.">
+<link rel="canonical" href="https://jeux-papi.fr/code-secret/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Jeux de Papi">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://jeux-papi.fr/code-secret/">
+<meta property="og:title" content="Code secret · Jeux de Papi">
+<meta property="og:description" content="Devinez la combinaison de couleurs cachée grâce aux indices. Sans publicité ni compte.">
+<meta property="og:image" content="https://jeux-papi.fr/og/jeux/code-secret.jpg">
+<meta property="og:image:alt" content="Code secret, sur Jeux de Papi.">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../lib/kit.css">
+<style>
+  /* The code secret plays on an aubergine felt, the cloth of a games table in a parlour. The board is an old
+     parlour game in honey beech inside a walnut rim, with brass numbers, painted wooden pegs and, at its end,
+     the hidden code under a hinged lid. */
+  :root {
+    --felt-top: #7E4A78; --felt: #341630; --shade: 44,18,40; --accent: #6E3A68;
+    --s: 52px; --cw: 70px; --p: 20px; --q: 60px;
+    --beech: #D9A866; --walnut: #5A3317; --brass: #C9A043;
+  }
+  #title svg { width: 32px; height: 32px; }
+  button.game { --accent: #6E3A68; }
+  button.game:hover { background: #84507C; }
+  button.game:active { background: #57284F; }
+
+  #table { position: relative; overflow: hidden; display: flex; }
+  #stage { margin: auto; display: flex; align-items: center; gap: var(--gap, 28px); padding: 8px 16px 12px; }
+  /* A phone: the tray goes under the board, and the board scrolls sideways to the column in play. */
+  #stage.stack { flex-direction: column; align-items: stretch; width: 100%; margin: 0; padding: 4px 8px 8px; gap: 10px; }
+  #stage.stack #boardWrap { overflow-x: auto; overflow-y: hidden; touch-action: pan-x; padding-bottom: 6px; }
+
+  /* ---------- The board ----------
+     A walnut rim around a beech playing surface, with a faint grain along its length. */
+  .board { position: relative; flex: none; display: inline-flex; padding: 12px; border-radius: 22px;
+    background: linear-gradient(160deg, #75451F, #4A2A10 70%);
+    box-shadow: 0 20px 40px rgba(0,0,0,.45), inset 0 2px 0 rgba(255,230,190,.25), inset 0 -3px 0 rgba(0,0,0,.35); }
+  .surface { display: flex; align-items: stretch; gap: 4px; padding: 10px 10px; border-radius: 13px;
+    background:
+      radial-gradient(120% 90% at 30% 0%, rgba(255,240,210,.35), transparent 60%),
+      repeating-linear-gradient(180deg, rgba(120,66,18,.07) 0 2px, transparent 2px 9px),
+      repeating-linear-gradient(176deg, rgba(255,255,255,.05) 0 1px, transparent 1px 23px),
+      linear-gradient(180deg, #E4B678, #C78B4A);
+    box-shadow: inset 0 3px 8px rgba(60,30,5,.45), inset 0 0 0 1px rgba(60,30,5,.4); }
+
+  /* A column: one try. Its number on a brass disc, the holes, the clue pins in an ivory inlay, and the counts. */
+  .col { position: relative; flex: none; width: var(--cw); display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 6px 0 6px; border-radius: 12px; }
+  .col + .col::before { content: ""; position: absolute; left: -3px; top: 14px; bottom: 14px; border-left: 1px solid rgba(90,48,12,.28);
+    box-shadow: 1px 0 0 rgba(255,240,210,.35); }
+  .num { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font: 700 20px/1 var(--ui); color: #3A2A05;
+    background: radial-gradient(circle at 35% 30%, #F8E39A, #C9A043 55%, #86661F); box-shadow: 0 2px 3px rgba(60,30,5,.5), inset 0 -1px 0 rgba(0,0,0,.2); }
+  .holes { display: flex; flex-direction: column; align-items: center; gap: var(--g, 6px); }
+  .hole { position: relative; width: var(--s); height: var(--s); display: grid; place-items: center; border-radius: 50%; }
+  /* The drilled hole: dark, with a bevel lit from above. */
+  .hole::before { content: ""; position: absolute; width: 56%; height: 56%; border-radius: 50%;
+    background: radial-gradient(circle at 50% 62%, #1A0D04 0 40%, #3E220B 75%, #6B4119);
+    box-shadow: 0 1px 0 rgba(255,240,210,.55), inset 0 2px 3px rgba(0,0,0,.6); }
+  /* The column in play is lit, like the lamp of a parlour over the board. */
+  .col.now { background: rgba(255,250,232,.5); box-shadow: 0 0 0 2px rgba(255,250,232,.65), 0 0 22px rgba(255,240,200,.55); }
+  .col.now .hole { cursor: pointer; }
+  /* The hole where the next colour goes: a dashed yellow ring with a dark edge. */
+  .col.now .hole.target::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 4px dashed var(--gold);
+    box-shadow: 0 0 0 2px rgba(58,34,8,.7), inset 0 0 0 2px rgba(58,34,8,.7); animation: target 1.6s ease-in-out infinite; pointer-events: none; }
+  @keyframes target { 50% { transform: scale(1.07); } }
+  .col.now .hole:hover:not(.target)::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; border: 3px solid #fff; pointer-events: none; }
+  .col.future { opacity: .78; }
+  .col.played { cursor: pointer; }
+  .col.played:hover { background: rgba(255,255,255,.18); }
+
+  /* A peg: a painted wooden dome with its symbol. The symbol keeps its colour apart from every other one. */
+  .peg { position: relative; width: 90%; height: 90%; border-radius: 50%; display: grid; place-items: center; color: var(--k);
+    background:
+      radial-gradient(circle at 34% 28%, rgba(255,255,255,.7) 0 7%, rgba(255,255,255,0) 30%),
+      radial-gradient(circle at 50% 50%, var(--c) 0 58%, color-mix(in srgb, var(--c), #000 22%) 76%, color-mix(in srgb, var(--c), #000 45%) 100%);
+    box-shadow: 0 3px 5px rgba(40,18,2,.5), 0 0 0 1px rgba(40,18,2,.35); }
+  .peg svg { width: 54%; height: 54%; fill: currentColor; filter: drop-shadow(0 1px 0 rgba(0,0,0,.18)); }
+  .peg.drop { animation: drop .42s cubic-bezier(.3,.7,.4,1.3) both; }
+  @keyframes drop { 0% { transform: translateY(-46%) scale(1.3); opacity: 0; } 55% { transform: translateY(4%) scale(.96); opacity: 1; } 100% { transform: none; } }
+  .peg.lift { animation: lift .3s ease-in both; }
+  @keyframes lift { to { transform: translateY(-40%) scale(1.25); opacity: 0; } }
+  .col.hop .peg { animation: hop .52s cubic-bezier(.3,.6,.4,1) var(--d, 0ms) both; }
+  @keyframes hop { 40% { transform: translateY(-26%) scale(1.08); } 70% { transform: translateY(4%); } }
+
+  /* The clue: an ivory inlay of small holes. A black pin, full: right colour, right place. A white pin with a
+     dark hole in it, a ring: right colour, other place. Shape tells them apart, not only colour. */
+  .clue { display: grid; grid-template-columns: repeat(2, var(--p)); gap: 4px; padding: 6px; border-radius: 10px; background: #EFE0BE;
+    box-shadow: inset 0 2px 3px rgba(90,50,10,.4), 0 1px 0 rgba(255,240,210,.6); }
+  .pin { width: var(--p); height: var(--p); border-radius: 50%; display: grid; place-items: center; }
+  .pin::before { content: ""; width: 34%; height: 34%; border-radius: 50%; background: #8A6A48; box-shadow: inset 0 1px 1px rgba(0,0,0,.5); }
+  .pin.b, .pin.w { box-shadow: 0 2px 2px rgba(40,18,2,.45); }
+  .pin.b { background: radial-gradient(circle at 35% 30%, #8C8C8C 0 9%, #202020 42%, #050505); }
+  .pin.b::before { display: none; }
+  .pin.w { background: #FFFDF6; border: 2px solid #2A1D10; }
+  .pin.w::before { width: 36%; height: 36%; background: #3A2A1A; }
+  .pin.pop { animation: pinIn .36s cubic-bezier(.3,.7,.4,1.4) var(--d, 0ms) both; }
+  @keyframes pinIn { from { transform: scale(0); opacity: 0; } }
+  /* The counts, on the wood under the clue: the same two shapes with their numbers. */
+  .count { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 10px; min-height: 26px; font: 700 21px/26px var(--ui); color: #3A2208; font-variant-numeric: tabular-nums; }
+  .count span { display: inline-flex; align-items: center; gap: 4px; }
+  .count svg, .note svg { width: 17px; height: 17px; flex: none; }
+  .two .count { flex-direction: column; align-items: flex-start; min-height: 52px; }
+  /* A low window: the counts alone, on the ivory inlay, in place of the pins. */
+  .compact .clue { display: none; }
+  .compact .col .count { padding: 2px 8px; border-radius: 10px; background: #EFE0BE; box-shadow: inset 0 2px 3px rgba(90,50,10,.4); }
+  .compact .col:not(.played) .count { visibility: hidden; }
+  .compact .num { width: 30px; height: 30px; }
+  .compact .col, .compact .vault { gap: 6px; }
+
+  /* The hidden code, at the end of the board, under a hinged lid with a brass plate. */
+  .vault { position: relative; flex: none; width: calc(var(--cw) * 1.1); margin-left: 10px; display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 6px 0; border-radius: 12px; background: linear-gradient(180deg, #6B3F1C, #4A2A10); box-shadow: inset 0 3px 8px rgba(0,0,0,.5); perspective: 700px; }
+  .vault .num { background: radial-gradient(circle at 35% 30%, #F8E39A, #C9A043 55%, #86661F); font-size: 22px; }
+  .vault .hole::before { background: radial-gradient(circle at 50% 62%, #0E0702 0 40%, #2A1607 75%, #4A2A10); box-shadow: 0 1px 0 rgba(255,230,190,.25), inset 0 2px 3px rgba(0,0,0,.7); }
+  .lid { position: absolute; left: 6px; right: 6px; top: 46px; bottom: 8px; border-radius: 10px; transform-origin: 50% 0; cursor: pointer;
+    background:
+      repeating-linear-gradient(90deg, rgba(120,66,18,.08) 0 2px, transparent 2px 8px),
+      linear-gradient(180deg, #DDAE6E, #B57A3C);
+    box-shadow: 0 6px 12px rgba(0,0,0,.45), inset 0 0 0 2px rgba(90,48,12,.45), inset 0 2px 0 rgba(255,240,210,.5);
+    display: grid; place-items: center; transition: transform .8s cubic-bezier(.4,0,.2,1), opacity .8s; }
+  /* The brass hinge along its top, and a brass plate with a keyhole. */
+  .lid::before { content: ""; position: absolute; left: 8px; right: 8px; top: 4px; height: 8px; border-radius: 4px;
+    background: linear-gradient(180deg, #F3D888, #A6822E); box-shadow: 0 1px 2px rgba(0,0,0,.4); }
+  .plate { width: 64%; aspect-ratio: .62; border-radius: 40% 40% 12px 12px / 30% 30% 12px 12px; display: grid; place-items: center;
+    background: radial-gradient(circle at 35% 25%, #FBE7A4, #C9A043 55%, #8A6A22); box-shadow: 0 2px 4px rgba(0,0,0,.45), inset 0 0 0 2px rgba(110,80,20,.5); }
+  .plate svg { width: 46%; height: auto; }
+  .vault.open .lid { transform: rotateX(-112deg); opacity: 0; pointer-events: none; }
+  .vault.open { background: linear-gradient(180deg, #7A4A22, #4A2A10); box-shadow: inset 0 3px 8px rgba(0,0,0,.5), 0 0 0 4px rgba(255,214,102,.9); }
+
+  /* ---------- The tray: the colours to choose and « Valider » ---------- */
+  #tray { flex: none; display: flex; flex-direction: column; align-items: stretch; gap: 14px; padding: 14px; border-radius: 20px;
+    background: linear-gradient(160deg, #75451F, #4A2A10 70%); box-shadow: 0 16px 32px rgba(0,0,0,.4), inset 0 2px 0 rgba(255,230,190,.25); }
+  #palette { display: grid; grid-template-columns: repeat(var(--pc, 2), auto); gap: 10px; justify-content: center; padding: 10px; border-radius: 13px;
+    background: radial-gradient(130% 100% at 50% 0%, #5A3055, #2A1027); box-shadow: inset 0 3px 8px rgba(0,0,0,.5); }
+  /* A colour: its peg in a round cup of felt, and its name. */
+  .pick { min-height: 0; width: calc(var(--q) + 26px); padding: 6px 4px 4px; flex-direction: column; gap: 3px; border-radius: 14px;
+    background: transparent; border: 0; box-shadow: none; color: #FFF6E2; font: 600 20px/1.1 var(--ui); }
+  .pick:hover { background: rgba(255,255,255,.1); }
+  .pick:active { background: rgba(255,255,255,.16); transform: none; box-shadow: none; }
+  .pick .cup { width: var(--q); height: var(--q); border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 50% 60%, #1A0818, #33152F 70%);
+    box-shadow: inset 0 3px 5px rgba(0,0,0,.6), 0 1px 0 rgba(255,255,255,.12); }
+  .pick .peg { width: 88%; height: 88%; transition: transform .15s; }
+  .pick:hover .peg { transform: translateY(-3px); box-shadow: 0 7px 9px rgba(0,0,0,.5), 0 0 0 3px #fff; }
+  .pick.used .cup { opacity: .38; }
+  .pick.used .nm::after { content: " ✓"; }
+  .pick .nm { white-space: nowrap; }
+  #tray.nonames .pick .nm { display: none; }
+  #okBtn { min-height: 62px; justify-content: center; font-size: 24px; font-weight: 700; }
+  #okBtn svg { width: 28px; height: 28px; stroke-width: 2.6; }
+  /* A cream card: what the shapes mean, and the clue of the last try in words. */
+  .note { padding: 10px 14px 12px; border-radius: 14px; background: #FFF8E8; color: #2A1D10; font: 500 20px/1.3 var(--ui);
+    box-shadow: inset 0 0 0 2px #E2C98F; }
+  .note b { display: block; font-weight: 700; margin-bottom: 2px; }
+  .note span { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  #tray.nonote .note { display: none; }
+  #stage.stack #tray { flex-direction: row; flex-wrap: wrap; gap: 8px; padding: 8px; }
+  #stage.stack #palette { flex: 1 1 100%; padding: 6px; gap: 2px; }
+  #stage.stack #okBtn { flex: 1 1 100%; min-height: 54px; }
+  #stage.stack .pick { width: calc(var(--q) + 6px); padding: 3px 0; }
+
+  /* ---------- The rules guide ----------
+     Each page: one picture on the aubergine felt, made of the same board, pegs and pins as the game, then one or two
+     short sentences. Their columns are .gcol, outside #board, so only the real board plays. */
+  #help { --guide-edge: #2A1027; --guide-more: #4A2E46; }
+  .guide-pic { --s: 32px; --g: 4px; --cw: 52px; --p: 13px; --q: 48px; position: relative; display: flex; align-items: center; justify-content: center; gap: 22px;
+    margin: 2px 0 8px; padding: 9px; border-radius: 18px; background: radial-gradient(120% 100% at 50% 0%, var(--felt-top), var(--felt) 80%); }
+  .guide-pic .count { display: none; }
+  .guide-pic .num, .guide-pic .noclue .clue { display: none; }
+  .guide-pic .col, .guide-pic .vault { gap: 6px; }
+  .guide-pic .board { padding: 7px; border-radius: 16px; }
+  .guide-pic .vault .lid { top: 6px; }
+  .guide-pic .surface { padding: 6px; }
+  .guide-pic .gtray { display: grid; grid-template-columns: repeat(3, auto); gap: 6px; padding: 10px; border-radius: 14px;
+    background: radial-gradient(130% 100% at 50% 0%, #5A3055, #2A1027); box-shadow: inset 0 3px 8px rgba(0,0,0,.5), 0 0 0 8px #5A3317; }
+  .guide-pic .gtray .cup { width: var(--q); height: var(--q); border-radius: 50%; display: grid; place-items: center; background: #22091F; position: relative; }
+  .guide-pic .gtray .cup.here { box-shadow: var(--guide-ring); }
+  .guide-pic .gtray .cup .guide-hand { left: 50%; top: 58%; }
+  .garrow { flex: none; width: 54px; height: 40px; fill: none; stroke: #FFFDF6; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); }
+  .gkey { display: flex; flex-direction: column; gap: 14px; text-align: left; color: #FFF8E8; font: 600 21px/1.25 var(--ui); }
+  .gkey span { display: flex; align-items: center; gap: 12px; }
+  .gkey .pin { --p: 30px; flex: none; }
+  .gok { flex: none; padding: 6px 26px 6px 18px; font-size: 22px; }
+  .guide-pic .vault { margin-left: 4px; }
+  html.low .guide-pic { --s: 24px; --cw: 40px; --p: 12px; --q: 40px; padding: 8px; }
+
+  @media (max-width: 700px) {
+    #hintBtn, #helpBtn { flex-direction: column; gap: 0; padding: 3px 2px; text-align: center; font-size: 18px; }
+    .guide-pic, html.low .guide-pic { --s: 28px; --cw: 42px; --p: 13px; --q: 36px; gap: 8px; padding: 10px 6px; }
+    .gkey { font-size: 18px; } .gkey .pin { --p: 22px; }
+    .guide-pic { flex-wrap: wrap; }
+    .garrow { display: none; }
+    .gok { font-size: 18px; padding: 4px 12px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .peg.drop, .peg.lift, .col.hop .peg, .pin.pop, .col.now .hole.target::after { animation: none; }
+    .lid { transition: none; }
+  }
+</style>
+<script src="../lib/zoom.js"></script>
+<script src="../lib/sound.js"></script>
+<script src="../lib/ph.js"></script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="cs-0" viewBox="0 0 24 24"><path d="M12 21 3.6 12.8A5 5 0 0 1 12 6.3a5 5 0 0 1 8.4 6.5z"/></symbol>
+  <symbol id="cs-1" viewBox="0 0 24 24"><path d="M12 2.6l2.8 6 6.5.7-4.9 4.4 1.4 6.4L12 16.8l-5.8 3.3 1.4-6.4-4.9-4.4 6.5-.7z"/></symbol>
+  <symbol id="cs-2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.6"/><path d="M12 1.8v3.4M12 18.8v3.4M1.8 12h3.4M18.8 12h3.4M4.8 4.8l2.4 2.4M16.8 16.8l2.4 2.4M4.8 19.2l2.4-2.4M16.8 7.2l2.4-2.4" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></symbol>
+  <symbol id="cs-3" viewBox="0 0 24 24"><path d="M12 3.2 21.6 20H2.4z"/></symbol>
+  <symbol id="cs-4" viewBox="0 0 24 24"><path d="M12 1.8 21 12 12 22.2 3 12z"/></symbol>
+  <symbol id="cs-5" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/></symbol>
+  <symbol id="cs-6" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="1.5"/></symbol>
+  <symbol id="cs-7" viewBox="0 0 24 24"><path d="M15.2 2.6a9.6 9.6 0 1 0 6.4 14.2A7.6 7.6 0 0 1 15.2 2.6z"/></symbol>
+  <symbol id="cs-disc" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8.5" fill="#141414"/></symbol>
+  <symbol id="cs-ring" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.6" fill="#FFFDF6" stroke="#2A1D10" stroke-width="2.4"/><circle cx="10" cy="10" r="3" fill="#3A2A1A"/></symbol>
+</svg>
+<div id="bar">
+  <div id="title"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="8" r="5" fill="#D3263A"/><circle cx="17" cy="8" r="5" fill="#2463D6"/><circle cx="7" cy="18" r="5" fill="#F6C624"/><circle cx="17" cy="18" r="5" fill="#2F9A4E"/></svg>Code secret</div>
+  <button id="undoBtn" data-icon="undo"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span><span class="tiny">Annuler</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Propose une combinaison qui respecte tous les indices"><span class="long">Que jouer maintenant ?</span><span class="short">Que jouer ?</span><span class="tiny">Idée</span></button>
+  <span class="spacer"></span>
+  <button id="helpBtn" data-icon="help">Règles</button>
+  <button id="newBtn" class="game">Nouvelle partie</button>
+</div>
+<div id="say"><div id="msg" aria-live="polite"></div></div>
+<div id="table">
+  <div id="stage">
+    <div id="boardWrap"><div class="board" id="board"><div class="surface" id="surface"></div></div></div>
+    <div id="tray">
+      <div id="palette" role="group" aria-label="Les couleurs"></div>
+      <button id="okBtn" class="primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Valider</button>
+      <div class="note" id="note" role="status"></div>
+    </div>
+  </div>
+</div>
+<footer id="rail"><div class="zoom"></div></footer>
+<div id="help" data-title="Comment jouer">
+  <section class="page">
+    <h3>Poser une couleur</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="gtray" data-tray></div>
+      <svg class="garrow" viewBox="0 0 54 40"><path d="M4 20h44M36 8l12 12-12 12"/></svg>
+      <div class="board"><div class="surface noclue" data-col="0,-1,-1,-1" data-target="1" data-now></div></div>
+    </div>
+    <p class="guide-lead">Cliquez sur une couleur : elle se pose dans le trou encadré.</p>
+    <p class="guide-more">Un clic sur un pion déjà posé l’enlève.</p>
+  </section>
+  <section class="page">
+    <h3>Valider la ligne</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="board"><div class="surface noclue" data-col="0,1,3,4" data-now></div></div>
+      <span class="guide-btn primary here gok">Valider</span>
+    </div>
+    <p class="guide-lead">La colonne est pleine ? Cliquez sur « Valider ».</p>
+    <p class="guide-more">L’ordinateur répond avec de petites fiches noires et blanches.</p>
+  </section>
+  <section class="page">
+    <h3>Lire les indices</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="board"><div class="surface" data-col="0,1,3,4" data-clue="2,1"></div></div>
+      <div class="gkey">
+        <span><i class="pin b"></i>bonne couleur,<br>bonne place</span>
+        <span><i class="pin w"></i>bonne couleur,<br>autre place</span>
+      </div>
+    </div>
+    <p class="guide-lead">Ici : 2 bien placées, 1 mal placée.</p>
+    <p class="guide-more">Une fiche noire pleine : bien placée. Un anneau blanc : mal placée.</p>
+  </section>
+  <section class="page">
+    <h3>Trouver le code</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="board"><div class="surface" data-col="0,1,2,3" data-clue="4,0" data-vault="0,1,2,3"></div></div>
+    </div>
+    <p class="guide-lead">Quatre fiches noires : vous avez trouvé le code !</p>
+    <p class="guide-more">Le couvercle s’ouvre. Facile donne 12 essais, Moyen et Difficile 10.</p>
+  </section>
+  <section class="page">
+    <h3>Demander de l’aide</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <span class="guide-btn primary here" data-icon="bulb">Que jouer maintenant ?</span>
+      <svg class="garrow" viewBox="0 0 54 40"><path d="M4 20h44M36 8l12 12-12 12"/></svg>
+      <div class="board"><div class="surface noclue" data-col="2,0,5,1" data-now></div></div>
+    </div>
+    <p class="guide-lead">Bloqué ? Cliquez sur « Que jouer maintenant ? ».</p>
+    <p class="guide-more">Une combinaison qui respecte vos indices se pose, et la ligne du haut dit pourquoi.</p>
+  </section>
+</div>
+
+<script src="../lib/store.js"></script>
+<script src="../lib/kit.js"></script>
+<script src="engine.js"></script>
+<script>
+'use strict';
+const C = CodeSecret;
+// French print: a space that never breaks before : ; ! ? and », and after «.
+const fr = t => t.replace(/ ([:;!?»])/g, '\u00a0$1').replace(/« /g, '«\u00a0');
+const say = t => Kit.say(fr(t)), tell = t => Kit.tell(fr(t));
+const $ = id => document.getElementById(id);
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const motion = ms => reducedMotion.matches ? 0 : ms;
+// The pace. A peg drops in 420 ms. After « Valider », the pins come in PIN_MS apart, then the line says the
+// clue. At the end the lid lifts in 800 ms, and the result sheet opens END_MS after the last pin.
+const PIN_MS = 260, PIN_START = 200, LID_MS = 800, END_MS = 2200;
+
+/* ---------- State ----------
+   G: the game (see engine.js). sel: the hole of the row where the next colour goes. stats: { won }.
+   wonNow: this game is counted as won. */
+let G, level = 'facile', stats = { won: 0 }, wonNow = false, sel = 0, timers = [];
+let stale = false, saved = true;
+addEventListener('gg-stale', () => { stale = true; });
+const FULL = "La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.";
+const name = c => C.COLORS[c].name;
+const list = cs => { const n = cs.map(name); return n.slice(0, -1).join(', ') + ' et ' + n[n.length - 1]; };
+const plural = (n, one, many) => n === 1 ? `1\u00a0${one}` : `${n}\u00a0${many}`;
+const started = () => !!G && (G.tries.length > 0 || G.order.length > 0);
+const playing = () => !!G && !G.result && started();
+
+/* ---------- Saves ---------- */
+async function save() {
+  const parts = [];
+  if (playing()) parts.push('Partie en cours');
+  if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
+  if (await GG.save('code-secret', { v: 1, G, level, stats, wonNow }, { summary: parts.join(' · ') })) return (saved = true);
+  saved = false;
+  if (!stale) say(FULL);
+  return false;
+}
+// A save that does not check whole is not loaded, but its wins and its level are kept: 'broken'.
+function load() {
+  try {
+    const v = GG.load('code-secret');
+    if (!v) return false;
+    if (v.stats && Number.isInteger(v.stats.won) && v.stats.won >= 0) stats = { won: v.stats.won };
+    if (C.LEVELS[v.level]) level = v.level;
+    if (!C.valid(v.G)) return 'broken';
+    G = v.G; level = G.level;
+    wonNow = !!v.wonNow && G.result === 'won';
+    return true;
+  } catch (e) { return false; }
+}
+
+function later(fn, ms) { const t = setTimeout(() => { timers = timers.filter(x => x !== t); fn(); }, ms); timers.push(t); return t; }
+function stopAll() { timers.forEach(clearTimeout); timers = []; }
+const firstEmpty = (from = 0) => {
+  for (let k = 0; k < G.holes; k++) { const i = (from + k) % G.holes; if (G.cur[i] < 0) return i; }
+  return -1;
+};
+
+/* ---------- The words of the message line ---------- */
+function rowLine() {
+  const n = G.tries.length + 1;
+  const left = G.cur.filter(c => c < 0).length;
+  if (!left) return 'La colonne est pleine : cliquez sur « Valider », ou sur un pion pour le changer.';
+  if (left === G.holes) return n === 1
+    ? `Trouvez le code de ${G.holes} couleurs. Cliquez sur une couleur : elle se pose dans le trou encadré.`
+    : `Essai ${n} : cliquez sur une couleur pour la poser dans le trou encadré.`;
+  return `Encore ${plural(left, 'couleur', 'couleurs')} à poser : cliquez sur une couleur, ou sur un pion pour l’enlever.`;
+}
+const clueLine = t => C.sentence(t.black, t.white);
+function afterTry() {
+  const t = G.tries[G.tries.length - 1], n = G.tries.length;
+  const left = G.rows - n;
+  const extra = t.black === 0 && t.white === 0 ? ' Aucune de ces couleurs n’est dans le code.' : '';
+  return `Essai ${n} : ${clueLine(t)}.${extra}\n${left === 1 ? 'Dernier essai' : `Encore ${left} essais`} : choisissez vos couleurs.`;
+}
+function endLine() {
+  if (G.result === 'won') return `Bravo, vous avez trouvé le code en ${plural(G.tries.length, 'essai', 'essais')} ! Cliquez sur « Nouvelle partie » pour rejouer.`;
+  return `Le code était ${list(G.code)}. Cliquez sur « Nouvelle partie » pour rejouer.`;
+}
+
+/* ---------- His moves ---------- */
+let busy = false; // the pins of a try are still coming in
+function pick(c) {
+  if (Kit.isOpen() || !G) return;
+  if (G.result) { Sound.play('bad'); tell('La partie est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.'); return; }
+  if (busy) { tell('Un instant : l’ordinateur pose ses fiches.'); return; }
+  if (G.cur.every(x => x >= 0)) {
+    Sound.play('bad');
+    say('La colonne est pleine : cliquez sur un pion pour l’enlever, ou sur « Valider ».');
+    return;
+  }
+  if (sel < 0 || G.cur[sel] >= 0) sel = firstEmpty(Math.max(0, sel));
+  const at = sel;
+  const why = C.refusal(G, at, c);
+  if (why === 'twice') {
+    Sound.play('bad');
+    shakePick(c);
+    say(`Au niveau facile, chaque couleur ne sert qu’une fois : le ${name(c)} est déjà posé. Choisissez une autre couleur.`);
+    return;
+  }
+  const g = C.place(G, at, c);
+  if (!g) return;
+  G = g;
+  dropped = at;
+  Sound.play('piece');
+  sel = firstEmpty(at + 1);
+  if (sel < 0) sel = at;
+  save();
+  render();
+  say(G.cur.every(x => x >= 0) ? rowLine() : `Vous avez posé le ${name(c)}. ` + rowLine());
+  coach();
+}
+function tapHole(i) {
+  if (Kit.isOpen() || !G || G.result || busy) return;
+  if (G.cur[i] >= 0) {
+    const c = G.cur[i];
+    lifting(i, () => {
+      G = C.remove(G, i); sel = i;
+      Sound.play('capture');
+      save(); render();
+      say(`Vous avez enlevé le ${name(c)}. Cliquez sur une couleur pour la poser à sa place.`);
+      coach();
+    });
+    return;
+  }
+  sel = i;
+  render();
+  say(`Ce trou est encadré : cliquez sur une couleur pour l’y poser.`);
+  coach();
+}
+// A peg taken out lifts off its hole first.
+function lifting(i, done) {
+  const peg = holeEls[i] && holeEls[i].querySelector('.peg');
+  if (!peg || reducedMotion.matches) { done(); return; }
+  busy = true;
+  peg.classList.add('lift');
+  setTimeout(() => { busy = false; done(); }, 260);
+}
+async function validate() {
+  if (Kit.isOpen() || !G || busy) return;
+  if (G.result) { tell('La partie est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.'); return; }
+  const g = C.submit(G);
+  if (!g) return;
+  const firstWin = g.result === 'won' && !wonNow;
+  G = g;
+  if (firstWin) { wonNow = true; stats.won++; }
+  sel = 0; popped = G.tries.length - 1; holdLid = !!G.result;
+  const ok = await save();
+  if (ok && firstWin) GG.track('code-secret', 'won');
+  else if (!ok && firstWin) { wonNow = false; stats.won--; }
+  render();
+  const t = G.tries[G.tries.length - 1];
+  const pins = t.black + t.white;
+  for (let k = 0; k < pins; k++) later(() => Sound.play('clack'), motion(PIN_START + k * PIN_MS));
+  const after = motion(PIN_START + Math.max(pins, 1) * PIN_MS);
+  busy = after > 0;
+  const game = G;
+  later(() => {
+    busy = false;
+    if (G !== game) return;
+    if (G.result) finish(true);
+    else { if (saved && !stale) say(afterTry()); coach(); }
+  }, after);
+  if (!after) busy = false;
+}
+function undo() {
+  if (Kit.isOpen() || !G || busy) return;
+  const back = G.order.length ? G.cur[G.order[G.order.length - 1]] : -1;
+  const g = C.undo(G);
+  if (!g) return;
+  const row = !G.order.length;
+  G = g;
+  sel = Math.max(0, firstEmpty());
+  Sound.play('capture');
+  save(); render();
+  say(row ? `L’essai ${G.tries.length + 1} est repris : changez ses couleurs, puis cliquez sur « Valider ».`
+    : `Vous avez repris le ${name(back)}. ` + rowLine());
+  coach();
+}
+
+/* ---------- The end ---------- */
+function finish(show) {
+  holdLid = false;
+  render();
+  Kit.gameOver(true);
+  const won = G.result === 'won';
+  if (!show) { if (saved && !stale) say(endLine()); return; }
+  // The lid lifts on the code, the pegs of the winning column hop in a wave, then the result sheet opens.
+  vaultEl.classList.remove('open'); void vaultEl.offsetWidth;
+  vaultEl.classList.add('open');
+  Sound.play('flip');
+  if (saved && !stale) say(endLine());
+  later(() => {
+    Sound.play(won ? 'win' : 'lose');
+    if (won && !reducedMotion.matches) { const col = colEls[G.tries.length - 1]; col.classList.remove('hop'); void col.offsetWidth; col.classList.add('hop'); }
+  }, motion(LID_MS));
+  const game = G;
+  later(() => {
+    if (G !== game || stale || Kit.isOpen()) return;
+    if (won) Kit.dialog(fr('Bravo, vous avez trouvé le code !'), fr(`Vous avez trouvé ${list(G.code)} en ${plural(G.tries.length, 'essai', 'essais')}.`),
+      [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', Kit.home]], true);
+    else Kit.dialog('Le code est resté secret', fr(`Le code était ${list(G.code)}. Vous ferez mieux à la prochaine partie !`),
+      [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', Kit.home]]);
+  }, motion(END_MS));
+}
+
+/* ---------- Buttons ---------- */
+function showHint() {
+  if (!G || G.result || Kit.isOpen() || busy) return;
+  const h = C.hint(G);
+  if (!h) return;
+  G = { ...G, cur: h.guess.slice(), order: h.guess.map((c, i) => i) };
+  dropped = 'all';
+  Sound.play('piece');
+  sel = 0;
+  save(); render();
+  let why;
+  if (h.first) why = G.holes === 4 && G.level === 'facile'
+    ? `Pour commencer, essayez ${list(h.guess)} : la réponse dira déjà beaucoup. Cliquez sur « Valider ».`
+    : `Pour commencer, essayez ${list(h.guess)} : des couleurs en double apprennent beaucoup. Cliquez sur « Valider ».`;
+  else if (h.left === 1) why = 'C’est la seule combinaison qui respecte tous vos indices : c’est le code ! Cliquez sur « Valider ».';
+  else why = `Elle respecte tous vos indices : le code est une des ${h.left} combinaisons possibles. Cliquez sur « Valider ».`;
+  say(why);
+  coach();
+}
+function askNewGame() { stopAll(); busy = false; if (holdLid && G.result) finish(false); render(); Kit.chooseLevel(level, playing(), newGame); }
+async function newGame(lv) {
+  stopAll(); busy = false;
+  if (lv) level = lv;
+  Kit.showLevel(level);
+  G = C.newGame(level, crypto.getRandomValues(new Uint32Array(1))[0]);
+  wonNow = false; sel = 0; popped = -1; dropped = -1;
+  const written = save();
+  built = '';
+  render();
+  dealIn();
+  Sound.play('deal');
+  if (!stale) say(rowLine());
+  coach();
+  if (await written) GG.track('code-secret', 'start');
+}
+// During his first game, the hand points at the colour the hint would put in the framed hole, then at « Valider ».
+function coach() {
+  if (!Kit.coaching() || !G || G.result) return;
+  if (G.cur.every(c => c >= 0)) { Kit.point($('okBtn')); return; }
+  const c = C.suggest(G, Math.max(0, sel));
+  if (c >= 0) Kit.point(pickEls[c]);
+}
+
+/* ---------- Drawing ---------- */
+const table = $('table'), stage = $('stage'), surface = $('surface'), tray = $('tray'), palette = $('palette');
+let holdLid = false; // the lid stays shut until the last pin of the last try is in
+let built = '', colEls = [], holeEls = [], pickEls = [], vaultEl = null, dropped = -1, popped = -1;
+const peg = c => `<span class="peg" style="--c:${C.COLORS[c].fill};--k:${C.COLORS[c].ink}"><svg viewBox="0 0 24 24"><use href="#cs-${c}"/></svg></span>`;
+const word = (n, one, many) => `${n} ${n > 1 ? many : one}`;
+const icon = k => `<svg viewBox="0 0 20 20" aria-hidden="true"><use href="#cs-${k}"/></svg>`;
+// One column: the number, the holes, the clue and the counts. Used by the board and by the rules guide.
+function colHtml(n, holes, guess, clue) {
+  let h = `<span class="num">${n}</span><div class="holes">`;
+  for (let i = 0; i < holes; i++) h += `<div class="hole" data-i="${i}">${guess && guess[i] >= 0 ? peg(guess[i]) : ''}</div>`;
+  h += `</div><div class="clue">`;
+  for (let k = 0; k < holes; k++) h += `<i class="pin${clue ? (k < clue[0] ? ' b' : k < clue[0] + clue[1] ? ' w' : '') : ''}"></i>`;
+  h += `</div><div class="count">${clue ? `<span>${icon('disc')}${clue[0]}</span><span>${icon('ring')}${clue[1]}</span>` : ''}</div>`;
+  return h;
+}
+function vaultHtml(holes, code) {
+  let h = `<span class="num">?</span><div class="holes">`;
+  for (let i = 0; i < holes; i++) h += `<div class="hole">${code ? peg(code[i]) : ''}</div>`;
+  return h + `</div><div class="lid"><span class="plate"><svg viewBox="0 0 20 32"><circle cx="10" cy="11" r="5" fill="#2A1A06"/><path d="M7.4 14h5.2l1.6 11H5.8z" fill="#2A1A06"/></svg></span></div>`;
+}
+function build() {
+  const key = G.level + ':' + G.rows;
+  if (built === key) return;
+  built = key; laidOut = '';
+  let html = '';
+  for (let r = 0; r < G.rows; r++) html += `<div class="col" data-r="${r}"></div>`;
+  html += `<div class="vault" id="vault"></div>`;
+  surface.innerHTML = html;
+  colEls = [...surface.querySelectorAll('.col')];
+  vaultEl = $('vault');
+  colEls.forEach((e, r) => { e.dataset.key = ''; e.addEventListener('click', ev => tapCol(r, ev)); });
+  vaultEl.addEventListener('click', () => {
+    if (G.result) return tell(`Le code secret : ${list(G.code)}.`);
+    tell('Le code est caché sous ce couvercle : il s’ouvre à la fin de la partie.');
+  });
+  palette.innerHTML = '';
+  pickEls = [];
+  for (let c = 0; c < G.colors; c++) {
+    const b = document.createElement('button');
+    b.className = 'pick'; b.dataset.c = c;
+    b.innerHTML = `<span class="cup">${peg(c)}</span><span class="nm">${C.COLORS[c].name[0].toUpperCase() + C.COLORS[c].name.slice(1)}</span>`;
+    b.setAttribute('aria-label', `${C.COLORS[c].name}, le pion au ${C.COLORS[c].sym}`);
+    b.addEventListener('click', () => pick(c));
+    palette.appendChild(b); pickEls.push(b);
+  }
+}
+function tapCol(r, ev) {
+  if (Kit.isOpen() || !G) return;
+  const n = G.tries.length;
+  if (r === n && !G.result) {
+    const hole = ev.target.closest('.hole');
+    if (hole) tapHole(+hole.dataset.i);
+    else tell('Cliquez sur une couleur à droite : elle se pose dans le trou encadré.');
+    return;
+  }
+  if (r < n) {
+    const t = G.tries[r];
+    tell(`Essai ${r + 1} : ${list(t.guess)}. ${clueLine(t)[0].toUpperCase() + clueLine(t).slice(1)}.`);
+    return;
+  }
+  if (G.result) tell('La partie est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.');
+  else tell(`Cette colonne servira plus tard : posez vos couleurs dans la colonne ${n + 1}, éclairée.`);
+}
+// The columns settle in from the left on a new board, and the lid closes.
+function dealIn() {
+  if (reducedMotion.matches) return;
+  colEls.forEach((e, r) => e.animate([{ opacity: 0, transform: 'translateY(-10px)' }, { opacity: 1, transform: 'none' }],
+    { duration: 340, delay: r * 30, easing: 'cubic-bezier(.22,.68,.32,1)', fill: 'backwards' }));
+}
+
+function render() {
+  if (!G) return;
+  build();
+  const n = G.tries.length;
+  colEls.forEach((e, r) => {
+    const t = G.tries[r];
+    const now = r === n && !G.result;
+    const guess = t ? t.guess : now ? G.cur : null;
+    const key = (t ? 'p' + t.guess.join('') : now ? 'n' + G.cur.join(',') : 'f') + ':' + (now ? sel : '');
+    e.className = 'col' + (t ? ' played' : now ? ' now' : ' future') + (e.classList.contains('hop') && G.result === 'won' && r === n - 1 ? ' hop' : '');
+    if (e.dataset.key !== key || r === popped || (now && dropped !== -1)) {
+      e.innerHTML = colHtml(r + 1, G.holes, guess, t ? [t.black, t.white] : null);
+      e.dataset.key = key;
+      if (r === popped && !reducedMotion.matches) e.querySelectorAll('.pin.b, .pin.w').forEach((p, k) => { p.classList.add('pop'); p.style.setProperty('--d', (PIN_START + k * PIN_MS) + 'ms'); });
+      if (now && dropped !== -1 && !reducedMotion.matches) e.querySelectorAll('.hole').forEach((h, i) => {
+        const p = h.querySelector('.peg');
+        if (p && (dropped === 'all' || dropped === i)) { p.classList.add('drop'); if (dropped === 'all') p.style.animationDelay = (i * 90) + 'ms'; }
+      });
+    }
+    e.querySelectorAll('.hole').forEach((h, i) => h.classList.toggle('target', now && i === sel && G.cur[i] < 0));
+    if (now) {
+      holeEls = [...e.querySelectorAll('.hole')];
+      holeEls.forEach((h, i) => {
+        h.setAttribute('role', 'button');
+        h.setAttribute('aria-label', G.cur[i] >= 0 ? `Trou ${i + 1} : ${name(G.cur[i])}, cliquez pour l’enlever` : `Trou ${i + 1}, vide${i === sel ? ', encadré' : ''}`);
+      });
+    }
+    e.setAttribute('aria-label', t ? `Essai ${r + 1} : ${list(t.guess)}. ${clueLine(t)}.` : now ? `Essai ${r + 1}, en cours` : `Essai ${r + 1}, plus tard`);
+  });
+  dropped = -1; popped = -1;
+  // The hidden code: drawn only once the game is over, so it is never in the page before.
+  const vkey = G.result ? 'open:' + G.code.join('') : 'shut:' + G.holes;
+  if (vaultEl.dataset.key !== vkey) { vaultEl.innerHTML = vaultHtml(G.holes, G.result ? G.code : null); vaultEl.dataset.key = vkey; }
+  if (!G.result) vaultEl.classList.remove('open');
+  else if (!holdLid) vaultEl.classList.add('open');
+  vaultEl.setAttribute('aria-label', G.result ? `Le code secret : ${list(G.code)}` : 'Le code secret, caché sous le couvercle');
+  // The tray: at Facile, the colours already in the row are dimmed, with a tick after their name.
+  const L = C.LEVELS[G.level];
+  pickEls.forEach((b, c) => b.classList.toggle('used', !L.repeat && G.cur.includes(c)));
+  const full = G.cur.every(c => c >= 0);
+  const ok = $('okBtn');
+  ok.disabled = !full || !!G.result;
+  const left = G.cur.filter(c => c < 0).length;
+  ok.dataset.why = fr(G.result ? 'La partie est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.'
+    : `Il manque encore ${plural(left, 'pion', 'pions')} : cliquez sur une couleur.`);
+  if (full && !G.result) ok.dataset.nudge = ''; else delete ok.dataset.nudge;
+  // The card: what the two shapes mean, and the last clue in words.
+  const t = G.tries[n - 1];
+  $('note').innerHTML = t
+    ? `<b>Essai ${n}</b><span>${icon('disc')}${word(t.black, 'bien placée', 'bien placées')}</span><span>${icon('ring')}${word(t.white, 'mal placée', 'mal placées')}</span>`
+    : `<b>Les indices</b><span>${icon('disc')}bien placée</span><span>${icon('ring')}mal placée</span>`;
+  // The bar.
+  const undoBtn = $('undoBtn'), hintBtn = $('hintBtn');
+  undoBtn.disabled = !!G.result || (!G.order.length && !n);
+  undoBtn.dataset.why = fr(G.result ? 'La partie est finie : le code est dévoilé. Cliquez sur « Nouvelle partie ».' : 'Il n’y a encore rien à annuler : cliquez sur une couleur.');
+  hintBtn.disabled = !!G.result;
+  hintBtn.dataset.why = fr('La partie est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.');
+  // The automatic hint of Facile never replaces pegs he put himself.
+  if (G.order.length) hintBtn.dataset.auto = 'no'; else delete hintBtn.dataset.auto;
+  Kit.showWins(stats.won);
+  layout();
+}
+function shakePick(c) {
+  const b = pickEls[c];
+  if (!b) return;
+  b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
+}
+
+// The sizes. The board takes the room the tray leaves, and its holes are as large as fit, 80 px at most.
+// Every size is tried on the page itself and measured, so the board and the tray always fit the table.
+// A window too narrow for the board and the tray side by side (a phone) puts the tray under the board, and the
+// board scrolls sideways to the column in play.
+const board = $('board');
+function setSize(s, mode) {
+  const root = stage.style;
+  root.setProperty('--s', s + 'px');
+  root.setProperty('--p', Math.round(Math.max(13, Math.min(30, s * .4))) + 'px');
+  root.setProperty('--g', Math.round(s * .12) + 'px');
+  // One line of counts needs 86 px; a narrower column puts them on two lines.
+  const p = Math.round(Math.max(13, Math.min(30, s * .4)));
+  root.setProperty('--cw', Math.max(Math.round(s * 1.28), mode === 'compact' ? 52 : 2 * p + 22, mode === 'one' ? 86 : 0) + 'px');
+  board.classList.toggle('two', mode !== 'one');
+  board.classList.toggle('compact', mode === 'compact');
+}
+// The largest size from lo to hi for which fits() holds, by halves.
+function largest(lo, hi, apply, fits) {
+  let best = lo;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    apply(mid);
+    if (fits()) { best = mid; lo = mid + 1; } else hi = mid - 1;
+  }
+  apply(best);
+  return best;
+}
+let laidOut = '';
+function layout() {
+  const W = table.clientWidth, H = table.clientHeight;
+  if (!W || !H) return;
+  const root = stage.style;
+  const stack = W < 760;
+  // The sizes change only with the window, the page size and the level.
+  const key = `${W}x${H}:${G.level}:${getComputedStyle(document.documentElement).zoom || ''}`;
+  if (key === laidOut) { if (stack) scrollToNow(); return; }
+  laidOut = key;
+  stage.classList.toggle('stack', stack);
+  root.setProperty('--gap', '28px');
+  // The tray: the colours with their names in two or three columns and the card of the clues, or without the
+  // card, or without the names. The board: the clue pins with their counts on one line or two, or, on a low
+  // window, the counts alone. Every pair is tried, and the largest holes win; names, the card and the pins
+  // win a tie of a few pixels.
+  const configs = stack ? [[G.colors, 'nonames nonote']]
+    : [[2, ''], [3, ''], [2, 'nonote'], [3, 'nonote'], [2, 'nonote nonames'], [3, 'nonote nonames']];
+  const setQ = q => root.setProperty('--q', q + 'px');
+  const fits = () => stack ? board.offsetHeight <= H - tray.offsetHeight - 30
+    : board.offsetHeight <= H - 20 && board.offsetWidth + tray.offsetWidth + 28 + 24 <= W;
+  let best = null;
+  for (const [pc, cls] of configs) {
+    tray.className = cls;
+    root.setProperty('--pc', pc);
+    const q = stack ? Math.max(30, Math.min(52, Math.floor((W - 40) / G.colors) - 8))
+      : largest(42, 66, setQ, () => tray.offsetHeight <= H - 16);
+    setQ(q);
+    if (!stack && tray.offsetHeight > H - 16 && cls !== 'nonote nonames') continue;
+    for (const mode of ['one', 'two', 'compact']) {
+      const size = largest(22, stack ? 46 : 80, s => setSize(s, mode), fits);
+      const full = mode !== 'compact';
+      const score = (fits() ? 10000 : 0) + (full && size >= 44 ? 1000 : 0) + size + (full ? 4 : 0)
+        + (cls.includes('nonames') ? 0 : 3) + (cls.includes('nonote') ? 0 : 2) + q / 100;
+      if (!best || score > best.score) best = { score, pc, cls, q, size, mode };
+    }
+  }
+  tray.className = best.cls;
+  root.setProperty('--pc', best.pc);
+  setQ(best.q);
+  setSize(best.size, best.mode);
+  if (!stack) root.setProperty('--gap', Math.max(18, Math.min(48, Math.round((W - board.offsetWidth - tray.offsetWidth) / 4))) + 'px');
+  if (stack) scrollToNow();
+}
+function scrollToNow() {
+  const wrap = $('boardWrap'), col = colEls[Math.min(G.tries.length, G.rows - 1)];
+  if (col) wrap.scrollLeft = Math.max(0, col.offsetLeft - wrap.clientWidth / 2 + col.offsetWidth / 2);
+}
+
+/* ---------- The pictures of the rules ----------
+   Each picture is built from the same columns and pegs as the board. */
+for (const s of document.querySelectorAll('#help .surface[data-col]')) {
+  const guess = s.dataset.col.split(',').map(Number);
+  const clue = s.dataset.clue ? s.dataset.clue.split(',').map(Number) : null;
+  let html = `<div class="col${s.hasAttribute('data-now') ? ' now' : ''}">${colHtml(s.dataset.vault ? 6 : 2, guess.length, guess, clue)}</div>`;
+  if (s.dataset.vault) html += `<div class="vault open">${vaultHtml(guess.length, s.dataset.vault.split(',').map(Number))}</div>`;
+  s.innerHTML = html;
+  if (s.dataset.target) s.querySelectorAll('.hole')[+s.dataset.target].classList.add('target');
+}
+for (const t of document.querySelectorAll('#help [data-tray]')) {
+  t.innerHTML = [0, 1, 2, 3, 4, 5].map(c => `<span class="cup${c === 1 ? ' here' : ''}">${peg(c)}${c === 1 ? Kit.icon('hand') : ''}</span>`).join('');
+}
+
+$('okBtn').onclick = validate;
+$('undoBtn').onclick = undo;
+$('hintBtn').onclick = showHint;
+$('helpBtn').onclick = () => { render(); Kit.openHelp(); };
+$('newBtn').onclick = askNewGame;
+// The keyboard: 1 to 8 put a colour, Entrée validates, Retour arrière takes back a peg, Ctrl+Z undoes.
+addEventListener('keydown', e => {
+  if (e.key === 'Escape') { Kit.escape(); return; }
+  if (Kit.isOpen() || !G || e.repeat) return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const d = Number(e.key);
+  if (d >= 1 && d <= G.colors) { pick(d - 1); return; }
+  if (e.key === 'Enter' && !(e.target.closest && e.target.closest('button'))) { e.preventDefault(); if (!$('okBtn').disabled) validate(); }
+  if (e.key === 'Backspace' && G.order.length) { e.preventDefault(); undo(); }
+});
+addEventListener('resize', () => render());
+
+// The first visit starts a game at Facile at once, with the coach (lib/kit.js).
+const loaded = load();
+if (loaded === 'broken') newGame(level);
+else if (loaded) {
+  Kit.showLevel(level);
+  sel = Math.max(0, firstEmpty());
+  render();
+  if (G.result) finish(false);
+  else say(G.tries.length && !G.order.length ? afterTry() : rowLine());
+} else {
+  Kit.firstVisit(newGame);
+}
+</script>
+</body>
+</html>

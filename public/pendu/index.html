@@ -1,0 +1,814 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le pendu · Jeux de Papi</title>
+<meta name="description" content="Le jeu du pendu en grand, pour les grands-parents : devinez le mot lettre par lettre avant que la marguerite perde ses pétales. Plus de 3 000 mots, un indice de thème, trois niveaux. Sans publicité ni compte.">
+<link rel="canonical" href="https://jeux-papi.fr/pendu/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Jeux de Papi">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://jeux-papi.fr/pendu/">
+<meta property="og:title" content="Le pendu · Jeux de Papi">
+<meta property="og:description" content="Devinez le mot avant que la marguerite perde ses pétales : de grandes lettres, un indice et trois niveaux. Sans publicité ni compte.">
+<meta property="og:image" content="https://jeux-papi.fr/og/jeux/pendu.jpg">
+<meta property="og:image:alt" content="Le pendu, sur Jeux de Papi.">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../lib/kit.css">
+<style>
+  /* The pendu plays on a soft morning sky. No hanged man: a daisy in a pot on a windowsill loses one petal at each
+     letter that is not in the word. The word and the letters are printed on a cream sheet beside the window. */
+  :root {
+    --felt-top: #8CC4EA; --felt: #3A78AE; --shade: 18,52,86; --accent: #2F6E9E;
+    --paper: #FFFBF0; --ink: #14335A; --line: #8FA9BD; --leaf: #4E9A3A; --miss: #B4443A;
+    --sw: 300px; --t: 60px; --tg: 8px; --kw: 60px; --kh: 58px; --kg: 8px; --cols: 13; --pad: 20px; --gap: 24px;
+  }
+  #title svg { width: 32px; height: 32px; }
+  button.game { --accent: #2F6E9E; }
+  button.game:hover { background: #3A7DB0; }
+  button.game:active { background: #275D86; }
+  #say { padding-block: clamp(10px, 3vh - 8px, 28px) clamp(8px, 6vh - 32px, 32px); }
+
+  #table { position: relative; overflow: auto; display: flex; }
+  #stage { margin: auto; display: flex; align-items: stretch; gap: var(--gap); padding: var(--pad); }
+  #stage.stack { flex-direction: column; align-items: center; }
+
+  /* The window: the daisy in its pot, and under it the petals left. */
+  #scene { flex: none; width: var(--sw); margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+  #daisyBox { width: var(--pw, 100%); }
+  #scene .daisy { display: block; width: 100%; height: auto; filter: drop-shadow(0 14px 22px rgba(10,40,70,.35)) drop-shadow(0 2px 4px rgba(10,40,70,.25)); }
+  #petals { display: flex; align-items: center; gap: 10px; padding: 6px 18px 6px 12px; border-radius: 999px; background: var(--paper); color: var(--ink);
+    font: 700 24px/1.15 var(--ui); white-space: nowrap; box-shadow: 0 6px 16px rgba(10,40,70,.28); }
+  #petals svg { width: 26px; height: 26px; flex: none; }
+  #petals.low { color: #8A3A22; }
+
+  /* The sheet: the theme, the word in tiles, the letters. */
+  #sheet { flex: none; max-width: 100%; position: relative; display: flex; flex-direction: column; justify-content: center; gap: var(--bg, 16px);
+    padding: var(--sp, 22px); border-radius: 18px; color: var(--ink);
+    background: linear-gradient(180deg, rgba(255,255,255,.7), rgba(255,255,255,0) 40%), var(--paper);
+    box-shadow: 0 1px 0 rgba(255,255,255,.7) inset, 0 18px 40px rgba(10,40,70,.35), 0 3px 8px rgba(10,40,70,.22); }
+  #top { display: flex; align-items: center; gap: 14px; min-height: 54px; }
+  #clue { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 12px; margin: 0; }
+  #clue svg { flex: none; width: 34px; height: 34px; }
+  #clue .lab { display: block; font: 600 20px/1.1 var(--ui); color: #4D6478; }
+  #clue b { display: block; font: 700 26px/1.15 var(--ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #proposeBtn { flex: none; background: #fff; color: var(--ink); border-color: var(--accent); box-shadow: 0 3px 0 var(--accent); }
+  #proposeBtn:hover { background: #EAF3FA; }
+  #proposeBtn:active { box-shadow: none; }
+  #proposeBtn .short { display: none; }
+  #proposeBtn.next { background: var(--gold); color: #1F1A00; border-color: #C9951A; box-shadow: 0 3px 0 #C9951A; }
+  #proposeBtn.next:hover { background: #FFD666; }
+
+  /* The word: one tile per letter. A hyphen is shown from the start. */
+  #word { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--tg); margin-inline: auto; }
+  .tile { position: relative; flex: none; width: var(--t); height: calc(var(--t) * 1.12); border-radius: calc(var(--t) * .16);
+    display: flex; align-items: center; justify-content: center; font: 700 calc(var(--t) * .62)/1 var(--ui); color: var(--ink);
+    background: #EEF4F8; box-shadow: inset 0 -5px 0 #7E9DB5, 0 1px 0 rgba(255,255,255,.8); }
+  .tile.on { background: #fff; box-shadow: inset 0 0 0 2px #9DB7CC, 0 3px 0 #9DB7CC; }
+  .brk { display: none; flex-basis: 100%; height: 0; }
+  #word.two .brk { display: block; }
+  .tile.dash { width: calc(var(--t) * .5); background: none; box-shadow: none; }
+  /* The letters he did not find, shown at the end of a lost word, in terracotta. */
+  .tile.missed { background: #FCEDE5; color: #A2482A; box-shadow: inset 0 0 0 2px #E2A98F, 0 3px 0 #E2A98F; }
+
+  /* The letters: large keys in the order of the alphabet. */
+  #keysBox { position: relative; }
+  #keys { display: grid; grid-template-columns: repeat(var(--cols), var(--kw)); gap: var(--kg); justify-content: center; }
+  .key { position: relative; width: var(--kw); height: var(--kh); min-height: 0; padding: 0; justify-content: center; border-radius: 12px;
+    font: 700 max(22px, calc(var(--kh) * .5))/1 var(--ui); color: var(--ink); background: #fff; border: 2px solid var(--line); box-shadow: 0 3px 0 var(--line); }
+  .key:hover { background: #EAF3FA; }
+  .key.hit { background: #E3F3DA; color: #275118; border-color: var(--leaf); box-shadow: 0 3px 0 var(--leaf); }
+  .key.miss { background: #E3E8EC; color: #6E7A83; border-color: #B9C3CA; box-shadow: none; }
+  /* A clear mark on each letter tried: a green tick for a letter of the word, a red cross for the others. */
+  .key.hit::after, .key.miss::after { content: ""; position: absolute; top: -9px; right: -9px; width: 24px; height: 24px; border-radius: 50%;
+    box-shadow: 0 0 0 2px #fff; background: var(--leaf) center / 16px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
+  .key.miss::after { background-color: var(--miss); background-size: 13px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.6' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6L6 18'/%3E%3C/svg%3E"); }
+  .key.miss::before { content: ""; position: absolute; left: 18%; right: 18%; top: 50%; height: 3px; border-radius: 2px; background: rgba(180,68,58,.75); rotate: -35deg; }
+  /* "Que jouer maintenant ?": the letter it suggests, in a yellow ring. */
+  .key.hint { z-index: 1; background: #FFF6D8; box-shadow: 0 0 0 5px var(--gold), 0 0 0 7px #2A3A4A, 0 0 18px 6px rgba(255,200,61,.65); }
+  #keys.idle .key { cursor: default; }
+
+  /* Proposer le mot: a large field in place of the letters, so nothing moves. */
+  #propose { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+    border-radius: 14px; background: #F2F7FB; box-shadow: inset 0 0 0 2px #C9D9E6; padding: 10px; }
+  #propose[hidden] { display: none; }
+  #keysBox.typing #keys { visibility: hidden; }
+  #propose label { font: 700 22px/1.2 var(--ui); color: var(--ink); text-align: center; }
+  #guessIn { width: min(100%, 560px); height: 64px; padding: 0 18px; border-radius: 14px; border: 3px solid var(--accent); background: #fff;
+    font: 700 34px/1 var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--ink); text-align: center; user-select: text; -webkit-user-select: text; touch-action: auto; }
+  #guessIn:focus { outline: 4px solid var(--gold); outline-offset: 2px; }
+  #propose .row { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+  #propose .row button { min-height: 54px; }
+
+  /* The daisy moves gently: the clouds drift, the flower sways. A petal falls, the butterfly of a win lands. */
+  .daisy .vein { fill: none; stroke: #DCE4EB; stroke-width: 1.2; stroke-linecap: round; }
+  .daisy .plant, .daisy .petal > path:first-child, .daisy .cloud { transform-box: fill-box; }
+  .daisy .plant { transform-origin: 50% 100%; }
+  .daisy .falling { transform-box: view-box; transform-origin: 0 0; }
+  .daisy .petal > path:first-child { transform-origin: 50% 100%; }
+  .daisy .bfly .wing { transform-box: fill-box; }
+  .daisy .bfly .wl { transform-origin: 100% 50%; } .daisy .bfly .wr { transform-origin: 0% 50%; }
+  .daisy .plant.bow { rotate: 7deg; transition: rotate 1.4s cubic-bezier(.4,0,.2,1); }
+
+  /* ---------- The rules guide ----------
+     Each page: one picture on the sky felt, made of the same tiles, keys and daisy as the game, then one or two
+     short sentences. The pictures use their own classes, so only the real keys play. */
+  #help { --guide-edge: #1D3550; --guide-more: #3D4E5C; }
+  .guide-pic { position: relative; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px 22px;
+    margin: 2px 0 12px; padding: 16px; border-radius: 18px; background: radial-gradient(120% 100% at 50% 0%, var(--felt-top), var(--felt) 80%); }
+  .gsheet { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 14px; background: var(--paper); color: var(--ink);
+    box-shadow: 0 10px 24px rgba(10,40,70,.35); }
+  .gword { display: flex; gap: 6px; }
+  .gword i { width: 40px; height: 45px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font: 700 26px/1 var(--ui); font-style: normal;
+    background: #EEF4F8; box-shadow: inset 0 -4px 0 #7E9DB5; }
+  .gword i.on { background: #fff; box-shadow: inset 0 0 0 2px #9DB7CC, 0 3px 0 #9DB7CC; }
+  .gword i.new { background: #E3F3DA; box-shadow: inset 0 0 0 2px var(--leaf), 0 3px 0 var(--leaf); }
+  .gkeys { display: flex; gap: 8px; }
+  .gkeys b { position: relative; width: 48px; height: 48px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font: 700 24px/1 var(--ui);
+    background: #fff; border: 2px solid var(--line); box-shadow: 0 3px 0 var(--line); }
+  .gkeys b.hit { background: #E3F3DA; color: #275118; border-color: var(--leaf); box-shadow: 0 3px 0 var(--leaf); }
+  .gkeys b.miss { background: #E3E8EC; color: #6E7A83; border-color: #B9C3CA; box-shadow: none; }
+  .gkeys b.hit::after, .gkeys b.miss::after { content: ""; position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%; box-shadow: 0 0 0 2px #fff;
+    background: var(--leaf) center / 15px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
+  .gkeys b.miss::after { background-color: var(--miss); background-size: 12px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.6' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6L6 18'/%3E%3C/svg%3E"); }
+  .gkeys b.miss::before { content: ""; position: absolute; left: 18%; right: 18%; top: 50%; height: 3px; background: rgba(180,68,58,.75); rotate: -35deg; }
+  .gkeys b.h { z-index: 2; background: #FFF1C7; box-shadow: var(--guide-ring); }
+  .gkeys b.h .guide-hand { left: 18px; top: 26px; }
+  .gdaisy { width: 150px; flex: none; filter: drop-shadow(0 8px 14px rgba(10,40,70,.35)); }
+  .gdaisy svg { display: block; width: 100%; height: auto; }
+  .gclue { font: 700 22px/1.1 var(--ui); }
+  .gclue span { font-weight: 600; color: #4D6478; }
+  .gfield { min-width: 220px; padding: 10px 16px; border-radius: 12px; border: 3px solid var(--accent); background: #fff; font: 700 28px/1 var(--ui); letter-spacing: .1em; text-align: center; }
+  .garrow { flex: none; width: 54px; height: 40px; fill: none; stroke: #FFFDF6; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); }
+  .guide-btn { flex: none; padding: 6px 48px 6px 22px; }
+  .guide-btn > .guide-hand { left: auto; right: -14px; top: 36%; }
+  html.low .guide-pic { padding: 10px; gap: 10px 16px; }
+  html.low .gdaisy { width: 118px; }
+
+  @media (max-width: 700px) {
+    #hintBtn, #helpBtn { flex-direction: column; gap: 0; padding: 3px 2px; text-align: center; font-size: 18px; }
+    #stage.stack #scene { width: auto; flex-direction: row; gap: 12px; }
+    #top { gap: 8px; }
+    #clue { gap: 8px; } #clue svg { width: 28px; height: 28px; }
+    #clue .lab { font-size: 16px; }
+    #clue b { font-size: 20px; white-space: normal; }
+    #proposeBtn { padding: 4px 12px; gap: 6px; font-size: 20px; }
+    #proposeBtn .long { display: none; } #proposeBtn .short { display: inline; }
+    #proposeBtn svg { width: 22px; height: 22px; }
+    #petals { font-size: 20px; padding: 4px 14px 4px 10px; }
+    .key { border-radius: 10px; }
+    .key.hit::after, .key.miss::after { width: 18px; height: 18px; top: -7px; right: -7px; background-size: 12px; }
+    .key.miss::after { background-size: 10px; }
+    .guide-pic { padding: 12px 8px; gap: 10px; }
+    .gword i { width: 32px; height: 38px; font-size: 22px; }
+    .gkeys b { width: 42px; height: 44px; font-size: 22px; }
+    .gdaisy { width: 112px; }
+    .garrow { width: 40px; rotate: 90deg; }
+    .guide-pic.to-keys { flex-direction: column; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .daisy .cloud.c1 { animation: drift 26s ease-in-out infinite alternate; }
+    .daisy .cloud.c2 { animation: drift 34s ease-in-out -9s infinite alternate-reverse; }
+    .daisy .plant:not(.bow) { animation: sway 7s ease-in-out infinite; }
+    .daisy.bloom .petal > path:first-child { animation: unfold .7s cubic-bezier(.3,1.4,.5,1) var(--d, 0ms) backwards; }
+    .daisy.cheer .petal > path:first-child { animation: cheer .6s ease-in-out var(--d, 0ms) 2; }
+    .daisy .bfly .wing { animation: flap .22s ease-in-out infinite alternate; }
+    .daisy .bfly.rest .wing { animation-duration: 1.1s; }
+    .tile.new { animation: tileIn .48s cubic-bezier(.3,1.5,.5,1) var(--d, 0ms) backwards; }
+    .tile.new::after { content: ""; position: absolute; inset: -4px; border-radius: inherit; box-shadow: 0 0 0 4px var(--leaf); opacity: 0; animation: glow 1.1s ease-out var(--d, 0ms); }
+    .tile.missed { animation: tileIn .48s ease-out var(--d, 0ms) backwards; }
+    #sheet.won .tile.on { animation: wave .55s ease-in-out var(--d, 0ms); }
+    .key.shake { animation: shake .42s ease-in-out; }
+    .key.hint { animation: hintIn .48s ease-out; }
+    #petals.drop { animation: chip .5s ease-out; }
+  }
+  @keyframes drift { to { translate: 26px 0; } }
+  @keyframes sway { 0%, 100% { rotate: -1.4deg; } 50% { rotate: 1.4deg; } }
+  @keyframes unfold { from { scale: .15 .3; opacity: 0; } }
+  @keyframes cheer { 50% { scale: 1.12 1.1; } }
+  @keyframes flap { from { scale: 1 1; } to { scale: .25 1; } }
+  @keyframes tileIn { from { transform: translateY(-14px) scale(.6); opacity: 0; } }
+  @keyframes glow { 10% { opacity: 1; } to { opacity: 0; } }
+  @keyframes wave { 45% { transform: translateY(-10px); } }
+  @keyframes shake { 28% { translate: -4px 0; } 64% { translate: 3px 0; } }
+  @keyframes hintIn { from { scale: .8; } 70% { scale: 1.06; } }
+  @keyframes chip { 30% { scale: 1.08; background: #FFE3D6; } }
+</style>
+<script src="../lib/zoom.js"></script>
+<script src="../lib/sound.js"></script>
+<script src="../lib/ph.js"></script>
+</head>
+<body>
+<div id="bar">
+  <div id="title"><svg viewBox="0 0 24 24" aria-hidden="true"><g transform="translate(12 11)" fill="#fff" stroke="#7F98AD" stroke-width=".7"><ellipse cy="-5.6" rx="2.6" ry="4.4"/><ellipse cy="-5.6" rx="2.6" ry="4.4" transform="rotate(60)"/><ellipse cy="-5.6" rx="2.6" ry="4.4" transform="rotate(120)"/><ellipse cy="-5.6" rx="2.6" ry="4.4" transform="rotate(180)"/><ellipse cy="-5.6" rx="2.6" ry="4.4" transform="rotate(240)"/><ellipse cy="-5.6" rx="2.6" ry="4.4" transform="rotate(300)"/><circle r="3.2" fill="#F6B51E" stroke="#C47B0C"/></g><path d="M5 22.4h4M10 22.4h4M15 22.4h4" stroke="#2F6E9E" stroke-width="1.8" stroke-linecap="round"/></svg>Le pendu</div>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Entoure une bonne lettre à essayer et dit pourquoi"><span class="long">Que jouer maintenant ?</span><span class="short">Que jouer ?</span><span class="tiny">Idée</span></button>
+  <span class="spacer"></span>
+  <button id="helpBtn" data-icon="help">Règles</button>
+  <button id="newBtn" class="game">Nouvelle partie</button>
+</div>
+<div id="say"><div id="msg" aria-live="polite"></div></div>
+<div id="table">
+  <div id="stage">
+    <figure id="scene">
+      <div id="daisyBox"></div>
+      <figcaption id="petals" aria-live="polite"></figcaption>
+    </figure>
+    <div id="sheet">
+      <div id="top">
+        <p id="clue"><svg viewBox="0 0 34 34" aria-hidden="true"><path d="M6 14 17 4l11 10v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z" fill="#FFE9A6" stroke="#C9951A" stroke-width="2" stroke-linejoin="round"/><circle cx="17" cy="13" r="2.6" fill="#fff" stroke="#C9951A" stroke-width="1.6"/><path d="M11 21h12M11 25h8" stroke="#8A6A18" stroke-width="2" stroke-linecap="round"/></svg><span><span class="lab">Indice</span><b id="theme"></b></span></p>
+        <button id="proposeBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.2-4.6L16 4.6a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L8.6 18.8z"/><path d="M14 6.6l3.4 3.4"/></svg><span class="long">Proposer le mot</span><span class="short">Proposer</span></button>
+      </div>
+      <div id="word" role="group" aria-label="Le mot à trouver"></div>
+      <div id="keysBox">
+        <div id="keys" role="group" aria-label="Les lettres"></div>
+        <form id="propose" hidden autocomplete="off">
+          <label for="guessIn">Tapez le mot entier, puis cliquez sur «&nbsp;Valider&nbsp;».</label>
+          <input id="guessIn" type="text" inputmode="text" autocapitalize="characters" spellcheck="false" maxlength="24">
+          <div class="row"><button type="submit" class="primary" id="sendBtn">Valider</button><button type="button" id="backBtn">Revenir aux lettres</button></div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<footer id="rail"><div class="zoom"></div></footer>
+<div id="help" data-title="Comment jouer">
+  <section class="page">
+    <h3>Choisir une lettre</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="gsheet">
+        <div class="gclue"><span>Indice : </span>Au jardin</div>
+        <div class="gword" data-w="R....U" data-on="R U"></div>
+        <div class="gkeys" data-k="ABCDE" data-h="E"></div>
+      </div>
+    </div>
+    <p class="guide-lead">Cliquez sur une lettre, ou tapez-la au clavier.</p>
+    <p class="guide-more">Trouvez le mot avant que la marguerite perde tous ses pétales.</p>
+  </section>
+  <section class="page">
+    <h3>Une bonne lettre</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="gsheet">
+        <div class="gword" data-w="RÂTEAU" data-on="R E" data-new="E"></div>
+        <div class="gkeys" data-k="ABCDE" data-hit="E"></div>
+      </div>
+    </div>
+    <p class="guide-lead">Une bonne lettre se place partout dans le mot.</p>
+    <p class="guide-more">Le E trouve aussi É, È et Ê. Le C trouve Ç.</p>
+  </section>
+  <section class="page">
+    <h3>Une lettre absente</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="gdaisy" data-petals="10" data-fallen="1"></div>
+      <div class="gsheet">
+        <div class="gkeys" data-k="KLMNO" data-miss="K"></div>
+      </div>
+    </div>
+    <p class="guide-lead">Une lettre absente fait tomber un pétale.</p>
+    <p class="guide-more">10 pétales au niveau facile, 8 au niveau moyen, 6 au niveau difficile.</p>
+  </section>
+  <section class="page">
+    <h3>Proposer le mot</h3>
+    <div class="guide-pic to-keys" aria-hidden="true">
+      <span class="guide-btn here" data-icon="pencil">Proposer le mot</span>
+      <svg class="garrow" viewBox="0 0 54 40"><path d="M4 20h44M36 8l12 12-12 12"/></svg>
+      <div class="gsheet"><div class="gfield">RÂTEAU</div></div>
+    </div>
+    <p class="guide-lead">Vous avez deviné&nbsp;? Cliquez sur «&nbsp;Proposer le mot&nbsp;».</p>
+    <p class="guide-more">Tapez-le, puis «&nbsp;Valider&nbsp;». Un mauvais mot fait aussi tomber un pétale.</p>
+  </section>
+  <section class="page">
+    <h3>Demander de l’aide</h3>
+    <div class="guide-pic to-keys" aria-hidden="true">
+      <span class="guide-btn primary here" data-icon="bulb">Que jouer maintenant ?</span>
+      <svg class="garrow" viewBox="0 0 54 40"><path d="M4 20h44M36 8l12 12-12 12"/></svg>
+      <div class="gsheet"><div class="gkeys" data-k="RST" data-ring="S"></div></div>
+    </div>
+    <p class="guide-lead">L’aide entoure une bonne lettre à essayer.</p>
+    <p class="guide-more">Elle dit pourquoi : la lettre est dans le plus de mots possibles.</p>
+  </section>
+</div>
+
+<script src="../lib/store.js"></script>
+<script src="../lib/kit.js"></script>
+<script src="words.js"></script>
+<script src="engine.js"></script>
+<script src="daisy.js"></script>
+<script>
+'use strict';
+const P = Pendu;
+const $ = id => document.getElementById(id);
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+// The timings of the motions. A petal falls in FALL_MS. The letters found appear TILE_MS apart. At a win the
+// butterfly flies FLY_MS, and the dialog opens WIN_MS after the last letter; after a loss, LOSS_MS.
+const FALL_MS = 1500, TILE_MS = 90, FLY_MS = 1700, WIN_MS = 2600, LOSS_MS = 2200;
+
+// French typography: a thin unbreakable space before : ; ! ? and inside « ».
+const fr = s => s.replace(/ ([:;!?»])/g, ' $1').replace(/« /g, '« ');
+const say = s => Kit.say(fr(s));
+const tell = s => Kit.tell(fr(s));
+const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
+// « le E », « l’A »: the article of a letter, as it is said.
+const theLetter = L => ('AEFHILMNORSX'.includes(L) ? 'l’' : 'le ') + L;
+const ofLetter = L => ('AEFHILMNORSX'.includes(L) ? 'd’' : 'de ') + L;
+const FULL = 'La partie n’a pas pu être enregistrée : la mémoire de l’ordinateur est pleine.';
+// The themes as the clue says them.
+const CLUE = { 'Une action': 'Une action (un verbe)', 'Pour décrire': 'Pour décrire (un adjectif)' };
+
+/* ---------- State ----------
+   G: the game (see engine.js). stats: { won, played }. used: per level, the words already played, never twice
+   until the level has none left. hintL: the letter ringed by the hint. typing: "Proposer le mot" is open. */
+let G = null, level = 'facile', stats = { won: 0, played: 0 }, used = { facile: [], moyen: [], fort: [] }, wonNow = false;
+let hintL = '', typing = false, stale = false, saved = true;
+addEventListener('gg-stale', () => { stale = true; });
+const playing = () => !!G && !G.result && G.tried.length + G.wrong.length > G.given.length;
+
+/* ---------- Saves ---------- */
+let saving = Promise.resolve();
+function save(onFail) {
+  const run = saving.then(async () => {
+    const parts = [];
+    if (playing()) parts.push('Partie en cours');
+    if (stats.won) parts.push(plural(stats.won, 'mot trouvé', 'mots trouvés'));
+    if (await GG.save('pendu', { v: 1, G, level, stats, used, wonNow }, { summary: parts.join(' · ') })) return (saved = true);
+    saved = false;
+    onFail?.();
+    if (!stale) say(FULL);
+    return false;
+  });
+  saving = run.catch(() => false);
+  return run;
+}
+function load() {
+  try {
+    const v = GG.load('pendu');
+    if (!v) return false;
+    if (v.stats && Number.isInteger(v.stats.won) && v.stats.won >= 0) stats = { won: v.stats.won, played: Number.isInteger(v.stats.played) ? v.stats.played : v.stats.won };
+    if (v.used && typeof v.used === 'object')
+      for (const lv of Object.keys(used)) used[lv] = Array.isArray(v.used[lv]) ? v.used[lv].filter(k => typeof k === 'string') : [];
+    if (P.LEVELS[v.level]) level = v.level;
+    const g = P.withLevel(v.G);
+    if (!P.valid(g)) return false;
+    G = g; level = G.level;
+    wonNow = !!v.wonNow && G.result === 'won';
+    return true;
+  } catch (e) { return false; }
+}
+
+/* ---------- His letters ----------
+   A click on a key or a letter of his keyboard tries it. A second click on the same key within half a second
+   is the end of a double-click: it counts once. */
+let lastKey = { L: '', t: 0 };
+async function play(letter, from) {
+  if (!G || Kit.isOpen() || typing) return;
+  const t = performance.now(), L = P.key(letter);
+  if (from === 'click' && L === lastKey.L && t - lastKey.t < 500) return;
+  lastKey = { L, t };
+  const r = P.guess(G, L);
+  if (r.kind === 'bad') return;
+  if (r.kind === 'over') { window.Sound?.play('bad'); return say(overLine()); }
+  if (r.kind === 'again') {
+    window.Sound?.play('bad');
+    shake(L);
+    return say(r.n ? `Vous avez déjà trouvé ${theLetter(L)}. Choisissez une lettre encore blanche.`
+      : `Vous avez déjà essayé ${theLetter(L)} : il n’est pas dans le mot. Choisissez une lettre encore blanche.`);
+  }
+  const before = G;
+  G = r.G; hintL = '';
+  const firstWin = G.result === 'won' && !wonNow;
+  if (firstWin) { wonNow = true; stats.won++; }
+  if (G.result) stats.played++;
+  const mine = G;
+  const ok = await save(firstWin ? () => { if (G === mine) wonNow = false; stats.won--; } : null);
+  if (ok && firstWin) GG.track('pendu', 'won');
+  if (G !== mine) return;
+  if (r.kind === 'hit') {
+    render(L);
+    if (G.result) return finish(true);
+    window.Sound?.play('good');
+    if (saved) say(r.n === 1 ? `Oui, il y a un ${L} dans le mot. Cliquez sur une autre lettre.`
+      : `Oui, il y a ${r.n} ${L} dans le mot. Cliquez sur une autre lettre.`);
+  } else {
+    render();
+    dropPetal(P.misses(before));
+    if (G.result) return finish(true);
+    window.Sound?.play('flip');
+    const left = P.lives(G);
+    if (saved) say(`Pas ${ofLetter(L)} dans ce mot : un pétale tombe, ${left === 1 ? 'il en reste un seul' : `il en reste ${left}`}. Essayez une autre lettre.`);
+  }
+}
+const overLine = () => G.result === 'won' ? 'Ce mot est trouvé : cliquez sur « Mot suivant » pour en deviner un autre.'
+  : 'Ce mot est fini : cliquez sur « Mot suivant » pour en deviner un autre.';
+
+/* ---------- Proposer le mot ---------- */
+function openPropose() {
+  if (!G || Kit.isOpen()) return;
+  if (G.result) return nextWord();
+  typing = true; hintL = '';
+  $('guessIn').value = '';
+  render();
+  $('guessIn').focus();
+  say(`Tapez le mot de ${plural(P.key(G.word).replace(/-/g, '').length, 'lettre', 'lettres')}, puis cliquez sur « Valider ». Les accents ne comptent pas.`);
+}
+function closePropose(quiet) {
+  if (!typing) return false;
+  typing = false;
+  $('guessIn').blur();
+  render();
+  if (!quiet) say('Cliquez sur une lettre, ou sur « Proposer le mot » quand vous l’avez deviné.');
+  return true;
+}
+async function sendGuess() {
+  if (!G || !typing || Kit.isOpen()) return;
+  const text = $('guessIn').value;
+  const r = P.propose(G, text);
+  const n = P.key(G.word).replace(/-/g, '').length;
+  if (r.kind === 'empty') { window.Sound?.play('bad'); $('guessIn').focus(); return say('Tapez d’abord le mot dans la case blanche, puis cliquez sur « Valider ».'); }
+  if (r.kind === 'length') {
+    window.Sound?.play('bad'); $('guessIn').focus();
+    return say(`Le mot a ${plural(n, 'lettre', 'lettres')}, et vous en avez tapé ${r.typed}. Corrigez-le, puis cliquez sur « Valider ».`);
+  }
+  if (r.kind === 'again') { window.Sound?.play('bad'); $('guessIn').focus(); return say(`Vous avez déjà proposé ${r.text} : ce n’est pas le mot. Essayez un autre mot.`); }
+  if (r.kind === 'over') { typing = false; render(); return say(overLine()); }
+  const before = G;
+  G = r.G; typing = false; hintL = '';
+  const firstWin = G.result === 'won' && !wonNow;
+  if (firstWin) { wonNow = true; stats.won++; }
+  if (G.result) stats.played++;
+  const mine = G;
+  const ok = await save(firstWin ? () => { if (G === mine) wonNow = false; stats.won--; } : null);
+  if (ok && firstWin) GG.track('pendu', 'won');
+  if (G !== mine) return;
+  if (r.kind === 'won') { render('*'); return finish(true); }
+  render();
+  dropPetal(P.misses(before));
+  if (G.result) return finish(true);
+  window.Sound?.play('flip');
+  const left = P.lives(G);
+  if (saved) say(`Ce n’est pas ${r.text} : un pétale tombe, ${left === 1 ? 'il en reste un seul' : `il en reste ${left}`}. Essayez une lettre ou un autre mot.`);
+}
+
+/* ---------- The hint ----------
+   The letter that the most words still possible contain, among the words of the level and of the theme. */
+function showHint() {
+  if (!G || Kit.isOpen()) return;
+  if (G.result) return say(overLine());
+  if (typing) closePropose(true);
+  const h = P.hint(G);
+  hintL = h.letter;
+  render();
+  let why;
+  if (h.n === 1) why = `Essayez ${theLetter(h.letter)} : un seul mot du thème va encore avec ce que vous voyez, et il en a un.`;
+  else if (h.has === h.n) why = `Essayez ${theLetter(h.letter)} : les ${h.n} mots du thème qui restent possibles en ont tous un.`;
+  else why = `Essayez ${theLetter(h.letter)} : il est dans ${h.has} des ${h.n} mots du thème qui restent possibles.`;
+  say(why + ' Cliquez sur la lettre entourée.');
+}
+// During his first game, the hand points at the letter the hint would ring.
+function coach() {
+  if (!Kit.coaching() || !G || G.result || Kit.isOpen() || typing) return;
+  const h = P.hint(G);
+  if (h) Kit.point(keyEls[h.letter]);
+}
+
+/* ---------- New word, end of a word ---------- */
+function askNewGame() { stopAll(); Kit.chooseLevel(level, playing(), newGame); }
+function nextWord() { if (playing()) return askNewGame(); newGame(level); }
+async function newGame(lv) {
+  pendingEnd = null; clearTimeout(endTimer);
+  stopAll();
+  if (lv) level = lv;
+  Kit.showLevel(level);
+  G = P.newGame(level, crypto.getRandomValues(new Uint32Array(1))[0], used[level]);
+  // Every word of the level was played: the list starts again, without the word just drawn.
+  if (!G.fresh) used[level] = [];
+  delete G.fresh;
+  used[level].push(P.key(G.word));
+  hintL = ''; typing = false; wonNow = false;
+  const written = save();
+  render();
+  drawDaisy(true);
+  if (!stale) say(startLine());
+  if (await written) GG.track('pendu', 'start');
+}
+const startLine = () => {
+  const n = P.key(G.word).replace(/-/g, '').length;
+  return G.given.length ? `Un mot de ${n} lettres : la première est donnée. Cliquez sur une lettre, ou tapez-la au clavier.`
+    : `Un mot de ${n} lettres. Cliquez sur une lettre, ou tapez-la au clavier.`;
+};
+function finish(show) {
+  Kit.gameOver(true);
+  const word = P.caps(G.word);
+  const text = G.result === 'won'
+    ? `Bravo, vous avez trouvé ${word} ! Cliquez sur « Mot suivant » pour en deviner un autre.`
+    : `La marguerite n’a plus de pétales. Le mot était ${word}. Cliquez sur « Mot suivant ».`;
+  if (saved && !stale) say(text);
+  if (!show) { drawDaisy(false); return; }
+  const won = G.result === 'won', game = G;
+  window.Sound?.play(won ? 'win' : 'lose');
+  pendingEnd = () => {
+    if (G !== game || stale) return;
+    const left = P.lives(G);
+    const body = won
+      ? `Le mot était ${word}, et la marguerite garde ${plural(left, 'pétale', 'pétales')}. ` + (saved ? `Mots trouvés : ${stats.won}.` : FULL)
+      : `Le mot était ${word} (${CLUE[G.theme] || G.theme}). ` + (saved ? 'Un nouveau mot vous attend.' : FULL);
+    Kit.dialog(won ? 'Bravo, vous avez gagné !' : 'La marguerite a perdu ses pétales', body,
+      [['Mot suivant', () => newGame(level), true], ['Changer de niveau', askNewGame], ['Retour aux jeux', Kit.home]], won);
+  };
+  if (reducedMotion.matches) return openEnd();
+  if (won) celebrate(); else bow();
+  later(openEnd, won ? WIN_MS : LOSS_MS);
+}
+let pendingEnd = null, endTimer, timers = [];
+function later(fn, ms) { const t = setTimeout(() => { timers = timers.filter(x => x !== t); fn(); }, ms); timers.push(t); return t; }
+function openEnd() {
+  clearTimeout(endTimer);
+  if (!pendingEnd) return;
+  if (Kit.isOpen()) { endTimer = setTimeout(openEnd, 300); return; }
+  const open = pendingEnd;
+  pendingEnd = null;
+  open();
+}
+function stopAll() {
+  timers.forEach(clearTimeout); timers = [];
+  if (pendingEnd) { clearTimeout(endTimer); endTimer = setTimeout(openEnd, 300); }
+}
+
+/* ---------- The daisy ---------- */
+const daisyBox = $('daisyBox');
+// The whole picture, as the game stands. A new word: the petals unfold one after the other.
+function drawDaisy(bloom) {
+  if (!G) return;
+  const n = P.LEVELS[G.level].lives;
+  daisyBox.innerHTML = Daisy.svg({ petals: n, fallen: Math.min(n, P.misses(G)), id: 'play' });
+  const svg = daisyBox.firstElementChild;
+  if (G.result === 'lost') svg.querySelector('.plant').classList.add('bow');
+  if (G.result === 'won') perch(svg, false);
+  if (bloom && !reducedMotion.matches) {
+    svg.querySelectorAll('.petal > path:first-child').forEach((p, k) => p.style.setProperty('--d', k * 70 + 'ms'));
+    svg.classList.add('bloom');
+  }
+}
+// One petal leaves the flower and drifts down onto the sill, swaying like a real one.
+function dropPetal(k) {
+  const svg = daisyBox.firstElementChild;
+  if (!svg || !G) return;
+  const n = P.LEVELS[G.level].lives, i = Daisy.order(n)[k];
+  const petal = svg.querySelector(`.petal[data-i="${i}"]`);
+  const chip = $('petals');
+  chip.classList.remove('drop'); void chip.offsetWidth; chip.classList.add('drop');
+  if (!petal) return drawDaisy(false);
+  const from = Daisy.petalAt(n, i), to = Daisy.spot(k);
+  const lying = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  lying.setAttribute('class', 'lying');
+  lying.innerHTML = petal.innerHTML;
+  lying.querySelector('.vein')?.remove();
+  lying.setAttribute('transform', `translate(${to.x} ${to.y}) scale(.92 .5) rotate(${to.a})`);
+  petal.remove();
+  svg.querySelector('.sill').appendChild(lying);
+  if (reducedMotion.matches) return;
+  // The flight is drawn in the coordinates of the picture: from the flower to the sill.
+  const fall = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  fall.setAttribute('class', 'falling');
+  fall.innerHTML = lying.innerHTML;
+  svg.querySelector('.fly').appendChild(fall);
+  lying.style.opacity = '0';
+  const side = to.x < 150 ? -1 : 1;
+  const T = (x, y, s1, s2, a) => `translate(${x}px, ${y}px) scale(${s1}, ${s2}) rotate(${a}deg)`;
+  const anim = fall.animate([
+    { transform: T(from.x, from.y, 1, 1, from.a), offset: 0 },
+    { transform: T(from.x + side * 18, from.y + 40, .95, .9, from.a + side * 60), offset: .25 },
+    { transform: T((from.x + to.x) / 2 - side * 14, (from.y + to.y) / 2 + 10, .9, .75, to.a - side * 40), offset: .55 },
+    { transform: T(to.x + side * 8, to.y - 18, .94, .6, to.a + side * 14), offset: .8 },
+    { transform: T(to.x, to.y, .92, .5, to.a), offset: 1 },
+  ], { duration: FALL_MS, easing: 'ease-in-out' });
+  anim.onfinish = anim.oncancel = () => { fall.remove(); lying.style.opacity = ''; };
+}
+// A won word: the petals left nod in a wave and a butterfly comes to rest on the heart of the flower.
+function celebrate() {
+  const svg = daisyBox.firstElementChild;
+  if (!svg) return;
+  svg.querySelectorAll('.petal > path:first-child').forEach((p, k) => p.style.setProperty('--d', k * 80 + 'ms'));
+  svg.classList.remove('bloom'); void svg.getBoundingClientRect(); svg.classList.add('cheer');
+  perch(svg, true);
+  $('sheet').classList.add('won');
+  $('word').querySelectorAll('.tile').forEach((t, k) => t.style.setProperty('--d', k * 70 + 'ms'));
+}
+function perch(svg, fly) {
+  const g = svg.querySelector('.fly');
+  g.insertAdjacentHTML('beforeend', `<g class="perch">${Daisy.BUTTERFLY}</g>`);
+  const b = g.lastElementChild;
+  b.style.transformBox = 'view-box'; b.style.transformOrigin = '0 0';
+  const rest = `translate(${Daisy.CX + 6}px, ${Daisy.CY - 30}px) rotate(12deg) scale(1.45)`;
+  b.style.transform = rest;
+  const wings = b.querySelector('.bfly');
+  if (!fly || reducedMotion.matches) { wings.classList.add('rest'); return; }
+  const a = b.animate([
+    { transform: 'translate(330px, 30px) rotate(-20deg) scale(1)' },
+    { transform: 'translate(250px, 70px) rotate(-10deg) scale(1.15)', offset: .3 },
+    { transform: 'translate(200px, 40px) rotate(8deg) scale(1.3)', offset: .55 },
+    { transform: `translate(${Daisy.CX + 30}px, ${Daisy.CY - 60}px) rotate(18deg) scale(1.4)`, offset: .8 },
+    { transform: rest },
+  ], { duration: FLY_MS, easing: 'ease-in-out' });
+  a.onfinish = () => wings.classList.add('rest');
+}
+// A lost word: the flower bows its head, gently.
+function bow() { daisyBox.querySelector('.plant')?.classList.add('bow'); }
+
+/* ---------- Drawing ---------- */
+const table = $('table'), stage = $('stage'), sheet = $('sheet'), wordEl = $('word'), keysEl = $('keys');
+const keyEls = {};
+for (const L of P.ALPHABET) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'key'; b.textContent = L; b.dataset.l = L;
+  b.addEventListener('click', () => play(L, 'click'));
+  keysEl.appendChild(b); keyEls[L] = b;
+}
+let built = '';
+function build() {
+  const id = G.word + '|' + G.level;
+  if (built === id) return;
+  built = id;
+  // A long word may take two rows: it breaks after the hyphen nearest the middle, else in the middle.
+  const k = P.key(G.word), mid = k.length / 2;
+  const hy = [...k].map((c, i) => c === '-' ? i : -1).filter(i => i > 0).sort((a, b) => Math.abs(a + .5 - mid) - Math.abs(b + .5 - mid))[0];
+  split = hy !== undefined && Math.abs(hy + .5 - mid) < k.length / 4 ? hy + 1 : Math.ceil(k.length / 2);
+  wordEl.innerHTML = [...k].map((c, i) => (i === split ? '<i class="brk"></i>' : '') + (c === '-' ? '<span class="tile dash on">-</span>' : '<span class="tile"></span>')).join('');
+}
+let split = 0;
+function shake(L) {
+  const k = keyEls[L];
+  if (!k || reducedMotion.matches) return;
+  k.classList.remove('shake'); void k.offsetWidth; k.classList.add('shake');
+  later(() => k.classList.remove('shake'), 450);
+}
+
+// The window on the left and the sheet on the right, each as large as the room allows. The keys take 13, 9 or 7
+// columns, whichever gives the largest keys. A phone puts the window above the sheet.
+function layout() {
+  const W = table.clientWidth, H = table.clientHeight, phone = innerWidth < 700, low = H < 380;
+  const n = P.key(G.word).length;
+  const pad = phone ? 8 : Math.round(Math.max(8, Math.min(26, H * .03)));
+  const gap = phone ? 10 : Math.round(Math.max(16, Math.min(40, W * .025)));
+  stage.classList.toggle('stack', phone);
+  const sp = phone ? 10 : low ? 10 : Math.round(Math.max(14, Math.min(28, H * .035)));
+  const bg = phone ? 10 : low ? 8 : Math.round(Math.max(10, Math.min(24, H * .03)));
+  const set = (k, v) => stage.style.setProperty(k, v);
+  set('--pad', pad + 'px'); set('--gap', gap + 'px');
+  sheet.style.setProperty('--sp', sp + 'px'); sheet.style.setProperty('--bg', bg + 'px');
+  // The picture keeps the shape of a window, 1 wide for 1.2 high; the count of petals sits under it, or beside
+  // it on a phone. The column is never narrower than the count.
+  const chipW = $('petals').offsetWidth, chipH = $('petals').offsetHeight + 8;
+  let pw, sw, bw, bh;
+  if (phone) {
+    pw = Math.round(Math.max(90, Math.min(140, H * .25 / 1.2)));
+    sw = pw;
+    bw = W - 2 * pad;
+    bh = H - 2 * pad - pw * 1.2 - gap - 4;
+  } else {
+    // A few pixels of room, for the rounding of the sizes below.
+    bh = H - 2 * pad - 4;
+    pw = Math.floor(Math.max(140, Math.min((bh - chipH) / 1.2, W * .32, 440)));
+    sw = Math.max(pw, chipW);
+    bw = Math.min(W - 2 * pad - gap - sw, 1000);
+  }
+  set('--sw', sw + 'px'); set('--pw', pw + 'px');
+  sheet.style.width = bw + 'px';
+  const inner = bw - 2 * sp, top = Math.max(54, $('top').offsetHeight);
+  const kg = phone ? 6 : Math.round(Math.max(6, Math.min(12, inner * .012)));
+  // The tiles of the word: one row as large as the width allows, up to 76 px. A long word that would get tiles
+  // smaller than the least size takes two rows.
+  const tg = Math.max(4, Math.min(10, Math.round(inner / n * .12)));
+  const least = phone ? 28 : 40;
+  const tileFor = per => Math.floor(Math.min(76, (inner - (per - 1) * tg) / per));
+  let rowsT = 1, per = n, t = tileFor(n);
+  if (t < least && n > 8) { rowsT = 2; per = Math.max(split, n - split); t = tileFor(per); }
+  wordEl.classList.toggle('two', rowsT > 1);
+  // The keys: 13, 9 or 7 to a row, whichever gives the largest keys that fit under the word, never under 44 px
+  // high. The tiles give way first when the window is short.
+  const keysFor = room => {
+    let best = null;
+    for (const cols of [13, 9, 7]) {
+      const rows = Math.ceil(26 / cols);
+      const kw = Math.floor(Math.min((inner - (cols - 1) * kg) / cols, 96));
+      const kh = Math.floor(Math.min((room - (rows - 1) * kg) / rows, kw * 1.05, 88));
+      if (kw < 30) continue;
+      const fits = kh >= 44, size = Math.min(kw, kh);
+      if (!best || fits && !best.fits || fits === best.fits && (fits ? size > best.size + 2 : rows < best.rows)) best = { cols, rows, kw, kh: Math.max(44, kh), size, fits };
+    }
+    return best;
+  };
+  const roomFor = t => bh - 2 * sp - top - rowsT * t * 1.12 - (rowsT - 1) * tg - 2 * bg;
+  t = Math.min(t, Math.floor((bh - 2 * sp) * .16));
+  let keys = keysFor(roomFor(t));
+  while (!keys.fits && t > (phone ? 24 : 32)) { t -= 2; keys = keysFor(roomFor(t)); }
+  sheet.style.setProperty('--t', t + 'px'); sheet.style.setProperty('--tg', tg + 'px');
+  sheet.style.setProperty('--cols', keys.cols); sheet.style.setProperty('--kw', keys.kw + 'px'); sheet.style.setProperty('--kh', keys.kh + 'px');
+  sheet.style.setProperty('--kg', kg + 'px');
+}
+
+function render(found) {
+  if (!G) return;
+  build();
+  // The count first: the layout measures it.
+  const n = P.LEVELS[G.level].lives, left = Math.max(0, P.lives(G));
+  $('petals').innerHTML = `<svg viewBox="0 0 26 26" aria-hidden="true"><path d="M13 23C7 19 6.5 9 13 3c6.5 6 6 16 0 20z" fill="#fff" stroke="#7F98AD" stroke-width="1.6"/></svg>`
+    + (left ? `Encore ${plural(left, 'pétale', 'pétales')}` : 'Plus de pétale');
+  $('petals').classList.toggle('low', left <= 2);
+  layout();
+  const shown = P.shown(G), k = P.key(G.word), lostNow = G.result === 'lost';
+  let fresh = 0;
+  wordEl.querySelectorAll('.tile').forEach((e, i) => {
+    if (k[i] === '-') return;
+    const c = shown[i], found_ = G.tried.includes(k[i]);
+    const was = e.classList.contains('on') || e.classList.contains('missed');
+    e.textContent = c || '';
+    e.classList.toggle('on', !!c && found_);
+    e.classList.toggle('missed', !!c && !found_ && lostNow);
+    if (c && !was && found !== undefined) { e.classList.add('new'); e.style.setProperty('--d', fresh++ * TILE_MS + 'ms'); later(() => e.classList.remove('new'), 1300 + fresh * TILE_MS); }
+    e.setAttribute('aria-label', c ? `Lettre ${i + 1} : ${c}` : `Lettre ${i + 1} : à trouver`);
+  });
+  $('theme').textContent = CLUE[G.theme] || G.theme;
+  $('theme').title = $('theme').textContent;
+  for (const L of P.ALPHABET) {
+    const e = keyEls[L], tried = G.tried.includes(L), hit = tried && k.includes(L);
+    e.classList.toggle('hit', hit);
+    e.classList.toggle('miss', tried && !hit);
+    e.classList.toggle('hint', L === hintL && !G.result);
+    e.setAttribute('aria-label', `${L}${hit ? ', dans le mot' : tried ? ', pas dans le mot' : ''}${L === hintL ? ', proposée par l’aide' : ''}`);
+  }
+  keysEl.classList.toggle('idle', !!G.result);
+  $('keysBox').classList.toggle('typing', typing);
+  $('propose').hidden = !typing;
+  // The field gives the keys of his keyboard back to the letters once it closes.
+  if (!typing && document.activeElement === $('guessIn')) $('guessIn').blur();
+  const pb = $('proposeBtn');
+  pb.classList.toggle('next', !!G.result);
+  pb.querySelector('.long').textContent = G.result ? 'Mot suivant' : 'Proposer le mot';
+  pb.querySelector('.short').textContent = G.result ? 'Mot suivant' : 'Proposer';
+  if (G.result) pb.dataset.nudge = ''; else delete pb.dataset.nudge;
+  if (!G.result) sheet.classList.remove('won');
+  $('hintBtn').disabled = !!G.result;
+  $('hintBtn').dataset.why = fr('Ce mot est fini : cliquez sur « Mot suivant ».');
+  if (typing) $('hintBtn').dataset.auto = 'no'; else delete $('hintBtn').dataset.auto;
+  Kit.showWins(stats.won);
+  coach();
+}
+
+/* ---------- The pictures of the rules ----------
+   data-w: the word, a dot for a hidden letter; data-on: the letters shown; data-new: the letter just found.
+   data-k: the keys; data-h: the key to click, with a ring and the hand; data-hit, data-miss: the marks; data-ring:
+   the ring of the hint. data-petals, data-fallen: a daisy. */
+for (const b of document.querySelectorAll('#help .gword')) {
+  const on = (b.dataset.on || '').split(' ').filter(Boolean), neu = b.dataset.new || '';
+  b.innerHTML = [...b.dataset.w].map(c => {
+    const base = P.key(c), vis = c !== '.' && on.includes(base);
+    return `<i class="${vis ? (base === neu ? 'on new' : 'on') : ''}">${vis ? c : ''}</i>`;
+  }).join('');
+}
+for (const b of document.querySelectorAll('#help .gkeys')) {
+  const d = b.dataset;
+  b.innerHTML = [...d.k].map(L => {
+    const cls = L === d.h ? 'h' : L === d.hit ? 'hit' : L === d.miss ? 'miss' : L === d.ring ? 'h' : '';
+    return `<b${cls ? ` class="${cls}"` : ''}>${L}${L === d.h ? Kit.icon('hand') : ''}</b>`;
+  }).join('');
+}
+for (const b of document.querySelectorAll('#help .gdaisy')) b.innerHTML = Daisy.svg({ petals: +b.dataset.petals, fallen: +b.dataset.fallen, id: 'g' + Math.random().toString(36).slice(2, 7) });
+// A pencil for the copy of « Proposer le mot » (the kit draws only its own icons).
+document.querySelectorAll('#help [data-icon="pencil"]').forEach(e => e.insertAdjacentHTML('afterbegin', $('proposeBtn').querySelector('svg').outerHTML));
+
+$('hintBtn').onclick = showHint;
+$('helpBtn').onclick = () => { if (!pendingEnd) stopAll(); Kit.openHelp(); };
+$('newBtn').onclick = askNewGame;
+$('proposeBtn').onclick = openPropose;
+$('backBtn').onclick = () => closePropose();
+$('propose').addEventListener('submit', e => { e.preventDefault(); sendGuess(); });
+addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (Kit.escape()) return;
+    if (closePropose()) return;
+    if (hintL) { hintL = ''; render(); }
+    return;
+  }
+  if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || Kit.isOpen() || typing) return;
+  if (e.target instanceof HTMLInputElement) return;
+  const L = P.key(e.key);
+  if (/^[A-Z]$/.test(L)) { e.preventDefault(); play(L, 'key'); }
+});
+addEventListener('resize', () => render());
+
+// The first visit starts a word at Facile at once, with the coach (lib/kit.js).
+if (load()) {
+  Kit.showLevel(level);
+  render();
+  drawDaisy(false);
+  if (G.result) finish(false);
+  else say(playing() ? `Encore ${plural(P.lives(G), 'pétale', 'pétales')} : cliquez sur une lettre, ou tapez-la au clavier.` : startLine());
+} else {
+  Kit.firstVisit(newGame);
+}
+</script>
+</body>
+</html>

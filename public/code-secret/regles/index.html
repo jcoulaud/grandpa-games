@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Règles du code secret : deviner la combinaison de couleurs · Jeux de Papi</title>
+  <meta name="description" content="Devinez les couleurs cachées et leur ordre grâce aux fiches noires et blanches. Trois niveaux, de 4 à 5 pions.">
+  <link rel="canonical" href="https://jeux-papi.fr/code-secret/regles/">
+  <meta property="og:type" content="article">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:site_name" content="Jeux de Papi">
+  <meta property="og:url" content="https://jeux-papi.fr/code-secret/regles/">
+  <meta property="og:title" content="Règles du code secret : deviner la combinaison de couleurs">
+  <meta property="og:description" content="Les fiches noires et blanches, les couleurs en double et une méthode simple pour trouver le code.">
+  <meta property="og:image" content="https://jeux-papi.fr/og/code-secret.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Règles du code secret. Un ancien jeu en bois avec des pions de couleur et un couvercle en laiton.">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="../icon.svg">
+  <link rel="stylesheet" href="../../lib/site-nav.css">
+  <link rel="stylesheet" href="../../lib/rules.css">
+  <style>
+    /* The pictures of the rules: the real pegs and pins of the game, on the beech of its board. */
+    .cs-art { display: grid; justify-content: center; gap: 14px; padding: clamp(1rem, 3vw, 1.75rem) 1rem;
+      background: linear-gradient(180deg, #E4B678, #C78B4A); box-shadow: inset 0 0 0 10px #5A3317; border-radius: 16px 16px 0 0; }
+    .cs-row { display: grid; grid-template-columns: 9.5rem auto auto; align-items: center; gap: 14px; }
+    .cs-row b { color: #3A2208; font-size: 20px; line-height: 1.2; }
+    .cs-cells { display: flex; gap: 8px; }
+    .cs-cell { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; }
+    .cs-cell.ok { box-shadow: 0 0 0 3px #141414; }
+    .cs-cell.near { box-shadow: 0 0 0 3px #FFFDF6, 0 0 0 5px #2A1D10; }
+    .cs-peg { width: 46px; height: 46px; filter: drop-shadow(0 2px 2px rgba(40,18,2,.45)); }
+    .cs-pins { display: grid; grid-template-columns: repeat(2, 24px); gap: 4px; padding: 6px; border-radius: 10px; background: #EFE0BE; box-shadow: inset 0 2px 3px rgba(90,50,10,.4); }
+    .cs-pin { width: 24px; height: 24px; }
+    .cs-palette { grid-template-columns: repeat(4, auto); gap: 12px 22px; }
+    .cs-swatch { display: grid; justify-items: center; gap: 4px; color: #3A2208; font-size: 20px; font-weight: 700; }
+    @media (max-width: 560px) {
+      .cs-row { grid-template-columns: auto auto; }
+      .cs-row b { grid-column: 1 / -1; }
+      .cs-cell { width: 42px; height: 42px; } .cs-peg { width: 38px; height: 38px; }
+      .cs-cells { gap: 4px; }
+    }
+  </style>
+  <script src="../../lib/zoom.js"></script>
+  <script src="../../lib/ph.js"></script>
+</head>
+<body class="rules code-secret">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="cs-0" viewBox="0 0 24 24"><path d="M12 21 3.6 12.8A5 5 0 0 1 12 6.3a5 5 0 0 1 8.4 6.5z"/></symbol>
+  <symbol id="cs-1" viewBox="0 0 24 24"><path d="M12 2.6l2.8 6 6.5.7-4.9 4.4 1.4 6.4L12 16.8l-5.8 3.3 1.4-6.4-4.9-4.4 6.5-.7z"/></symbol>
+  <symbol id="cs-2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.6"/><path d="M12 1.8v3.4M12 18.8v3.4M1.8 12h3.4M18.8 12h3.4M4.8 4.8l2.4 2.4M16.8 16.8l2.4 2.4M4.8 19.2l2.4-2.4M16.8 7.2l2.4-2.4" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></symbol>
+  <symbol id="cs-3" viewBox="0 0 24 24"><path d="M12 3.2 21.6 20H2.4z"/></symbol>
+  <symbol id="cs-4" viewBox="0 0 24 24"><path d="M12 1.8 21 12 12 22.2 3 12z"/></symbol>
+  <symbol id="cs-5" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/></symbol>
+  <symbol id="cs-6" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="1.5"/></symbol>
+  <symbol id="cs-7" viewBox="0 0 24 24"><path d="M15.2 2.6a9.6 9.6 0 1 0 6.4 14.2A7.6 7.6 0 0 1 15.2 2.6z"/></symbol>
+</svg>
+<a class="skip" href="#contenu">Aller au texte</a>
+<header class="site-nav">
+  <div class="site-nav-inner">
+    <a class="site-nav-brand" href="../../"><img src="../../icons/logo.webp" width="48" height="48" alt="">Jeux de Papi</a>
+    <nav class="site-nav-links" aria-label="Navigation principale">
+      <a href="../../#games">Les jeux</a>
+      <details class="site-menu is-current">
+        <summary>Règles</summary>
+        <div class="site-menu-panel">
+          <p class="site-menu-title">Règles des jeux</p>
+          <a href="../../belote/regles/"><img src="../../belote/icon.svg" width="40" height="40" alt="">Belote</a>
+          <a href="../../dames/regles/"><img src="../../dames/icon.svg" width="40" height="40" alt="">Jeu de dames</a>
+          <a href="../../solitaire/regles/"><img src="../../solitaire/icon.svg" width="40" height="40" alt="">Solitaire</a>
+          <a href="../../demineur/regles/"><img src="../../demineur/icon.svg" width="40" height="40" alt="">Démineur</a>
+          <a href="../../yams/regles/"><img src="../../yams/icon.svg" width="40" height="40" alt="">Yams</a>
+          <a href="../../huit-americain/regles/"><img src="../../huit-americain/icon.svg" width="40" height="40" alt="">Huit américain</a>
+          <a href="../../freecell/regles/"><img src="../../freecell/icon.svg" width="40" height="40" alt="">FreeCell</a>
+          <a href="../../dame-de-pique/regles/"><img src="../../dame-de-pique/icon.svg" width="40" height="40" alt="">Dame de pique</a>
+          <a href="../../bataille-navale/regles/"><img src="../../bataille-navale/icon.svg" width="40" height="40" alt="">Bataille navale</a>
+          <a href="../../paires/regles/"><img src="../../paires/icon.svg" width="40" height="40" alt="">Jeu des paires</a>
+          <a href="../../sudoku/regles/"><img src="../../sudoku/icon.svg" width="40" height="40" alt="">Sudoku</a>
+          <a href="../../mots-meles/regles/"><img src="../../mots-meles/icon.svg" width="40" height="40" alt="">Mots mêlés</a>
+          <a href="../../petits-chevaux/regles/"><img src="../../petits-chevaux/icon.svg" width="40" height="40" alt="">Petits chevaux</a>
+          <a href="../../morpion/regles/"><img src="../../morpion/icon.svg" width="40" height="40" alt="">Morpion</a>
+          <a href="../../golf/regles/"><img src="../../golf/icon.svg" width="40" height="40" alt="">Golf miniature</a>
+          <a href="../../billard/regles/"><img src="../../billard/icon.svg" width="40" height="40" alt="">Billard américain</a>
+          <a href="../../bowling/regles/"><img src="../../bowling/icon.svg" width="40" height="40" alt="">Bowling</a>
+          <a href="../../rami/regles/"><img src="../../rami/icon.svg" width="40" height="40" alt="">Rami</a>
+          <a href="../../dominos/regles/"><img src="../../dominos/icon.svg" width="40" height="40" alt="">Dominos</a>
+          <a href="../../loto/regles/"><img src="../../loto/icon.svg" width="40" height="40" alt="">Loto</a>
+          <a href="../../mots-fleches/regles/"><img src="../../mots-fleches/icon.svg" width="40" height="40" alt="">Mots fléchés</a>
+          <a href="../../pendu/regles/"><img src="../../pendu/icon.svg" width="40" height="40" alt="">Le pendu</a>
+          <a href="./" aria-current="page"><img src="../../code-secret/icon.svg" width="40" height="40" alt="">Code secret</a>
+          <a href="../../petanque/regles/"><img src="../../petanque/icon.svg" width="40" height="40" alt="">Pétanque</a>
+        </div>
+      </details>
+      <a href="../../blog/">Blog</a>
+    </nav>
+  </div>
+</header>
+<main id="contenu">
+  <header class="rules-head">
+    <div class="rules-head-inner">
+      <div>
+        <nav class="crumbs" aria-label="Vous êtes ici">
+          <ol><li><a href="../../">Les jeux</a></li><li><a href="../">Code secret</a></li><li aria-current="page">Règles</li></ol>
+        </nav>
+        <h1>Règles du code secret : deviner la combinaison de couleurs</h1>
+        <p class="intro">L’ordinateur cache quelques pions de couleur. À vous de trouver lesquels, et dans quel ordre, grâce à ses réponses.</p>
+        <a class="play" href="../" aria-label="Jouer au code secret">Jouer</a>
+      </div>
+      <div class="rules-art"><img src="hero.webp" width="1200" height="800" alt="" fetchpriority="high"></div>
+    </div>
+  </header>
+
+  <div class="rules-layout" id="sommaire">
+    <nav class="rules-contents" aria-labelledby="contents-title">
+      <h2 id="contents-title">Sommaire</h2>
+      <ul>
+        <li><a href="#but">Trouver le code secret</a></li>
+        <li><a href="#indices">Lire les indices</a></li>
+        <li><a href="#doubles">Les couleurs en double</a></li>
+        <li><a href="#niveaux">Choisir son niveau</a></li>
+        <li><a href="#methode">Une méthode pour trouver</a></li>
+        <li><a href="#aide">Utiliser l’aide</a></li>
+      </ul>
+      <a class="play" href="../" aria-label="Jouer au code secret">Jouer</a>
+    </nav>
+    <article class="rules-article">
+      <section id="but">
+        <h2>Trouver le code secret</h2>
+        <p>L’ordinateur cache une rangée de pions de couleur sous un couvercle : quatre pions aux niveaux Facile et Moyen, cinq au niveau Difficile. Vous devez retrouver les couleurs et leur ordre.</p>
+        <p>À chaque essai, cliquez sur des couleurs pour remplir une colonne, puis sur « Valider ». L’ordinateur répond par de petites fiches. Le couvercle s’ouvre quand vous trouvez le code ou quand les essais sont finis.</p>
+        <figure><div class="cs-art cs-palette" aria-hidden="true"><span class="cs-swatch"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#D3263A" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-0" x="9" y="9" width="22" height="22" fill="#fff" color="#fff"/></svg><span>Rouge</span></span><span class="cs-swatch"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#2463D6" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-1" x="9" y="9" width="22" height="22" fill="#fff" color="#fff"/></svg><span>Bleu</span></span><span class="cs-swatch"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#F6C624" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-2" x="9" y="9" width="22" height="22" fill="#4A3500" color="#4A3500"/></svg><span>Jaune</span></span><span class="cs-swatch"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#2F9A4E" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-3" x="9" y="9" width="22" height="22" fill="#fff" color="#fff"/></svg><span>Vert</span></span><span class="cs-swatch"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#F4F0E6" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-4" x="9" y="9" width="22" height="22" fill="#2A2622" color="#2A2622"/></svg><span>Blanc</span></span><span class="cs-swatch"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#7E45B8" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-5" x="9" y="9" width="22" height="22" fill="#fff" color="#fff"/></svg><span>Violet</span></span><span class="cs-swatch"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#F08A1C" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-6" x="9" y="9" width="22" height="22" fill="#4A2300" color="#4A2300"/></svg><span>Orange</span></span><span class="cs-swatch"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#F29BC0" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-7" x="9" y="9" width="22" height="22" fill="#5A1030" color="#5A1030"/></svg><span>Rose</span></span></div><figcaption>Chaque couleur porte son propre dessin : un cœur sur le rouge, une étoile sur le bleu, un soleil sur le jaune. On les reconnaît même quand deux couleurs se ressemblent.</figcaption></figure>
+      </section>
+
+      <section id="indices">
+        <h2>Lire les fiches noires et blanches</h2>
+        <p>Une <strong>fiche noire pleine</strong> veut dire : une bonne couleur à la bonne place. Un <strong>anneau blanc</strong> veut dire : une bonne couleur, mais à une autre place. L’ordinateur ne dit pas quels pions sont concernés : c’est à vous de le déduire.</p>
+        <figure><div class="cs-art" role="img" aria-label="Le code caché : rouge, bleu, jaune, vert. Votre essai : rouge, bleu, vert, blanc. Réponse : deux fiches noires et un anneau blanc."><div class="cs-row"><b>Le code caché</b><span class="cs-cells"><span class="cs-cell"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#D3263A" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-0" x="9" y="9" width="22" height="22" fill="#fff" color="#fff"/></svg></span><span class="cs-cell"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#2463D6" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-1" x="9" y="9" width="22" height="22" fill="#fff" color="#fff"/></svg></span><span class="cs-cell"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#F6C624" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-2" x="9" y="9" width="22" height="22" fill="#4A3500" color="#4A3500"/></svg></span><span class="cs-cell"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#2F9A4E" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-3" x="9" y="9" width="22" height="22" fill="#fff" color="#fff"/></svg></span></span></div><div class="cs-row"><b>Votre essai</b><span class="cs-cells"><span class="cs-cell ok"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#D3263A" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-0" x="9" y="9" width="22" height="22" fill="#fff" color="#fff"/></svg></span><span class="cs-cell ok"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#2463D6" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-1" x="9" y="9" width="22" height="22" fill="#fff" color="#fff"/></svg></span><span class="cs-cell near"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#2F9A4E" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-3" x="9" y="9" width="22" height="22" fill="#fff" color="#fff"/></svg></span><span class="cs-cell"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#F4F0E6" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-4" x="9" y="9" width="22" height="22" fill="#2A2622" color="#2A2622"/></svg></span></span><span class="cs-pins"><svg class="cs-pin" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.5" fill="#141414"/></svg><svg class="cs-pin" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.5" fill="#141414"/></svg><svg class="cs-pin" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.6" fill="#FFFDF6" stroke="#2A1D10" stroke-width="2.4"/><circle cx="10" cy="10" r="3" fill="#3A2A1A"/></svg><svg class="cs-pin" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3" fill="#8A6A48"/></svg></span></div></div><figcaption>Le rouge et le bleu sont à leur place : deux fiches noires. Le vert est dans le code, mais pas à cette place : un anneau blanc. Le blanc n’y est pas. Le jeu écrit aussi la réponse en toutes lettres : « 2 bien placées, 1 mal placée ».</figcaption></figure>
+      </section>
+
+      <section id="doubles">
+        <h2>Les couleurs en double</h2>
+        <p>Aux niveaux Moyen et Difficile, une couleur peut revenir plusieurs fois dans le code et dans vos essais. Chaque pion du code ne donne qu’une seule fiche.</p>
+        <figure><div class="cs-art" role="img" aria-label="Le code caché : rouge, rouge, bleu, jaune. Votre essai : rouge, bleu, rouge, rouge. Réponse : une fiche noire et deux anneaux blancs."><div class="cs-row"><b>Le code caché</b><span class="cs-cells"><span class="cs-cell"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#D3263A" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-0" x="9" y="9" width="22" height="22" fill="#fff" color="#fff"/></svg></span><span class="cs-cell"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#D3263A" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-0" x="9" y="9" width="22" height="22" fill="#fff" color="#fff"/></svg></span><span class="cs-cell"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#2463D6" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-1" x="9" y="9" width="22" height="22" fill="#fff" color="#fff"/></svg></span><span class="cs-cell"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#F6C624" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-2" x="9" y="9" width="22" height="22" fill="#4A3500" color="#4A3500"/></svg></span></span></div><div class="cs-row"><b>Votre essai</b><span class="cs-cells"><span class="cs-cell ok"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#D3263A" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-0" x="9" y="9" width="22" height="22" fill="#fff" color="#fff"/></svg></span><span class="cs-cell near"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#2463D6" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-1" x="9" y="9" width="22" height="22" fill="#fff" color="#fff"/></svg></span><span class="cs-cell near"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#D3263A" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-0" x="9" y="9" width="22" height="22" fill="#fff" color="#fff"/></svg></span><span class="cs-cell"><svg class="cs-peg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#D3263A" stroke="#3A2208" stroke-opacity=".45" stroke-width="1.5"/><circle cx="14" cy="13" r="5" fill="#fff" opacity=".35"/><use href="#cs-0" x="9" y="9" width="22" height="22" fill="#fff" color="#fff"/></svg></span></span><span class="cs-pins"><svg class="cs-pin" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.5" fill="#141414"/></svg><svg class="cs-pin" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.6" fill="#FFFDF6" stroke="#2A1D10" stroke-width="2.4"/><circle cx="10" cy="10" r="3" fill="#3A2A1A"/></svg><svg class="cs-pin" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.6" fill="#FFFDF6" stroke="#2A1D10" stroke-width="2.4"/><circle cx="10" cy="10" r="3" fill="#3A2A1A"/></svg><svg class="cs-pin" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3" fill="#8A6A48"/></svg></span></div></div><figcaption>Le premier rouge est bien placé : une fiche noire. Le bleu et un deuxième rouge sont mal placés : deux anneaux blancs. Le dernier rouge ne compte pas, car le code n’a que deux rouges.</figcaption></figure>
+      </section>
+
+      <section id="niveaux">
+        <h2>Choisir son niveau</h2>
+        <table class="score">
+          <caption>Les trois niveaux</caption>
+          <thead><tr><th scope="col">Niveau</th><th scope="col">Pions à trouver</th><th scope="col">Couleurs</th><th scope="col">Essais</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Facile</th><td>4, toutes différentes</td><td>6</td><td>12</td></tr>
+            <tr><th scope="row">Moyen</th><td>4, une couleur peut revenir</td><td>6</td><td>10</td></tr>
+            <tr><th scope="row">Difficile</th><td>5, une couleur peut revenir</td><td>8</td><td>10</td></tr>
+          </tbody>
+        </table>
+        <p>Au niveau Facile, une couleur déjà posée dans la colonne porte une coche dans la réserve. Il y a 360 codes possibles au niveau Facile, 1 296 au niveau Moyen et 32 768 au niveau Difficile.</p>
+      </section>
+
+      <section id="methode">
+        <h2>Une méthode simple pour trouver le code</h2>
+        <ol><li>Commencez par des couleurs différentes : la réponse vous dit combien d’entre elles sont dans le code.</li><li>Changez une seule chose à la fois, par exemple deux pions qui échangent leur place. Comparez la nouvelle réponse avec la précédente.</li><li>Gardez ce qui fait monter le nombre de fiches noires.</li></ol>
+        <p>Un clic sur une colonne déjà jouée relit son essai et sa réponse dans la ligne du haut.</p>
+      </section>
+
+      <section id="aide">
+        <h2>Utiliser l’aide et annuler</h2>
+        <p>Le bouton « Que jouer maintenant ? » pose une combinaison qui respecte toutes les réponses déjà reçues, et dit combien de codes restent possibles. Avec cette aide, l’ordinateur trouve le code en 4 essais en moyenne au niveau Facile, et en 5 à 6 essais au niveau Difficile.</p>
+        <p>« Annuler le dernier coup » retire le dernier pion posé. Si la colonne est vide, il reprend l’essai précédent. Une partie finie ne s’annule pas, puisque le code a été montré.</p>
+      </section>
+    </article>
+  </div>
+
+  <nav class="rules-more" aria-labelledby="more-title">
+    <h2 id="more-title">Les règles des autres jeux</h2>
+    <ul>
+      <li><a href="../../belote/regles/"><img src="../../belote/icon.svg" width="48" height="48" alt="">Règles de la belote</a></li>
+      <li><a href="../../dames/regles/"><img src="../../dames/icon.svg" width="48" height="48" alt="">Règles du jeu de dames</a></li>
+      <li><a href="../../solitaire/regles/"><img src="../../solitaire/icon.svg" width="48" height="48" alt="">Règles du solitaire</a></li>
+      <li><a href="../../demineur/regles/"><img src="../../demineur/icon.svg" width="48" height="48" alt="">Règles du démineur</a></li>
+      <li><a href="../../yams/regles/"><img src="../../yams/icon.svg" width="48" height="48" alt="">Règles du Yams</a></li>
+      <li><a href="../../huit-americain/regles/"><img src="../../huit-americain/icon.svg" width="48" height="48" alt="">Règles du Huit américain</a></li>
+      <li><a href="../../freecell/regles/"><img src="../../freecell/icon.svg" width="48" height="48" alt="">Règles du FreeCell</a></li>
+      <li><a href="../../dame-de-pique/regles/"><img src="../../dame-de-pique/icon.svg" width="48" height="48" alt="">Règles de la Dame de pique</a></li>
+      <li><a href="../../bataille-navale/regles/"><img src="../../bataille-navale/icon.svg" width="48" height="48" alt="">Règles de la bataille navale</a></li>
+      <li><a href="../../paires/regles/"><img src="../../paires/icon.svg" width="48" height="48" alt="">Règles du jeu des paires</a></li>
+      <li><a href="../../sudoku/regles/"><img src="../../sudoku/icon.svg" width="48" height="48" alt="">Règles du sudoku</a></li>
+      <li><a href="../../mots-meles/regles/"><img src="../../mots-meles/icon.svg" width="48" height="48" alt="">Règles des mots mêlés</a></li>
+      <li><a href="../../petits-chevaux/regles/"><img src="../../petits-chevaux/icon.svg" width="48" height="48" alt="">Règles des petits chevaux</a></li>
+      <li><a href="../../morpion/regles/"><img src="../../morpion/icon.svg" width="48" height="48" alt="">Règles du morpion</a></li>
+      <li><a href="../../golf/regles/"><img src="../../golf/icon.svg" width="48" height="48" alt="">Règles du golf miniature</a></li>
+      <li><a href="../../billard/regles/"><img src="../../billard/icon.svg" width="48" height="48" alt="">Règles du billard américain</a></li>
+      <li><a href="../../bowling/regles/"><img src="../../bowling/icon.svg" width="48" height="48" alt="">Règles du bowling</a></li>
+      <li><a href="../../rami/regles/"><img src="../../rami/icon.svg" width="48" height="48" alt="">Règles du rami</a></li>
+      <li><a href="../../dominos/regles/"><img src="../../dominos/icon.svg" width="48" height="48" alt="">Règles des dominos</a></li>
+      <li><a href="../../loto/regles/"><img src="../../loto/icon.svg" width="48" height="48" alt="">Règles du loto</a></li>
+      <li><a href="../../mots-fleches/regles/"><img src="../../mots-fleches/icon.svg" width="48" height="48" alt="">Règles des mots fléchés</a></li>
+      <li><a href="../../pendu/regles/"><img src="../../pendu/icon.svg" width="48" height="48" alt="">Règles du pendu</a></li>
+      <li><a href="../../petanque/regles/"><img src="../../petanque/icon.svg" width="48" height="48" alt="">Règles de la pétanque</a></li>
+      <li><a href="../../"><img src="../../icons/logo.webp" width="48" height="48" alt="">Tous les jeux</a></li>
+    </ul>
+  </nav>
+</main>
+<footer class="rules-footer">
+  <div class="rules-footer-inner">
+    <details class="rules-jump">
+      <summary><span class="rules-jump-label">Sommaire</span><span class="rules-jump-now">Choisir une partie</span></summary>
+      <ul class="rules-jump-list">
+        <li><a href="#contenu">Haut de la page</a></li>
+        <li><a href="#but">Trouver le code secret</a></li>
+        <li><a href="#indices">Lire les indices</a></li>
+        <li><a href="#doubles">Les couleurs en double</a></li>
+        <li><a href="#niveaux">Choisir son niveau</a></li>
+        <li><a href="#methode">Une méthode pour trouver</a></li>
+        <li><a href="#aide">Utiliser l’aide</a></li>
+      </ul>
+    </details>
+    <a class="play" href="../" aria-label="Jouer au code secret">Jouer</a>
+  </div>
+</footer>
+<footer class="site-foot"><div class="in">
+  <a class="credit" href="https://x.com/JulienCoulaud" target="_blank" rel="noopener"><img src="../../icons/julien.webp" width="34" height="34" alt=""><span>Par <b>Julien Coulaud</b></span><span class="sr">, s’ouvre dans un nouvel onglet</span></a>
+  <div class="footer-controls"><div class="zoom"></div></div>
+</div></footer>
+<script src="../../lib/site-nav.js" defer></script>
+</body>
+</html>

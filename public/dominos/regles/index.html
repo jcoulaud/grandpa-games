@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Règles du domino&nbsp;: la pioche, les doubles et les points · Jeux de Papi</title>
+  <meta name="description" content="Apprenez à jouer aux dominos : la donne, qui commence, poser un domino, piocher, passer, compter les points et gagner la partie en 100 points.">
+  <link rel="canonical" href="https://jeux-papi.fr/dominos/regles/">
+  <meta property="og:type" content="article">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:site_name" content="Jeux de Papi">
+  <meta property="og:url" content="https://jeux-papi.fr/dominos/regles/">
+  <meta property="og:title" content="Règles du domino : la pioche, les doubles et les points">
+  <meta property="og:description" content="La donne, le plus gros double, la pioche, la ligne bloquée et le compte des points, avec des exemples.">
+  <meta property="og:image" content="https://jeux-papi.fr/og/dominos.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Règles des dominos. Cinq anciens dominos en os avec des points noirs.">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="../icon.svg">
+  <link rel="stylesheet" href="../../lib/site-nav.css">
+  <link rel="stylesheet" href="../../lib/rules.css">
+  <style>
+    .dm-figure { margin: 1rem 0; }
+    .dm-svg { display: block; width: 100%; max-width: 760px; height: auto; }
+    .dm-points { display: flex; flex-wrap: wrap; gap: 14px; padding: 16px; border-radius: 18px; background: #1E4A37; box-shadow: inset 0 0 0 3px #C9A45C; }
+    .dm-points > div { flex: 1 1 150px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px; border-radius: 14px; background: #fffdf8; }
+    .dm-points b { font-weight: 700; }
+    .dm-points .sum { font-size: 1.3em; font-weight: 800; }
+    .dm-points .win { background: #fff3cf; }
+    .dm-points .win .sum { color: #1d7a45; }
+    .dm-hand { height: 84px; width: auto; }
+  </style>
+  <script src="../../lib/zoom.js"></script>
+  <script src="../../lib/ph.js"></script>
+</head>
+<body class="rules dominos">
+<a class="skip" href="#contenu">Aller au texte</a>
+<header class="site-nav">
+  <div class="site-nav-inner">
+    <a class="site-nav-brand" href="../../"><img src="../../icons/logo.webp" width="48" height="48" alt="">Jeux de Papi</a>
+    <nav class="site-nav-links" aria-label="Navigation principale">
+      <a href="../../#games">Les jeux</a>
+      <details class="site-menu is-current">
+        <summary>Règles</summary>
+        <div class="site-menu-panel">
+          <p class="site-menu-title">Règles des jeux</p>
+          <a href="../../belote/regles/"><img src="../../belote/icon.svg" width="40" height="40" alt="">Belote</a>
+          <a href="../../dames/regles/"><img src="../../dames/icon.svg" width="40" height="40" alt="">Jeu de dames</a>
+          <a href="../../solitaire/regles/"><img src="../../solitaire/icon.svg" width="40" height="40" alt="">Solitaire</a>
+          <a href="../../demineur/regles/"><img src="../../demineur/icon.svg" width="40" height="40" alt="">Démineur</a>
+          <a href="../../yams/regles/"><img src="../../yams/icon.svg" width="40" height="40" alt="">Yams</a>
+          <a href="../../huit-americain/regles/"><img src="../../huit-americain/icon.svg" width="40" height="40" alt="">Huit américain</a>
+          <a href="../../freecell/regles/"><img src="../../freecell/icon.svg" width="40" height="40" alt="">FreeCell</a>
+          <a href="../../dame-de-pique/regles/"><img src="../../dame-de-pique/icon.svg" width="40" height="40" alt="">Dame de pique</a>
+          <a href="../../bataille-navale/regles/"><img src="../../bataille-navale/icon.svg" width="40" height="40" alt="">Bataille navale</a>
+          <a href="../../paires/regles/"><img src="../../paires/icon.svg" width="40" height="40" alt="">Jeu des paires</a>
+          <a href="../../sudoku/regles/"><img src="../../sudoku/icon.svg" width="40" height="40" alt="">Sudoku</a>
+          <a href="../../mots-meles/regles/"><img src="../../mots-meles/icon.svg" width="40" height="40" alt="">Mots mêlés</a>
+          <a href="../../petits-chevaux/regles/"><img src="../../petits-chevaux/icon.svg" width="40" height="40" alt="">Petits chevaux</a>
+          <a href="../../morpion/regles/"><img src="../../morpion/icon.svg" width="40" height="40" alt="">Morpion</a>
+          <a href="../../golf/regles/"><img src="../../golf/icon.svg" width="40" height="40" alt="">Golf miniature</a>
+          <a href="../../billard/regles/"><img src="../../billard/icon.svg" width="40" height="40" alt="">Billard américain</a>
+          <a href="../../bowling/regles/"><img src="../../bowling/icon.svg" width="40" height="40" alt="">Bowling</a>
+          <a href="../../rami/regles/"><img src="../../rami/icon.svg" width="40" height="40" alt="">Rami</a>
+          <a href="./" aria-current="page"><img src="../../dominos/icon.svg" width="40" height="40" alt="">Dominos</a>
+          <a href="../../loto/regles/"><img src="../../loto/icon.svg" width="40" height="40" alt="">Loto</a>
+          <a href="../../mots-fleches/regles/"><img src="../../mots-fleches/icon.svg" width="40" height="40" alt="">Mots fléchés</a>
+          <a href="../../pendu/regles/"><img src="../../pendu/icon.svg" width="40" height="40" alt="">Le pendu</a>
+          <a href="../../code-secret/regles/"><img src="../../code-secret/icon.svg" width="40" height="40" alt="">Code secret</a>
+          <a href="../../petanque/regles/"><img src="../../petanque/icon.svg" width="40" height="40" alt="">Pétanque</a>
+        </div>
+      </details>
+      <a href="../../blog/">Blog</a>
+    </nav>
+  </div>
+</header>
+<main id="contenu">
+  <header class="rules-head">
+    <div class="rules-head-inner">
+      <div>
+        <nav class="crumbs" aria-label="Vous êtes ici">
+          <ol><li><a href="../../">Les jeux</a></li><li><a href="../">Dominos</a></li><li aria-current="page">Règles</li></ol>
+        </nav>
+        <h1>Règles du domino&nbsp;: la pioche, les doubles et les points</h1>
+        <p class="intro">Posez vos dominos bout à bout, un chiffre contre le même chiffre. Le premier qui n’a plus rien en main gagne la manche.</p>
+        <a class="play" href="../" aria-label="Jouer aux dominos">Jouer</a>
+      </div>
+      <div class="rules-art"><img src="hero.webp" width="1200" height="800" alt="" fetchpriority="high"></div>
+    </div>
+  </header>
+
+  <div class="rules-layout" id="sommaire">
+    <nav class="rules-contents" aria-labelledby="contents-title">
+      <h2 id="contents-title">Sommaire</h2>
+      <ul>
+        <li><a href="#donne">Le jeu et la donne</a></li>
+        <li><a href="#commencer">Qui commence</a></li>
+        <li><a href="#poser">Poser un domino</a></li>
+        <li><a href="#piocher">Piocher ou passer</a></li>
+        <li><a href="#points">Compter les points</a></li>
+        <li><a href="#variantes">Variantes</a></li>
+      </ul>
+      <a class="play" href="../" aria-label="Jouer aux dominos">Jouer</a>
+    </nav>
+    <article class="rules-article">
+      <section id="donne">
+        <h2>Le jeu et la donne</h2>
+        <p>Le jeu compte 28 dominos, du double blanc au double six. Chaque domino porte deux chiffres, de 0 (le blanc) à 6. Les sept doubles portent deux fois le même chiffre.</p>
+        <p>Sur Jeux de Papi, vous jouez à trois contre deux joueurs de l’ordinateur. On mélange les dominos face cachée et chacun en prend sept. Les sept qui restent forment la pioche.</p>
+      </section>
+
+      <section id="commencer">
+        <h2>Qui commence&nbsp;?</h2>
+        <p>Le joueur qui a le plus gros double le pose au milieu de la table&nbsp;: le double six, sinon le double cinq, et ainsi de suite. Si personne n’a de double, le domino le plus lourd commence.</p>
+        <p>On joue ensuite vers la droite, dans le sens inverse des aiguilles d’une montre, comme aux cartes dans les cafés. Dans le jeu, des flèches sur le tapis montrent qui joue après qui.</p>
+      </section>
+
+      <section id="poser">
+        <h2>Poser un domino</h2>
+        <figure class="dm-figure"><svg class="dm-svg" viewBox="0 0 900 300" role="img" aria-label="Une ligne de dominos&nbsp;: le quatre-un, le un-six, puis le six-deux posé au bout du 6, son 6 contre le 6, et le double deux posé en travers."><rect width="900" height="300" rx="26" fill="#1E4A37"/><rect x="8" y="8" width="884" height="284" rx="20" fill="none" stroke="#C9A45C" stroke-width="3"/><g transform="translate(60 60)"><rect x="3" y="6" width="200" height="100" rx="15" fill="#0E2419" opacity=".45"/><rect width="200" height="100" rx="15" fill="#FFFBF0" stroke="#C9BB98" stroke-width="2"/><path d="M100 14V86" stroke="#2C2520" stroke-width="3.4"/><circle cx="100" cy="50" r="5.5" fill="#C9A04A"/><circle cx="27" cy="27" r="9.6" fill="#17130F"/><circle cx="27" cy="73" r="9.6" fill="#17130F"/><circle cx="73" cy="27" r="9.6" fill="#17130F"/><circle cx="73" cy="73" r="9.6" fill="#17130F"/><circle cx="150" cy="50" r="9.6" fill="#17130F"/></g><g transform="translate(262 60)"><rect x="3" y="6" width="200" height="100" rx="15" fill="#0E2419" opacity=".45"/><rect width="200" height="100" rx="15" fill="#FFFBF0" stroke="#C9BB98" stroke-width="2"/><path d="M100 14V86" stroke="#2C2520" stroke-width="3.4"/><circle cx="100" cy="50" r="5.5" fill="#C9A04A"/><circle cx="50" cy="50" r="9.6" fill="#17130F"/><circle cx="122" cy="28" r="9.6" fill="#17130F"/><circle cx="122" cy="72" r="9.6" fill="#17130F"/><circle cx="150" cy="28" r="9.6" fill="#17130F"/><circle cx="150" cy="72" r="9.6" fill="#17130F"/><circle cx="178" cy="28" r="9.6" fill="#17130F"/><circle cx="178" cy="72" r="9.6" fill="#17130F"/></g><g transform="translate(464 60)"><rect x="3" y="6" width="200" height="100" rx="15" fill="#0E2419" opacity=".45"/><rect width="200" height="100" rx="15" fill="#FFFBF0" stroke="#C9BB98" stroke-width="2"/><path d="M100 14V86" stroke="#2C2520" stroke-width="3.4"/><circle cx="100" cy="50" r="5.5" fill="#C9A04A"/><circle cx="22" cy="28" r="9.6" fill="#17130F"/><circle cx="22" cy="72" r="9.6" fill="#17130F"/><circle cx="50" cy="28" r="9.6" fill="#17130F"/><circle cx="50" cy="72" r="9.6" fill="#17130F"/><circle cx="78" cy="28" r="9.6" fill="#17130F"/><circle cx="78" cy="72" r="9.6" fill="#17130F"/><circle cx="127" cy="27" r="9.6" fill="#17130F"/><circle cx="173" cy="73" r="9.6" fill="#17130F"/></g><g transform="translate(666 10)"><rect x="3" y="6" width="100" height="200" rx="15" fill="#0E2419" opacity=".45"/><rect width="100" height="200" rx="15" fill="#FFFBF0" stroke="#C9BB98" stroke-width="2"/><path d="M14 100H86" stroke="#2C2520" stroke-width="3.4"/><circle cx="50" cy="100" r="5.5" fill="#C9A04A"/><circle cx="27" cy="27" r="9.6" fill="#17130F"/><circle cx="73" cy="73" r="9.6" fill="#17130F"/><circle cx="27" cy="127" r="9.6" fill="#17130F"/><circle cx="73" cy="173" r="9.6" fill="#17130F"/></g><path d="M565 268 V188" stroke="#fff" stroke-width="8" stroke-linecap="round"/><path d="M545 202 L565 176 L585 202 Z" fill="#fff"/></svg><figcaption>Les bouts montrent le 4 et le 6. Le six-deux se pose au bout du 6, son 6 contre le 6. Le double deux se pose ensuite en travers, contre le 2.</figcaption></figure>
+        <p>À votre tour, posez un domino à un des deux bouts de la ligne. La moitié qui touche la ligne doit montrer le même chiffre que ce bout. Les doubles se posent en travers, pour bien les voir.</p>
+        <p>Quand la ligne arrive au bord de la table, elle tourne et repart dans l’autre sens. Elle reste ainsi entière sous vos yeux.</p>
+      </section>
+
+      <section id="piocher">
+        <h2>Vous ne pouvez pas jouer&nbsp;? Piochez</h2>
+        <p>Si aucun de vos dominos ne va, prenez un domino dans la pioche. S’il se pose, jouez-le. Sinon, piochez encore, jusqu’à en trouver un qui va.</p>
+        <p>Quand la pioche est vide, vous passez votre tour. C’est la règle des cafés, appelée aussi «&nbsp;domino à la pioche&nbsp;».</p>
+      </section>
+
+      <section id="points">
+        <h2>Compter les points</h2>
+        <p>Le premier qui pose son dernier domino crie «&nbsp;Domino&nbsp;!&nbsp;» et gagne la manche. Il marque le total des points restés dans la main des deux autres joueurs.</p>
+        <figure class="dm-figure">
+          <div class="dm-points" aria-hidden="true">
+            <div><b>Joueur 2</b><svg class="dm-hand" viewBox="0 0 240 210" aria-hidden="true"><g transform="translate(6 2)"><rect x="3" y="6" width="100" height="200" rx="15" fill="#0E2419" opacity=".45"/><rect width="100" height="200" rx="15" fill="#FFFBF0" stroke="#C9BB98" stroke-width="2"/><path d="M14 100H86" stroke="#2C2520" stroke-width="3.4"/><circle cx="50" cy="100" r="5.5" fill="#C9A04A"/><circle cx="28" cy="22" r="9.6" fill="#17130F"/><circle cx="72" cy="22" r="9.6" fill="#17130F"/><circle cx="28" cy="50" r="9.6" fill="#17130F"/><circle cx="72" cy="50" r="9.6" fill="#17130F"/><circle cx="28" cy="78" r="9.6" fill="#17130F"/><circle cx="72" cy="78" r="9.6" fill="#17130F"/><circle cx="27" cy="127" r="9.6" fill="#17130F"/><circle cx="73" cy="127" r="9.6" fill="#17130F"/><circle cx="27" cy="173" r="9.6" fill="#17130F"/><circle cx="73" cy="173" r="9.6" fill="#17130F"/></g><g transform="translate(126 2)"><rect x="3" y="6" width="100" height="200" rx="15" fill="#0E2419" opacity=".45"/><rect width="100" height="200" rx="15" fill="#FFFBF0" stroke="#C9BB98" stroke-width="2"/><path d="M14 100H86" stroke="#2C2520" stroke-width="3.4"/><circle cx="50" cy="100" r="5.5" fill="#C9A04A"/><circle cx="27" cy="27" r="9.6" fill="#17130F"/><circle cx="73" cy="73" r="9.6" fill="#17130F"/><circle cx="50" cy="150" r="9.6" fill="#17130F"/></g></svg><span class="sum">13 points</span></div>
+            <div><b>Joueur 3</b><svg class="dm-hand" viewBox="0 0 120 210" aria-hidden="true"><g transform="translate(6 2)"><rect x="3" y="6" width="100" height="200" rx="15" fill="#0E2419" opacity=".45"/><rect width="100" height="200" rx="15" fill="#FFFBF0" stroke="#C9BB98" stroke-width="2"/><path d="M14 100H86" stroke="#2C2520" stroke-width="3.4"/><circle cx="50" cy="100" r="5.5" fill="#C9A04A"/><circle cx="26" cy="26" r="9.6" fill="#17130F"/><circle cx="74" cy="26" r="9.6" fill="#17130F"/><circle cx="50" cy="50" r="9.6" fill="#17130F"/><circle cx="26" cy="74" r="9.6" fill="#17130F"/><circle cx="74" cy="74" r="9.6" fill="#17130F"/><circle cx="26" cy="126" r="9.6" fill="#17130F"/><circle cx="74" cy="126" r="9.6" fill="#17130F"/><circle cx="50" cy="150" r="9.6" fill="#17130F"/><circle cx="26" cy="174" r="9.6" fill="#17130F"/><circle cx="74" cy="174" r="9.6" fill="#17130F"/></g></svg><span class="sum">10 points</span></div>
+            <div class="win"><b>Vous&nbsp;: Domino&nbsp;!</b><span class="sum">+23 points</span></div>
+          </div>
+          <figcaption>Il reste au joueur 2 le six-quatre et le deux-un, 13 points, et au joueur 3 le double cinq, 10 points. Vous marquez 23 points.</figcaption>
+        </figure>
+        <p>Parfois, plus personne ne peut jouer et la pioche est vide&nbsp;: la ligne est bloquée. Chacun compte alors les points de sa main. Le plus petit total gagne la manche et marque les points des deux autres. Si deux joueurs ont le même petit total, personne ne marque.</p>
+        <p>On rejoue des manches jusqu’à ce qu’un joueur atteigne 100&nbsp;points&nbsp;: il gagne la partie. Comptez environ huit manches, une vingtaine de minutes. Dans le jeu, la partie est enregistrée à chaque coup&nbsp;: vous la reprenez quand vous voulez.</p>
+      </section>
+
+      <section id="variantes">
+        <h2>Variantes autour d’une table</h2>
+        <p>À deux joueurs, chacun prend sept dominos et la pioche en garde quatorze. À quatre, chacun prend sept dominos et il n’y a pas de pioche&nbsp;: c’est le jeu bloqué, où l’on passe son tour sans piocher.</p>
+        <p>Certaines familles ne piochent qu’un domino avant de passer, ou retirent du score du gagnant les points qu’il garde. Mettez-vous d’accord avant la première manche.</p>
+      </section>
+    </article>
+  </div>
+
+  <nav class="rules-more" aria-labelledby="more-title">
+    <h2 id="more-title">Les règles des autres jeux</h2>
+    <ul>
+      <li><a href="../../belote/regles/"><img src="../../belote/icon.svg" width="48" height="48" alt="">Règles de la belote</a></li>
+      <li><a href="../../dames/regles/"><img src="../../dames/icon.svg" width="48" height="48" alt="">Règles du jeu de dames</a></li>
+      <li><a href="../../solitaire/regles/"><img src="../../solitaire/icon.svg" width="48" height="48" alt="">Règles du solitaire</a></li>
+      <li><a href="../../demineur/regles/"><img src="../../demineur/icon.svg" width="48" height="48" alt="">Règles du démineur</a></li>
+      <li><a href="../../yams/regles/"><img src="../../yams/icon.svg" width="48" height="48" alt="">Règles du Yams</a></li>
+      <li><a href="../../huit-americain/regles/"><img src="../../huit-americain/icon.svg" width="48" height="48" alt="">Règles du Huit américain</a></li>
+      <li><a href="../../freecell/regles/"><img src="../../freecell/icon.svg" width="48" height="48" alt="">Règles du FreeCell</a></li>
+      <li><a href="../../dame-de-pique/regles/"><img src="../../dame-de-pique/icon.svg" width="48" height="48" alt="">Règles de la Dame de pique</a></li>
+      <li><a href="../../bataille-navale/regles/"><img src="../../bataille-navale/icon.svg" width="48" height="48" alt="">Règles de la bataille navale</a></li>
+      <li><a href="../../paires/regles/"><img src="../../paires/icon.svg" width="48" height="48" alt="">Règles du jeu des paires</a></li>
+      <li><a href="../../sudoku/regles/"><img src="../../sudoku/icon.svg" width="48" height="48" alt="">Règles du sudoku</a></li>
+      <li><a href="../../mots-meles/regles/"><img src="../../mots-meles/icon.svg" width="48" height="48" alt="">Règles des mots mêlés</a></li>
+      <li><a href="../../petits-chevaux/regles/"><img src="../../petits-chevaux/icon.svg" width="48" height="48" alt="">Règles des petits chevaux</a></li>
+      <li><a href="../../morpion/regles/"><img src="../../morpion/icon.svg" width="48" height="48" alt="">Règles du morpion</a></li>
+      <li><a href="../../golf/regles/"><img src="../../golf/icon.svg" width="48" height="48" alt="">Règles du golf miniature</a></li>
+      <li><a href="../../billard/regles/"><img src="../../billard/icon.svg" width="48" height="48" alt="">Règles du billard américain</a></li>
+      <li><a href="../../bowling/regles/"><img src="../../bowling/icon.svg" width="48" height="48" alt="">Règles du bowling</a></li>
+      <li><a href="../../rami/regles/"><img src="../../rami/icon.svg" width="48" height="48" alt="">Règles du rami</a></li>
+      <li><a href="../../loto/regles/"><img src="../../loto/icon.svg" width="48" height="48" alt="">Règles du loto</a></li>
+      <li><a href="../../mots-fleches/regles/"><img src="../../mots-fleches/icon.svg" width="48" height="48" alt="">Règles des mots fléchés</a></li>
+      <li><a href="../../pendu/regles/"><img src="../../pendu/icon.svg" width="48" height="48" alt="">Règles du pendu</a></li>
+      <li><a href="../../code-secret/regles/"><img src="../../code-secret/icon.svg" width="48" height="48" alt="">Règles du code secret</a></li>
+      <li><a href="../../petanque/regles/"><img src="../../petanque/icon.svg" width="48" height="48" alt="">Règles de la pétanque</a></li>
+      <li><a href="../../"><img src="../../icons/logo.webp" width="48" height="48" alt="">Tous les jeux</a></li>
+    </ul>
+  </nav>
+</main>
+<footer class="rules-footer">
+  <div class="rules-footer-inner">
+    <details class="rules-jump">
+      <summary><span class="rules-jump-label">Sommaire</span><span class="rules-jump-now">Choisir une partie</span></summary>
+      <ul class="rules-jump-list">
+        <li><a href="#contenu">Haut de la page</a></li>
+        <li><a href="#donne">Le jeu et la donne</a></li>
+        <li><a href="#commencer">Qui commence</a></li>
+        <li><a href="#poser">Poser un domino</a></li>
+        <li><a href="#piocher">Piocher ou passer</a></li>
+        <li><a href="#points">Compter les points</a></li>
+        <li><a href="#variantes">Variantes</a></li>
+      </ul>
+    </details>
+    <a class="play" href="../" aria-label="Jouer aux dominos">Jouer</a>
+  </div>
+</footer>
+<footer class="site-foot"><div class="in">
+  <a class="credit" href="https://x.com/JulienCoulaud" target="_blank" rel="noopener"><img src="../../icons/julien.webp" width="34" height="34" alt=""><span>Par <b>Julien Coulaud</b></span><span class="sr">, s’ouvre dans un nouvel onglet</span></a>
+  <div class="footer-controls"><div class="zoom"></div></div>
+</div></footer>
+<script src="../../lib/site-nav.js" defer></script>
+</body>
+</html>

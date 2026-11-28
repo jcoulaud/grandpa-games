@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#2F6E9E"/>
+  <rect x="5" y="5" width="54" height="54" rx="10" fill="#CFE8F7"/>
+  <g transform="translate(32 24)">
+    <g fill="#fff" stroke="#9FB3C4" stroke-width="1">
+      <ellipse cx="0" cy="-11" rx="4.6" ry="8.5"/>
+      <ellipse cx="0" cy="-11" rx="4.6" ry="8.5" transform="rotate(51)"/>
+      <ellipse cx="0" cy="-11" rx="4.6" ry="8.5" transform="rotate(103)"/>
+      <ellipse cx="0" cy="-11" rx="4.6" ry="8.5" transform="rotate(154)"/>
+      <ellipse cx="0" cy="-11" rx="4.6" ry="8.5" transform="rotate(206)"/>
+      <ellipse cx="0" cy="-11" rx="4.6" ry="8.5" transform="rotate(257)"/>
+    </g>
+    <circle r="6" fill="#F6B51E" stroke="#C47B0C" stroke-width="1"/>
+  </g>
+  <ellipse cx="50" cy="38" rx="3.6" ry="6.8" fill="#fff" stroke="#9FB3C4" stroke-width="1" transform="rotate(38 50 38)"/>
+  <g fill="#FFFDF6" stroke="#2F6E9E" stroke-width="1.4">
+    <rect x="9" y="43" width="13" height="13" rx="2.5"/><rect x="25.5" y="43" width="13" height="13" rx="2.5"/><rect x="42" y="43" width="13" height="13" rx="2.5"/>
+  </g>
+  <text x="32" y="53.6" font-family="Segoe UI, Arial, sans-serif" font-weight="700" font-size="11" text-anchor="middle" fill="#14335A">A</text>
+  <path d="M12 53.5h7M45 53.5h7" stroke="#14335A" stroke-width="1.8" stroke-linecap="round"/>
+</svg>

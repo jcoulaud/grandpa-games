@@ -1,0 +1,914 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mots fléchés · Jeux de Papi</title>
+<meta name="description" content="Les mots fléchés en grand, pour les grands-parents : de grandes cases, la définition écrite en gros, un clavier à l’écran et trois niveaux. Sans publicité ni compte.">
+<link rel="canonical" href="https://jeux-papi.fr/mots-fleches/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Jeux de Papi">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://jeux-papi.fr/mots-fleches/">
+<meta property="og:title" content="Mots fléchés · Jeux de Papi">
+<meta property="og:description" content="Les mots fléchés en grand, avec la définition écrite en gros et trois niveaux. Sans publicité ni compte.">
+<meta property="og:image" content="https://jeux-papi.fr/og/jeux/mots-fleches.jpg">
+<meta property="og:image:alt" content="Mots fléchés, sur Jeux de Papi.">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../lib/kit.css">
+<style>
+  /* The mots fléchés play on a periwinkle blue felt. The grid is printed on a cream newspaper sheet, with
+     light blue definition cells and ink blue arrows. Beside it, a card shows the definition of the word
+     he is on in large type, and a keyboard of large keys. */
+  :root {
+    --felt-top: #7088C8; --felt: #28386F; --shade: 28,36,82; --accent: #3D55A0;
+    --paper: #FBF7EC; --ink: #1D2B45; --rule: #2B3545; --clue: #D6E7F5; --clue-edge: #9DBCD9; --arrow: #1F3F78;
+    --pen: #1D4FA0; --word: #FFF0B8; --cur: #FFD45E; --wrong: #C4122F;
+    --c: 56px; --f: 34px; --pad: 14px; --gap: 26px;
+  }
+  #title svg { width: 32px; height: 32px; }
+  button.game { --accent: #3D55A0; }
+  button.game:hover { background: #4A7A5D; }
+  button.game:active { background: #30583F; }
+  #checkBtn svg { stroke-width: 2.4; }
+  #say { padding-block: clamp(10px, 3vh - 8px, 28px) clamp(8px, 6vh - 32px, 32px); }
+
+  /* A window too small for the grid scrolls to the rest of it. */
+  #table { position: relative; overflow: auto; display: flex; touch-action: pan-x pan-y; }
+  #desk { margin: auto; display: flex; align-items: flex-start; gap: var(--gap); padding: var(--pad); }
+  #desk.stack { flex-direction: column; align-items: stretch; }
+  .paper { position: relative; background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,0) 30%), var(--paper); color: var(--ink);
+    border-radius: 6px; box-shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 18px 40px rgba(0,0,0,.32), 0 3px 8px rgba(0,0,0,.22); }
+  #sheet { flex: none; padding: 12px; }
+
+  /* The grid: a frame of two rules, as in a newspaper. */
+  #board { position: relative; width: calc(var(--cols) * var(--c) + 4px); height: calc(var(--rows) * var(--c) + 4px);
+    border: 2px solid var(--rule); box-shadow: 0 0 0 3px var(--paper), 0 0 0 4px var(--rule); border-radius: 2px; background: #FFFEF9; }
+  #grid { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(var(--cols), var(--c)); grid-auto-rows: var(--c); }
+  #arrows { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 3; }
+  #arrows path { fill: none; stroke: var(--arrow); stroke-linecap: round; stroke-linejoin: round; }
+  #arrows path.head { fill: var(--arrow); stroke: none; }
+  .cell, .clue { position: relative; box-shadow: inset -1px -1px 0 #B9C0C8; cursor: pointer; }
+  .cell { display: flex; align-items: center; justify-content: center; font: 600 var(--f)/1 var(--ui); color: var(--pen); }
+  .cell:hover { background: #F2F6FB; }
+  /* The word he is on: soft yellow. The cell where the next letter goes: deeper yellow with a dark edge. */
+  .cell.word { background: var(--word); }
+  .cell.cur { background: var(--cur); box-shadow: inset 0 0 0 3px #5A4300, inset -1px -1px 0 #B9C0C8; z-index: 2; }
+  /* The letters he did not write: printed in dark ink. A letter of the hint keeps a small gold corner. */
+  .cell.given { color: var(--ink); }
+  .cell.aid::after { content: ""; position: absolute; right: 3px; top: 3px; width: calc(var(--c) * .2); height: calc(var(--c) * .2);
+    background: linear-gradient(225deg, #E0A526 50%, transparent 50%); border-radius: 0 3px 0 0; }
+  /* « Vérifier »: a letter that does not go is struck in red on a pale red, kindly, until he changes it. */
+  .cell.wrong { background: #FBE3E1; color: #8E1F1A; }
+  .cell.wrong.cur { background: #F7C9C4; }
+  .cell.wrong::before { content: ""; position: absolute; left: 18%; right: 18%; top: 50%; height: 3px; border-radius: 2px; background: var(--wrong); rotate: -35deg; }
+  .ch { position: relative; z-index: 1; }
+
+  /* A definition cell: light blue, its one or two definitions printed small, as in the newspaper. The
+     definition is read in large type on the card beside the grid. */
+  .clue { display: flex; flex-direction: column; background: var(--clue); box-shadow: inset -1px -1px 0 var(--clue-edge), inset 1px 1px 0 #EAF3FB; }
+  .clue .part { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 2px 3px;
+    text-align: center; overflow: hidden; }
+  .clue .part + .part { border-top: 1.5px solid var(--clue-edge); }
+  .clue .part.on { background: #FFE38A; box-shadow: inset 0 0 0 2px #B88A00; }
+  .clue .part.done .print { color: #7C8AA0; }
+  /* The print of a definition cell is a picture of the newspaper: the card says it in large type. */
+  .print { display: block; max-width: 100%; font: 500 var(--pf, 11px)/1.08 var(--ui); color: var(--ink); letter-spacing: -.01em; pointer-events: none; }
+  /* A definition too long for its half shows lines of print, like a newspaper seen from afar. */
+  .part.bars .print { visibility: hidden; position: absolute; }
+  .part.bars::before { content: ""; width: 62%; height: min(54%, 22px); opacity: .55;
+    background: repeating-linear-gradient(180deg, #5E6E88 0 2px, transparent 2px 6px); border-radius: 1px; }
+  .clue:hover { background: #C6DDF1; }
+
+  /* The win: a stamp, as a newspaper prints « Bravo ». */
+  #stamp { display: none; position: absolute; z-index: 6; left: 50%; top: 50%; translate: -50% -50%; pointer-events: none; background: var(--paper); padding: 10px 22px;
+    border: 4px solid var(--accent); border-radius: 14px; color: var(--accent); font: 800 32px/1 var(--ui); letter-spacing: .04em; text-transform: uppercase; rotate: -6deg; }
+  #sheet.wave #stamp { display: block; }
+
+  /* The card: the definition of the word he is on, in large type, then the keyboard. */
+  #side { flex: none; width: var(--side); display: flex; flex-direction: column; gap: var(--sg, 12px); padding: 14px 16px 16px; }
+  #sideHead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  #kicker { font: 700 20px/1.1 var(--ui); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+  #count { font: 600 20px/1.2 var(--ui); color: #4A5568; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #side hr { margin: -2px 0 0; border: 0; border-top: 3px double var(--rule); }
+  .def { display: flex; align-items: center; gap: 14px; text-align: left; }
+  .badge { flex: none; display: grid; place-items: center; width: var(--bw, 54px); height: var(--bw, 54px); border-radius: 8px; background: var(--clue); box-shadow: inset 0 0 0 2px var(--clue-edge); }
+  .badge svg { width: 70%; height: 70%; fill: none; stroke: var(--arrow); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+  #def { min-height: calc(var(--df, 30px) * 2.5 + 26px); }
+  #defText { margin: 0; font: 700 var(--df, 30px)/1.18 var(--ui); color: var(--ink); overflow-wrap: break-word; }
+  #defMeta { margin: 4px 0 0; font: 500 20px/1.2 var(--ui); color: #4A5568; white-space: nowrap; }
+  /* The other word of the cell, across or down: one click takes it. */
+  #other { width: 100%; min-height: 56px; padding: 6px 14px 6px 8px; border-radius: 12px; justify-content: flex-start;
+    background: #fff; border: 2px dashed #8FA6BF; box-shadow: none; color: var(--ink); font: 600 21px/1.2 var(--ui); white-space: normal; }
+  #other .badge { --bw: 40px; }
+  #other:hover { background: #F1F6FB; }
+  #other.off { visibility: hidden; }
+  #other .t { min-width: 0; }
+
+  /* The keyboard: the letters of a French keyboard, large keys of the newspaper paper. */
+  #keys { display: grid; grid-template-columns: repeat(20, 1fr); gap: var(--kg, 6px); margin-top: auto; }
+  #keys button { grid-column: span 2; min-height: var(--kh, 50px); height: var(--kh, 50px); padding: 0; justify-content: center; border-radius: 10px;
+    font: 700 var(--kf, 24px)/1 var(--ui); color: var(--ink); background: #fff; border-color: #A9B4C2; box-shadow: 0 3px 0 #A9B4C2; }
+  #keys button:hover { background: #EEF3F9; }
+  #keys button:active { background: #DCE6F1; box-shadow: none; }
+  #keys .row3 { grid-column: 2 / span 2; }
+  #keys #erase { grid-column: span 6; gap: 6px; font-size: 21px; font-weight: 600; }
+  #keys #erase svg { width: 24px; height: 24px; stroke-width: 2.4; }
+  /* A low window: the card keeps the definition, the other word and the keys, closer together. */
+  #desk.low #side { padding: 10px 14px 12px; }
+  #desk.low #side hr { display: none; }
+  #desk.low #def { min-height: 0; }
+  #desk.low #other { min-height: 48px; padding-block: 3px; }
+
+  /* ---------- The rules guide ----------
+     Each page: one picture on the periwinkle felt, made of the same paper, cells and arrows as the game, then
+     one or two short sentences. The cells of the guide use their own classes, so only the real grid plays. */
+  #help { --guide-edge: #1D2B45; --guide-more: #3D4A3F; }
+  .guide-pic { position: relative; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 16px 22px;
+    margin: 2px 0 12px; padding: 16px; border-radius: 18px; background: radial-gradient(120% 100% at 50% 0%, var(--felt-top), var(--felt) 80%); }
+  .gpaper { position: relative; flex: none; padding: 9px; border-radius: 6px; background: var(--paper); color: var(--ink);
+    box-shadow: 0 10px 24px rgba(0,0,0,.35), 0 2px 6px rgba(0,0,0,.25); }
+  .gg { --gc: 62px; position: relative; display: grid; grid-template-columns: var(--cols); grid-auto-rows: var(--gc); border: 2px solid var(--rule); background: #FFFEF9; }
+  .gg > i { position: relative; display: flex; align-items: center; justify-content: center; font: 600 34px/1 var(--ui); font-style: normal; color: var(--pen);
+    box-shadow: inset -1px -1px 0 #B9C0C8; }
+  .gg > i.q { flex-direction: column; justify-content: center; padding: 4px; background: var(--clue); color: var(--ink); font: 600 20px/1.1 var(--ui); text-align: center; }
+  .gg > i.w { background: var(--word); }
+  .gg > i.k { background: var(--cur); box-shadow: inset 0 0 0 3px #5A4300; }
+  .gg > i.h { z-index: 3; box-shadow: var(--guide-ring); background: #FFF1C7; }
+  .gg > i.x { background: #FBE3E1; color: #8E1F1A; }
+  .gg > i.x::before { content: ""; position: absolute; left: 18%; right: 18%; top: 50%; height: 3px; background: var(--wrong); rotate: -35deg; }
+  .gg > i.a { color: var(--ink); }
+  .gg > i.a::after { content: ""; position: absolute; right: 3px; top: 3px; width: 12px; height: 12px; background: linear-gradient(225deg, #E0A526 50%, transparent 50%); }
+  .gg svg.ga { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  .gg svg.ga path { fill: none; stroke: var(--arrow); stroke-width: .07; stroke-linecap: round; stroke-linejoin: round; }
+  .gg svg.ga path.head { fill: var(--arrow); stroke: none; }
+  .gcard { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; max-width: 300px; text-align: left; }
+  .gcard b { font: 700 26px/1.15 var(--ui); }
+  .gcard small { font: 500 20px/1.2 var(--ui); color: #4A5568; }
+  .gkeys { display: grid; grid-template-columns: repeat(4, 48px); gap: 6px; }
+  .gkeys span { display: grid; place-items: center; height: 48px; border-radius: 9px; background: #fff; border: 2px solid #A9B4C2; box-shadow: 0 3px 0 #A9B4C2; font: 700 24px var(--ui); color: var(--ink); }
+  .gkeys span.here { position: relative; z-index: 3; box-shadow: var(--guide-ring); background: #FFF1C7; }
+  .gkeys .guide-hand { left: 18px; top: 26px; }
+  .gg .guide-hand { z-index: 4; width: 40px; height: 48px; left: 50%; top: 52%; }
+  .garrow { flex: none; width: 54px; height: 40px; fill: none; stroke: #FFFDF6; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); }
+  .guide-btn { flex: none; padding: 6px 48px 6px 22px; }
+  .guide-pic.down { flex-direction: column; gap: 4px; } .guide-pic.down .garrow { rotate: 90deg; height: 34px; }
+  .guide-btn > .guide-hand { left: auto; right: -14px; top: 36%; }
+  html.low .guide-pic { padding: 10px; }
+  html.low .gg { --gc: 54px; }
+
+  @media (max-width: 700px) {
+    #hintBtn, #checkBtn, #helpBtn { flex-direction: column; gap: 0; padding: 3px 2px; text-align: center; font-size: 18px; }
+    #desk { padding: 10px; }
+    .guide-pic { padding: 12px 8px; gap: 12px; }
+    .gg { --gc: 50px; } .gg > i.q { font-size: 15px; } .gg > i { font-size: 28px; }
+    .gcard b { font-size: 22px; }
+    .garrow { width: 40px; }
+    .guide-pic.to-grid { flex-direction: column; gap: 6px; } .to-grid .garrow { rotate: 90deg; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .cell.cur { transition: background-color .18s; }
+    .cell.just .ch { animation: pencil .32s ease-out; }
+    .cell.wrong::before { animation: strike .36s ease-out; transform-origin: left; }
+    .cell.aid .ch { animation: aidIn .52s ease-out; }
+    #def.new #defText { animation: defIn .36s ease-out; }
+    #sheet.deal .ch, #sheet.deal .print { animation: inkIn .4s ease-out var(--row-delay) backwards; }
+    #sheet.wave .cell .ch { animation: lift .76s ease-in-out var(--delay) both; }
+    #sheet.wave #stamp { animation: stampIn .56s ease-out var(--stamp-delay) backwards; }
+    .cell.shake { animation: shake .36s ease-in-out; }
+  }
+  @keyframes pencil { from { transform: translateY(-5px) scale(1.12); opacity: .2; } 70% { transform: translateY(1px) scale(.98); opacity: 1; } }
+  @keyframes strike { from { scale: 0 1; } }
+  @keyframes aidIn { from { transform: scale(.4); opacity: 0; } 70% { transform: scale(1.12); } }
+  @keyframes defIn { from { opacity: .15; transform: translateY(4px); } }
+  @keyframes inkIn { from { opacity: 0; } }
+  @keyframes lift { 40% { transform: translateY(-14%); color: var(--accent); } }
+  @keyframes shake { 30% { transform: translateX(-3px); } 70% { transform: translateX(3px); } }
+  @keyframes stampIn {
+    from { transform: translateY(-22px) rotate(-7deg) scale(1.22); opacity: 0; }
+    66% { transform: translateY(2px) rotate(1deg) scale(.97); opacity: 1; }
+    to { transform: none; }
+  }
+</style>
+<script src="../lib/zoom.js"></script>
+<script src="../lib/sound.js"></script>
+<script src="../lib/ph.js"></script>
+</head>
+<body>
+<div id="bar">
+  <div id="title"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="3" fill="#FBF7EC" stroke="#28386F" stroke-width="1.4"/><rect x="2.7" y="2.7" width="9.3" height="9.3" fill="#D6E7F5"/><path d="M7 7.4h3.4M9 5.8l1.6 1.6L9 9" fill="none" stroke="#1F3F78" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 2.7v18.6M2.7 12h18.6" stroke="#9AA4B0" stroke-width=".9"/><text x="16.6" y="10" text-anchor="middle" font-family="Lexend, Segoe UI, sans-serif" font-weight="700" font-size="7.4" fill="#1D4FA0">R</text><text x="16.6" y="19.4" text-anchor="middle" font-family="Lexend, Segoe UI, sans-serif" font-weight="700" font-size="7.4" fill="#1D4FA0">O</text></svg>Mots fléchés</div>
+  <button id="hintBtn" class="primary" data-icon="bulb" data-auto="no" title="Écrit une lettre juste et dit laquelle"><span class="long">Que jouer maintenant ?</span><span class="short">Que jouer ?</span><span class="tiny">Aide</span></button>
+  <button id="checkBtn" title="Barre en rouge les lettres qui ne vont pas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg><span class="long">Vérifier</span><span class="short">Vérifier</span><span class="tiny">Vérifier</span></button>
+  <span class="spacer"></span>
+  <button id="helpBtn" data-icon="help">Règles</button>
+  <button id="newBtn" class="game">Nouvelle partie</button>
+</div>
+<div id="say"><div id="msg" aria-live="polite"></div></div>
+<div id="table">
+  <div id="desk">
+    <div id="sheet" class="paper">
+      <div id="board"><div id="grid" role="grid" aria-label="Grille de mots fléchés"></div><svg id="arrows" aria-hidden="true"></svg><div id="stamp" aria-hidden="true">Bravo !</div></div>
+    </div>
+    <aside id="side" class="paper" aria-label="La définition et le clavier">
+      <div id="sideHead"><span id="kicker">Définition</span><span id="count"></span></div>
+      <hr>
+      <div id="def" class="def" aria-live="polite"><span class="badge" id="defBadge"></span><div><p id="defText"></p><p id="defMeta"></p></div></div>
+      <button id="other" class="def off" title="Prendre l’autre mot de cette case"><span class="badge"></span><span class="t"></span></button>
+      <div id="keys" aria-label="Clavier"></div>
+    </aside>
+  </div>
+</div>
+<footer id="rail"><div class="zoom"></div></footer>
+<div id="help" data-title="Comment jouer">
+  <section class="page">
+    <h3>Choisir un mot</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="gpaper"><div class="gg" data-g="Animal qui ronronne|.|.|.|." data-cols="2.4 1 1 1 1" data-ar="0:right" data-h="1"></div></div>
+    </div>
+    <p class="guide-lead">Cliquez sur une case blanche, ou sur une définition.</p>
+    <p class="guide-more">La définition s’écrit en grand à droite. Remplissez toute la grille pour gagner.</p>
+  </section>
+  <section class="page">
+    <h3>Suivre la flèche</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="gpaper"><div class="gg" data-g="Capitale de l’Italie|R|O|M|E" data-cols="2.4 1 1 1 1" data-ar="0:right"></div></div>
+      <div class="gpaper"><div class="gg" data-g="Note de musique|D|O" data-cols="1.7" data-ar="0:down"></div></div>
+    </div>
+    <p class="guide-lead">La flèche montre où le mot commence.</p>
+    <p class="guide-more">Le mot se lit dans le sens de la flèche : vers la droite ou vers le bas.</p>
+  </section>
+  <section class="page">
+    <h3>Écrire les lettres</h3>
+    <div class="guide-pic" aria-hidden="true">
+      <div class="gpaper"><div class="gg" data-g="Il chante à l’aube|C|O|." data-cols="2.4 1 1 1" data-ar="0:right" data-w="1 2 3" data-k="3"></div></div>
+      <div class="gpaper"><div class="gkeys"><span>A</span><span class="here">Q</span><span>S</span><span>D</span></div></div>
+    </div>
+    <p class="guide-lead">Tapez les lettres au clavier, ou cliquez sur les grandes touches.</p>
+    <p class="guide-more">Les accents ne comptent pas : PÊCHE s’écrit PECHE.</p>
+  </section>
+  <section class="page">
+    <h3>Vérifier la grille</h3>
+    <div class="guide-pic to-grid" aria-hidden="true">
+      <span class="guide-btn here" data-check="1">Vérifier</span>
+      <svg class="garrow" viewBox="0 0 54 40"><path d="M4 20h44M36 8l12 12-12 12"/></svg>
+      <div class="gpaper"><div class="gg" data-g="Note de musique|S|U|L" data-cols="2.4 1 1 1" data-ar="0:right" data-x="2"></div></div>
+    </div>
+    <p class="guide-lead">« Vérifier » barre en rouge les lettres qui ne vont pas.</p>
+    <p class="guide-more">Tapez la bonne lettre par-dessus : ici, SOL.</p>
+  </section>
+  <section class="page">
+    <h3>Demander de l’aide</h3>
+    <div class="guide-pic to-grid down" aria-hidden="true">
+      <span class="guide-btn primary here" data-icon="bulb">Que jouer maintenant ?</span>
+      <svg class="garrow" viewBox="0 0 54 40"><path d="M4 20h44M36 8l12 12-12 12"/></svg>
+      <div class="gpaper"><div class="gg" data-g="Fruit du pommier|P|O|M|.|." data-cols="2.4 1 1 1 1 1" data-ar="0:right" data-w="1 2 3 4 5" data-k="4" data-a="3"></div></div>
+    </div>
+    <p class="guide-lead">Bloqué ? « Que jouer maintenant ? » écrit une lettre juste.</p>
+    <p class="guide-more">Son coin doré montre qu’elle vient de l’aide.</p>
+  </section>
+</div>
+
+<script src="../lib/store.js"></script>
+<script src="../lib/kit.js"></script>
+<script src="words.js"></script>
+<script src="grids.js"></script>
+<script src="engine.js"></script>
+<script>
+'use strict';
+const M = MotsFleches;
+const $ = id => document.getElementById(id);
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const ID = 'mots-fleches';
+
+/* ---------- State ----------
+   G: the game (see engine.js). word: the index of the word he is on, in M.wordsOf(G). at: the cell where
+   the next letter goes. stats: { won }: the grids finished. wonNow: this grid is counted as won.
+   played: the grids of each level already opened, so a grid comes back only once all the others have. */
+let G, level = 'facile', stats = { won: 0 }, wonNow = false, word = 0, at = -1, timers = [];
+let played = { facile: [], moyen: [], fort: [] };
+let stale = false, saved = true;
+addEventListener('gg-stale', () => { stale = true; });
+
+const WS = () => M.wordsOf(G);
+const playing = () => !!G && !G.result && [...G.typed].some((x, i) => x !== '#' && x !== ' ' && G.given[i] !== '1');
+const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
+const FULL = "La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.";
+const quote = w => `« ${G.defs[w]} »`;
+
+/* ---------- Saves ----------
+   One save at a time, in order. A win that could not be saved is not counted: onFail takes it back. */
+let saving = Promise.resolve();
+function save(onFail) {
+  const run = saving.then(async () => {
+    const parts = [];
+    if (playing()) parts.push('Partie en cours');
+    if (stats.won) parts.push(plural(stats.won, 'grille finie', 'grilles finies'));
+    if (await GG.save(ID, { v: 1, G, level, stats, played, wonNow, word, at }, { summary: parts.join(' · ') })) return (saved = true);
+    saved = false;
+    onFail?.();
+    if (!stale) Kit.say(FULL);
+    return false;
+  });
+  saving = run.catch(() => false);
+  return run;
+}
+// Many letters typed fast: one save after the last one.
+let saveTimer;
+const saveSoon = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => { saveTimer = 0; save(); }, 300); };
+// Leaving the page saves at once the letters still waiting.
+addEventListener('pagehide', () => { if (saveTimer) { clearTimeout(saveTimer); saveTimer = 0; save(); } });
+function load() {
+  try {
+    const v = GG.load(ID);
+    if (!v) return false;
+    if (v.stats && Number.isInteger(v.stats.won) && v.stats.won >= 0) stats = { won: v.stats.won };
+    for (const lv of Object.keys(played)) if (Array.isArray(v.played?.[lv])) played[lv] = v.played[lv].filter(Number.isInteger);
+    if (!M.valid(v.G)) return false;
+    G = v.G; level = G.level;
+    wonNow = !!v.wonNow && G.result === 'won';
+    const n = WS().length;
+    word = Number.isInteger(v.word) && v.word >= 0 && v.word < n ? v.word : 0;
+    at = Number.isInteger(v.at) && WS()[word].cells.includes(v.at) ? v.at : WS()[word].cells[0];
+    return true;
+  } catch (e) { return false; }
+}
+
+/* ---------- Choosing a word ----------
+   A click on a white cell takes the word through it in the same direction as before, when there is one.
+   A second click on the same cell takes the other word. A click on a definition takes its word. */
+const wordsAt = i => WS().map((w, k) => w.cells.includes(i) ? k : -1).filter(k => k >= 0);
+const filled = i => G.typed[i] !== ' ';
+const firstEmpty = w => WS()[w].cells.find(i => !filled(i));
+function choose(w, cell, why) {
+  word = w;
+  const ws = WS()[w];
+  at = cell !== undefined && ws.cells.includes(cell) ? cell : firstEmpty(w) ?? ws.cells[0];
+  render({ newDef: true });
+  if (why !== false) Kit.say(why || askLine());
+  saveSoon();
+}
+const lettersOf = w => plural(WS()[w].cells.length, 'lettre', 'lettres');
+function askLine() {
+  if (G.result) return 'Cette grille est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.';
+  if (firstEmpty(word) === undefined) return `Le mot ${quote(word)} est rempli. Cliquez sur une autre case blanche, ou corrigez une lettre.`;
+  return `${quote(word)}, en ${lettersOf(word)} : tapez les lettres au clavier, ou cliquez-les à droite.`;
+}
+let lastTap = null;
+function tapCell(i, x, y, part) {
+  if (Kit.isOpen() || !G) return;
+  stay();
+  const t = performance.now(), prev = lastTap;
+  lastTap = { i, t, x, y, part };
+  // A double-click is one click.
+  if (prev && t - prev.t < 500 && prev.i === i && prev.part === part) return;
+  if (G.grid[i] === '#') {
+    const ws = WS().map((w, k) => w.clue === i ? k : -1).filter(k => k >= 0);
+    if (!ws.length) return Kit.tell('Cette case bleue n’a pas de définition. Cliquez sur une case blanche.');
+    // The half he clicked; a click on the definition he is on takes the other one of the cell.
+    return choose(ws.length === 1 ? ws[0] : ws[part] ?? ws[0]);
+  }
+  const ws = wordsAt(i);
+  const same = ws.find(k => WS()[k].dir === WS()[word]?.dir);
+  let w = ws.includes(word) ? word : same ?? ws[0];
+  if (i === at && ws.length > 1) w = ws.find(k => k !== word);
+  choose(w, i);
+}
+
+/* ---------- Writing ----------
+   A letter goes in the yellow cell, then the next cell of the word takes the yellow. The letters he did
+   not write are skipped. When the word is full, the next word with an empty cell is chosen. */
+// The next word, chosen a moment after a word is full. Any other action of his cancels it.
+let advance = 0;
+const stay = () => { clearTimeout(advance); advance = 0; };
+function type(letter) {
+  if (!G || Kit.isOpen()) return;
+  stay();
+  if (G.result) return Kit.say('Cette grille est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.');
+  const ws = WS()[word];
+  let i = at;
+  // The cell he is on holds a letter of the game: the letter goes in an empty cell of the word, the next
+  // one after it, else the first one. A full word is never changed this way: he clicks the letter to change.
+  if (G.given[i] === '1') {
+    const k0 = ws.cells.indexOf(at), free = ws.cells.filter(k => G.given[k] !== '1');
+    i = free.find(k => ws.cells.indexOf(k) > k0 && !filled(k)) ?? free.find(k => !filled(k)) ?? -1;
+    if (i < 0) {
+      window.Sound?.play('bad');
+      return Kit.say(free.length ? `Le mot ${quote(word)} est rempli. Pour changer une lettre, cliquez d’abord sur elle.`
+        : 'Les lettres de ce mot sont déjà données. Cliquez sur une autre case blanche.');
+    }
+  }
+  const before = G, wasEmpty = !filled(i);
+  G = M.write(G, i, letter);
+  if (G === before) return;
+  window.Sound?.play('write');
+  justCell = i;
+  at = i;
+  if (G.result) { render(); return win(); }
+  const next = ws.cells.slice(ws.cells.indexOf(i) + 1).find(k => G.given[k] !== '1');
+  // The letter filled the last empty cell of the word: the next word with an empty cell, after a short
+  // pause so the last letter is seen. A letter written over another one stays in its word.
+  if (wasEmpty && firstEmpty(word) === undefined) {
+    const n = WS().length;
+    let k = 1;
+    while (k < n && firstEmpty((word + k) % n) === undefined) k++;
+    if (k < n) {
+      const to = (word + k) % n, mine = G;
+      render();
+      saveSoon();
+      advance = later(() => { if (G === mine && !Kit.isOpen()) choose(to, undefined, `Mot suivant : ${quote(to)}, en ${lettersOf(to)}. Tapez ses lettres.`); }, reducedMotion.matches ? 0 : 420);
+      return;
+    }
+    // Every cell is written, but some letters do not go: they are struck in red.
+    G = M.mark(G);
+    render();
+    window.Sound?.play('bad');
+    const bad = M.mistakes(G).length;
+    saveSoon();
+    return Kit.say(`La grille est pleine, mais ${plural(bad, 'lettre ne va pas', 'lettres ne vont pas')} : barrée${bad > 1 ? 's' : ''} en rouge. Tapez la bonne lettre par-dessus.`);
+  }
+  if (next !== undefined) at = next;
+  render();
+  say();
+}
+function say() {
+  saveSoon();
+  Kit.say(firstEmpty(word) === undefined ? askLine() : `${quote(word)}, en ${lettersOf(word)} : tapez la lettre suivante.`);
+}
+// Backspace erases the yellow cell, or, when it is empty, goes back one cell and erases it.
+function erase(back = true) {
+  if (!G || Kit.isOpen()) return;
+  stay();
+  if (G.result) return Kit.say('Cette grille est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.');
+  const ws = WS()[word];
+  let i = at;
+  if (back && (!filled(i) || G.given[i] === '1')) {
+    const k = ws.cells.indexOf(at);
+    const prev = ws.cells.slice(0, k).reverse().find(j => G.given[j] !== '1');
+    if (prev !== undefined) i = prev;
+  }
+  if (G.given[i] === '1' || !filled(i)) {
+    at = i; render();
+    return Kit.say(G.given[i] === '1' ? 'Cette lettre est donnée par le jeu : elle reste. Tapez une lettre dans une case blanche.' : `Rien à effacer ici. ${quote(word)} : tapez une lettre.`);
+  }
+  G = M.write(G, i, '');
+  at = i;
+  render();
+  saveSoon();
+  Kit.say(`Lettre effacée. ${quote(word)} : tapez la bonne lettre.`);
+}
+// The arrow keys move the yellow cell to the next white cell that way, and take the word in that direction.
+function move(dr, dc) {
+  if (!G || Kit.isOpen()) return;
+  stay();
+  let r = Math.floor(at / G.cols), c = at % G.cols;
+  for (;;) {
+    r += dr; c += dc;
+    if (r < 0 || c < 0 || r >= G.rows || c >= G.cols) return Kit.tell('C’est le bord de la grille.');
+    if (G.grid[r * G.cols + c] !== '#') break;
+  }
+  const i = r * G.cols + c, ws = wordsAt(i), dir = dr ? 'v' : 'h';
+  const w = ws.find(k => WS()[k].dir === dir) ?? (ws.includes(word) ? word : ws[0]);
+  choose(w, i);
+}
+
+/* ---------- The buttons ---------- */
+function check() {
+  if (!G || Kit.isOpen()) return;
+  stay();
+  if (G.result) return Kit.say('Cette grille est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.');
+  const mine = [...G.typed].filter((x, i) => x !== ' ' && x !== '#' && G.given[i] !== '1').length;
+  if (!mine) return Kit.say('Écrivez d’abord quelques lettres : il n’y a encore rien à vérifier. Tapez une lettre dans la case jaune.');
+  G = M.mark(G);
+  const bad = M.mistakes(G);
+  render();
+  saveSoon();
+  if (!bad.length) {
+    window.Sound?.play('good');
+    return Kit.say(`Bravo : ${plural(mine, 'lettre écrite est juste', 'lettres écrites sont justes')}. Continuez : tapez les lettres du mot en jaune.`);
+  }
+  window.Sound?.play('bad');
+  if (!reducedMotion.matches) bad.forEach(i => { cellEls[i].classList.remove('shake'); void cellEls[i].offsetWidth; cellEls[i].classList.add('shake'); });
+  Kit.say(`${plural(bad.length, 'lettre ne va pas', 'lettres ne vont pas')} : barrée${bad.length > 1 ? 's' : ''} en rouge. Tapez la bonne lettre par-dessus.`);
+}
+let lastHint = -Infinity;
+function showHint() {
+  if (!G || G.result || Kit.isOpen()) return;
+  stay();
+  const t = performance.now();
+  if (t - lastHint < 500) return;
+  lastHint = t;
+  const h = M.hint(G, word);
+  if (!h) return;
+  G = h.G;
+  word = h.w;
+  const ws = WS()[word];
+  aidCell = h.i;
+  if (G.result) { at = h.i; render({ newDef: true }); return win(); }
+  at = firstEmpty(word) ?? h.i;
+  render({ newDef: true });
+  saveSoon();
+  const L = G.grid[h.i], pos = ws.cells.indexOf(h.i) + 1;
+  const where = pos === 1 ? 'la première lettre' : `la ${pos}e lettre`;
+  Kit.say(`${h.fixed ? 'Corrigé : ' : ''}${where} de ${quote(word)} est un ${L}. ` + (firstEmpty(word) === undefined ? 'Cliquez sur une autre case blanche.' : 'Tapez la lettre suivante.'));
+}
+// During his first game, the hand points at the key of the next letter, so he learns where to type.
+function coach() {
+  if (!Kit.coaching() || !G || G.result || Kit.isOpen()) return;
+  const i = firstEmpty(word);
+  if (i === undefined) return;
+  Kit.point(keyEls[G.grid[i]]);
+}
+
+// A grid of the level he has not opened yet, drawn at random. Once all are opened, they all come back.
+function pick(lv) {
+  const total = M.count(lv), done = new Set(played[lv]);
+  if (done.size >= total) { played[lv] = []; done.clear(); }
+  const free = [];
+  for (let k = 0; k < total; k++) if (!done.has(k)) free.push(k);
+  return free[crypto.getRandomValues(new Uint32Array(1))[0] % free.length];
+}
+function askNewGame() { stopAll(); Kit.chooseLevel(level, playing(), newGame); }
+async function newGame(lv) {
+  pendingWin = null; clearTimeout(winTimer);
+  stopAll(); lastTap = null;
+  if (lv) level = lv;
+  Kit.showLevel(level);
+  G = M.newGame(level, pick(level));
+  played[level] = [...played[level], G.n];
+  wonNow = false; word = 0;
+  // The first word to fill: the first one with an empty cell.
+  const n = WS().length;
+  while (word < n - 1 && firstEmpty(word) === undefined) word++;
+  at = firstEmpty(word) ?? WS()[word].cells[0];
+  const written = save();
+  render({ newDef: true });
+  showDeal();
+  if (!stale) Kit.say(level === 'facile'
+    ? `Les premières lettres sont données. ${quote(word)}, en ${lettersOf(word)} : tapez les lettres.`
+    : `${quote(word)}, en ${lettersOf(word)} : tapez les lettres au clavier, ou cliquez-les à droite.`);
+  if (await written) GG.track(ID, 'start');
+}
+
+/* ---------- The end of the grid ---------- */
+async function win() {
+  const mine = G;
+  const firstWin = !wonNow;
+  if (firstWin) { wonNow = true; stats.won++; }
+  const ok = await save(firstWin ? () => { if (G === mine) wonNow = false; stats.won--; } : null);
+  if (ok && firstWin) GG.track(ID, 'won');
+  if (G !== mine) return;
+  render();
+  finish(!stale);
+}
+function finish(show) {
+  const text = 'Bravo, la grille est finie ! Cliquez sur « Nouvelle partie » pour en commencer une autre.';
+  Kit.gameOver(true);
+  if (saved && !stale) Kit.say(text);
+  if (!show) return;
+  window.Sound?.play('win');
+  const wait = showWin();
+  const game = G;
+  pendingWin = () => {
+    if (G !== game || stale) return;
+    Kit.dialog('Bravo, vous avez gagné !',
+      `Vous avez rempli toute la grille. ` + (saved ? `Grilles finies : ${stats.won}.` : FULL),
+      [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', Kit.home]], true);
+  };
+  if (!wait) return openWin();
+  later(endWave, wait);
+}
+
+/* ---------- Motions ---------- */
+function later(fn, ms) { const t = setTimeout(() => { timers = timers.filter(x => x !== t); fn(); }, ms); timers.push(t); return t; }
+let pendingWin = null, winTimer;
+function endWave() { sheet.classList.remove('wave'); openWin(); }
+function openWin() {
+  clearTimeout(winTimer);
+  if (!pendingWin) return;
+  if (Kit.isOpen()) { winTimer = setTimeout(openWin, 300); return; }
+  const open = pendingWin;
+  pendingWin = null;
+  open();
+}
+reducedMotion.addEventListener('change', () => { if (reducedMotion.matches && pendingWin) endWave(); });
+function stopAll() {
+  timers.forEach(clearTimeout); timers = [];
+  sheet.classList.remove('wave', 'deal');
+  if (pendingWin) { clearTimeout(winTimer); winTimer = setTimeout(openWin, 300); }
+}
+// A new grid: the print and the given letters come in row by row.
+const ROW_MS = 40;
+function showDeal() {
+  sheet.classList.remove('deal');
+  if (reducedMotion.matches) return;
+  [...gridEl.children].forEach((e, i) => e.style.setProperty('--row-delay', Math.floor(i / G.cols) * ROW_MS + 'ms'));
+  void sheet.offsetWidth;
+  sheet.classList.add('deal');
+  later(() => sheet.classList.remove('deal'), G.rows * ROW_MS + 450);
+}
+// The win: the letters lift in a wave from the top left, then the stamp comes down. Returns the wait
+// before the dialog.
+function showWin() {
+  if (reducedMotion.matches) return 0;
+  cellEls.forEach((e, i) => { if (e) e.style.setProperty('--delay', (Math.floor(i / G.cols) + i % G.cols) * 55 + 'ms'); });
+  const wave = (G.rows + G.cols) * 55 + 760;
+  sheet.style.setProperty('--stamp-delay', wave - 200 + 'ms');
+  sheet.classList.remove('wave'); void sheet.offsetWidth;
+  sheet.classList.add('wave');
+  return wave + 900;
+}
+
+/* ---------- Drawing ---------- */
+const table = $('table'), desk = $('desk'), sheet = $('sheet'), side = $('side'), gridEl = $('grid'), arrowsEl = $('arrows');
+let cellEls = [], partEls = new Map(), built = '', cell = 56, justCell = -1, aidCell = -1;
+const keyEls = {};
+// The keyboard: the letters in the order of a French keyboard, then « Effacer ».
+(() => {
+  const rows = ['AZERTYUIOP', 'QSDFGHJKLM', 'WXCVBN'];
+  const k = $('keys');
+  rows.forEach((row, r) => [...row].forEach((L, j) => {
+    const b = document.createElement('button');
+    b.textContent = L; b.dataset.k = L; b.setAttribute('aria-label', 'Lettre ' + L);
+    if (r === 2 && j === 0) b.className = 'row3';
+    b.onclick = () => type(L);
+    k.appendChild(b); keyEls[L] = b;
+  }));
+  const e = document.createElement('button');
+  e.id = 'erase'; e.dataset.icon = 'back'; e.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h11v14H9l-6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></svg>Effacer';
+  e.title = 'Efface la lettre de la case jaune';
+  e.onclick = () => erase(true);
+  k.appendChild(e);
+})();
+
+// The arrows, drawn in units of one cell. Each starts at the edge of its definition cell and enters the
+// first cell of its word.
+function arrowPath(w, cols) {
+  const r = Math.floor(w.clue / cols), c = w.clue % cols;
+  const y = w.alone ? r + .5 : r + (w.part ? .75 : .25), x = c + .5;
+  const head = (px, py, dir) => {
+    const s = .13;
+    const pts = dir === 'r' ? [[px, py - s], [px + s * 1.1, py], [px, py + s]] : [[px - s, py], [px, py + s * 1.1], [px + s, py]];
+    return `<path class="head" d="M${pts.map(p => p.map(v => v.toFixed(3)).join(' ')).join('L')}Z"/>`;
+  };
+  if (w.arrow === 'right') return `<path d="M${c + 1 - .02} ${y}h.1"/>` + head(c + 1.08, y, 'r');
+  if (w.arrow === 'down') return `<path d="M${x} ${r + 1 - .02}v.1"/>` + head(x, r + 1.08, 'd');
+  // The bent arrows: out of the right edge, then down along the first cell (top row), or out of the
+  // bottom edge, then right along the first cell (left column).
+  if (w.arrow === 'rightDown') return `<path d="M${c + 1 - .02} ${y}h.2v.12"/>` + head(c + 1.18, y + .2, 'd');
+  return `<path d="M${x} ${r + 1 - .02}v.2h.12"/>` + head(x + .2, r + 1.18, 'r');
+}
+function build() {
+  const k = G.cols + ':' + G.grid;
+  if (built === k) return;
+  built = k;
+  gridEl.innerHTML = ''; cellEls = []; partEls = new Map();
+  const ws = WS();
+  desk.style.setProperty('--cols', G.cols); desk.style.setProperty('--rows', G.rows);
+  for (let i = 0; i < G.grid.length; i++) {
+    const e = document.createElement('div');
+    e.dataset.i = i;
+    if (G.grid[i] === '#') {
+      e.className = 'clue';
+      const mine = ws.map((w, k) => w.clue === i ? k : -1).filter(k => k >= 0);
+      e.setAttribute('role', 'gridcell');
+      e.setAttribute('aria-label', mine.length ? 'Définition : ' + mine.map(k => G.defs[k]).join(' ; ') : 'Case bleue');
+      for (const w of mine) {
+        const p = document.createElement('div');
+        p.className = 'part'; p.dataset.w = w;
+        p.innerHTML = `<span class="print"></span>`;
+        p.firstChild.textContent = G.defs[w];
+        e.appendChild(p); partEls.set(w, p);
+      }
+      cellEls.push(null);
+    } else {
+      e.className = 'cell';
+      e.setAttribute('role', 'gridcell');
+      e.innerHTML = '<span class="ch"></span>';
+      cellEls.push(e);
+    }
+    gridEl.appendChild(e);
+  }
+  arrowsEl.setAttribute('viewBox', `0 0 ${G.cols} ${G.rows}`);
+  arrowsEl.innerHTML = ws.map(w => arrowPath(w, G.cols)).join('');
+  arrowsEl.querySelectorAll('path:not(.head)').forEach(p => p.setAttribute('stroke-width', '.06'));
+  fitted = '';
+}
+
+// The sizes: the grid takes the largest cells that fit beside the card, or above it on a phone. The card
+// takes the room left, between 340 and 520 px, and its keys grow with it.
+let fitted = '';
+function layout() {
+  const W = table.clientWidth, H = table.clientHeight, phone = innerWidth < 700, low = H < 450;
+  const pad = phone ? 8 : Math.round(Math.max(8, Math.min(20, H * .025)));
+  const gap = phone ? 12 : Math.round(Math.max(16, Math.min(36, W * .022)));
+  desk.style.setProperty('--pad', pad + 'px');
+  desk.style.setProperty('--gap', gap + 'px');
+  desk.classList.toggle('stack', phone);
+  desk.classList.toggle('low', low && !phone);
+  const frame = 24 + 8;
+  let sideW;
+  if (phone) {
+    cell = Math.floor(Math.min((W - 2 * pad - frame) / G.cols, 64));
+    sideW = W - 2 * pad;
+  } else {
+    const most = W > 1500 ? 600 : 520;
+    sideW = Math.round(Math.max(340, Math.min(most, W * .36)));
+    cell = Math.floor(Math.min((H - 2 * pad - frame) / G.rows, (W - 2 * pad - gap - sideW - frame) / G.cols, 96));
+    // Room left on the right: the card takes it, up to 520 px, or 600 px on a large monitor.
+    const gridW = cell * G.cols + frame;
+    sideW = Math.round(Math.max(340, Math.min(most, W - 2 * pad - gap - gridW - 2)));
+  }
+  cell = Math.max(24, cell);
+  desk.style.setProperty('--c', cell + 'px');
+  // Letters large in their cells: 60 % of the cell, never under 20 px (13 on a phone).
+  desk.style.setProperty('--f', Math.max(phone ? 15 : 20, Math.round(cell * .6)) + 'px');
+  desk.style.setProperty('--side', sideW + 'px');
+  // The keys: ten in a row, 44 px high at least.
+  const kg = sideW < 400 ? 4 : 6, kw = (sideW - 32 - 9 * kg) / 10;
+  const kh = Math.round(Math.max(44, Math.min(phone ? 46 : 64, kw * 1.1, low ? 44 : 64)));
+  desk.style.setProperty('--kg', kg + 'px');
+  desk.style.setProperty('--kh', kh + 'px');
+  desk.style.setProperty('--kf', Math.round(Math.max(20, Math.min(26, kh * .48))) + 'px');
+  desk.style.setProperty('--df', (phone ? 24 : low ? 25 : sideW > 440 ? 32 : 28) + 'px');
+  desk.style.setProperty('--bw', (low ? 46 : 54) + 'px');
+  desk.style.setProperty('--sg', (low ? 6 : 12) + 'px');
+  // The card stands as tall as the grid when it can, so the two sheets line up.
+  side.style.minHeight = phone ? '' : (cell * G.rows + frame) + 'px';
+  fitPrint();
+}
+// The print of the definition cells, one size for the whole grid, as in a newspaper: the largest size,
+// up to 20 px, at which most definitions fit their half of a cell without cutting a word. A definition
+// that does not fit at that size shows lines of print instead: the card says it in large type.
+function fitPrint() {
+  const k = cell + ':' + built;
+  if (fitted === k) return;
+  fitted = k;
+  const fits = (span, p, size) => {
+    span.style.setProperty('--pf', size + 'px');
+    return span.scrollHeight <= p.clientHeight - 2 && span.scrollWidth <= p.clientWidth - 4;
+  };
+  const cap = Math.max(9, Math.min(20, Math.floor(cell * .3)));
+  const best = new Map();
+  for (const [w, p] of partEls) {
+    p.classList.remove('bars');
+    const span = p.firstChild;
+    let lo = 9, hi = cap, b = 0;
+    while (lo <= hi) { const mid = (lo + hi) >> 1; if (fits(span, p, mid)) { b = mid; lo = mid + 1; } else hi = mid - 1; }
+    best.set(w, b);
+  }
+  const sizes = [...best.values()].sort((a, b) => b - a);
+  const size = Math.max(9, sizes[Math.floor(sizes.length * .6)] || 9);
+  desk.style.setProperty('--pf', size + 'px');
+  for (const [w, p] of partEls) {
+    p.firstChild.style.removeProperty('--pf');
+    p.classList.toggle('bars', best.get(w) < size);
+  }
+}
+
+const ARROW_ICONS = {
+  right: '<path d="M4 12h15M13 6l6 6-6 6"/>',
+  down: '<path d="M12 4v15M6 13l6 6 6-6"/>',
+  rightDown: '<path d="M3 7h9a3 3 0 0 1 3 3v10M10 15l5 5 5-5"/>',
+  downRight: '<path d="M7 3v9a3 3 0 0 0 3 3h10M15 10l5 5-5 5"/>',
+};
+const arrowIcon = a => `<svg viewBox="0 0 24 24">${ARROW_ICONS[a]}</svg>`;
+const direction = w => WS()[w].dir === 'h' ? 'Horizontal' : 'Vertical';
+function render(opts = {}) {
+  if (!G) return;
+  build();
+  const ws = WS(), cur = ws[word];
+  if (!cur.cells.includes(at)) at = cur.cells[0];
+  const left = M.empty(G);
+  $('count').textContent = G.result ? 'Grille finie' : left ? `Encore ${plural(left, 'case', 'cases')}` : 'Grille pleine';
+  Kit.showWins(stats.won);
+  layout();
+  const inWord = new Set(cur.cells);
+  cellEls.forEach((e, i) => {
+    if (!e) return;
+    const ch = G.typed[i] === ' ' ? '' : G.typed[i];
+    e.firstChild.textContent = ch;
+    e.classList.toggle('word', inWord.has(i) && !G.result);
+    e.classList.toggle('cur', i === at && !G.result);
+    e.classList.toggle('given', G.given[i] === '1');
+    e.classList.toggle('aid', G.given[i] === '1' && !(LEVEL_GIVEN() && ws.some(w => w.cells[0] === i)));
+    e.classList.toggle('wrong', G.wrong[i] === '1');
+    e.classList.toggle('just', i === justCell);
+    const r = Math.floor(i / G.cols) + 1, c = i % G.cols + 1;
+    e.setAttribute('aria-label', `Ligne ${r}, colonne ${c} : ${ch || 'vide'}${G.wrong[i] === '1' ? ', à corriger' : ''}${i === at ? ', case choisie' : ''}`);
+  });
+  if (aidCell >= 0 && cellEls[aidCell]) { const e = cellEls[aidCell]; e.classList.remove('aid'); void e.offsetWidth; e.classList.add('aid'); }
+  justCell = -1; aidCell = -1;
+  for (const [w, p] of partEls) {
+    p.classList.toggle('on', w === word && !G.result);
+    p.classList.toggle('done', ws[w].cells.every(i => filled(i)));
+  }
+  // The card: the definition he is on, then the other word of the cell, to take with one click.
+  $('defBadge').innerHTML = arrowIcon(cur.arrow);
+  $('defText').textContent = G.defs[word];
+  $('defMeta').textContent = `${direction(word)}, ${lettersOf(word)}`;
+  if (opts.newDef && !reducedMotion.matches) { const d = $('def'); d.classList.remove('new'); void d.offsetWidth; d.classList.add('new'); }
+  const other = wordsAt(at).find(k => k !== word);
+  const o = $('other');
+  o.classList.toggle('off', other === undefined || !!G.result);
+  if (other !== undefined) {
+    o.dataset.w = other;
+    o.querySelector('.badge').innerHTML = arrowIcon(ws[other].arrow);
+    o.querySelector('.t').textContent = G.defs[other];
+    o.setAttribute('aria-label', `L’autre mot de cette case : ${G.defs[other]}`);
+  }
+  $('hintBtn').disabled = !!G.result;
+  $('hintBtn').dataset.why = 'Cette grille est finie : cliquez sur « Nouvelle partie ».';
+  $('checkBtn').disabled = !!G.result;
+  $('checkBtn').dataset.why = 'Cette grille est finie : cliquez sur « Nouvelle partie ».';
+  coach();
+}
+const LEVEL_GIVEN = () => M.LEVELS[G.level].given;
+
+/* ---------- His clicks and keys ---------- */
+gridEl.addEventListener('click', e => {
+  const c = e.target.closest('.cell, .clue');
+  if (!c) return;
+  const i = +c.dataset.i;
+  let part = 0;
+  if (c.classList.contains('clue') && c.children.length > 1) {
+    const r = c.getBoundingClientRect();
+    part = e.clientY > r.top + r.height / 2 ? 1 : 0;
+  }
+  tapCell(i, e.clientX, e.clientY, part);
+});
+$('other').onclick = () => { stay(); const w = +$('other').dataset.w; if (!Number.isNaN(w)) choose(w, at); };
+$('hintBtn').onclick = showHint;
+$('checkBtn').onclick = check;
+$('helpBtn').onclick = () => { if (!pendingWin) stopAll(); Kit.openHelp(); };
+$('newBtn').onclick = askNewGame;
+addEventListener('keydown', e => {
+  if (e.key === 'Escape') { Kit.escape(); return; }
+  if (Kit.isOpen() || e.ctrlKey || e.metaKey || e.altKey) return;
+  // A key held down writes once.
+  if (e.repeat && e.key !== 'Backspace' && !e.key.startsWith('Arrow')) return;
+  const k = e.key;
+  if (k === 'Backspace') { e.preventDefault(); return erase(true); }
+  if (k === 'Delete') { e.preventDefault(); return erase(false); }
+  if (k === 'ArrowLeft') { e.preventDefault(); return move(0, -1); }
+  if (k === 'ArrowRight') { e.preventDefault(); return move(0, 1); }
+  if (k === 'ArrowUp') { e.preventDefault(); return move(-1, 0); }
+  if (k === 'ArrowDown') { e.preventDefault(); return move(1, 0); }
+  // Space presses a button or link reached with the keyboard (Tab), as everywhere. A button clicked with the
+  // mouse keeps the focus too, but without the visible ring: there, Space takes the other word of the cell,
+  // so it never presses the same key or the hint a second time.
+  // Enter on a button clicked with the mouse would press it again: a second letter or a second hint.
+  if (k === 'Enter' && e.target instanceof Element && e.target.closest('button') && !e.target.matches(':focus-visible')) { e.preventDefault(); return; }
+  if (k === ' ' && e.target instanceof Element && e.target.matches(':focus-visible') && e.target.closest('button, a, input, select, textarea, summary, [role="button"]')) return;
+  if (k === ' ' && G) { e.preventDefault(); const o = wordsAt(at).find(w => w !== word); if (o !== undefined) choose(o, at); return; }
+  if (k.length === 1) {
+    const L = M.key(k);
+    if (/^[A-Z]$/.test(L)) { e.preventDefault(); type(L); }
+    else if (/^[0-9]$/.test(k)) Kit.tell('La grille ne prend que des lettres : tapez une lettre de A à Z.');
+  }
+});
+addEventListener('resize', () => { fitted = ''; render(); });
+
+/* ---------- The pictures of the rules ----------
+   Each grid of the guide is written in data-g, cell by cell with |: a definition (several words), a
+   letter, or '.' for an empty cell. data-cols gives the widths of the columns in cells; one width means
+   one column. data-ar puts an arrow on a definition, data-w the yellow word, data-k the yellow cell, data-h
+   the cell to click (a yellow ring and a hand), data-x a letter struck by « Vérifier », data-a a letter
+   of the hint. */
+for (const b of document.querySelectorAll('#help .gg')) {
+  const d = b.dataset, items = d.g.split('|'), widths = d.cols.split(' ').map(Number), n = widths.length;
+  const at = key => (d[key] || '').split(' ').filter(Boolean).map(Number);
+  b.style.setProperty('--cols', widths.map(x => `calc(var(--gc) * ${x})`).join(' '));
+  b.innerHTML = items.map((x, i) => {
+    const cls = (x.length > 1 ? ' q' : '') + (at('w').includes(i) ? ' w' : '') + (at('k').includes(i) ? ' k' : '') + (at('h').includes(i) ? ' h' : '')
+      + (at('x').includes(i) ? ' x' : '') + (at('a').includes(i) ? ' a' : '');
+    return `<i${cls ? ` class="${cls.trim()}"` : ''}>${x === '.' ? '' : x}${at('h').includes(i) ? Kit.icon('hand') : ''}</i>`;
+  }).join('');
+  // The arrows, in the units of the columns: a definition at index i of a row of n columns.
+  const total = widths.reduce((a, b) => a + b, 0), rows = Math.ceil(items.length / n);
+  const left = k => widths.slice(0, k).reduce((a, b) => a + b, 0);
+  const paths = (d.ar || '').split(' ').filter(Boolean).map(s => {
+    const [i, a] = s.split(':'), k = +i, r = Math.floor(k / n), c = k % n, x0 = left(c), x1 = x0 + widths[c];
+    if (a === 'right') return `<path d="M${x1 - .02} ${r + .5}h.08"/><path class="head" d="M${x1 + .02} ${r + .37}L${x1 + .17} ${r + .5}L${x1 + .02} ${r + .63}Z"/>`;
+    return `<path d="M${(x0 + x1) / 2} ${r + .98}v.08"/><path class="head" d="M${(x0 + x1) / 2 - .13} ${r + 1.02}L${(x0 + x1) / 2} ${r + 1.17}L${(x0 + x1) / 2 + .13} ${r + 1.02}Z"/>`;
+  }).join('');
+  b.insertAdjacentHTML('beforeend', `<svg class="ga" viewBox="0 0 ${total} ${rows}" preserveAspectRatio="none">${paths}</svg>`);
+}
+document.querySelectorAll('#help .gkeys .here').forEach(k => k.insertAdjacentHTML('beforeend', Kit.icon('hand')));
+document.querySelectorAll('#help [data-check]').forEach(b => b.insertAdjacentHTML('afterbegin', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg>'));
+
+// The first visit starts a game at Facile at once, with the coach (lib/kit.js).
+if (load()) {
+  Kit.showLevel(level);
+  render({ newDef: true });
+  if (G.result) finish(false);
+  else Kit.say(askLine());
+} else {
+  Kit.firstVisit(newGame);
+}
+</script>
+</body>
+</html>

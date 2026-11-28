@@ -122,6 +122,46 @@
 
   a.tile.opening { opacity: .85; transform: none; }
 
+  /* New games: a shelf above the families, built like one: a heading with its line, then one card per new game in
+     the felt of its table, which opens it in one click. « Masquer » puts the shelf away for good. The tiles of the
+     new games below carry a « Nouveau » tag. */
+  #news { margin: 0 0 calc(clamp(18px, 3vh, 30px) * var(--k) + var(--air)); }
+  #news[hidden] { display: none; }
+  #news .head { margin: 0 0 calc(14px * var(--k)); display: flex; align-items: center; gap: 14px; }
+  #news h2 { margin: 0; display: flex; align-items: center; gap: 12px; font: 700 calc(28px * var(--k)) var(--title); color: #fff; white-space: nowrap; }
+  #news h2 svg { width: calc(34px * var(--k)); height: calc(34px * var(--k)); flex: none; }
+  #news .rule { flex: 1; min-width: 12px; border-top: 2px solid rgb(255 200 61 / .45); }
+  #news .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(196px * var(--k))), 1fr)); gap: calc(14px * var(--k)); }
+  #news a { position: relative; display: flex; align-items: center; gap: 12px; min-height: calc(76px * var(--k)); padding: 10px 14px 10px 10px;
+    border-radius: 20px; background: radial-gradient(130% 160% at 0% 0%, var(--c1), var(--c2) 62%);
+    color: #fff; font: 700 calc(22px * var(--k))/1.15 var(--ui); text-decoration: none; text-shadow: 0 1px 2px rgb(0 0 0 / .35);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / .2), 0 2px 4px rgb(0 0 0 / .2), 0 10px 22px rgb(0 0 0 / .24); transition: transform .14s, box-shadow .14s; }
+  #news a img { width: calc(52px * var(--k)); height: calc(52px * var(--k)); flex: none; border-radius: 14px; box-shadow: 0 0 0 2px rgb(255 255 255 / .9), 0 3px 8px rgb(0 0 0 / .3); }
+  #news a:hover { transform: translateY(-2px); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .3), 0 4px 8px rgb(0 0 0 / .22), 0 16px 30px rgb(0 0 0 / .3); }
+  #news a:focus-visible, #news button:focus-visible { outline: 5px solid var(--gold); outline-offset: 4px; }
+  #news button { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px 0 10px; border: 0; border-radius: 14px; cursor: pointer;
+    background: rgb(0 0 0 / .2); color: #fff; font: 600 20px var(--ui); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .3); }
+  #news button svg { width: 18px; height: 18px; flex: none; }
+  #news button:hover { background: rgb(0 0 0 / .38); }
+  @media (prefers-reduced-motion: reduce) { #news a { transition: none; } #news a:hover { transform: none; } }
+  .art .new { position: absolute; left: 12px; top: 12px; z-index: 1; display: flex; align-items: center; gap: 6px; padding: 3px 12px 3px 8px; border-radius: 999px;
+    background: var(--gold); color: #2A2000; font: 700 20px/1.25 var(--ui); box-shadow: 0 2px 6px rgb(0 0 0 / .3); }
+  .art .new svg { width: 18px; height: 18px; flex: none; }
+  /* A laptop: the shelf takes the place of the line under the heading. */
+  @media (min-width: 700px) and (max-height: 760px) {
+    main:has(#news:not([hidden])) .greeting { margin-bottom: calc(14px + var(--air)); }
+    main:has(#news:not([hidden])) #tagline { display: none; }
+  }
+  @media (max-width: 699px) {
+    #news .head { gap: 8px; }
+    #news h2 { font-size: 22px; gap: 8px; }
+    #news h2 svg { width: 28px; height: 28px; }
+    #news .rule { display: none; }
+    #news button { margin-left: auto; padding: 0 12px 0 9px; }
+    #news .cards { grid-template-columns: 1fr 1fr; gap: 10px; }
+    #news a { flex-direction: column; justify-content: center; gap: 8px; padding: 12px 8px; text-align: center; }
+  }
+
   /* Keep the desktop controls in one row while the library scrolls. */
   body { display: flex; flex-direction: column; min-height: calc(100vh / var(--z, 1)); }
   main { flex: 1; }
@@ -192,6 +232,12 @@
           <a href="billard/regles/"><img src="billard/icon.svg" width="40" height="40" alt="">Billard américain</a>
           <a href="bowling/regles/"><img src="bowling/icon.svg" width="40" height="40" alt="">Bowling</a>
           <a href="rami/regles/"><img src="rami/icon.svg" width="40" height="40" alt="">Rami</a>
+          <a href="dominos/regles/"><img src="dominos/icon.svg" width="40" height="40" alt="">Dominos</a>
+          <a href="loto/regles/"><img src="loto/icon.svg" width="40" height="40" alt="">Loto</a>
+          <a href="mots-fleches/regles/"><img src="mots-fleches/icon.svg" width="40" height="40" alt="">Mots fléchés</a>
+          <a href="pendu/regles/"><img src="pendu/icon.svg" width="40" height="40" alt="">Le pendu</a>
+          <a href="code-secret/regles/"><img src="code-secret/icon.svg" width="40" height="40" alt="">Code secret</a>
+          <a href="petanque/regles/"><img src="petanque/icon.svg" width="40" height="40" alt="">Pétanque</a>
         </div>
       </details>
       <a href="blog/">Blog</a>
@@ -211,6 +257,8 @@
     <h1>Des jeux classiques à votre rythme</h1>
     <p id="tagline">Simples et sans publicité. Cliquez sur un jeu pour commencer.</p>
   </header>
+
+  <section id="news" aria-labelledby="news-title" hidden></section>
 
   <div id="games"></div>
 
@@ -244,12 +292,16 @@ const GAMES = [
     felt: ['#8A6234', '#4A3217'], scene: mineArt },
   { id: 'yams', family: 'plateau', title: 'Yams', text: 'Lancez cinq dés et remplissez votre feuille, contre l’ordinateur.',
     felt: ['#B5532A', '#6A2A12'], scene: diceArt },
+  { id: 'dominos', family: 'plateau', title: 'Dominos', text: 'Posez vos dominos bout à bout et marquez 100 points, à trois autour de la table.',
+    felt: ['#74503A', '#2B1A10'], scene: dominoArt, added: '2026-11-28' },
   { id: 'bataille-navale', family: 'plateau', title: 'Bataille navale', text: 'Coulez les bateaux de l’ordinateur avant les vôtres.',
     felt: ['#1C7896', '#0A3142'], scene: seaArt },
   { id: 'bowling', family: 'adresse', title: 'Bowling', text: 'Dix tours sur une vraie piste : faites tomber les quilles à votre rythme.',
     felt: ['#3C3F8E', '#1B1C4A'], scene: () => '<img src="bowling/icon.svg" alt="" style="width:100%;height:100%">' },
   { id: 'billard', family: 'adresse', title: 'Billard américain', text: 'Rentrez vos sept billes, puis la noire, contre l’ordinateur.',
     felt: ['#7A3A22', '#3A170B'], scene: () => '<img src="billard/icon.svg" alt="" style="width:100%;height:100%">' },
+  { id: 'petanque', family: 'adresse', title: 'Pétanque', text: 'Une partie contre Marius sous les platanes : pointez ou tirez, à votre rythme.',
+    felt: ['#6E8A6A', '#2F4430'], scene: petanqueArt, added: '2026-11-28' },
   { id: 'golf', family: 'adresse', title: 'Golf miniature', text: 'Neuf nouveaux trous à chaque partie : visez le drapeau à votre rythme.',
     felt: ['#3f7d55', '#1d4634'], scene: () => '<img src="golf/icon.svg" alt="" style="width:100%;height:100%">' },
   { id: 'paires', family: 'tete', title: 'Jeu des paires', text: 'Retournez les cartes deux par deux et retrouvez les paires.',
@@ -258,8 +310,16 @@ const GAMES = [
     felt: ['#4A5560', '#232A31'], scene: slateArt },
   { id: 'mots-meles', family: 'tete', title: 'Mots mêlés', text: 'Retrouvez les mots cachés dans une grille de lettres.',
     felt: ['#C8576B', '#6E2234'], scene: wordsArt },
+  { id: 'mots-fleches', family: 'tete', title: 'Mots fléchés', text: 'Trouvez les mots grâce aux définitions et aux flèches de la grille.',
+    felt: ['#7088C8', '#28386F'], scene: arrowsArt, added: '2026-11-28' },
+  { id: 'pendu', family: 'tete', title: 'Le pendu', text: 'Devinez le mot lettre par lettre, avant que la marguerite perde ses pétales.',
+    felt: ['#8CC4EA', '#3A78AE'], scene: penduArt, added: '2026-11-28' },
+  { id: 'code-secret', family: 'tete', title: 'Code secret', text: 'Devinez les couleurs cachées grâce aux fiches noires et blanches.',
+    felt: ['#7E4A78', '#341630'], scene: codeArt, added: '2026-11-28' },
   { id: 'petits-chevaux', family: 'plateau', title: 'Petits chevaux', text: 'Sortez vos chevaux avec un 6 et menez-les au centre, contre l’ordinateur.',
     felt: ['#2BA3A8', '#0F5A60'], scene: horsesArt },
+  { id: 'loto', family: 'plateau', title: 'Loto', text: 'Couvrez les numéros tirés du sac : quine, double quine, carton plein.',
+    felt: ['#B5383E', '#561419'], scene: lotoArt, added: '2026-11-28' },
   { id: 'morpion', family: 'plateau', title: 'Morpion', text: 'Alignez vos croix avant l’ordinateur, sur une grille de neuf cases.',
     felt: ['#B98AC9', '#6B4580'], scene: morpionArt },
   { id: 'belote', family: 'cartes', title: 'Belote', text: 'Jouez avec André contre Simone et Henri, en 501 points.',
@@ -657,19 +717,295 @@ function ramiScene() {
       <text x="30" y="69" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-weight="800" font-size="13.5" fill="currentColor">JOKER</text></svg></div>`;
   return scene(lamp + tray + joker + card(CARREAU + 6, 95, 86, w, -8, 'lifted') + card(CARREAU + 7, 125, 82, w, 0, 'lifted') + card(CARREAU + 8, 155, 86, w, 8, 'lifted'));
 }
+// The dominos: a corner of the bottle-green mat seen from above, with its gold line. A line of ivory dominoes
+// runs across it and turns down at the edge, a double six lies across the line, and a last domino slides in
+// at the end of the line, its shadow still apart from the table.
+function dominoArt() {
+  const PIPS = { 0: [], 1: [[50, 50]], 2: [[27, 27], [73, 73]], 3: [[25, 25], [50, 50], [75, 75]], 4: [[27, 27], [73, 27], [27, 73], [73, 73]],
+    5: [[26, 26], [74, 26], [50, 50], [26, 74], [74, 74]], 6: [[28, 22], [72, 22], [28, 50], [72, 50], [28, 78], [72, 78]] };
+  // A domino at (x, y), 200 by 100 units lying or 100 by 200 standing, scaled by s, a and b its two halves.
+  const dom = (x, y, a, b, up, s = .22, rot = 0, lift = 0) => {
+    const W = up ? 100 : 200, H = up ? 200 : 100;
+    let pips = '';
+    [a, b].forEach((n, k) => PIPS[n].forEach(([px, py]) => {
+      const [cx, cy] = up ? [px, py + 100 * k] : [py + 100 * k, px];
+      pips += `<circle cx="${cx}" cy="${cy}" r="10" fill="#17130F"/>`;
+    }));
+    const line = up ? '<path d="M14 100H86" stroke="#2C2520" stroke-width="4"/>' : '<path d="M100 14V86" stroke="#2C2520" stroke-width="4"/>';
+    return `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${s})">
+      <rect x="${6 + lift}" y="${12 + lift}" width="${W}" height="${H}" rx="16" fill="rgba(0,0,0,${lift ? .25 : .4})"/>
+      <rect width="${W}" height="${H}" rx="16" fill="#FFFBF0" stroke="#C9BB98" stroke-width="3"/>${line}
+      <circle cx="${W / 2}" cy="${H / 2}" r="6" fill="#C9A04A"/>${pips}</g>`;
+  };
+  return `<svg class="field" viewBox="0 0 210 147" aria-hidden="true">
+    <rect x="4" y="14" width="202" height="130" rx="16" fill="#163A2A"/><rect x="8" y="18" width="194" height="122" rx="13" fill="#2B6249"/>
+    <rect x="13" y="23" width="184" height="112" rx="9" fill="none" stroke="#C9A45C" stroke-width="1.5"/>
+    ${dom(20, 50, 3, 5, false, .2)}${dom(60, 50, 5, 6, false, .2)}${dom(100, 40, 6, 6, true, .2)}${dom(120, 50, 6, 4, false, .2)}${dom(160, 50, 4, 1, false, .2)}
+    ${dom(180, 70, 1, 2, true, .2)}${dom(160, 110, 5, 2, false, .2)}
+    ${dom(92, 100, 3, 5, false, .21, -10, 12)}
+    <path d="M86 128q-10 4-20 1" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2.2" stroke-linecap="round"/></svg>`;
+}
+
+// The loto: a yellow carton of the salle des fêtes, tilted on the felt, with three amber glass jetons on its
+// numbers, and a beech barrel with the 22 that has just come out of the bag.
+function lotoArt() {
+  const rows = [[4, 0, 22, 35, 0, 51, 0, 73, 0], [0, 15, 0, 38, 46, 0, 64, 0, 81], [8, 0, 27, 0, 49, 0, 66, 78, 0]];
+  const on = [4, 35, 46, 66], S = 20;
+  let cells = '';
+  rows.forEach((row, r) => row.forEach((n, c) => {
+    const x = 14 + c * S, y = 6 + r * S;
+    cells += n ? `<rect x="${x}" y="${y}" width="${S}" height="${S}" fill="#FFFEF8" stroke="#D9A93B" stroke-width="1.2"/>`
+      + `<text x="${x + S / 2}" y="${y + 14.5}" text-anchor="middle" font-family="Segoe UI, sans-serif" font-weight="700" font-size="10.5" fill="#1E2622">${n}</text>`
+      + (on.includes(n) ? `<circle cx="${x + S / 2}" cy="${y + S / 2}" r="8" fill="url(#lotoGlass)" stroke="rgba(110,45,0,.5)" stroke-width=".8"/>` : '')
+      : `<rect x="${x}" y="${y}" width="${S}" height="${S}" fill="#F7D57A" stroke="#D9A93B" stroke-width="1.2"/>`;
+  }));
+  return `<svg class="field" viewBox="0 0 210 147" aria-hidden="true">
+    <defs>
+      <radialGradient id="lotoGlass" cx=".34" cy=".28" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset=".2" stop-color="#FFDEA0" stop-opacity=".5"/><stop offset=".6" stop-color="#E89628" stop-opacity=".55"/><stop offset="1" stop-color="#964600" stop-opacity=".8"/></radialGradient>
+      <radialGradient id="lotoBeech" cx=".4" cy=".35" r=".75"><stop offset="0" stop-color="#FBE9C6"/><stop offset=".6" stop-color="#E9C48A"/><stop offset="1" stop-color="#C8955A"/></radialGradient>
+      <linearGradient id="lotoBarrel" x1="0" x2="1"><stop offset="0" stop-color="#A46F38"/><stop offset=".4" stop-color="#E1B87A"/><stop offset="1" stop-color="#8E5C2A"/></linearGradient>
+    </defs>
+    <g transform="translate(14 34) rotate(-7 100 36)">
+      <rect x="3" y="6" width="200" height="72" rx="5" fill="rgba(40,8,10,.4)"/>
+      <rect width="200" height="72" rx="5" fill="#FFE39A"/>
+      <path d="M11 6V66" stroke="#D9A93B" stroke-width="1.2" stroke-dasharray="3 2"/>
+      ${cells}
+    </g>
+    <g transform="translate(160 104)">
+      <ellipse cy="26" rx="22" ry="5" fill="rgba(30,5,5,.35)"/>
+      <path d="M-20 0v14c0 7 9 12 20 12s20-5 20-12V0z" fill="url(#lotoBarrel)"/>
+      <path d="M-20 9c0 6 9 10 20 10s20-4 20-10" fill="none" stroke="rgba(90,50,15,.45)" stroke-width="1.2"/>
+      <ellipse rx="20" ry="13" fill="url(#lotoBeech)" stroke="#8A5A26" stroke-width="1.2"/>
+      <text y="5.5" text-anchor="middle" font-family="Segoe UI, sans-serif" font-weight="800" font-size="15" fill="#4A2408">22</text>
+    </g></svg>`;
+}
+
+// The mots fléchés: a corner of a newspaper arrow-word grid, its light blue definition cells with lines of
+// print and ink arrows, ROME and EAU written in blue ink, and a blue ballpoint pen lying across the page,
+// its tip at the next empty cell.
+function arrowsArt() {
+  const x0 = 38, y0 = 20, c = 25;
+  // The cells: q a definition (with how many definitions), a letter, or '' an empty white cell.
+  const rows = [['q2', 'R', 'O', 'M', 'E'], ['E', 'q1', '', 'q1', ''], ['A', '', '', '', 'q1'], ['U', 'q1', '', '', '']];
+  let cells = '', print = '', ink = '', arrows = '';
+  const bars = (x, y, w, h) => { let s = ''; for (let k = 0; k < 3; k++) s += `<rect x="${x + (w - 15) / 2 + (k === 2 ? 3 : 0)}" y="${y + h / 2 - 5 + k * 4}" width="${k === 2 ? 9 : 15}" height="1.7" rx=".8" fill="#6F7F98"/>`; return s; };
+  const arrowR = (x, y) => `<path d="M${x - 1} ${y}h3" stroke="#1F3F78" stroke-width="1.6"/><path d="M${x + 1.5} ${y - 3}L${x + 5} ${y}L${x + 1.5} ${y + 3}Z" fill="#1F3F78"/>`;
+  const arrowD = (x, y) => `<path d="M${x} ${y - 1}v3" stroke="#1F3F78" stroke-width="1.6"/><path d="M${x - 3} ${y + 1.5}L${x} ${y + 5}L${x + 3} ${y + 1.5}Z" fill="#1F3F78"/>`;
+  rows.forEach((row, r) => row.forEach((v, k) => {
+    const x = x0 + k * c, y = y0 + r * c;
+    if (v[0] === 'q') {
+      cells += `<rect x="${x}" y="${y}" width="${c}" height="${c}" fill="#D6E7F5"/>`;
+      if (v === 'q2') {
+        cells += `<path d="M${x} ${y + c / 2}h${c}" stroke="#9DBCD9" stroke-width="1"/>`;
+        print += bars(x, y + 1, c, c / 2 - 2).replace(/height="1.7"/g, 'height="1.4"') + bars(x, y + c / 2 + 1, c, c / 2 - 2).replace(/height="1.7"/g, 'height="1.4"');
+        arrows += arrowR(x + c, y + c / 4) + arrowD(x + c / 2, y + c);
+      } else {
+        print += bars(x, y, c, c);
+        arrows += k < 4 && rows[r][k + 1] !== undefined && rows[r][k + 1][0] !== 'q' && (r === 3 || rows[r + 1][k][0] === 'q') ? arrowR(x + c, y + c / 2) : arrowD(x + c / 2, y + c);
+      }
+    } else {
+      cells += `<rect x="${x}" y="${y}" width="${c}" height="${c}" fill="#FFFEF9"/>`;
+      if (v) ink += `<text x="${x + c / 2}" y="${y + c / 2 + 6.5}">${v}</text>`;
+    }
+  }));
+  let lines = '';
+  for (let k = 0; k <= 5; k++) lines += `<path d="M${x0 + k * c} ${y0}v${4 * c}" stroke="#B9C0C8" stroke-width=".9"/>`;
+  for (let k = 0; k <= 4; k++) lines += `<path d="M${x0} ${y0 + k * c}h${5 * c}" stroke="#B9C0C8" stroke-width=".9"/>`;
+  // The pen, drawn along x with its tip at 0: the tip, the cone, the clear six-sided barrel with its blue
+  // ink tube, and the blue cap at the far end with its clip.
+  const pen = `<path d="M0 0l5 -1.6v3.2z" fill="#3A3D44"/><path d="M5 -2.6l8 -1.4v8l-8 -1.4z" fill="#E8ECF2"/>
+    <rect x="13" y="-4" width="62" height="8" rx="1" fill="rgba(225,235,248,.92)" stroke="#AFC0D6" stroke-width=".6"/>
+    <rect x="13" y="-4" width="62" height="2.4" fill="rgba(255,255,255,.75)"/><rect x="15" y="-.8" width="58" height="1.6" rx=".8" fill="#2F5FB8"/>
+    <rect x="75" y="-4.6" width="20" height="9.2" rx="2" fill="#1F4FB0"/><rect x="75" y="-4.6" width="20" height="3" rx="1.5" fill="#4F7FD8"/>
+    <path d="M80 -4.6v-1.8h14v1.8" fill="none" stroke="#173E8C" stroke-width="1.4"/>`;
+  return `<svg class="field" viewBox="0 0 210 147" aria-hidden="true">
+    <g transform="rotate(-4 105 74)">
+      <rect x="22" y="9" width="166" height="124" rx="3" fill="rgba(0,0,0,.25)" transform="translate(3 5)"/>
+      <rect x="22" y="9" width="166" height="124" rx="3" fill="#FBF7EC"/>
+      ${cells}${lines}${print}
+      <rect x="${x0}" y="${y0}" width="${5 * c}" height="${4 * c}" fill="none" stroke="#2B3545" stroke-width="1.8"/>
+      <rect x="${x0 - 3}" y="${y0 - 3}" width="${5 * c + 6}" height="${4 * c + 6}" fill="none" stroke="#2B3545" stroke-width=".8"/>
+      <g font-family="Segoe UI, Arial, sans-serif" font-weight="700" font-size="17" fill="#1D4FA0" text-anchor="middle">${ink}</g>
+      ${arrows}
+      <rect x="${x0 + 2 * c + 2}" y="${y0 + 2 * c + 2}" width="${c - 4}" height="${c - 4}" fill="none" stroke="#E0A526" stroke-width="2.4" rx="2"/>
+    </g>
+    <g transform="translate(${x0 + 2 * c + 14} ${y0 + 2 * c + 16}) rotate(28)">
+      <g transform="translate(2 4)" opacity=".28"><path d="M0 0l13 -4h82v9H13z" fill="#1A0F05"/></g>
+      ${pen}
+    </g>
+  </svg>`;
+}
+
+// The pendu: a daisy in a terracotta pot on a windowsill in front of a morning sky, one petal drifting down and
+// another lying on the sill, and under it the word being guessed, three cream tiles with one A found.
+function penduArt() {
+  const petal = (a, w = 6.5, l = 25) => `<ellipse cx="0" cy="${-(l / 2 + 8)}" rx="${w}" ry="${l / 2}" transform="rotate(${a})"/>`;
+  const petals = [0, 40, 80, 120, 160, 240, 280, 320].map(a => petal(a)).join('');
+  const tile = (x, ch) => `<rect x="${x}" y="114" width="24" height="26" rx="4" fill="${ch ? '#FFFFFF' : '#EEF4F8'}" stroke="#9DB7CC" stroke-width="1.4"/>`
+    + (ch ? `<text x="${x + 12}" y="133" text-anchor="middle">${ch}</text>` : `<path d="M${x + 5} 135h14" stroke="#7E9DB5" stroke-width="2.4" stroke-linecap="round"/>`);
+  return `<svg class="field" viewBox="0 0 210 147" aria-hidden="true">
+    <rect x="34" y="8" width="142" height="104" rx="9" fill="rgba(0,0,0,.22)" transform="translate(2 4)"/>
+    <rect x="34" y="8" width="142" height="104" rx="9" fill="#FFFDF6"/>
+    <defs><linearGradient id="penduSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#BFE0F6"/><stop offset="1" stop-color="#F2F5E6"/></linearGradient></defs>
+    <rect x="41" y="15" width="128" height="88" rx="5" fill="url(#penduSky)"/>
+    <circle cx="150" cy="33" r="9" fill="#FFE07A"/>
+    <g fill="#fff" opacity=".9"><ellipse cx="66" cy="32" rx="13" ry="5"/><ellipse cx="74" cy="28" rx="8" ry="5"/></g>
+    <path d="M41 84c20-9 40-6 62-2s46-6 66-1v22H41z" fill="#B3D597"/>
+    <path d="M105 92c-2-14 3-26 0-40" fill="none" stroke="#4D8A39" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M104 76c-8-6-15-5-19-1 6 4 13 4 19 1z" fill="#5FA046"/>
+    <g transform="translate(105 50)"><g fill="#fff" stroke="#9FB3C4" stroke-width="1">${petals}</g><circle r="8.5" fill="#F6B51E" stroke="#C47B0C" stroke-width="1"/></g>
+    <ellipse cx="137" cy="70" rx="4.5" ry="10" fill="#fff" stroke="#9FB3C4" stroke-width="1" transform="rotate(48 137 70)"/>
+    <rect x="89" y="88" width="32" height="7" rx="2" fill="#C9663D"/><path d="M91 95h28l-4 17h-20z" fill="#B5552F"/>
+    <rect x="30" y="104" width="150" height="7" rx="2" fill="#D4A671"/>
+    <ellipse cx="62" cy="105" rx="9" ry="3" fill="#fff" stroke="#9FB3C4" stroke-width=".8" transform="rotate(-8 62 105)"/>
+    <g font-family="Segoe UI, Arial, sans-serif" font-weight="700" font-size="17" fill="#14335A">${tile(64, '')}${tile(93, 'A')}${tile(122, '')}</g>
+  </svg>`;
+}
+
+// The code secret: a corner of the beech board in its walnut rim, at a slant. Three columns of painted pegs,
+// each with its symbol and its ivory clue (the last one four black pins), and the hinged lid swung open on the
+// code, the same four pegs. A loose red peg lies on the felt, and the lid lies open beside the board.
+function codeArt() {
+  const SYM = ['M12 21 3.6 12.8A5 5 0 0 1 12 6.3a5 5 0 0 1 8.4 6.5z', 'M12 2.6l2.8 6 6.5.7-4.9 4.4 1.4 6.4L12 16.8l-5.8 3.3 1.4-6.4-4.9-4.4 6.5-.7z',
+    'M12 7.4a4.6 4.6 0 1 1 0 9.2a4.6 4.6 0 1 1 0-9.2z', 'M12 3.2 21.6 20H2.4z', 'M12 1.8 21 12 12 22.2 3 12z', 'M9 3h6v6h6v6h-6v6H9v-6H3V9h6z'];
+  const COL = [['#D3263A', '#fff'], ['#2463D6', '#fff'], ['#F6C624', '#4A3500'], ['#2F9A4E', '#fff'], ['#F4F0E6', '#2A2622'], ['#7E45B8', '#fff']];
+  const peg = (x, y, c, r = 8) => `<g transform="translate(${x} ${y})"><circle r="${r}" fill="${COL[c][0]}" stroke="rgba(40,18,2,.45)" stroke-width=".8"/>
+    <circle cx="${-r * .32}" cy="${-r * .36}" r="${r * .32}" fill="#fff" opacity=".35"/>
+    <path d="${SYM[c]}" fill="${COL[c][1]}" transform="scale(${r / 19}) translate(-12 -12)"/></g>`;
+  const pin = (x, y, k) => k === 'b' ? `<circle cx="${x}" cy="${y}" r="2.9" fill="#141414"/>`
+    : k === 'w' ? `<circle cx="${x}" cy="${y}" r="2.5" fill="#FFFDF6" stroke="#2A1D10" stroke-width="1"/><circle cx="${x}" cy="${y}" r=".9" fill="#3A2A1A"/>`
+    : `<circle cx="${x}" cy="${y}" r="1.1" fill="#8A6A48"/>`;
+  const code = [0, 1, 2, 3];
+  const rows = [[[4, 0, 5, 1], 'wwee'], [[0, 2, 1, 3], 'bbww'], [code, 'bbbb']];
+  let out = '';
+  rows.forEach(([g, clue], k) => {
+    const x = 30 + k * 26;
+    out += `<circle cx="${x}" cy="15" r="5.5" fill="#C9A043"/><text x="${x}" y="18" text-anchor="middle" font-family="Lexend, Segoe UI, sans-serif" font-weight="700" font-size="8" fill="#3A2A05">${k + 1}</text>`;
+    g.forEach((c, i) => { out += peg(x, 32 + i * 20, c); });
+    out += `<rect x="${x - 9}" y="${108}" width="18" height="18" rx="4" fill="#EFE0BE"/>`;
+    [...clue].forEach((t, i) => { out += pin(x - 4 + (i % 2) * 8, 113 + Math.floor(i / 2) * 8, t); });
+  });
+  // The vault, open: the code on dark walnut, and the lid swung up behind it.
+  out += `<rect x="96" y="6" width="26" height="124" rx="5" fill="#4A2A10"/>`;
+  code.forEach((c, i) => { out += peg(109, 32 + i * 20, c); });
+  out += `<rect x="96" y="6" width="26" height="124" rx="5" fill="none" stroke="#FFD666" stroke-width="2"/>`;
+  return `<svg class="field" viewBox="0 0 210 147" aria-hidden="true"><g transform="translate(98 74) scale(.9) rotate(-7) translate(-70 -69)">
+    <rect x="3" y="6" width="140" height="140" rx="12" fill="rgba(10,20,15,.35)"/>
+    <g transform="translate(128 10) rotate(16)"><rect x="0" y="0" width="32" height="118" rx="5" fill="#C88D4C" stroke="#6B3F1C" stroke-width="1.4"/>
+      <rect x="3" y="2" width="4" height="114" rx="2" fill="#E3C35F"/><circle cx="18" cy="59" r="6" fill="#E3C35F" stroke="#8A6A22"/><path d="M18 56v6" stroke="#2A1A06" stroke-width="2" stroke-linecap="round"/></g>
+    <rect width="140" height="138" rx="12" fill="#5A3317"/>
+    <rect x="6" y="5" width="128" height="128" rx="8" fill="#D9A866"/>
+    <path d="M10 30h120M10 62h120M10 94h120" stroke="rgba(120,66,18,.12)" stroke-width="1.4"/>
+    <g transform="translate(4 0)">${out}</g>
+  </g>${peg(26, 124, 0, 11).replace('<g ', '<g filter="drop-shadow(0 3px 3px rgba(0,0,0,.4))" ')}</svg>`;
+}
+
+// The pétanque: a corner of a gravel terrain under a plane tree, seen from behind the circle: the red
+// cochonnet with two steel boules and one bronze boule around it, the tape stretched to the nearest,
+// and a boule coming down from a plombée.
+function petanqueArt() {
+  const boule = (x, y, r, kind) => `<ellipse cx="${x}" cy="${y + r * 0.9}" rx="${r * 1.05}" ry="${r * 0.28}" fill="#3A2412" opacity=".3"/>`
+    + `<circle cx="${x}" cy="${y}" r="${r}" fill="url(#pt-${kind})"/>`
+    + `<path d="M${x - r * 0.86} ${y - r * 0.3}Q${x} ${y + r * 0.2} ${x + r * 0.86} ${y - r * 0.3}M${x - r * 0.9} ${y - r * 0.12}Q${x} ${y + r * 0.38} ${x + r * 0.9} ${y - r * 0.12}M${x - r * 0.32} ${y - r * 0.93}Q${x + r * 0.18} ${y} ${x - r * 0.32} ${y + r * 0.93}" fill="none" stroke="#3A3A3A" stroke-width=".9" opacity=".5"/>`;
+  return scene(`<svg width="260" height="150" viewBox="0 0 260 150" style="position: absolute; inset: 0; overflow: visible">
+    <defs>
+      <linearGradient id="pt-gravel" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#E6CFA2"/><stop offset="1" stop-color="#C9AC7B"/></linearGradient>
+      <radialGradient id="pt-steel" cx=".34" cy=".3" r=".78"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".42" stop-color="#C8CDD5"/><stop offset="1" stop-color="#626A75"/></radialGradient>
+      <radialGradient id="pt-bronze" cx=".34" cy=".3" r=".78"><stop offset="0" stop-color="#F2CDA4"/><stop offset=".48" stop-color="#8C5A36"/><stop offset="1" stop-color="#3A210F"/></radialGradient>
+      <radialGradient id="pt-jack" cx=".34" cy=".3" r=".8"><stop offset="0" stop-color="#FFA27A"/><stop offset=".55" stop-color="#E2482A"/><stop offset="1" stop-color="#8E2412"/></radialGradient>
+    </defs>
+    <g transform="translate(-39 -40) scale(1.3)">
+    <path d="M18 150 76 40h108l58 110z" fill="#7A5530"/>
+    <path d="M29 150 81 46h98l52 104z" fill="url(#pt-gravel)"/>
+    <path d="M81 46h98l10 20c-22 8-38-4-58 3s-36 4-58-3z" fill="#3E4A2F" opacity=".16"/>
+    <path d="M150 120c26 4 52-6 70-2l6 12c-28 4-54 10-82 2z" fill="#3E4A2F" opacity=".12"/>
+    <g fill="#7A6A52" opacity=".35"><circle cx="70" cy="132" r="1.2"/><circle cx="96" cy="104" r="1"/><circle cx="196" cy="136" r="1.3"/><circle cx="150" cy="60" r=".9"/><circle cx="112" cy="72" r=".9"/></g>
+    <g fill="#FFF7E4" opacity=".7"><circle cx="82" cy="122" r="1.1"/><circle cx="134" cy="138" r="1.2"/><circle cx="166" cy="70" r=".9"/><circle cx="206" cy="112" r="1"/></g>
+    <path d="M134 84H112" stroke="#FBF8EF" stroke-width="3.2"/><path d="M134 84H112" stroke="#1D1D1D" stroke-width="3.2" stroke-dasharray=".8 2.4"/>
+    <ellipse cx="139" cy="88.5" rx="5.5" ry="1.7" fill="#3A2412" opacity=".3"/>
+    <circle cx="139" cy="84.5" r="4.6" fill="url(#pt-jack)"/>
+    ${boule(102, 84, 10, 'steel')}${boule(168, 98, 13, 'bronze')}${boule(98, 120, 17, 'steel')}
+    <path d="M182 50q-4 12-14 24" fill="none" stroke="#FFF7E4" stroke-width="1.6" stroke-dasharray="1 4" stroke-linecap="round" opacity=".9"/>
+    <circle cx="186" cy="42" r="6" fill="url(#pt-steel)"/>
+    </g>
+  </svg>`);
+}
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 const PLAY = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3.2v13.6a1 1 0 0 0 1.5.86l11-6.8a1 1 0 0 0 0-1.72l-11-6.8A1 1 0 0 0 5 3.2z"/></svg>';
-const art = g => `<div class="art" style="background: radial-gradient(90% 120% at 50% 0%, ${g.felt[0]}, ${g.felt[1]})">${g.scene()}</div>`;
+// A four-point star, the mark of what is new: on the shelf and on the tiles.
+const SPARK = 'M12 1.5c.5 4.9 2.6 8 8.5 10.5-5.9 2.5-8 5.6-8.5 10.5-.5-4.9-2.6-8-8.5-10.5C9.4 9.5 11.5 6.4 12 1.5z';
+const art = (g, isNew) => `<div class="art" style="background: radial-gradient(90% 120% at 50% 0%, ${g.felt[0]}, ${g.felt[1]})">${isNew ? `<span class="new"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${SPARK}" fill="currentColor"/></svg>Nouveau</span>` : ''}${g.scene()}</div>`;
 // The line a game saved for the library, such as "Trou 3 sur 9 en cours · 2 parcours finis".
 const partsOf = meta => typeof meta?.summary === 'string' && meta.summary ? meta.summary.split(' · ') : [];
 const inProgress = parts => parts.some(p => /en cours/i.test(p));
-function render() {
+// New games. A game with `added` is new for him when it was added in the last 60 days, he has not opened it
+// yet (the first visit saves a game, so GG.meta finds it), and the library first showed it to him less than
+// 3 days ago. gg:news-seen keeps when each game was first shown, gg:news-hidden the games put away with
+// « Masquer ». Without storage, the page still works: the shelf shows until « Masquer » in this window.
+const DAY = 864e5;
+const asObject = v => v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+let newsSeen = asObject(GG.get('news-seen'));
+let newsHidden = Array.isArray(GG.get('news-hidden')) ? GG.get('news-hidden') : [];
+function newGames() {
+  const now = Date.now();
+  // Another tab may have changed them: read them again.
+  newsSeen = { ...newsSeen, ...asObject(GG.get('news-seen')) };
+  const stored = GG.get('news-hidden');
+  if (Array.isArray(stored)) newsHidden = [...new Set([...newsHidden, ...stored])];
+  const fresh = GAMES.filter(g => {
+    if (!g.added || GG.meta(g.id)) return false;
+    // A game already shown keeps its 3 days, even past the 60 days: the 60 days only decide the first showing.
+    const seen = newsSeen[g.id];
+    if (typeof seen === 'number') return now - seen < 3 * DAY;
+    return now - new Date(g.added + 'T00:00').getTime() < 60 * DAY;
+  });
+  const unseen = fresh.filter(g => typeof newsSeen[g.id] !== 'number');
+  if (unseen.length) {
+    newsSeen = { ...newsSeen };
+    for (const g of unseen) newsSeen[g.id] = now;
+    GG.set('news-seen', newsSeen);
+  }
+  return fresh;
+}
+function renderNews(fresh) {
+  const box = document.getElementById('news');
+  // In the order of the page: by family, then as in GAMES.
+  const order = g => FAMILIES.findIndex(([id]) => id === g.family);
+  const shown = fresh.filter(g => !newsHidden.includes(g.id)).sort((a, b) => order(a) - order(b));
+  box.hidden = !shown.length;
+  if (!shown.length) { box.textContent = ''; return; }
+  const lead = shown.length === 1 ? 'Nouveau jeu' : 'Nouveaux jeux';
+  const seal = `<svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="17" fill="#FFC83D"/><path d="${SPARK}" fill="#2A2000" transform="translate(7 7) scale(.92)"/></svg>`;
+  box.innerHTML = `<div class="head"><h2 id="news-title">${seal}${lead}</h2><span class="rule"></span>
+      <button type="button"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>Masquer</button></div>
+    <div class="cards">${shown.map(g => `<a href="${g.id}/" data-id="${g.id}" style="--c1: ${g.felt[0]}; --c2: ${g.felt[1]}"><img src="${g.id}/icon.svg" width="52" height="52" alt="">${esc(g.title)}</a>`).join('')}</div>`;
+  box.querySelector('button').onclick = () => {
+    newsHidden = [...new Set([...newsHidden, ...shown.map(g => g.id)])];
+    GG.set('news-hidden', newsHidden);
+    renderNews(fresh);
+    lastState = shownState(fresh);
+  };
+}
+// What the page shows of each game: whether it is new and hidden from the shelf, and whether a game is in
+// progress. A redraw that changes none of it is skipped, so the focus stays on the tile he chose.
+const shownState = fresh => JSON.stringify(GAMES.map(g => [fresh.includes(g), newsHidden.includes(g.id), inProgress(partsOf(GG.meta(g.id)))]));
+let lastState = '';
+function refresh() {
+  const fresh = newGames();
+  if (shownState(fresh) !== lastState) render(fresh);
+}
+function render(fresh = newGames()) {
+  lastState = shownState(fresh);
+  // The tile or shelf card he reached with the keyboard gets the focus back after the redraw.
+  const focused = document.activeElement?.closest?.('[data-id]');
+  const where = focused && (focused.closest('#news') ? '#news' : '#games');
+  renderNews(fresh);
   const tile = g => {
     // The tile shows no line about the saved game: only the button says a game is in progress.
     const playing = inProgress(partsOf(GG.meta(g.id)));
     return `<a class="tile" href="${g.id}/" data-id="${g.id}">
-      ${art(g)}
+      ${art(g, fresh.includes(g))}
       <div class="body">
         <h3>${esc(g.title)}</h3>
         <p>${esc(g.text)}</p>
@@ -681,6 +1017,7 @@ function render() {
     return games.length ? `<section class="family" aria-labelledby="family-${id}"><h2 id="family-${id}">${esc(name)}</h2>
       <div class="grid">${games.map(tile).join('')}</div></section>` : '';
   }).join('');
+  if (where) document.querySelector(`${where} [data-id="${focused.dataset.id}"]`)?.focus();
 }
 function opening(e) {
   const t = e.target.closest('a.tile');
@@ -694,6 +1031,10 @@ function opening(e) {
 document.getElementById('games').addEventListener('click', opening);
 // Safari keeps the page in memory when Papi goes into a game. Coming back, redraw the tiles.
 addEventListener('pageshow', e => { if (e.persisted) render(); });
+// Back from a game in another tab, or after a long time open, the shelf and the tags follow what changed.
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refresh(); });
+// A library left open for days still drops a game once its 3 days are over.
+setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 36e5);
 
 
 // Chrome and Edge offer to install the site as an app. Show the offer as a plain button.

@@ -522,3 +522,39 @@ figcaption { padding: 1rem 1.25rem 1.15rem; color: #2c3633; font-size: 19px; lin
   --hero-top: #3c3f8e;
   --hero-bottom: #1b1c4a;
 }
+.rules.dominos {
+  --guide-ink: #1F5A40;
+  --guide-light: #E2EFE7;
+  --hero-top: #2F6B52;
+  --hero-bottom: #163A2A;
+}
+.rules.loto {
+  --guide-ink: #8e1e25;
+  --guide-light: #f6e3e1;
+  --hero-top: #b5383e;
+  --hero-bottom: #561419;
+}
+.rules.mots-fleches {
+  --guide-ink: #2B3F85;
+  --guide-light: #E4E9F6;
+  --hero-top: #5D76BC;
+  --hero-bottom: #28386F;
+}
+.rules.pendu {
+  --guide-ink: #24557F;
+  --guide-light: #E6F0F8;
+  --hero-top: #3F7FB5;
+  --hero-bottom: #1F4E78;
+}
+.rules.code-secret {
+  --guide-ink: #5E2A58;
+  --guide-light: #F3E6F1;
+  --hero-top: #7E4A78;
+  --hero-bottom: #341630;
+}
+.rules.petanque {
+  --guide-ink: #3f5a3a;
+  --guide-light: #e6ede2;
+  --hero-top: #6e8a6a;
+  --hero-bottom: #2f4430;
+}
