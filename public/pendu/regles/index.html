@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Règles du pendu : lettres, pétales et niveaux · Jeux de Papi</title>
+  <meta name="description" content="Apprenez à jouer au pendu sur Jeux de Papi : devinez le mot lettre par lettre avant que la marguerite perde ses pétales. Les accents, l’indice, l’aide et les trois niveaux.">
+  <link rel="canonical" href="https://jeux-papi.fr/pendu/regles/">
+  <meta property="og:type" content="article">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:site_name" content="Jeux de Papi">
+  <meta property="og:url" content="https://jeux-papi.fr/pendu/regles/">
+  <meta property="og:title" content="Règles du pendu : lettres, pétales et niveaux">
+  <meta property="og:description" content="Devinez le mot lettre par lettre avant que la marguerite perde ses pétales. Les accents, l’indice et les trois niveaux.">
+  <meta property="og:image" content="https://jeux-papi.fr/og/pendu.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Règles du pendu. Une marguerite dans un pot en terre cuite perd deux pétales, devant quatre lettres en bois.">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="../icon.svg">
+  <link rel="stylesheet" href="../../lib/site-nav.css">
+  <link rel="stylesheet" href="../../lib/rules.css">
+  <style>
+    /* The word and the keys, drawn as in the game: cream tiles, white keys, a green tick or a red cross. */
+    .example-table.pendu-example { flex-direction: column; gap: 1rem; background: #2F6E9E; }
+    .pendu-word, .pendu-keys { display: flex; flex-wrap: wrap; justify-content: center; gap: .4rem; }
+    .pendu-word span { display: grid; place-items: center; width: clamp(34px, 9vw, 54px); height: clamp(40px, 10vw, 60px); border-radius: 8px;
+      background: #EEF4F8; box-shadow: inset 0 -4px 0 #7E9DB5; color: #14335A; font: 700 clamp(1.3rem, 5vw, 2rem)/1 Lexend, "Segoe UI", sans-serif; }
+    .pendu-word span.on { background: #fff; box-shadow: inset 0 0 0 2px #9DB7CC, 0 3px 0 #9DB7CC; }
+    .pendu-word span.new { background: #E3F3DA; box-shadow: inset 0 0 0 2px #4E9A3A, 0 3px 0 #4E9A3A; }
+    .pendu-keys b { position: relative; display: grid; place-items: center; width: clamp(40px, 10vw, 54px); height: clamp(40px, 10vw, 54px); border-radius: 10px;
+      background: #fff; border: 2px solid #8FA9BD; box-shadow: 0 3px 0 #8FA9BD; color: #14335A; font: 700 clamp(1.2rem, 4vw, 1.6rem)/1 Lexend, "Segoe UI", sans-serif; }
+    .pendu-keys b.hit { background: #E3F3DA; color: #275118; border-color: #4E9A3A; box-shadow: 0 3px 0 #4E9A3A; }
+    .pendu-keys b.miss { background: #E3E8EC; color: #6E7A83; border-color: #B9C3CA; box-shadow: none; text-decoration: line-through 3px rgba(180,68,58,.8); }
+    .pendu-keys b.hit::after, .pendu-keys b.miss::after { position: absolute; top: -9px; right: -9px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+      font: 700 14px/1 "Segoe UI", sans-serif; color: #fff; box-shadow: 0 0 0 2px #fff; }
+    .pendu-keys b.hit::after { content: "✓"; background: #4E9A3A; }
+    .pendu-keys b.miss::after { content: "✕"; background: #B4443A; }
+    .pendu-daisies { display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem 1.5rem; padding: clamp(1rem, 3vw, 1.75rem) 1rem; background: #2F6E9E; }
+    .pendu-daisies .diagram-part { color: #fff; }
+    .pendu-daisies svg { width: clamp(110px, 26vw, 170px); height: auto; display: block; filter: drop-shadow(0 8px 14px rgba(10,40,70,.35)); }
+  </style>
+  <script src="../../lib/zoom.js"></script>
+  <script src="../../lib/ph.js"></script>
+</head>
+<body class="rules pendu">
+<a class="skip" href="#contenu">Aller au texte</a>
+<header class="site-nav">
+  <div class="site-nav-inner">
+    <a class="site-nav-brand" href="../../"><img src="../../icons/logo.webp" width="48" height="48" alt="">Jeux de Papi</a>
+    <nav class="site-nav-links" aria-label="Navigation principale">
+      <a href="../../#games">Les jeux</a>
+      <details class="site-menu is-current">
+        <summary>Règles</summary>
+        <div class="site-menu-panel">
+          <p class="site-menu-title">Règles des jeux</p>
+          <a href="../../belote/regles/"><img src="../../belote/icon.svg" width="40" height="40" alt="">Belote</a>
+          <a href="../../dames/regles/"><img src="../../dames/icon.svg" width="40" height="40" alt="">Jeu de dames</a>
+          <a href="../../solitaire/regles/"><img src="../../solitaire/icon.svg" width="40" height="40" alt="">Solitaire</a>
+          <a href="../../demineur/regles/"><img src="../../demineur/icon.svg" width="40" height="40" alt="">Démineur</a>
+          <a href="../../yams/regles/"><img src="../../yams/icon.svg" width="40" height="40" alt="">Yams</a>
+          <a href="../../huit-americain/regles/"><img src="../../huit-americain/icon.svg" width="40" height="40" alt="">Huit américain</a>
+          <a href="../../freecell/regles/"><img src="../../freecell/icon.svg" width="40" height="40" alt="">FreeCell</a>
+          <a href="../../dame-de-pique/regles/"><img src="../../dame-de-pique/icon.svg" width="40" height="40" alt="">Dame de pique</a>
+          <a href="../../bataille-navale/regles/"><img src="../../bataille-navale/icon.svg" width="40" height="40" alt="">Bataille navale</a>
+          <a href="../../paires/regles/"><img src="../../paires/icon.svg" width="40" height="40" alt="">Jeu des paires</a>
+          <a href="../../sudoku/regles/"><img src="../../sudoku/icon.svg" width="40" height="40" alt="">Sudoku</a>
+          <a href="../../mots-meles/regles/"><img src="../../mots-meles/icon.svg" width="40" height="40" alt="">Mots mêlés</a>
+          <a href="../../petits-chevaux/regles/"><img src="../../petits-chevaux/icon.svg" width="40" height="40" alt="">Petits chevaux</a>
+          <a href="../../morpion/regles/"><img src="../../morpion/icon.svg" width="40" height="40" alt="">Morpion</a>
+          <a href="../../golf/regles/"><img src="../../golf/icon.svg" width="40" height="40" alt="">Golf miniature</a>
+          <a href="../../billard/regles/"><img src="../../billard/icon.svg" width="40" height="40" alt="">Billard américain</a>
+          <a href="../../bowling/regles/"><img src="../../bowling/icon.svg" width="40" height="40" alt="">Bowling</a>
+          <a href="../../rami/regles/"><img src="../../rami/icon.svg" width="40" height="40" alt="">Rami</a>
+          <a href="../../dominos/regles/"><img src="../../dominos/icon.svg" width="40" height="40" alt="">Dominos</a>
+          <a href="../../loto/regles/"><img src="../../loto/icon.svg" width="40" height="40" alt="">Loto</a>
+          <a href="../../mots-fleches/regles/"><img src="../../mots-fleches/icon.svg" width="40" height="40" alt="">Mots fléchés</a>
+          <a href="./" aria-current="page"><img src="../../pendu/icon.svg" width="40" height="40" alt="">Le pendu</a>
+          <a href="../../code-secret/regles/"><img src="../../code-secret/icon.svg" width="40" height="40" alt="">Code secret</a>
+          <a href="../../petanque/regles/"><img src="../../petanque/icon.svg" width="40" height="40" alt="">Pétanque</a>
+        </div>
+      </details>
+      <a href="../../blog/">Blog</a>
+    </nav>
+  </div>
+</header>
+<main id="contenu">
+  <header class="rules-head">
+    <div class="rules-head-inner">
+      <div>
+        <nav class="crumbs" aria-label="Vous êtes ici">
+          <ol><li><a href="../../">Les jeux</a></li><li><a href="../">Le pendu</a></li><li aria-current="page">Règles</li></ol>
+        </nav>
+        <h1>Règles du pendu&nbsp;: lettres, pétales et niveaux</h1>
+        <p class="intro">Devinez le mot caché lettre par lettre. Chaque lettre absente fait tomber un pétale de la marguerite&nbsp;: trouvez le mot avant le dernier.</p>
+        <a class="play" href="../" aria-label="Jouer au pendu">Jouer</a>
+      </div>
+      <div class="rules-art"><img src="hero.webp" width="1200" height="800" alt="" fetchpriority="high"></div>
+    </div>
+  </header>
+
+  <div class="rules-layout" id="sommaire">
+    <nav class="rules-contents" aria-labelledby="contents-title">
+      <h2 id="contents-title">Sommaire</h2>
+      <ul>
+        <li><a href="#tour">Un tour de jeu</a></li>
+        <li><a href="#exemple">Exemple de lettres</a></li>
+        <li><a href="#marguerite">La marguerite</a></li>
+        <li><a href="#mot">Proposer le mot</a></li>
+        <li><a href="#niveaux">Les trois niveaux</a></li>
+        <li><a href="#aide">L’aide et les mots</a></li>
+      </ul>
+      <a class="play" href="../" aria-label="Jouer au pendu">Jouer</a>
+    </nav>
+    <article class="rules-article">
+      <section id="tour">
+        <h2>Deviner le mot, une lettre à la fois</h2>
+        <ol><li>Lisez l’indice&nbsp;: il donne le thème du mot, par exemple «&nbsp;Au jardin&nbsp;» ou «&nbsp;Les animaux&nbsp;».</li><li>Cliquez sur une lettre du grand clavier, ou tapez-la sur le clavier de l’ordinateur.</li><li>Si la lettre est dans le mot, elle se place partout où elle se trouve. Sinon, un pétale tombe.</li><li>Trouvez toutes les lettres, ou proposez le mot entier, avant que la marguerite perde son dernier pétale.</li></ol>
+        <p>Les lettres sont rangées dans l’ordre de l’alphabet, de A à Z&nbsp;: on trouve une lettre sans connaître la place des touches d’un clavier. Une lettre déjà essayée est cochée en vert si elle est dans le mot, barrée de rouge sinon. La rejouer ne coûte rien.</p>
+      </section>
+
+      <section id="exemple">
+        <h2>Les accents se trouvent avec la lettre simple</h2>
+        <figure><div class="example-table pendu-example" aria-hidden="true">
+          <div class="pendu-word"><span class="on">R</span><span class="new">Â</span><span></span><span class="new">E</span><span class="new">A</span><span></span></div>
+          <div class="pendu-keys"><b class="hit">A</b><b class="hit">E</b><b class="miss">S</b><b>T</b><b>U</b></div>
+        </div><figcaption>Dans RÂTEAU, la touche A trouve le Â et le A. La touche E trouve le E. Le S n’y est pas&nbsp;: il est barré, et un pétale tombe.</figcaption></figure>
+        <p>Il n’y a pas de touche pour É, È, Ê, À ou Ç&nbsp;: le E trouve toutes les formes du E, le C trouve le Ç. Les mots composés, comme ARC-EN-CIEL, montrent leurs traits d’union dès le début.</p>
+      </section>
+
+      <section id="marguerite">
+        <h2>Pourquoi une marguerite et pas un pendu&nbsp;?</h2>
+        <figure><div class="pendu-daisies" aria-hidden="true">
+          <div class="diagram-part" data-daisy="10 0">Au début</div>
+          <div class="diagram-part" data-daisy="10 4">Après 4 erreurs</div>
+          <div class="diagram-part" data-daisy="10 9">Le dernier pétale</div>
+        </div><figcaption>Au niveau facile, la marguerite a 10 pétales. Chaque lettre absente en fait tomber un sur le rebord de la fenêtre.</figcaption></figure>
+        <p>Dans le jeu d’école, chaque erreur ajoute un trait au dessin d’un pendu. Ce dessin n’a rien de gai. Sur Jeux de Papi, on effeuille plutôt la marguerite, comme dans «&nbsp;il m’aime, un peu, beaucoup…&nbsp;». Le nombre de pétales se lit d’un coup d’œil, et un mot trouvé fait venir un papillon sur la fleur.</p>
+      </section>
+
+      <section id="mot">
+        <h2>Proposer le mot entier</h2>
+        <p>Vous avez deviné avant la fin&nbsp;? Cliquez sur «&nbsp;Proposer le mot&nbsp;», tapez-le dans la grande case, puis cliquez sur «&nbsp;Valider&nbsp;». Les accents, les majuscules et les traits d’union ne comptent pas&nbsp;: «&nbsp;arc en ciel&nbsp;» trouve ARC-EN-CIEL.</p>
+        <p>Un mauvais mot fait tomber un pétale, comme une lettre absente. Un mot qui n’a pas le bon nombre de lettres est simplement refusé, sans perdre de pétale&nbsp;: c’est souvent une faute de frappe.</p>
+      </section>
+
+      <section id="niveaux">
+        <h2>Les trois niveaux</h2>
+        <table class="score">
+          <caption>Le pendu sur Jeux de Papi</caption>
+          <thead><tr><th scope="col">Niveau</th><th scope="col">Les mots</th><th scope="col">Pétales</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Facile</th><td>Des mots courants de 5 à 7 lettres. La première lettre est donnée.</td><td>10</td></tr>
+            <tr><th scope="row">Moyen</th><td>Des mots de 6 à 9 lettres, moins fréquents.</td><td>8</td></tr>
+            <tr><th scope="row">Difficile</th><td>Des mots longs ou rares, avec des K, des W, des Y ou des Z.</td><td>6</td></tr>
+          </tbody>
+        </table>
+        <p>Chaque niveau a ses propres mots, plus de 800 chacun. Un mot ne revient pas avant que tous les mots du niveau aient été joués.</p>
+      </section>
+
+      <section id="aide">
+        <h2>L’aide et la liste de mots</h2>
+        <p>«&nbsp;Que jouer maintenant&nbsp;?&nbsp;» entoure une lettre en jaune et dit pourquoi&nbsp;: parmi les mots du thème qui vont encore avec les lettres trouvées, c’est la lettre qui se trouve dans le plus grand nombre. Cliquez sur la lettre entourée pour l’essayer.</p>
+        <p>Les mots ont été choisis un par un&nbsp;: des noms, des adjectifs et des verbes de tous les jours, sans nom propre ni mot triste. Leur fréquence vient de <a href="http://www.lexique.org" target="_blank" rel="noopener">Lexique 3.83<span class="sr">, s’ouvre dans un nouvel onglet</span></a>, une base libre de la langue française (licence CC BY-SA 4.0), qui sert à les ranger du plus courant au plus rare.</p>
+      </section>
+    </article>
+  </div>
+
+  <nav class="rules-more" aria-labelledby="more-title">
+    <h2 id="more-title">Les règles des autres jeux</h2>
+    <ul>
+      <li><a href="../../belote/regles/"><img src="../../belote/icon.svg" width="48" height="48" alt="">Règles de la belote</a></li>
+      <li><a href="../../dames/regles/"><img src="../../dames/icon.svg" width="48" height="48" alt="">Règles du jeu de dames</a></li>
+      <li><a href="../../solitaire/regles/"><img src="../../solitaire/icon.svg" width="48" height="48" alt="">Règles du solitaire</a></li>
+      <li><a href="../../demineur/regles/"><img src="../../demineur/icon.svg" width="48" height="48" alt="">Règles du démineur</a></li>
+      <li><a href="../../yams/regles/"><img src="../../yams/icon.svg" width="48" height="48" alt="">Règles du Yams</a></li>
+      <li><a href="../../huit-americain/regles/"><img src="../../huit-americain/icon.svg" width="48" height="48" alt="">Règles du Huit américain</a></li>
+      <li><a href="../../freecell/regles/"><img src="../../freecell/icon.svg" width="48" height="48" alt="">Règles du FreeCell</a></li>
+      <li><a href="../../dame-de-pique/regles/"><img src="../../dame-de-pique/icon.svg" width="48" height="48" alt="">Règles de la Dame de pique</a></li>
+      <li><a href="../../bataille-navale/regles/"><img src="../../bataille-navale/icon.svg" width="48" height="48" alt="">Règles de la bataille navale</a></li>
+      <li><a href="../../paires/regles/"><img src="../../paires/icon.svg" width="48" height="48" alt="">Règles du jeu des paires</a></li>
+      <li><a href="../../sudoku/regles/"><img src="../../sudoku/icon.svg" width="48" height="48" alt="">Règles du sudoku</a></li>
+      <li><a href="../../mots-meles/regles/"><img src="../../mots-meles/icon.svg" width="48" height="48" alt="">Règles des mots mêlés</a></li>
+      <li><a href="../../petits-chevaux/regles/"><img src="../../petits-chevaux/icon.svg" width="48" height="48" alt="">Règles des petits chevaux</a></li>
+      <li><a href="../../morpion/regles/"><img src="../../morpion/icon.svg" width="48" height="48" alt="">Règles du morpion</a></li>
+      <li><a href="../../golf/regles/"><img src="../../golf/icon.svg" width="48" height="48" alt="">Règles du golf miniature</a></li>
+      <li><a href="../../billard/regles/"><img src="../../billard/icon.svg" width="48" height="48" alt="">Règles du billard américain</a></li>
+      <li><a href="../../bowling/regles/"><img src="../../bowling/icon.svg" width="48" height="48" alt="">Règles du bowling</a></li>
+      <li><a href="../../rami/regles/"><img src="../../rami/icon.svg" width="48" height="48" alt="">Règles du rami</a></li>
+      <li><a href="../../dominos/regles/"><img src="../../dominos/icon.svg" width="48" height="48" alt="">Règles des dominos</a></li>
+      <li><a href="../../loto/regles/"><img src="../../loto/icon.svg" width="48" height="48" alt="">Règles du loto</a></li>
+      <li><a href="../../mots-fleches/regles/"><img src="../../mots-fleches/icon.svg" width="48" height="48" alt="">Règles des mots fléchés</a></li>
+      <li><a href="../../code-secret/regles/"><img src="../../code-secret/icon.svg" width="48" height="48" alt="">Règles du code secret</a></li>
+      <li><a href="../../petanque/regles/"><img src="../../petanque/icon.svg" width="48" height="48" alt="">Règles de la pétanque</a></li>
+      <li><a href="../../"><img src="../../icons/logo.webp" width="48" height="48" alt="">Tous les jeux</a></li>
+    </ul>
+  </nav>
+</main>
+<footer class="rules-footer">
+  <div class="rules-footer-inner">
+    <details class="rules-jump">
+      <summary><span class="rules-jump-label">Sommaire</span><span class="rules-jump-now">Choisir une partie</span></summary>
+      <ul class="rules-jump-list">
+        <li><a href="#contenu">Haut de la page</a></li>
+        <li><a href="#tour">Un tour de jeu</a></li>
+        <li><a href="#exemple">Exemple de lettres</a></li>
+        <li><a href="#marguerite">La marguerite</a></li>
+        <li><a href="#mot">Proposer le mot</a></li>
+        <li><a href="#niveaux">Les trois niveaux</a></li>
+        <li><a href="#aide">L’aide et les mots</a></li>
+      </ul>
+    </details>
+    <a class="play" href="../" aria-label="Jouer au pendu">Jouer</a>
+  </div>
+</footer>
+<footer class="site-foot"><div class="in">
+  <a class="credit" href="https://x.com/JulienCoulaud" target="_blank" rel="noopener"><img src="../../icons/julien.webp" width="34" height="34" alt=""><span>Par <b>Julien Coulaud</b></span><span class="sr">, s’ouvre dans un nouvel onglet</span></a>
+  <div class="footer-controls"><div class="zoom"></div></div>
+</div></footer>
+<script src="../daisy.js"></script>
+<script>
+  // The three daisies are drawn by the game's own picture (../daisy.js), so they match what he sees in play.
+  document.querySelectorAll('[data-daisy]').forEach((e, k) => {
+    const [petals, fallen] = e.dataset.daisy.split(' ').map(Number);
+    e.insertAdjacentHTML('afterbegin', Daisy.svg({ petals, fallen, id: 'r' + k }));
+  });
+</script>
+<script src="../../lib/site-nav.js" defer></script>
+</body>
+</html>

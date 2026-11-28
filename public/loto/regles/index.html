@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Règles du loto : quine, double quine et carton plein · Jeux de Papi</title>
+  <meta name="description" content="Apprenez à jouer au loto traditionnel de la salle des fêtes : le carton de 15 numéros, le tirage, la quine, la double quine et le carton plein.">
+  <link rel="canonical" href="https://jeux-papi.fr/loto/regles/">
+  <meta property="og:type" content="article">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:site_name" content="Jeux de Papi">
+  <meta property="og:url" content="https://jeux-papi.fr/loto/regles/">
+  <meta property="og:title" content="Règles du loto : quine, double quine et carton plein">
+  <meta property="og:description" content="Le carton, le tirage du sac et les trois lots d’une partie de loto, expliqués simplement.">
+  <meta property="og:image" content="https://jeux-papi.fr/og/loto.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Règles du loto. Des pions de bois numérotés qui sortent d’un sac en lin.">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="../icon.svg">
+  <link rel="stylesheet" href="../../lib/site-nav.css">
+  <link rel="stylesheet" href="../../lib/rules.css">
+  <style>
+    /* The loto carton drawn in HTML. */
+    .loto-table { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 1rem 1.5rem; padding: clamp(1rem, 3vw, 2rem) .5rem;
+      background: linear-gradient(#c99359, #a8733d); }
+    .lc { --c: clamp(30px, 7.4vw, 52px); display: grid; grid-template-columns: calc(var(--c) * .6) repeat(9, var(--c)); padding: calc(var(--c) * .1);
+      border-radius: 8px; background: #ffe39a; box-shadow: 0 8px 18px rgba(40,18,0,.35); }
+    .lc-stub { grid-row: 1 / 4; writing-mode: vertical-rl; rotate: 180deg; display: grid; place-items: center; border-right: 2px dashed #d9a93b;
+      margin-right: 4px; font: 800 14px Lexend, sans-serif; letter-spacing: .12em; color: #8a6418; }
+    .lc i, .lc b { width: var(--c); height: var(--c); border: 1.5px solid #d9a93b; margin: 0 -1.5px -1.5px 0; }
+    .lc i { background: repeating-linear-gradient(45deg, rgba(255,255,255,.3) 0 3px, transparent 3px 8px); }
+    .lc b { position: relative; display: grid; place-items: center; background: #fffef8; color: #1e2622; font: 700 calc(var(--c) * .46) Lexend, sans-serif; }
+    .lc b.on::before { content: ""; position: absolute; inset: 10%; border-radius: 50%;
+      background: radial-gradient(circle at 34% 28%, rgba(255,255,255,.8) 0 8%, rgba(255,222,160,.42) 18%, rgba(232,150,40,.5) 58%, rgba(150,70,0,.72) 100%); }
+    .lc b span { position: relative; }
+    .lc b.won { box-shadow: inset 0 -5px 0 #3e8e4a; }
+    .loto-call { display: inline-flex; align-items: center; min-height: 54px; padding: 4px 24px; border-radius: 14px; background: #fff; color: #8e1e25; border: 3px solid #8e1e25;
+      box-shadow: 0 4px 0 #5e1015; font: 700 24px Lexend, sans-serif; }
+    .loto-cols { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; width: min(100%, 40rem); margin: 0 auto 1rem; }
+    .loto-cols span { display: grid; place-items: center; min-height: 54px; border-radius: 8px; background: #ffe39a; border: 1.5px solid #d9a93b; color: #1e2622; font: 700 clamp(13px, 3.3vw, 20px)/1.15 Lexend, sans-serif; letter-spacing: -.03em; text-align: center; white-space: nowrap; }
+  </style>
+  <script src="../../lib/zoom.js"></script>
+  <script src="../../lib/ph.js"></script>
+</head>
+<body class="rules loto">
+<a class="skip" href="#contenu">Aller au texte</a>
+<header class="site-nav">
+  <div class="site-nav-inner">
+    <a class="site-nav-brand" href="../../"><img src="../../icons/logo.webp" width="48" height="48" alt="">Jeux de Papi</a>
+    <nav class="site-nav-links" aria-label="Navigation principale">
+      <a href="../../#games">Les jeux</a>
+      <details class="site-menu is-current">
+        <summary>Règles</summary>
+        <div class="site-menu-panel">
+          <p class="site-menu-title">Règles des jeux</p>
+          <a href="../../belote/regles/"><img src="../../belote/icon.svg" width="40" height="40" alt="">Belote</a>
+          <a href="../../dames/regles/"><img src="../../dames/icon.svg" width="40" height="40" alt="">Jeu de dames</a>
+          <a href="../../solitaire/regles/"><img src="../../solitaire/icon.svg" width="40" height="40" alt="">Solitaire</a>
+          <a href="../../demineur/regles/"><img src="../../demineur/icon.svg" width="40" height="40" alt="">Démineur</a>
+          <a href="../../yams/regles/"><img src="../../yams/icon.svg" width="40" height="40" alt="">Yams</a>
+          <a href="../../huit-americain/regles/"><img src="../../huit-americain/icon.svg" width="40" height="40" alt="">Huit américain</a>
+          <a href="../../freecell/regles/"><img src="../../freecell/icon.svg" width="40" height="40" alt="">FreeCell</a>
+          <a href="../../dame-de-pique/regles/"><img src="../../dame-de-pique/icon.svg" width="40" height="40" alt="">Dame de pique</a>
+          <a href="../../bataille-navale/regles/"><img src="../../bataille-navale/icon.svg" width="40" height="40" alt="">Bataille navale</a>
+          <a href="../../paires/regles/"><img src="../../paires/icon.svg" width="40" height="40" alt="">Jeu des paires</a>
+          <a href="../../sudoku/regles/"><img src="../../sudoku/icon.svg" width="40" height="40" alt="">Sudoku</a>
+          <a href="../../mots-meles/regles/"><img src="../../mots-meles/icon.svg" width="40" height="40" alt="">Mots mêlés</a>
+          <a href="../../petits-chevaux/regles/"><img src="../../petits-chevaux/icon.svg" width="40" height="40" alt="">Petits chevaux</a>
+          <a href="../../morpion/regles/"><img src="../../morpion/icon.svg" width="40" height="40" alt="">Morpion</a>
+          <a href="../../golf/regles/"><img src="../../golf/icon.svg" width="40" height="40" alt="">Golf miniature</a>
+          <a href="../../billard/regles/"><img src="../../billard/icon.svg" width="40" height="40" alt="">Billard américain</a>
+          <a href="../../bowling/regles/"><img src="../../bowling/icon.svg" width="40" height="40" alt="">Bowling</a>
+          <a href="../../rami/regles/"><img src="../../rami/icon.svg" width="40" height="40" alt="">Rami</a>
+          <a href="../../dominos/regles/"><img src="../../dominos/icon.svg" width="40" height="40" alt="">Dominos</a>
+          <a href="./" aria-current="page"><img src="../../loto/icon.svg" width="40" height="40" alt="">Loto</a>
+          <a href="../../mots-fleches/regles/"><img src="../../mots-fleches/icon.svg" width="40" height="40" alt="">Mots fléchés</a>
+          <a href="../../pendu/regles/"><img src="../../pendu/icon.svg" width="40" height="40" alt="">Le pendu</a>
+          <a href="../../code-secret/regles/"><img src="../../code-secret/icon.svg" width="40" height="40" alt="">Code secret</a>
+          <a href="../../petanque/regles/"><img src="../../petanque/icon.svg" width="40" height="40" alt="">Pétanque</a>
+        </div>
+      </details>
+      <a href="../../blog/">Blog</a>
+    </nav>
+  </div>
+</header>
+<main id="contenu">
+  <header class="rules-head">
+    <div class="rules-head-inner">
+      <div>
+        <nav class="crumbs" aria-label="Vous êtes ici">
+          <ol><li><a href="../../">Les jeux</a></li><li><a href="../">Loto</a></li><li aria-current="page">Règles</li></ol>
+        </nav>
+        <h1>Règles du loto : quine, double quine et carton plein</h1>
+        <p class="intro">Les numéros sortent du sac un à un. Couvrez-les sur vos cartons et criez le premier pour gagner les lots.</p>
+        <a class="play" href="../" aria-label="Jouer au loto">Jouer</a>
+      </div>
+      <div class="rules-art"><img src="hero.webp" width="1200" height="800" alt="" fetchpriority="high"></div>
+    </div>
+  </header>
+
+  <div class="rules-layout" id="sommaire">
+    <nav class="rules-contents" aria-labelledby="contents-title">
+      <h2 id="contents-title">Sommaire</h2>
+      <ul>
+        <li><a href="#carton">Le carton</a></li>
+        <li><a href="#tirage">Le tirage</a></li>
+        <li><a href="#lots">Les trois lots</a></li>
+        <li><a href="#crier">Crier au bon moment</a></li>
+        <li><a href="#niveaux">Les niveaux</a></li>
+      </ul>
+      <a class="play" href="../" aria-label="Jouer au loto">Jouer</a>
+    </nav>
+    <article class="rules-article">
+      <section id="carton">
+        <h2>Le carton : 15 numéros sur 3 lignes</h2>
+        <figure><div class="loto-table"><div class="lc" aria-hidden="true"><span class="lc-stub">LOTO</span><b><span>4</span></b><i></i><b><span>22</span></b><b><span>35</span></b><i></i><b><span>51</span></b><i></i><b><span>73</span></b><i></i><i></i><b><span>15</span></b><i></i><b><span>38</span></b><b><span>46</span></b><i></i><b><span>64</span></b><i></i><b><span>81</span></b><b><span>8</span></b><i></i><b><span>27</span></b><i></i><b><span>49</span></b><i></i><b><span>66</span></b><b><span>78</span></b><b><span>90</span></b></div></div><figcaption>Chaque ligne porte 5 numéros. Les cases vides sont de la couleur du carton.</figcaption></figure>
+        <p>Un carton a 3 lignes et 9 colonnes. Chaque colonne garde sa dizaine&nbsp;: la première va de 1 à 9, la deuxième de 10 à 19, et la dernière de 80 à 90.</p>
+        <div class="loto-cols" aria-hidden="true"><span>1–9</span><span>10–19</span><span>20–29</span><span>30–39</span><span>40–49</span><span>50–59</span><span>60–69</span><span>70–79</span><span>80–90</span></div>
+        <p>Vous trouvez donc un numéro tiré d’un seul coup d’œil&nbsp;: le 47 ne peut être que dans la cinquième colonne.</p>
+      </section>
+
+      <section id="tirage">
+        <h2>Le tirage : un numéro à la fois</h2>
+        <p>Le meneur de jeu tire un pion de bois du sac et annonce son numéro. Chaque joueur pose un jeton sur ce numéro s’il est sur un de ses cartons. Dans les salles des fêtes, on utilise souvent des jetons de verre ou des haricots secs.</p>
+        <p>Sur Jeux de Papi, c’est vous qui tirez&nbsp;: le numéro suivant attend votre clic sur «&nbsp;Tirer le numéro&nbsp;». Les numéros sortis restent affichés au tableau, de 1 à 90. Un numéro oublié peut donc être couvert plus tard.</p>
+      </section>
+
+      <section id="lots">
+        <h2>Les trois lots d’une partie</h2>
+        <figure><div class="loto-table"><div class="lc" aria-hidden="true"><span class="lc-stub">LOTO</span><b class="on won"><span>4</span></b><i></i><b class="on won"><span>22</span></b><b class="on won"><span>35</span></b><i></i><b class="on won"><span>51</span></b><i></i><b class="on won"><span>73</span></b><i></i><i></i><b class="on"><span>15</span></b><i></i><b><span>38</span></b><b class="on"><span>46</span></b><i></i><b><span>64</span></b><i></i><b><span>81</span></b><b class="on"><span>8</span></b><i></i><b><span>27</span></b><i></i><b><span>49</span></b><i></i><b><span>66</span></b><b><span>78</span></b><b><span>90</span></b></div><span class="loto-call" aria-hidden="true">Quine&nbsp;!</span></div><figcaption>La ligne du haut est pleine&nbsp;: c’est une quine.</figcaption></figure>
+        <table class="score">
+          <caption>Une partie se joue en trois temps, sur le même tirage</caption>
+          <thead><tr><th scope="col">Lot</th><th scope="col">Ce qu’il faut</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Quine</th><td>Une ligne entière couverte, 5 numéros</td></tr>
+            <tr><th scope="row">Double quine</th><td>Deux lignes entières sur le même carton</td></tr>
+            <tr><th scope="row">Carton plein</th><td>Les 15 numéros d’un carton. La partie s’arrête là.</td></tr>
+          </tbody>
+        </table>
+        <figure><div class="loto-table"><div class="lc" aria-hidden="true"><span class="lc-stub">LOTO</span><b class="on won"><span>4</span></b><i></i><b class="on won"><span>22</span></b><b class="on won"><span>35</span></b><i></i><b class="on won"><span>51</span></b><i></i><b class="on won"><span>73</span></b><i></i><i></i><b class="on won"><span>15</span></b><i></i><b class="on won"><span>38</span></b><b class="on won"><span>46</span></b><i></i><b class="on won"><span>64</span></b><i></i><b class="on won"><span>81</span></b><b class="on"><span>8</span></b><i></i><b><span>27</span></b><i></i><b><span>49</span></b><i></i><b class="on"><span>66</span></b><b><span>78</span></b><b><span>90</span></b></div></div><figcaption>Deux lignes pleines sur le même carton&nbsp;: c’est une double quine.</figcaption></figure>
+        <p>Chaque lot a son prix, comme à la salle des fêtes&nbsp;: une bouteille de cidre, un panier garni ou un jambon.</p>
+      </section>
+
+      <section id="crier">
+        <h2>Crier au bon moment</h2>
+        <p>Dès qu’une ligne est pleine, cliquez sur «&nbsp;Quine&nbsp;!&nbsp;». Le jeu vérifie vos jetons. Si ce n’est pas encore bon, il dit pourquoi, et l’erreur ne coûte rien.</p>
+        <p>Vos trois voisins de table jouent aussi. Ils crient quand leur carton est prêt, mais jamais avant votre prochain clic sur «&nbsp;Tirer le numéro&nbsp;». Tant que vous n’avez pas tiré, vous gardez toujours la main.</p>
+      </section>
+
+      <section id="niveaux">
+        <h2>Les niveaux</h2>
+        <p>Au niveau facile, vous jouez un carton et le numéro à couvrir brille en jaune. Au niveau moyen, vous jouez deux cartons sans aide. Au niveau difficile, vous jouez trois cartons et vos voisins crient plus vite.</p>
+        <p>À tout moment, «&nbsp;Que faire maintenant&nbsp;?&nbsp;» entoure un numéro à couvrir, ou vous dit de crier.</p>
+      </section>
+    </article>
+  </div>
+
+  <nav class="rules-more" aria-labelledby="more-title">
+    <h2 id="more-title">Les règles des autres jeux</h2>
+    <ul>
+      <li><a href="../../belote/regles/"><img src="../../belote/icon.svg" width="48" height="48" alt="">Règles de la belote</a></li>
+      <li><a href="../../dames/regles/"><img src="../../dames/icon.svg" width="48" height="48" alt="">Règles du jeu de dames</a></li>
+      <li><a href="../../solitaire/regles/"><img src="../../solitaire/icon.svg" width="48" height="48" alt="">Règles du solitaire</a></li>
+      <li><a href="../../demineur/regles/"><img src="../../demineur/icon.svg" width="48" height="48" alt="">Règles du démineur</a></li>
+      <li><a href="../../yams/regles/"><img src="../../yams/icon.svg" width="48" height="48" alt="">Règles du Yams</a></li>
+      <li><a href="../../huit-americain/regles/"><img src="../../huit-americain/icon.svg" width="48" height="48" alt="">Règles du Huit américain</a></li>
+      <li><a href="../../freecell/regles/"><img src="../../freecell/icon.svg" width="48" height="48" alt="">Règles du FreeCell</a></li>
+      <li><a href="../../dame-de-pique/regles/"><img src="../../dame-de-pique/icon.svg" width="48" height="48" alt="">Règles de la Dame de pique</a></li>
+      <li><a href="../../bataille-navale/regles/"><img src="../../bataille-navale/icon.svg" width="48" height="48" alt="">Règles de la bataille navale</a></li>
+      <li><a href="../../paires/regles/"><img src="../../paires/icon.svg" width="48" height="48" alt="">Règles du jeu des paires</a></li>
+      <li><a href="../../sudoku/regles/"><img src="../../sudoku/icon.svg" width="48" height="48" alt="">Règles du sudoku</a></li>
+      <li><a href="../../mots-meles/regles/"><img src="../../mots-meles/icon.svg" width="48" height="48" alt="">Règles des mots mêlés</a></li>
+      <li><a href="../../petits-chevaux/regles/"><img src="../../petits-chevaux/icon.svg" width="48" height="48" alt="">Règles des petits chevaux</a></li>
+      <li><a href="../../morpion/regles/"><img src="../../morpion/icon.svg" width="48" height="48" alt="">Règles du morpion</a></li>
+      <li><a href="../../golf/regles/"><img src="../../golf/icon.svg" width="48" height="48" alt="">Règles du golf miniature</a></li>
+      <li><a href="../../billard/regles/"><img src="../../billard/icon.svg" width="48" height="48" alt="">Règles du billard américain</a></li>
+      <li><a href="../../bowling/regles/"><img src="../../bowling/icon.svg" width="48" height="48" alt="">Règles du bowling</a></li>
+      <li><a href="../../rami/regles/"><img src="../../rami/icon.svg" width="48" height="48" alt="">Règles du rami</a></li>
+      <li><a href="../../dominos/regles/"><img src="../../dominos/icon.svg" width="48" height="48" alt="">Règles des dominos</a></li>
+      <li><a href="../../mots-fleches/regles/"><img src="../../mots-fleches/icon.svg" width="48" height="48" alt="">Règles des mots fléchés</a></li>
+      <li><a href="../../pendu/regles/"><img src="../../pendu/icon.svg" width="48" height="48" alt="">Règles du pendu</a></li>
+      <li><a href="../../code-secret/regles/"><img src="../../code-secret/icon.svg" width="48" height="48" alt="">Règles du code secret</a></li>
+      <li><a href="../../petanque/regles/"><img src="../../petanque/icon.svg" width="48" height="48" alt="">Règles de la pétanque</a></li>
+      <li><a href="../../"><img src="../../icons/logo.webp" width="48" height="48" alt="">Tous les jeux</a></li>
+    </ul>
+  </nav>
+</main>
+<footer class="rules-footer">
+  <div class="rules-footer-inner">
+    <details class="rules-jump">
+      <summary><span class="rules-jump-label">Sommaire</span><span class="rules-jump-now">Choisir une partie</span></summary>
+      <ul class="rules-jump-list">
+        <li><a href="#contenu">Haut de la page</a></li>
+        <li><a href="#carton">Le carton</a></li>
+        <li><a href="#tirage">Le tirage</a></li>
+        <li><a href="#lots">Les trois lots</a></li>
+        <li><a href="#crier">Crier au bon moment</a></li>
+        <li><a href="#niveaux">Les niveaux</a></li>
+      </ul>
+    </details>
+    <a class="play" href="../" aria-label="Jouer au loto">Jouer</a>
+  </div>
+</footer>
+<footer class="site-foot"><div class="in">
+  <a class="credit" href="https://x.com/JulienCoulaud" target="_blank" rel="noopener"><img src="../../icons/julien.webp" width="34" height="34" alt=""><span>Par <b>Julien Coulaud</b></span><span class="sr">, s’ouvre dans un nouvel onglet</span></a>
+  <div class="footer-controls"><div class="zoom"></div></div>
+</div></footer>
+<script src="../../lib/site-nav.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pétanque · Jeux de Papi</title>
+<meta name="description" content="Une partie de pétanque contre Marius, sous les platanes : pointez ou tirez à votre rythme.">
+<link rel="canonical" href="https://jeux-papi.fr/petanque/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Jeux de Papi">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://jeux-papi.fr/petanque/">
+<meta property="og:title" content="Pétanque · Jeux de Papi">
+<meta property="og:description" content="Une partie de pétanque contre Marius, sous les platanes : pointez ou tirez à votre rythme.">
+<meta property="og:image" content="https://jeux-papi.fr/og/jeux/petanque.jpg">
+<meta property="og:image:alt" content="Pétanque, sur Jeux de Papi.">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../lib/kit.css">
+<script src="../lib/zoom.js"></script>
+<script src="../lib/sound.js"></script>
+<script src="../lib/ph.js"></script>
+<style>
+:root {--felt-top:#6E8A6A;--felt:#2F4430;--shade:47,68,48;--accent:#A8472B;--paper:#fff8e7;--ink:#263326;--you:#2f6fd6;--cpu:#c4502e}
+button.game {--accent:#A8472B} button.game:hover {background:#923b22}
+#table {min-height:0;margin:0 clamp(8px,1.2vw,20px) 6px;display:grid;grid-template-columns:clamp(185px,15%,250px) minmax(0,1fr) clamp(320px,28%,390px);grid-template-rows:minmax(0,1fr);gap:8px 12px;font:600 20px var(--ui)}
+#card,#console {color:var(--ink);background:var(--paper);border-radius:16px;box-shadow:0 5px 16px rgba(var(--shade),.55)}
+/* The card: the mène, then the two players, each with a face, the points and the boules still to play. */
+#card {grid-column:1;align-self:start;padding:12px 10px;display:grid;gap:10px;border-top:6px solid var(--accent)}
+#meneLine {display:flex;flex-direction:column;align-items:center;line-height:1.15;text-align:center}
+#mene {font-size:26px;white-space:nowrap}
+#goalLine {color:#4b5546}
+.player {position:relative;display:grid;grid-template-columns:46px minmax(0,1fr) auto;grid-template-rows:auto auto;align-items:center;gap:2px 6px;padding:12px 8px 8px;border-radius:12px;background:#f1e6cc;border:3px solid transparent}
+.player img {grid-row:1/span 2;width:46px;height:46px;border-radius:50%;background:#e6d7b6}
+.player .name {font-size:21px;line-height:1.1;min-width:0}
+.player .pts {grid-row:1/span 2;grid-column:3;font-size:34px;line-height:1;color:var(--ink)}
+.player .left {display:flex;gap:5px;grid-column:2}
+.player .left i {width:20px;height:20px;border-radius:50%;box-shadow:inset 0 -2px 3px #0003}
+#pYou .left i {background:radial-gradient(circle at 35% 30%,#fff,#c9ced6 45%,#7d848e)}
+#pCpu .left i {background:radial-gradient(circle at 35% 30%,#e9bf93,#8c5a36 50%,#4a2b16)}
+#card .player .left i.used {background:none;box-shadow:none;border:2px dashed #b3a78d}
+.player .now {grid-column:1/-1;font-size:20px;line-height:1.15;color:#4b5546;min-height:1.15em}
+.player.turn {border-color:var(--c);background:#fffdf6}
+#pYou {--c:var(--you)} #pCpu {--c:var(--cpu)}
+.player .pointTag {position:absolute;top:-13px;left:50%;translate:-50% 0;white-space:nowrap;padding:1px 10px;border-radius:12px;background:var(--c);color:#fff;font-size:20px;line-height:1.2;display:none}
+.player.point .pointTag {display:block}
+#stage {grid-column:2;position:relative;border-radius:16px;overflow:hidden;min-height:0;background:#cfe3ef}
+#stage canvas {position:absolute;inset:0;width:100%;height:100%;display:block}
+/* The view of the jeu: the cochonnet and the boules around it, large, in the corner of the terrain. */
+#jeu {position:absolute;top:8px;right:8px;box-sizing:border-box;border:2px solid #fff6dd;border-radius:10px;box-shadow:0 2px 8px #1d2a1c88;overflow:hidden;pointer-events:none;display:flex;flex-direction:column;justify-content:flex-end}
+#jeu[hidden] {display:none}
+#jeu span {display:block;background:#2f4430;color:#fff6dd;font:600 20px/26px var(--ui);padding:0 10px}
+/* The result of a mène, on a paper sheet over the terrain. */
+#sheet {position:absolute;left:50%;bottom:14px;translate:-50% 0;max-width:calc(100% - 24px);padding:12px 22px;border-radius:16px;background:var(--paper);color:var(--ink);box-shadow:0 8px 24px #0006;text-align:center;line-height:1.25}
+#sheet[hidden] {display:none}
+#sheet b {display:block;font-size:26px}
+#sheet span {display:block;font-size:20px}
+#console {grid-column:3;align-self:start;display:flex;flex-direction:column;gap:8px;padding:12px 14px;container-type:inline-size;max-height:100%;overflow:hidden}
+#console h2 {font-size:24px;margin:0}
+.controls {min-width:0}
+.controls h3 {margin:0 0 4px;font-size:20px}
+.keys {display:flex;align-items:center;gap:6px}
+#console button {justify-content:center;min-width:0;min-height:54px;padding:2px 6px;font-size:20px;line-height:1.08}
+.keys button {flex:0 0 54px;font-size:28px}
+/* The four ways to throw: one key each, the chosen one dark with a check. */
+#styles {display:grid;grid-template-columns:1fr 1fr;gap:6px}
+#styles button {display:flex;flex-direction:column;gap:2px;padding:4px 4px 6px;background:#fff;border:2px solid #b8ab8e;color:var(--ink);box-shadow:none}
+#styles button svg {width:46px;height:18px;flex:none}
+#styles button[aria-pressed="true"] {background:var(--ink);border-color:var(--ink);color:#fff}
+#styles button[aria-pressed="true"] svg path {stroke:#fff}
+#styles button[hidden] {display:none}
+html.no-tir #styles button[data-style="plombee"] {grid-column:1/-1}
+.meter {flex:1;min-width:0;text-align:center;color:var(--ink)}
+.bar {position:relative;height:14px;margin-bottom:3px;border-radius:3px;background:repeating-linear-gradient(90deg,#e2d2ad 0 7px,#d4c094 7px 8px)}
+.bar::after {content:'';position:absolute;left:50%;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:#8a7752}
+.bar i {position:absolute;z-index:1;top:-3px;bottom:-3px;width:8px;margin-left:-4px;border-radius:3px;background:var(--ink);transition:left .15s}
+.meter span {display:block;font-size:20px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:clip}
+#console #shoot {flex:none;width:100%;min-height:60px;margin-top:2px}
+#console .controls[hidden] {display:none !important}
+html.short #console {gap:4px;padding:8px 10px}
+html.short #console h2 {display:none}
+html.short .controls:not(#styleRow) {display:grid;grid-template-columns:92px minmax(0,1fr);align-items:center}
+html.short .controls:not(#styleRow) h3 {margin:0}
+html.short #styleRow h3 {margin:0 0 2px}
+html.short #console button {min-height:46px}
+html.short .keys button {flex-basis:46px}
+html.short #styles button svg {display:none}
+html.short #console #shoot {min-height:50px}
+html.short #card {gap:6px;padding:8px}
+html.short .player {padding:10px 6px 5px;grid-template-columns:44px minmax(0,1fr) auto}
+html.short .player img {width:44px;height:44px}
+html.low #mene {font-size:22px}
+html.low .player .now {display:none}
+/* When the panel is still too tall for the table, game.js sets .tight: the style keys lose their label and
+   every key comes down to 44 px. When a meter's words do not fit, it sets .narrow: the meters keep their
+   words only, on two lines if need be. */
+@media (min-width:700px) {
+ html.tight #styleRow h3 {display:none}
+ html.tight #console {gap:3px;padding:6px 8px}
+ html.tight #console button {min-height:44px}
+ html.tight .keys button {flex-basis:44px}
+ html.tight #styles {gap:4px}
+ html.tight #styles button {padding:0 4px;line-height:1.02}
+ html.tight #console #shoot {min-height:46px;margin:0}
+ html.narrow .meter .bar {display:none}
+ html.narrow .meter span {white-space:normal;line-height:1.05}
+}
+@media (min-width:700px) { @container (max-width:250px) { #console .controls {display:block} #console .controls h3 {margin:0 0 2px} } }
+#ribbon {position:absolute;left:50%;top:16%;translate:-50% 0;padding:8px 34px;border-radius:16px;pointer-events:none;display:none;white-space:nowrap;
+  background:linear-gradient(#FFD666,#F2B21E);color:#3A2600;font:800 40px/1.15 var(--ui);box-shadow:0 10px 30px rgba(0,0,0,.35),inset 0 -3px 0 rgba(0,0,0,.15)}
+#ribbon.on {display:block;animation:ribbon 1.8s cubic-bezier(.2,1.3,.4,1) both}
+@keyframes ribbon {0% {scale:.3;opacity:0} 15% {scale:1.08;opacity:1} 25% {scale:1} 80% {opacity:1} 100% {opacity:0}}
+@media (prefers-reduced-motion:reduce) {#ribbon.on {display:none}}
+#confetti {position:absolute;inset:0;pointer-events:none;overflow:hidden}
+#confetti i {position:absolute;width:8px;height:14px;top:-5%;background:#ffc83d;animation:fall 1.8s ease-in both}
+#confetti i:nth-child(3n) {background:#c4502e} #confetti i:nth-child(3n+1) {background:#7aa74a}
+@keyframes fall {to {top:105%;transform:translateX(45px) rotate(285deg)}}
+#overText {white-space:pre-line}
+/* The rules guide: one picture on the sage of the game, then one or two sentences. */
+#help {--guide-more:#3c4a37;--guide-edge:#263326}
+.pt-pic {position:relative;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:14px 28px;margin:2px 0 12px;padding:14px;border-radius:18px;
+  background:radial-gradient(120% 100% at 50% 0%,var(--felt-top),var(--felt) 80%)}
+.pt-pic > svg {display:block;width:100%;max-width:520px;height:auto;max-height:170px}
+.pt-pic > svg text {font-family:var(--ui);font-weight:700}
+html.low .pt-pic > svg {max-height:118px}
+html.low .pt-pic {padding-block:8px}
+.pt-panel {display:grid;gap:8px;padding:12px;border-radius:14px;background:var(--paper);color:var(--ink);width:min(100%,460px)}
+.pt-panel .pt-styles {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.pt-panel .pt-styles span {display:grid;place-items:center;text-align:center;line-height:1.05;min-height:44px;border-radius:10px;border:2px solid #b8ab8e;background:#fff;font:600 18px var(--ui)}
+.pt-panel .pt-styles span.on {background:var(--ink);border-color:var(--ink);color:#fff}
+.pt-panel .guide-btn {width:100%;justify-content:center}
+.pt-pic .guide-hand {left:calc(50% + 150px);top:calc(100% - 60px)}
+@media (max-width:699px) {.pt-panel .pt-styles span {font-size:14px} .pt-pic .guide-hand {left:auto;right:20px}}
+@media (max-width:699px) {
+ #table {grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;gap:5px;margin:0 5px 5px;font-size:14px}
+ #card {grid-column:1;grid-template-columns:1fr 1fr;align-items:center;gap:10px 6px;padding:4px 6px 6px;border-top-width:3px}
+ #meneLine {grid-column:1/-1;flex-direction:row;justify-content:center;gap:8px;font-size:14px}
+ #mene {font-size:16px}
+ .player {grid-template-columns:30px minmax(0,1fr) auto;padding:5px 5px 3px;gap:0 5px}
+ .player img {width:30px;height:30px}
+ .player .name {font-size:16px}
+ .player .pts {font-size:26px}
+ .player .left i {width:13px;height:13px}
+ .player .now {display:none}
+ .player .pointTag {font-size:13px;top:-9px;padding:0 6px}
+ #stage,#console {grid-column:1}
+ #console {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px 6px;padding:6px}
+ #console h2 {display:none}
+ #console .controls {grid-column:1/-1;display:grid;grid-template-columns:92px minmax(0,1fr);align-items:center}
+ #console .controls h3 {margin:0;font-size:16px}
+ #console button {min-height:44px;font-size:16px}
+ .keys button {flex-basis:44px}
+ #styles {grid-template-columns:repeat(4,minmax(0,1fr))}
+ html.no-tir #styles {grid-template-columns:repeat(3,minmax(0,1fr))}
+ html.no-tir #styles button[data-style="plombee"] {grid-column:auto}
+ #styles button svg {display:none}
+ #console #styles button {font-size:14px;padding:2px}
+ .meter span {font-size:14px}
+ #console #shoot {grid-column:1/-1;min-height:48px}
+ #msg,#msg.long {font-size:16px;line-height:1.15;min-height:66px;height:auto;padding-block:3px}
+ #say {padding:5px}
+ #sheet b {font-size:18px} #sheet span {font-size:14px}
+ #ribbon {font-size:28px;padding:6px 22px}
+}
+</style></head><body>
+<div id="bar"><div id="title">Pétanque</div>
+  <button id="undoBtn" data-icon="undo" title="Annuler le dernier coup joué"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span><span class="tiny">Annuler</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre un bon coup à jouer maintenant"><span class="long">Que jouer maintenant ?</span><span class="short">Que jouer ?</span><span class="tiny">Idée</span></button>
+<span class="spacer"></span><button id="helpBtn" data-icon="help">Règles</button><button id="newBtn" class="game">Nouvelle partie</button></div>
+<div id="say"><div id="msg" aria-live="polite"></div></div>
+<main id="table">
+ <aside id="card" aria-label="Le score">
+  <div id="meneLine"><b id="mene">Mène 1</b><span id="goalLine">Partie en 13 points</span></div>
+  <section class="player" id="pYou"><img src="../lib/avatars/vous.webp" alt=""><span class="name">Vous</span><b class="pts">0</b><div class="left" aria-hidden="true"><i></i><i></i><i></i></div><span class="now"></span><span class="pointTag">Le point</span></section>
+  <section class="player" id="pCpu"><img src="../lib/avatars/marcel.webp" alt=""><span class="name">Marius</span><b class="pts">0</b><div class="left" aria-hidden="true"><i></i><i></i><i></i></div><span class="now"></span><span class="pointTag">Le point</span></section>
+ </aside>
+ <div id="stage"><canvas aria-label="Le terrain de pétanque. Réglez votre lancer dans « Votre lancer »."></canvas>
+  <div id="jeu" hidden><span>Le jeu</span></div>
+  <div id="sheet" hidden role="status"><b id="sheetTitle"></b><span id="sheetText"></span></div>
+  <div id="confetti"></div><div id="ribbon"></div></div>
+ <aside id="console" aria-labelledby="panelTitle">
+  <h2 id="panelTitle">Votre lancer</h2>
+  <div class="controls" id="styleRow"><h3>Lancer</h3><div id="styles">
+   <button data-style="roulette" aria-pressed="false"><svg viewBox="0 0 46 18" aria-hidden="true"><path d="M3 15q6-5 12-1H43" fill="none" stroke="#263326" stroke-width="2.6" stroke-linecap="round"/></svg>Roulette</button>
+   <button data-style="demi" aria-pressed="true"><svg viewBox="0 0 46 18" aria-hidden="true"><path d="M3 15Q13-4 24 15H43" fill="none" stroke="#263326" stroke-width="2.6" stroke-linecap="round"/></svg>Demi-portée</button>
+   <button data-style="plombee" aria-pressed="false"><svg viewBox="0 0 46 18" aria-hidden="true"><path d="M3 15Q24-14 37 15h6" fill="none" stroke="#263326" stroke-width="2.6" stroke-linecap="round"/></svg>Plombée</button>
+   <button data-style="tir" aria-pressed="false"><svg viewBox="0 0 46 18" aria-hidden="true"><path d="M3 12Q22 0 38 13" fill="none" stroke="#263326" stroke-width="2.6" stroke-linecap="round"/><circle cx="40" cy="13" r="4" fill="none" stroke="#263326" stroke-width="2.2"/></svg>Tir</button>
+  </div></div>
+  <div class="controls" id="dirRow"><h3>Direction</h3><div class="keys">
+   <button id="left" aria-label="Viser plus à gauche">◀</button>
+   <div class="meter"><div class="bar" aria-hidden="true"><i id="dirMark"></i></div><span id="dirLabel">Droit</span></div>
+   <button id="right" aria-label="Viser plus à droite">▶</button></div></div>
+  <div class="controls" id="lenRow"><h3>Longueur</h3><div class="keys">
+   <button id="shorter" aria-label="Plus court">−</button>
+   <div class="meter"><div class="bar" aria-hidden="true"><i id="lenMark"></i></div><span id="lenLabel">Au cochonnet</span></div>
+   <button id="longer" aria-label="Plus long">+</button></div></div>
+  <div class="controls" id="targetRow" hidden><h3>Cible</h3><div class="keys">
+   <button id="prevTarget" aria-label="Viser une autre boule">◀</button>
+   <div class="meter"><span id="targetLabel">La boule de Marius</span></div>
+   <button id="nextTarget" aria-label="Viser une autre boule">▶</button></div></div>
+  <button id="shoot" class="primary">Lancer la boule</button>
+ </aside>
+</main>
+<footer id="rail"><div class="zoom"></div></footer>
+<div id="help" data-title="Comment jouer">
+<section class="page">
+  <h3>Lancer la boule</h3>
+  <div class="pt-pic" aria-hidden="true"><div class="pt-panel"><div class="pt-styles"><span>Roulette</span><span class="on">Demi-portée</span><span>Plombée</span><span>Tir</span></div><span class="guide-btn primary here">Lancer la boule</span></div></div>
+  <p class="guide-lead">Choisissez un lancer, puis cliquez sur «&nbsp;Lancer la boule&nbsp;».</p>
+  <p class="guide-more">Chaque boule part droit vers le cochonnet. Finissez plus près que Marius.</p>
+</section>
+<section class="page">
+  <h3>Qui a le point&nbsp;?</h3>
+  <div class="pt-pic" aria-hidden="true"><svg viewBox="0 0 520 190">
+   <rect x="10" y="10" width="500" height="170" rx="14" fill="#dcc9a3"/>
+   <circle cx="260" cy="95" r="9" fill="#e2482a" stroke="#7a2412" stroke-width="2"/>
+   <path d="M269 95H316" stroke="#fbf8ef" stroke-width="7"/><path d="M269 95H316" stroke="#1d1d1d" stroke-width="7" stroke-dasharray="1.5 4.5"/>
+   <circle cx="338" cy="95" r="22" fill="#d9dde3" stroke="#2f6fd6" stroke-width="5"/>
+   <path d="M251 95H170" stroke="#fbf8ef" stroke-width="7"/><path d="M251 95H170" stroke="#1d1d1d" stroke-width="7" stroke-dasharray="1.5 4.5"/>
+   <circle cx="148" cy="95" r="22" fill="#9a6a44" stroke="#5a3418" stroke-width="3"/>
+   <rect x="262" y="40" width="98" height="34" rx="17" fill="#2f6fd6"/><text x="311" y="64" text-anchor="middle" font-size="20" fill="#fff">8 cm</text>
+   <rect x="150" y="116" width="98" height="34" rx="17" fill="#c4502e"/><text x="199" y="140" text-anchor="middle" font-size="20" fill="#fff">25 cm</text>
+  </svg></div>
+  <p class="guide-lead">La boule la plus près du cochonnet a le point.</p>
+  <p class="guide-more">L’autre joueur lance alors, jusqu’à reprendre le point.</p>
+</section>
+<section class="page">
+  <h3>Trois façons de pointer</h3>
+  <div class="pt-pic" aria-hidden="true"><svg viewBox="0 0 520 200">
+   <rect x="10" y="150" width="500" height="34" rx="8" fill="#dcc9a3"/>
+   <circle cx="470" cy="160" r="7" fill="#e2482a"/>
+   <path d="M40 140Q70 128 100 150H455" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="2 9" stroke-linecap="round"/>
+   <path d="M40 140Q150 20 260 150H455" fill="none" stroke="#ffe7a6" stroke-width="4" stroke-dasharray="2 9" stroke-linecap="round"/>
+   <path d="M40 140Q300-80 430 150L455 150" fill="none" stroke="#b9dcff" stroke-width="4" stroke-dasharray="2 9" stroke-linecap="round"/>
+   <text x="100" y="178" text-anchor="middle" font-size="20" fill="#263326">Roulette</text>
+   <text x="260" y="178" text-anchor="middle" font-size="20" fill="#263326">Demi-portée</text>
+   <text x="410" y="178" text-anchor="middle" font-size="20" fill="#263326">Plombée</text>
+  </svg></div>
+  <p class="guide-lead">La roulette roule, la plombée tombe et s’arrête.</p>
+  <p class="guide-more">Une boule devant vous gêne&nbsp;? Passez par-dessus en plombée.</p>
+</section>
+<section class="page">
+  <h3>Compter les points</h3>
+  <div class="pt-pic" aria-hidden="true"><svg viewBox="0 0 520 190">
+   <rect x="10" y="10" width="500" height="170" rx="14" fill="#dcc9a3"/>
+   <circle cx="260" cy="95" r="9" fill="#e2482a" stroke="#7a2412" stroke-width="2"/>
+   <circle cx="292" cy="72" r="18" fill="#d9dde3" stroke="#2f6fd6" stroke-width="5"/><text x="292" y="46" text-anchor="middle" font-size="22" fill="#fff">1</text>
+   <circle cx="230" cy="118" r="18" fill="#d9dde3" stroke="#2f6fd6" stroke-width="5"/><text x="200" y="125" text-anchor="middle" font-size="22" fill="#fff">2</text>
+   <circle cx="318" cy="134" r="18" fill="#9a6a44" stroke="#5a3418" stroke-width="3"/>
+   <circle cx="186" cy="52" r="18" fill="#d9dde3" stroke="#2f6fd6" stroke-width="5"/>
+   <circle cx="260" cy="95" r="70" fill="none" stroke="#fff" stroke-width="2.5" stroke-dasharray="6 7"/>
+   <rect x="400" y="30" width="96" height="44" rx="12" fill="#fff8e7"/><text x="448" y="60" text-anchor="middle" font-size="24" fill="#263326">+2</text>
+  </svg></div>
+  <p class="guide-lead">Une boule plus près que celles de Marius vaut un point.</p>
+  <p class="guide-more">Le premier à 13 points gagne. Au niveau facile, la partie se joue en 7 points.</p>
+</section>
+<section class="page">
+  <h3>Tirer une boule</h3>
+  <div class="pt-pic" aria-hidden="true"><svg viewBox="0 0 520 190">
+   <rect x="10" y="140" width="500" height="36" rx="8" fill="#dcc9a3"/>
+   <path d="M40 120Q200 10 330 128" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="2 9" stroke-linecap="round"/>
+   <circle cx="342" cy="138" r="22" fill="#9a6a44" stroke="#5a3418" stroke-width="3"/>
+   <circle cx="342" cy="138" r="31" fill="none" stroke="#fff" stroke-width="4"/>
+   <path d="M378 128h70m-14-10 14 10-14 10" fill="none" stroke="#fff8e7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+   <circle cx="470" cy="150" r="7" fill="#e2482a"/>
+  </svg></div>
+  <p class="guide-lead">Au tir, votre boule frappe une boule de Marius pour la chasser.</p>
+  <p class="guide-more">Choisissez «&nbsp;Tir&nbsp;», puis la boule visée avec ◀ et ▶. Le tir s’ouvre au niveau moyen.</p>
+</section>
+</div><script src="../lib/store.js"></script><script src="../lib/kit.js"></script><script type="module" src="game.js"></script></body></html>

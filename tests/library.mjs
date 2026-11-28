@@ -50,8 +50,7 @@ try {
   check('tile for freecell', await page.locator('a.tile[data-id="freecell"]').count() === 1);
   check('tile for dames', await page.locator('a.tile[data-id="dames"]').count() === 1);
   check('tile for dame de pique', await page.locator('a.tile[data-id="dame-de-pique"]').count() === 1);
-  check('no "Nouveau" badge on the games', await page.locator('a.tile .badge').count() === 0);
-  check('games follow the library header', await page.locator('header + #games').count() === 1);
+  check('games follow the library header and the band of new games', await page.locator('header + #news + #games').count() === 1);
   check('no last game before the first game', await page.locator('#last').isHidden());
   check('no line about the saves under the games', await page.locator('#saves').count() === 0 && !(await page.textContent('main')).includes('gardées'));
   check('old backup data is removed', await page.evaluate(() => !localStorage.getItem('gg:cloud:old') && !localStorage.getItem('gg:approved')));
@@ -194,7 +193,110 @@ try {
   check('no sideways scroll at 390 px', await phone.evaluate(() => document.documentElement.scrollWidth <= 390));
   await phone.screenshot({ path: join(OUT, 'library-phone.png'), fullPage: true });
 
-  // 8. Ten wrong admin passwords lock this network out, also with the right password. Last, as it locks the admin.
+  // 8. New games: a band under the heading names the games added in the last 60 days that he has not opened,
+  // for 3 days after it first showed them, and their tiles carry a « Nouveau » tag. The clock is fixed at
+  // the day after the last game was added, so the test does not depend on today's date.
+  {
+    const DAY = 864e5;
+    const ctx = await browser.newContext({ viewport: { width: 1366, height: 680 }, serviceWorkers: 'block' });
+    const p = await ctx.newPage();
+    await p.goto(BASE);
+    const added = await p.evaluate(() => GAMES.filter(g => g.added).map(g => [g.id, new Date(g.added + 'T00:00').getTime()]));
+    const t0 = Math.max(...added.map(([, t]) => t)) + DAY / 2;
+    const expected = added.filter(([, t]) => t0 - t < 60 * DAY).map(([id]) => id).sort();
+    await ctx.clock.setFixedTime(t0);
+    await p.evaluate(() => localStorage.removeItem('gg:news-seen'));
+    await p.reload();
+    const band = () => p.evaluate(() => document.getElementById('news').hidden ? [] : [...document.querySelectorAll('#news a')].map(a => a.dataset.id).sort());
+    const tags = () => p.evaluate(() => [...document.querySelectorAll('a.tile .art .new')].map(e => e.closest('a.tile').dataset.id).sort());
+    const same = (a, b) => a.join() === b.join();
+    check('new games: there are new games to show', expected.length > 0);
+    check('new games: the band shows them on a new PC', same(await band(), expected), (await band()).join());
+    check('new games: their tiles carry « Nouveau »', same(await tags(), expected), (await tags()).join());
+    check('new games: one plain sentence', (await p.textContent('#news p')).trim() === (expected.length > 1 ? 'Nouveaux jeux :' : 'Nouveau jeu :'));
+    const id0 = expected[0];
+    check('new games: a name opens the game, like its tile', await p.getAttribute(`#news a[data-id="${id0}"]`, 'href') === await p.getAttribute(`a.tile[data-id="${id0}"]`, 'href'));
+    check('new games: the first row of games shows whole at 1366x680', await p.evaluate(() => document.querySelector('.family a.tile').getBoundingClientRect().bottom <= document.querySelector('main').getBoundingClientRect().bottom + .5),
+      String(await p.evaluate(() => [document.querySelector('.family a.tile').getBoundingClientRect().bottom, document.querySelector('main').getBoundingClientRect().bottom])));
+    // Every window size: no text under 20 px, keys 44 px high or more, nothing past the sides.
+    const layout = () => p.evaluate(() => {
+      const bad = [];
+      const els = [...document.querySelectorAll('#news, #news *, a.tile .new')];
+      for (const e of els) {
+        const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
+        if (r.left < -.5 || r.right > document.documentElement.clientWidth + .5) bad.push('outside: ' + (e.textContent || e.tagName));
+        if (e.scrollWidth > e.clientWidth + 1 && cs.overflow !== 'visible') bad.push('cut: ' + e.textContent);
+        if ([...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && parseFloat(cs.fontSize) < 20) bad.push('small: ' + e.textContent);
+        if ((e.tagName === 'A' || e.tagName === 'BUTTON') && e.offsetHeight < 44) bad.push('low key: ' + e.textContent);
+      }
+      if (document.documentElement.scrollWidth > innerWidth) bad.push('sideways scroll');
+      return bad;
+    });
+    for (const [w, h, z] of [[1366, 680, 1], [1093, 530, 1], [1920, 1000, 1], [1280, 620, 1], [390, 760, 1], [1366, 680, 1.3], [1920, 1000, 1.75]]) {
+      await p.evaluate(z => localStorage.setItem('gg:size', String(z)), z);
+      await p.setViewportSize({ width: w, height: h });
+      await p.reload();
+      await p.waitForSelector('#news a');
+      await p.evaluate(() => document.fonts.ready);
+      const bad = await layout();
+      check(`new games: the band fits at ${w}x${h} and ${z * 100} %`, !bad.length, bad.join(' | '));
+    }
+    await p.evaluate(() => localStorage.setItem('gg:size', '1'));
+    await p.setViewportSize({ width: 1366, height: 680 });
+    await p.screenshot({ path: join(OUT, 'library-new-games.png') });
+
+    // A game he opened is no longer new.
+    await p.evaluate(id => GG.save(id, { n: 1 }, { summary: 'Partie en cours' }).then(GG.flush), id0);
+    await p.reload();
+    check('new games: a game he started drops out of the band and loses its tag', !(await band()).includes(id0) && !(await tags()).includes(id0) && (await band()).length === expected.length - 1);
+
+    // Two days after the band first showed them, they are still new; three days after, they are gone.
+    const seen = await p.evaluate(() => GG.get('news-seen'));
+    check('new games: the first time each game was shown is kept', expected.every(id => seen[id] === t0), JSON.stringify(seen));
+    const age = days => p.evaluate(([days, DAY]) => {
+      const s = GG.get('news-seen');
+      for (const id in s) s[id] = Date.now() - days * DAY;
+      GG.set('news-seen', s);
+    }, [days, DAY]);
+    await age(2.9); await p.reload();
+    check('new games: still shown 2.9 days after they were first shown', (await band()).length === expected.length - 1);
+    await age(3); await p.reload();
+    check('new games: gone 3 days after they were first shown', (await band()).length === 0 && (await tags()).length === 0 && await p.locator('#news').isHidden());
+    // Without the band, the heading is followed by its line again.
+    check('new games: the line under the heading is back', await p.locator('#tagline').isVisible());
+
+    // « Masquer » puts the band away for good; the tags stay until the games are no longer new.
+    await p.evaluate(id => { localStorage.removeItem('gg:news-seen'); localStorage.removeItem('gg:save:' + id); }, id0);
+    await p.reload();
+    check('new games: the band is back on a PC that has not seen it', same(await band(), expected));
+    await p.click('#news button:has-text("Masquer")');
+    check('new games: « Masquer » hides the band', await p.locator('#news').isHidden());
+    await p.reload();
+    check('new games: the band stays hidden after a reload', await p.locator('#news').isHidden() && same(await tags(), expected));
+
+    // Sixty days after a game was added, a PC that sees the library for the first time shows nothing.
+    await p.evaluate(() => { localStorage.removeItem('gg:news-seen'); localStorage.removeItem('gg:news-hidden'); });
+    await ctx.clock.setFixedTime(t0 + 61 * DAY);
+    await p.reload();
+    check('new games: nothing is new 60 days after it was added', (await band()).length === 0 && (await tags()).length === 0);
+    await ctx.close();
+
+    // Without storage, the library still shows the band, and « Masquer » hides it in this window.
+    const bare = await browser.newContext({ viewport: { width: 1366, height: 680 }, serviceWorkers: 'block' });
+    await bare.addInitScript(() => Object.defineProperty(window, 'localStorage', { get() { throw new Error('denied'); } }));
+    await bare.clock.setFixedTime(t0);
+    const q = await bare.newPage();
+    const errors = [];
+    q.on('pageerror', e => errors.push(e.message));
+    await q.goto(BASE);
+    await q.waitForSelector('a.tile');
+    check('new games: without storage, the band shows', await q.locator('#news a').count() === expected.length, errors.join());
+    await q.click('#news button:has-text("Masquer")');
+    check('new games: without storage, « Masquer » hides it', await q.locator('#news').isHidden() && !errors.length, errors.join());
+    await bare.close();
+  }
+
+  // 9. Ten wrong admin passwords lock this network out, also with the right password. Last, as it locks the admin.
   const tryAdmin = pw => fetch(BASE + 'api/admin/overview', { headers: { Authorization: 'Bearer ' + pw } });
   sql('DELETE FROM admin_failures'); // the earlier steps tried wrong passwords too
   for (let i = 0; i < 9; i++) await tryAdmin('guess' + i);

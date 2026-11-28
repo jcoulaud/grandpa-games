@@ -4,7 +4,7 @@ import { gameUrl, launch } from './harness.mjs';
 
 const browser = await launch();
 try {
-  for (const game of ['solitaire', 'freecell', 'dames', 'dame-de-pique', 'demineur', 'yams', 'bataille-navale', 'paires', 'huit-americain', 'rami', 'belote', 'morpion', 'petits-chevaux', 'mots-meles', 'sudoku']) {
+  for (const game of ['solitaire', 'freecell', 'dames', 'dame-de-pique', 'demineur', 'yams', 'bataille-navale', 'paires', 'huit-americain', 'rami', 'belote', 'morpion', 'petits-chevaux', 'mots-meles', 'sudoku', 'dominos', 'loto']) {
     const page = await browser.newPage({ reducedMotion: 'reduce' });
     await page.goto(gameUrl(game));
     // The first visit starts a game at Facile at once, with no guide and no dialog.
@@ -20,7 +20,7 @@ try {
       assert.ok([['Facile', 'Moyen', 'Difficile', back], [back, 'Facile', 'Moyen', 'Difficile']].some(o => o.join() === texts.join()), texts.join());
       if (await page.locator('#overText.warn').count()) assert.equal(await page.locator('#overBtns button.primary').textContent(), back);
       const choice = choices.getByText(label, { exact: true });
-      if (game === 'dames' || game === 'dame-de-pique' || game === 'demineur' || game === 'yams' || game === 'bataille-navale' || game === 'paires' || game === 'huit-americain' || game === 'rami' || game === 'belote' || game === 'morpion' || game === 'petits-chevaux' || game === 'mots-meles' || game === 'sudoku') {
+      if (game === 'dames' || game === 'dame-de-pique' || game === 'demineur' || game === 'yams' || game === 'bataille-navale' || game === 'paires' || game === 'huit-americain' || game === 'rami' || game === 'belote' || game === 'morpion' || game === 'petits-chevaux' || game === 'mots-meles' || game === 'sudoku' || game === 'dominos' || game === 'loto') {
         await choice.click();
         // The sudoku makes its grid in a worker: the save comes after it.
         if (game === 'sudoku') await page.waitForFunction(() => G && !making);

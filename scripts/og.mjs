@@ -65,12 +65,12 @@ const browser = await chromium.launch();
 const shelf = await browser.newPage({ viewport: { width: 1400, height: 900 }, deviceScaleFactor: 2 });
 await shelf.goto(new URL('index.html', root).href, { waitUntil: 'load' });
 // Only the drawing: no felt, no tile and no page behind it, so it sits on the felt of the preview.
-await shelf.addStyleTag({ content: 'html, body, .tile, .tile .art { background: none !important; box-shadow: none !important; } .family .grid { grid-template-columns: repeat(auto-fill, 520px) !important; } .tile .art { --k: 2; width: 520px; height: 300px; }' });
+await shelf.addStyleTag({ content: 'html, body, .tile, .tile .art { background: none !important; box-shadow: none !important; } .family .grid { grid-template-columns: repeat(auto-fill, 520px) !important; } .tile .art { --k: 2; width: 520px; height: 300px; } .art .new { display: none !important; }' });
 await shelf.evaluate(() => document.fonts.ready);
 // Whole tiles for the library's preview, as the library shows them, without their line of text.
 const wall = await browser.newPage({ viewport: { width: 1400, height: 1400 }, deviceScaleFactor: 2 });
 await wall.goto(new URL('index.html', root).href, { waitUntil: 'load' });
-await wall.addStyleTag({ content: 'html, body { background: none !important; } .family .grid { grid-template-columns: repeat(auto-fill, 320px) !important; } .tile .body p { display: none; } .tile { box-shadow: none !important; }' });
+await wall.addStyleTag({ content: 'html, body { background: none !important; } .family .grid { grid-template-columns: repeat(auto-fill, 320px) !important; } .tile .body p { display: none; } .tile { box-shadow: none !important; } .art .new, #news { display: none !important; }' });
 await wall.evaluate(() => document.fonts.ready);
 const tile = async (id) =>
   'data:image/png;base64,' + (await wall.locator(`.tile[data-id="${id}"]`).screenshot({ omitBackground: true })).toString('base64');

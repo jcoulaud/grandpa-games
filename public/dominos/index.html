@@ -1,0 +1,1000 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dominos · Jeux de Papi</title>
+<meta name="description" content="Le jeu de dominos en grand, pour les grands-parents : de gros dominos ivoire, la pioche des cafés, contre deux joueurs de l'ordinateur à trois niveaux. Sans publicité ni compte.">
+<link rel="canonical" href="https://jeux-papi.fr/dominos/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Jeux de Papi">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://jeux-papi.fr/dominos/">
+<meta property="og:title" content="Dominos · Jeux de Papi">
+<meta property="og:description" content="Le jeu de dominos en grand, contre l'ordinateur. Sans publicité ni compte.">
+<meta property="og:image" content="https://jeux-papi.fr/og/jeux/dominos.jpg">
+<meta property="og:image:alt" content="Dominos, sur Jeux de Papi.">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../lib/kit.css">
+<style>
+  /* The dominos play on a walnut café table. The line lies on a bottle-green leather mat with a gold
+     tooled edge, the way café owners keep one under the counter for the regulars. */
+  :root {
+    --felt-top: #74503A; --felt: #2B1A10; --shade: 30,16,8; --accent: #2F6B52;
+    --hw: 56px;          /* the width of a domino in his hand; it is twice as tall */
+    --turn: #8FE0B6;     /* the border of the player who plays now: mint, so yellow keeps "press me" */
+    --paper: #FFF9EC; --ink: #1E2622;
+  }
+  #title svg { width: 34px; height: 34px; }
+  button.game { --accent: #2F6B52; }
+  button.game:hover { background: #377A5E; }
+  button.game:active { background: #275A45; }
+
+  #table { position: relative; display: flex; flex-direction: column; gap: clamp(8px, 1.6vh, 16px); padding: 0 clamp(10px, 2vw, 32px) clamp(6px, 1.4vh, 14px); overflow: hidden; }
+  /* The table of wood, as a soft grain under the felt colours. */
+  body { background:
+    repeating-linear-gradient(92deg, rgba(255,255,255,.025) 0 3px, transparent 3px 11px, rgba(0,0,0,.035) 11px 13px, transparent 13px 29px),
+    radial-gradient(120% 100% at 50% 0%, var(--felt-top), var(--felt) 72%) var(--felt); }
+
+  /* ---------- The board: the two other players beside the mat, or above it in a narrow window ---------- */
+  #board { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "s2 mat s1"; gap: clamp(10px, 1.4vw, 22px); align-items: center; }
+  #board.top { grid-template-columns: 1fr 1fr; grid-template-areas: "s2 s1" "mat mat"; grid-template-rows: auto minmax(0, 1fr); align-items: stretch; }
+  #seat2 { grid-area: s2; } #seat1 { grid-area: s1; } #mat { grid-area: mat; }
+
+  .seat { position: relative; display: flex; align-items: center; gap: 12px; min-width: 0; padding: 10px 16px 10px 10px; border-radius: 20px;
+    background: var(--paper); color: var(--ink); border: 3px solid rgba(0,0,0,.08); box-shadow: 0 6px 18px rgba(0,0,0,.35); transition: border-color .2s, box-shadow .2s, scale .3s; }
+  #board:not(.top) .seat { flex-direction: column; text-align: center; width: var(--seatW, 200px); padding: 14px 12px 12px; }
+  .seat.turn { border-color: var(--turn); box-shadow: 0 0 0 5px rgba(143,224,182,.38), 0 6px 18px rgba(0,0,0,.35); scale: 1.03; }
+  .ava { width: 64px; height: 64px; border-radius: 50%; flex: none; object-fit: cover; box-shadow: 0 0 0 3px #fff, 0 2px 6px rgba(0,0,0,.3); }
+  .seat .who { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .seat b { display: block; font: 700 24px/1.15 var(--ui); }
+  .seat .pts { font: 700 22px/1.2 var(--ui); color: #2F6B52; font-variant-numeric: tabular-nums; }
+  .seat .now { font: 500 20px/1.25 var(--ui); color: #5A6461; }
+  .seat.turn .now { color: #1D5A3E; font-weight: 700; }
+  /* The dominoes a player holds, face down, in a small fan. */
+  .backs { display: flex; justify-content: center; height: 34px; padding-top: 2px; }
+  .backs i { width: 15px; height: 30px; margin-left: -5px; border-radius: 3px; background: linear-gradient(135deg, #3A2E26, #17110D); box-shadow: inset 0 0 0 1.5px #B48A3C, 0 2px 3px rgba(0,0,0,.35); }
+  .backs i:first-child { margin-left: 0; }
+  #board.top .seat .backs { display: none; }
+  #board.top .ava { width: 50px; height: 50px; }
+
+  /* ---------- The mat ---------- */
+  #mat { position: relative; height: 100%; min-height: 0; border-radius: 26px;
+    background: radial-gradient(70% 90% at 50% 40%, #2F6E52, #1E4A37 62%, #163A2A);
+    box-shadow: inset 0 0 0 3px #0E2419, inset 0 0 0 10px #1B4232, inset 0 0 0 12px #C9A45C, inset 0 0 0 14px #1B4232, inset 0 10px 40px rgba(0,0,0,.45),
+      0 18px 40px rgba(0,0,0,.45), 0 3px 0 #0B1C13; }
+  #mat::before { content: ""; position: absolute; inset: 16px; border-radius: 14px; pointer-events: none;
+    background: repeating-linear-gradient(35deg, rgba(255,255,255,.012) 0 2px, transparent 2px 6px); }
+  #way { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  #way path { fill: none; stroke: #fff; stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; opacity: .2; transition: opacity .3s; }
+  #way path.on { opacity: .9; filter: drop-shadow(0 0 5px rgba(255,255,255,.55)); }
+  #line { position: absolute; inset: var(--pad, 38px) var(--pad, 38px) calc(var(--pad, 38px) + 6px); }
+  .lt { position: absolute; transform-origin: 50% 50%; }
+  .lt svg, .dom svg, .gd svg { display: block; width: 100%; height: 100%; overflow: visible; }
+  .lt.fresh::after { content: ""; position: absolute; inset: -6px; border: 4px solid #fff; border-radius: 22%; opacity: 0; animation: freshRing 1.6s ease-out; pointer-events: none; }
+  @keyframes freshRing { 15% { opacity: .9; } 100% { opacity: 0; inset: -14px; } }
+  /* The free place at an end, when his domino can go at both: a yellow frame to click. */
+  .ghost { position: absolute; border-radius: 14%; border: 4px dashed var(--gold); background: rgba(255,200,61,.2); box-shadow: 0 0 0 1.5px rgba(0,0,0,.5), 0 0 22px rgba(255,200,61,.5);
+    display: none; padding: 0; min-height: 0; cursor: pointer; animation: glow 1.4s ease-in-out infinite; }
+  .ghost.on { display: block; }
+  .ghost:hover, .ghost.hint { background: rgba(255,200,61,.55); border-style: solid; }
+  .ghost:active { transform: none; }
+  .ghost span { position: absolute; left: 50%; top: 50%; width: max(100%, 56px); height: max(100%, 56px); translate: -50% -50%; }
+  @keyframes glow { 50% { box-shadow: 0 0 0 1.5px rgba(0,0,0,.5), 0 0 30px 8px rgba(255,200,61,.7); } }
+  /* The plaque on the edge of the mat: the manche and the target. */
+  #plaque { position: absolute; left: 50%; bottom: -14px; translate: -50% 0; z-index: 2; padding: 3px 18px; border-radius: 12px; white-space: nowrap;
+    background: linear-gradient(#E9CD8A, #C59B4A); color: #3A2608; font: 700 20px/1.3 var(--ui); box-shadow: 0 4px 10px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.5); }
+
+  /* ---------- His side: his place, his dominoes, the pioche ---------- */
+  #me { flex: none; display: flex; align-items: flex-end; justify-content: center; gap: clamp(12px, 2vw, 30px); padding-top: 14px; }
+  #seat0 { align-self: center; }
+  #hand { display: flex; align-items: flex-end; justify-content: center; gap: calc(var(--hw) * .16); min-width: 0; padding: calc(var(--hw) * .3) 6px 4px; flex-wrap: wrap; }
+  .dom { position: relative; flex: none; width: var(--hw); height: calc(var(--hw) * 2); min-height: 0; padding: 0; border: 0; border-radius: 14%; background: none; box-shadow: none;
+    display: block; transition: translate .22s cubic-bezier(.3,1.4,.5,1), opacity .2s; }
+  .dom:hover, .dom:active { background: none; box-shadow: none; transform: none; }
+  .dom:hover { outline: 3px solid #fff; outline-offset: 3px; }
+  .dom:focus-visible { outline: 4px solid #fff; outline-offset: 4px; box-shadow: none; }
+  /* At Facile, the dominoes that fit stand up, in a dashed yellow frame that glows. */
+  .dom.can { translate: 0 calc(var(--hw) * -.2); }
+  .dom.can::after, .dom.pick::after, .dom.hint::before { content: ""; position: absolute; border-radius: 22%; pointer-events: none; }
+  .dom.can::after { inset: -8px; border: 4px dashed var(--gold); box-shadow: 0 0 0 1.5px rgba(0,0,0,.55); animation: glow 1.6s ease-in-out infinite; }
+  /* The domino he chose: higher, in a solid yellow frame. */
+  .dom.pick { translate: 0 calc(var(--hw) * -.32); }
+  .dom.pick::after { inset: -8px; border: 5px solid var(--gold); box-shadow: 0 0 0 1.5px rgba(0,0,0,.7), inset 0 0 0 1.5px rgba(0,0,0,.5), 0 0 24px rgba(255,200,61,.6); animation: none; }
+  .dom.hint::before { inset: -14px; border: 5px solid var(--gold); box-shadow: 0 0 0 1.5px rgba(0,0,0,.7); animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .35; } }
+  .dom.shake { animation: shake .42s; }
+  @keyframes shake { 20%, 60% { rotate: -4deg; } 40%, 80% { rotate: 4deg; } }
+  .dom.new .tag { display: block; }
+  .dom .tag { display: none; position: absolute; left: 50%; bottom: calc(100% + 4px); translate: -50% 0; padding: 0 8px; border-radius: 9px; background: #fff; color: #1E2622;
+    font: 700 20px/1.35 var(--ui); white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,.35); pointer-events: none; }
+  #me.wait .dom { opacity: .92; }
+
+  #pile { flex: none; align-self: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  #stack { position: relative; width: 104px; height: 66px; cursor: pointer; }
+  #stack i { position: absolute; left: 6px; width: 92px; height: 46px; border-radius: 9px; background: linear-gradient(135deg, #3A2E26, #17110D);
+    box-shadow: inset 0 0 0 2px #B48A3C, 0 3px 5px rgba(0,0,0,.45); }
+  #stack i::after { content: ""; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px; border-radius: 50%; background: #C9A45C; }
+  #stack.empty i { display: none; }
+  #stack.empty { border: 3px dashed rgba(255,255,255,.3); border-radius: 12px; width: 98px; height: 52px; margin-top: 6px; }
+  #count { font: 700 20px/1.2 var(--ui); color: #FCEBD5; text-shadow: 0 2px 3px rgba(0,0,0,.4); white-space: nowrap; }
+  #drawBtn { min-height: 58px; padding-inline: 22px; font-size: 22px; justify-content: center; white-space: nowrap; }
+
+  /* ---------- The end of a manche: a sheet on the mat ---------- */
+  #sheet { position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 20; width: min(700px, calc(100% - 24px)); max-height: calc(100% - 8px); overflow: auto;
+    padding: 18px 22px 18px; border-radius: 20px; background: var(--paper); color: var(--ink); box-shadow: 0 20px 50px rgba(0,0,0,.55); text-align: center; }
+  #sheet[hidden] { display: none; }
+  #sheet h2 { margin: 0 0 4px; font: 800 30px/1.15 var(--ui); }
+  #sheet .sub { margin: 0 0 10px; font: 500 21px/1.3 var(--ui); color: #4E5A57; }
+  #sheet table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+  #sheet td { padding: 6px 8px; border-top: 1.5px solid #E9DFC9; font: 600 21px/1.2 var(--ui); white-space: nowrap; }
+  #sheet td.n { text-align: left; } #sheet td.n img { width: 40px; height: 40px; border-radius: 50%; vertical-align: middle; margin-right: 10px; }
+  #sheet td.left { text-align: left; white-space: normal; }
+  #sheet td.left .mini { display: inline-flex; gap: 4px; vertical-align: middle; margin-right: 8px; }
+  #sheet td.left .mini span { display: block; width: 18px; height: 36px; }
+  #sheet td.plus { color: #1D7A45; font-weight: 800; }
+  #sheet td.tot { font-weight: 800; font-size: 24px; font-variant-numeric: tabular-nums; }
+  #sheet tr.win td { background: #FFF3CF; }
+  #sheet .head td { border-top: 0; font: 600 20px/1.2 var(--ui); color: #5A6461; }
+  #sheet button { min-height: 58px; font-size: 22px; padding-inline: 28px; }
+  #sheet.short { padding: 10px 18px 12px; }
+  #sheet.short td.left .mini { display: none; }
+  #sheet.short h2 { font-size: 26px; }
+  #sheet.short .sub { margin-bottom: 4px; }
+  #sheet.short td { padding: 2px 8px; }
+  #sheet.short td.n img { width: 30px; height: 30px; }
+  #sheet.short table { margin-bottom: 8px; }
+
+  /* ---------- A low window: smaller places, so the line keeps its room ---------- */
+  #table.low .seat .now { display: none; }
+  #table.low #board:not(.top) .seat { padding: 10px 8px; }
+  #table.low .ava { width: 48px; height: 48px; }
+  #table.low #me { padding-top: 6px; }
+  #table.low #stack { display: none; }
+  #table.low #sheet h2 { font-size: 26px; }
+  #table.low #sheet td { padding: 3px 8px; }
+
+  /* A phone: the two players in a row on top, the mat, then his dominoes and the pioche. */
+  @media (max-width: 700px) {
+    #table { padding: 6px 6px 8px; gap: 6px; }
+    #board { gap: 6px; }
+    .seat { padding: 6px 8px 6px 6px; gap: 6px; border-radius: 14px; }
+    .seat b { font-size: 15px; } .seat .pts, .seat .now { font-size: 14px; }
+    #board.top .ava { width: 34px; height: 34px; }
+    #me { flex-wrap: wrap; gap: 6px; padding-top: 4px; }
+    #seat0 { order: 2; padding: 4px 10px 4px 4px; }
+    #seat0 .ava { width: 34px; height: 34px; } #seat0 .now { display: none; }
+    #table { overflow-y: auto; touch-action: pan-y; }
+    #board { flex: 1 0 auto; }
+    #board.top { grid-template-rows: auto minmax(260px, 1fr); }
+    #pile { order: 3; flex-direction: row; }
+    #hand { order: 1; flex-basis: 100%; }
+    #stack { display: none; }
+    #count { font-size: 15px; }
+    #drawBtn { min-height: 46px; font-size: 17px; padding-inline: 14px; }
+    #plaque { font-size: 14px; padding: 2px 10px; bottom: -10px; }
+    #sheet { padding: 10px; } #sheet h2 { font-size: 20px; } #sheet .sub, #sheet td { font-size: 14px; } #sheet td.tot { font-size: 16px; }
+    #sheet td.n img { width: 26px; height: 26px; margin-right: 4px; }
+    #sheet button { min-height: 46px; font-size: 17px; }
+    .dom .tag { font-size: 13px; }
+  }
+
+  /* ---------- The rules guide ----------
+     Each page: one picture on a piece of the green mat, made of the real dominoes, then one or two short
+     sentences. The pictures use their own classes, so only the real dominoes play. */
+  #help { --guide-edge: #10261B; --guide-more: #3A4542; }
+  .dg-pic { --u: 48px; position: relative; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px 22px; margin: 2px 0 12px; padding: 18px 16px;
+    border-radius: 18px; background: radial-gradient(80% 100% at 50% 30%, #2F6E52, #1E4A37 70%); box-shadow: inset 0 0 0 3px #0E2419, inset 0 0 0 6px #C9A45C; }
+  .dg-col { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .dg-row { display: flex; align-items: center; justify-content: center; }
+  .gd { position: relative; flex: none; width: calc(var(--u) * 2); height: var(--u); }
+  .gd.v { width: var(--u); height: calc(var(--u) * 2); }
+  .gd.ghost { display: block; position: relative; animation: none; }
+  .gd.ghost.here { background: rgba(255,200,61,.55); border-style: solid; }
+  .dg-hand { display: flex; align-items: flex-end; gap: 16px; --u: 52px; }
+  .dg-hand .gd.can { translate: 0 -8px; }
+  .dg-hand .gd.can::after, .dg-hand .gd.pick::after { content: ""; position: absolute; inset: -7px; border-radius: 22%; border: 4px dashed var(--gold); box-shadow: 0 0 0 1.5px rgba(0,0,0,.55); }
+  .dg-hand .gd.pick { translate: 0 -14px; }
+  .dg-hand .gd.pick::after { border: 5px solid var(--gold); }
+  .dg-hand .gd.here::after { border: 5px solid var(--gold); box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--guide-edge); }
+  .gd .guide-hand { left: 30%; top: 55%; }
+  .ghost .guide-hand { left: 30%; top: 40%; }
+  .dg-pile { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .dg-pile .guide-btn .guide-hand { left: calc(100% - 22px); top: 40%; }
+  .dg-way { width: 316px; height: 200px; }
+  .dg-way .who { font: 700 15px var(--ui); fill: #1E2622; }
+  .dg-count { display: flex; flex-wrap: wrap; justify-content: center; align-items: stretch; gap: 12px 18px; --u: 40px; }
+  .dg-count .box { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 14px; background: var(--paper); color: var(--ink); box-shadow: 0 6px 16px rgba(0,0,0,.35); }
+  .dg-count .box b { font: 700 20px/1.2 var(--ui); }
+  .dg-count .box .row { display: flex; gap: 6px; }
+  .dg-count .box em { font: 800 24px/1 var(--ui); font-style: normal; }
+  .dg-count .box.win { background: #FFF3CF; }
+  .dg-count .box.win em { color: #1D7A45; margin: auto 0; font-size: 34px; }
+  html.low .dg-pic { --u: 32px; padding: 10px; margin-bottom: 8px; }
+  html.low .dg-hand { --u: 34px; }
+  html.low .dg-way { width: 260px; height: 164px; }
+  html.low .dg-count { --u: 26px; }
+  @media (max-width: 700px) {
+    .dg-pic { --u: 22px; padding: 12px 8px; gap: 10px; }
+    .dg-hand { --u: 26px; gap: 8px; }
+    .dg-count { --u: 16px; }
+    .dg-count .box b { font-size: 15px; } .dg-count .box em { font-size: 18px; }
+    .dg-way { width: 220px; height: 140px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ghost, .dom.can::after, .dom.hint::before, .dom.shake, .lt.fresh::after { animation: none; }
+    .dom, .seat { transition: none; }
+  }
+</style>
+<script src="../lib/zoom.js"></script>
+<script src="../lib/sound.js"></script>
+<script src="../lib/ph.js"></script>
+</head>
+<body>
+<svg id="defs" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="dFace" x1="0" y1="0" x2=".85" y2="1"><stop offset="0" stop-color="#FFFFFB"/><stop offset=".55" stop-color="#FBF5E6"/><stop offset="1" stop-color="#EDE1C6"/></linearGradient>
+  <radialGradient id="dGloss" cx=".28" cy=".2" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".8"/><stop offset=".55" stop-color="#fff" stop-opacity=".1"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+  <radialGradient id="dPip" cx=".4" cy=".35" r=".75"><stop offset="0" stop-color="#3C3632"/><stop offset=".6" stop-color="#14110F"/><stop offset="1" stop-color="#000"/></radialGradient>
+  <radialGradient id="dPin" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#FFF0B8"/><stop offset=".5" stop-color="#C9A04A"/><stop offset="1" stop-color="#7A5A1E"/></radialGradient>
+  <linearGradient id="dBack" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3E3129"/><stop offset="1" stop-color="#15100C"/></linearGradient>
+</defs></svg>
+<div id="bar">
+  <div id="title"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="1.5" width="12" height="21" rx="3" fill="#FFFDF6" stroke="#1E3A2C" stroke-width="1.5"/><path d="M7.5 12h9" stroke="#1E3A2C" stroke-width="1.3"/><g fill="#1B1B1B"><circle cx="9.4" cy="5.4" r="1.25"/><circle cx="14.6" cy="8.6" r="1.25"/><circle cx="9.4" cy="15.4" r="1.25"/><circle cx="14.6" cy="15.4" r="1.25"/><circle cx="12" cy="17.6" r="1.25"/><circle cx="9.4" cy="19.8" r="1.25"/><circle cx="14.6" cy="19.8" r="1.25"/></g></svg>Dominos</div>
+  <button id="undoBtn" data-icon="undo" title="Reprend le dernier domino que vous avez posé"><span class="long">Annuler le dernier coup</span><span class="short">Annuler le coup</span><span class="tiny">Annuler</span></button>
+  <button id="hintBtn" class="primary" data-icon="bulb" title="Montre le domino à poser, ou s'il faut piocher"><span class="long">Que jouer maintenant ?</span><span class="short">Que jouer ?</span><span class="tiny">Idée</span></button>
+  <span class="spacer"></span>
+  <button id="helpBtn" data-icon="help">Règles</button>
+  <button id="newBtn" class="game">Nouvelle partie</button>
+</div>
+<div id="say"><div id="msg" aria-live="polite"></div></div>
+<div id="table">
+  <div id="board">
+    <div class="seat" id="seat2"></div>
+    <div id="mat">
+      <svg id="way" aria-hidden="true"></svg>
+      <div id="line" aria-label="La ligne de dominos"></div>
+      <div id="plaque"></div>
+    </div>
+    <div class="seat" id="seat1"></div>
+  </div>
+  <div id="me">
+    <div class="seat" id="seat0"></div>
+    <div id="hand" role="group" aria-label="Vos dominos"></div>
+    <div id="pile">
+      <div id="stack" aria-hidden="true"></div>
+      <div id="count"></div>
+      <button id="drawBtn" class="primary">Piocher</button>
+    </div>
+  </div>
+  <div id="sheet" hidden role="region" aria-label="Fin de la manche"></div>
+</div>
+<footer id="rail"><div class="zoom"></div></footer>
+<div id="help" data-title="Comment jouer">
+  <section class="page">
+    <h3>Poser un domino</h3>
+    <div class="dg-pic" aria-hidden="true">
+      <div class="dg-col">
+        <div class="dg-row" data-line="4-1,1-6"></div>
+        <div class="dg-hand" data-hand="6-2:can here,3-3,5-0"></div>
+      </div>
+    </div>
+    <p class="guide-lead">Cliquez sur un domino qui touche un bout de la ligne.</p>
+    <p class="guide-more">Le six-deux va sur le 6. Le premier qui pose tous ses dominos gagne la manche.</p>
+  </section>
+  <section class="page">
+    <h3>Choisir le bout</h3>
+    <div class="dg-pic" aria-hidden="true">
+      <div class="dg-col">
+        <div class="dg-row" data-line="ghost,4-1,1-6,ghost:here"></div>
+        <div class="dg-hand" data-hand="6-4:pick,3-3,5-0"></div>
+      </div>
+    </div>
+    <p class="guide-lead">Il va aux deux bouts&nbsp;? Cliquez sur le bout choisi.</p>
+    <p class="guide-more">Les deux places sont encadrées en jaune.</p>
+  </section>
+  <section class="page">
+    <h3>Piocher</h3>
+    <div class="dg-pic" aria-hidden="true">
+      <div class="dg-col">
+        <div class="dg-row" data-line="4-1,1-6"></div>
+        <div class="dg-hand" data-hand="3-3,5-0,2-2"></div>
+      </div>
+      <div class="dg-pile"><span class="guide-btn primary here">Piocher</span></div>
+    </div>
+    <p class="guide-lead">Aucun domino ne va&nbsp;? Cliquez sur «&nbsp;Piocher&nbsp;».</p>
+    <p class="guide-more">Piochez jusqu’à en trouver un. Pioche vide&nbsp;: «&nbsp;Passer mon tour&nbsp;».</p>
+  </section>
+  <section class="page">
+    <h3>Chacun son tour</h3>
+    <div class="dg-pic" aria-hidden="true">
+      <svg class="dg-way" viewBox="0 0 300 190">
+        <rect x="44" y="34" width="212" height="122" rx="22" fill="#1E4A37" stroke="#C9A45C" stroke-width="2.5"/>
+        <path d="M168 150 H222 Q246 150 246 126 V108" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M237 114 L246 100 L255 114 Z" fill="#fff"/>
+        <path d="M246 84 V62 Q246 42 226 42 H74 Q54 42 54 62 V78" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M45 72 L54 86 L63 72 Z" fill="#fff"/>
+        <path d="M54 104 V126 Q54 150 78 150 H124" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M118 141 L132 150 L118 159 Z" fill="#fff"/>
+        <g><circle cx="150" cy="166" r="22" fill="#FFF9EC" stroke="#8FE0B6" stroke-width="4"/><text class="who" x="150" y="171" text-anchor="middle">Vous</text></g>
+        <g><circle cx="276" cy="95" r="22" fill="#FFF9EC"/><text class="who" x="276" y="100" text-anchor="middle">2</text></g>
+        <g><circle cx="24" cy="95" r="22" fill="#FFF9EC"/><text class="who" x="24" y="100" text-anchor="middle">3</text></g>
+      </svg>
+    </div>
+    <p class="guide-lead">On joue vers la droite, à l’inverse des aiguilles d’une montre.</p>
+    <p class="guide-more">Le plus gros double commence chaque manche.</p>
+  </section>
+  <section class="page">
+    <h3>Compter les points</h3>
+    <div class="dg-pic" aria-hidden="true">
+      <div class="dg-count">
+        <div class="box"><b>Joueur 2</b><div class="row" data-hand="6-4,2-1"></div><em>13</em></div>
+        <div class="box"><b>Joueur 3</b><div class="row" data-hand="5-5"></div><em>10</em></div>
+        <div class="box win"><b>Vous&nbsp;: Domino&nbsp;!</b><em class="big">+23</em></div>
+      </div>
+    </div>
+    <p class="guide-lead">Le gagnant marque les points restés chez les autres.</p>
+    <p class="guide-more">Ligne bloquée&nbsp;: le plus petit total gagne. Le premier à 100&nbsp;points gagne la partie.</p>
+  </section>
+</div>
+
+<script src="../lib/store.js"></script>
+<script src="../lib/kit.js"></script>
+<script src="engine.js"></script>
+<script src="line.js"></script>
+<script>
+'use strict';
+const D = Dominos;
+const $ = id => document.getElementById(id);
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const FIRST_MS = 900;   // before a computer player's first step, so his own domino is seen landing first
+const STEP_MS = 1100;   // between two dominoes laid by the computer players
+const DRAW_MS = 700;    // between two dominoes drawn
+const END_MS = 900;     // the last domino of a manche lands before the sheet shows
+const FLY_MS = 520;     // a domino travels to its place
+
+// The players the computer can seat. Each new game seats two, not the ones before.
+const CAST = {
+  jeanne: { she: true, name: 'Jeanne', color: '#F2B8A8' }, louise: { she: true, name: 'Louise', color: '#BFE3C0' },
+  simone: { she: true, name: 'Simone', color: '#B9D7F0' }, odette: { she: true, name: 'Odette', color: '#D8C8F0' },
+  colette: { she: true, name: 'Colette', color: '#F5E2A0' }, yvonne: { she: true, name: 'Yvonne', color: '#F7CFA8' },
+  paul: { name: 'Paul', color: '#B4CCE8' }, marcel: { name: 'Marcel', color: '#E8D5B0' },
+  rene: { name: 'René', color: '#B0E0DA' }, andre: { name: 'André', color: '#CDE6B8' },
+  henri: { name: 'Henri', color: '#F0C6D0' }, gaston: { name: 'Gaston', color: '#D6CCEE' },
+};
+let cast = ['marcel', 'odette'];   // the player on his right (1), then on his left (2)
+const who = p => p === 0 ? 'Vous' : CAST[cast[p - 1]].name;
+const pron = p => CAST[cast[p - 1]].she ? 'elle' : 'il';
+function newCast() {
+  const pool = Object.keys(CAST).filter(id => !cast.includes(id));
+  const a = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+  const b = pool[Math.floor(Math.random() * pool.length)];
+  cast = [a, b];
+}
+
+/* ---------- The dominoes, drawn in SVG ----------
+   Ivory with a soft light from the top left, a thickness under the face, a black line across the middle
+   with a brass pin, and black pips sunk into the face. The pips are set for a domino standing up; a domino
+   lying down turns them. */
+const PIPS = { 0: [], 1: [[50, 50]], 2: [[27, 27], [73, 73]], 3: [[25, 25], [50, 50], [75, 75]], 4: [[27, 27], [73, 27], [27, 73], [73, 73]],
+  5: [[26, 26], [74, 26], [50, 50], [26, 74], [74, 74]], 6: [[28, 22], [72, 22], [28, 50], [72, 50], [28, 78], [72, 78]] };
+// a: the top (or left) half, b: the bottom (or right) half.
+function dominoSvg(a, b, vertical) {
+  const W = vertical ? 100 : 200, H = vertical ? 200 : 100;
+  const face = vertical ? 195 : 95;   // the face, above the thickness
+  let pips = '';
+  const half = (n, k) => PIPS[n].map(([x, y]) => {
+    const [px, py] = vertical ? [x, y * .975 + k * 97.5] : [y + k * 100, x * .95];
+    return `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="9.6" fill="url(#dPip)"/><path d="M${(px - 7).toFixed(1)} ${(py + 5).toFixed(1)}a9 9 0 0 0 14 0" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.6"/>`;
+  }).join('');
+  pips = half(a, 0) + half(b, 1);
+  const line = vertical ? `<path d="M13 97.5H87" stroke="#2C2520" stroke-width="3.4" stroke-linecap="round"/><circle cx="50" cy="97.5" r="5.6" fill="url(#dPin)" stroke="#6B4E1C" stroke-width=".8"/>`
+    : `<path d="M100 12V83" stroke="#2C2520" stroke-width="3.4" stroke-linecap="round"/><circle cx="100" cy="47.5" r="5.6" fill="url(#dPin)" stroke="#6B4E1C" stroke-width=".8"/>`;
+  return `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true">`
+    + `<rect x="3" y="8" width="${W}" height="${H - 2}" rx="15" fill="rgba(0,0,0,.34)"/>`
+    + `<rect x="0" y="2" width="${W}" height="${H - 2}" rx="15" fill="#CDBE9C"/>`
+    + `<rect x="0" y="0" width="${W}" height="${face}" rx="15" fill="url(#dFace)"/>`
+    + `<rect x="0" y="0" width="${W}" height="${face}" rx="15" fill="url(#dGloss)"/>`
+    + `<rect x="3" y="3" width="${W - 6}" height="${face - 6}" rx="12" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width="2"/>`
+    + line + pips + '</svg>';
+}
+// The back of a domino: dark ebony with a thin gold frame and the brass pin.
+const backSvg = vertical => { const W = vertical ? 100 : 200, H = vertical ? 200 : 100;
+  return `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true"><rect x="3" y="8" width="${W}" height="${H - 2}" rx="15" fill="rgba(0,0,0,.34)"/><rect width="${W}" height="${H - 2}" rx="15" fill="url(#dBack)"/>`
+    + `<rect x="7" y="7" width="${W - 14}" height="${H - 16}" rx="10" fill="none" stroke="#B48A3C" stroke-width="3"/><circle cx="${W / 2}" cy="${(H - 2) / 2}" r="7" fill="url(#dPin)"/></svg>`; };
+// A tile in his hand stands up, its larger number on top.
+const handSvg = t => { const [a, b] = D.TILES[t]; return dominoSvg(b, a, true); };
+
+/* ---------- State ----------
+   G: the game (see engine.js). view: the game on screen; it differs from G while the computer players'
+   turn is shown step by step. undo: the games before each domino he laid in this manche, as JSON.
+   pick: the domino he chose, when it goes at both ends. hint: what the hint shows, until his next action. */
+let G, view, undo = [], level = 'facile', stats = { won: 0 }, wonNow = false, pick = null, hint = null, timers = [], showing = false;
+let stale = false, saved = true, fresh = null, drawn = null;
+addEventListener('gg-stale', () => { stale = true; });
+// French print: a space that never breaks before : ; ! ? and inside « ».
+const nb = t => t.replace(/ ([:;!?»])/g, '\u00a0$1').replace(/« /g, '«\u00a0');
+const say = t => Kit.say(nb(t));
+const plural = (n, one, many) => n === 1 ? `1 ${one}` : `${n} ${many}`;
+const pts = n => n === 0 ? '0 point' : plural(n, 'point', 'points');
+const busy = () => showing;
+const mine = () => G && !G.end && !G.result && G.turn === 0 && !busy();
+const playing = () => G && !G.result && (G.manche > 1 || G.line.length > 0 || G.scores.some(s => s));
+const tname = t => D.name(t);
+const Tname = t => { const s = D.name(t); return s[0].toUpperCase() + s.slice(1); };
+const marks = () => level === 'facile';
+
+/* ---------- Saves ---------- */
+async function save() {
+  const parts = [];
+  if (playing()) parts.push('Partie en cours');
+  if (stats.won) parts.push(stats.won === 1 ? '1 victoire' : `${stats.won} victoires`);
+  const data = { v: 1, G, cast, undo, level, stats, wonNow };
+  if (await GG.save('dominos', data, { summary: parts.join(' · '), undoLimits: [Infinity, 8, 2, 0] })) return (saved = true);
+  if (stale) return (saved = false);
+  saved = false;
+  say("La partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.");
+  return false;
+}
+function load() {
+  try {
+    const v = GG.load('dominos');
+    // A save without a known level still loads, at Facile.
+    if (v && v.G && !Object.hasOwn(D.LEVELS, v.G.level)) v.G.level = 'facile';
+    if (!v || !D.valid(v.G)) return false;
+    G = view = v.G; level = G.level; wonNow = !!v.wonNow;
+    undo = (Array.isArray(v.undo) ? v.undo : []).filter(u => { try { const g = JSON.parse(u); return D.valid(g) && g.turn === 0 && !g.end && g.manche === G.manche; } catch (e) { return false; } });
+    stats = { won: 0, ...(v.stats || {}) };
+    if (Array.isArray(v.cast) && v.cast.length === 2 && v.cast.every(id => Object.hasOwn(CAST, id)) && v.cast[0] !== v.cast[1]) cast = v.cast;
+    return true;
+  } catch (e) { return false; }
+}
+
+/* ---------- Words ---------- */
+const endsText = g => { const [l, r] = D.ends(g); return l === r ? `les deux bouts montrent le ${l}` : `les bouts montrent le ${l} et le ${r}`; };
+function turnText() {
+  if (!G.line.length) return `Vous avez ${tname(G.opening)}, le plus gros : cliquez dessus pour commencer.`;
+  if (D.legal(G).length) return marks() ? 'À vous : cliquez sur un domino encadré en jaune.' : 'À vous : cliquez sur un domino à poser.';
+  if (G.stock.length) return `Aucun domino ne se pose, ${endsText(G)} : cliquez sur « Piocher ».`;
+  return 'Aucun domino ne se pose et la pioche est vide : cliquez sur « Passer mon tour ».';
+}
+// What a computer player did, for the message line.
+function stepText(s, p) {
+  if (s.did === 'play') return s.side === 'C' ? `${who(p)} commence avec ${tname(s.t)}.` : `${who(p)} pose ${tname(s.t)}.`;
+  if (s.did === 'draw') return `${who(p)} pioche un domino.`;
+  return `${who(p)} ne peut pas jouer : ${pron(p)} passe.`;
+}
+// The coach of his first game points at the next thing to click.
+function coach() {
+  if (!Kit.coaching() || !mine()) return;
+  const a = D.advice(G);
+  if (!a) return;
+  if (a.kind !== 'play') return Kit.point($('drawBtn'));
+  if (pick !== null) return Kit.point($('ghost' + (pick === a.t ? a.side : D.fits(G, pick)[0])));
+  Kit.point(handEl(a.t));
+}
+
+/* ---------- His actions ---------- */
+let lastTap = null;
+// A second click on the same thing within half a second is a double-click: it counts as one click.
+function once(key) {
+  const t = performance.now(), prev = lastTap;
+  lastTap = { key, t };
+  return !(prev && t - prev.t < 500 && prev.key === key);
+}
+function refuseBusy() {
+  if (G.result) return say('La partie est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.'), true;
+  if (G.end) return say('La manche est finie : cliquez sur « Manche suivante ».'), true;
+  if (busy() || G.turn !== 0) return say(`Attendez : c'est à ${who(view.turn)} de jouer.`), true;
+  return false;
+}
+function tapTile(t) {
+  if (Kit.isOpen() || refuseBusy()) return;
+  const sides = D.fits(G, t);
+  if (!sides.length) {
+    shake(handEl(t));
+    if (!G.line.length) return say(`Commencez par ${tname(G.opening)} : c'est le plus gros domino de la manche.`);
+    const rest = D.legal(G).length ? (marks() ? ' Cliquez sur un domino encadré.' : ' Cliquez sur un autre domino.')
+      : G.stock.length ? ' Aucun ne se pose : cliquez sur « Piocher ».' : ' Aucun ne se pose : cliquez sur « Passer mon tour ».';
+    return say(`${Tname(t)} ne se pose pas : ${endsText(G)}.${rest}`);
+  }
+  if (pick === t) { pick = null; hint = null; window.Sound?.play('tap'); render(); say(turnText()); return coach(); }
+  // At both ends: if the two ends show the same number, it changes nothing for the game, and it goes on the
+  // shorter side so the line stays in the middle. Otherwise he picks the end.
+  if (sides.length === 2) {
+    const [l, r] = D.ends(G);
+    if (l !== r) {
+      pick = t;
+      if (hint && hint.t !== t) hint = null;
+      window.Sound?.play('tap');
+      render();
+      say(`${Tname(t)} se pose aux deux bouts : cliquez sur le bout encadré en jaune où le poser.`);
+      return coach();
+    }
+    return lay(t, G.first < G.line.length - 1 - G.first ? 'L' : 'R');
+  }
+  lay(t, sides[0]);
+}
+function tapEnd(side) {
+  if (Kit.isOpen() || refuseBusy()) return;
+  if (pick === null) return say(marks() ? "Cliquez d'abord sur un domino encadré de votre main." : "Cliquez d'abord sur un domino de votre main.");
+  lay(pick, side);
+}
+async function lay(t, side) {
+  const from = handEl(t)?.getBoundingClientRect();
+  undo.push(JSON.stringify(G));
+  G = view = D.play(G, t, side);
+  pick = null; hint = null; drawn = null;
+  fresh = { t, from };
+  window.Sound?.play('piece');
+  const current = G;
+  const done = commit();
+  render();
+  say(side === 'C' ? `Vous commencez avec ${tname(t)}.` : G.end ? `Vous posez ${tname(t)}.` : `Vous posez ${tname(t)}. ${who(G.turn)} joue.`);
+  if (!(await done) || G !== current) return;
+  if (G.end) return later(endManche, REDUCED ? 0 : END_MS);
+  runComputers();
+}
+async function doDraw() {
+  if (Kit.isOpen() || refuseBusy()) return;
+  if (D.legal(G).length) return say(marks() ? 'Un de vos dominos se pose : cliquez sur un domino encadré en jaune.' : 'Un de vos dominos se pose : cliquez dessus.');
+  if (!G.stock.length) {
+    // The pioche is empty: he passes.
+    undo = [];
+    G = view = D.pass(G);
+    pick = null; hint = null;
+    window.Sound?.play('tap');
+    const current = G, done = commit();
+    render();
+    say('Vous passez votre tour.');
+    if (!(await done) || G !== current) return;
+    if (G.end) return later(endManche, REDUCED ? 0 : END_MS);
+    return runComputers();
+  }
+  G = view = D.draw(G);
+  const t = G.last.t;
+  hint = null; drawn = t;
+  fresh = { t, from: $('stack').getBoundingClientRect(), hand: true };
+  window.Sound?.play('piece');
+  save(); render();
+  if (!saved) return;
+  const fits = D.fits(G, t).length;
+  say(fits ? `Vous piochez ${tname(t)} : il se pose. Cliquez dessus.`
+    : G.stock.length ? `Vous piochez ${tname(t)} : il ne se pose pas. Cliquez encore sur « Piocher ».`
+    : `Vous piochez ${tname(t)} : il ne se pose pas, et la pioche est vide. Cliquez sur « Passer mon tour ».`);
+  coach();
+}
+// Counts a win once, and saves.
+async function commit() {
+  const firstWin = G.result === 'won' && !wonNow;
+  if (firstWin) { wonNow = true; stats.won++; }
+  if (await save()) { if (firstWin) GG.track('dominos', 'won'); return true; }
+  if (firstWin) { wonNow = false; stats.won--; }
+  return false;
+}
+
+/* ---------- The computer players ----------
+   Each player's turn is shown one step at a time, then saved. It depends only on the saved game, so a
+   reload during it plays the same turn again, and an undo during it takes it back with his domino. */
+function runComputers() {
+  if (G.end || G.turn === 0) { showing = false; return afterComputers(); }
+  showing = true;
+  const p = G.turn, steps = D.computerTurn(G);
+  let at = 0;
+  view = G;
+  render();
+  const show = () => {
+    const s = steps[at++];
+    view = s.G;
+    if (s.did === 'play') { fresh = { t: s.t, from: seatRect(p) }; window.Sound?.play('piece'); }
+    else if (s.did === 'draw') { flyBack($('stack').getBoundingClientRect(), seatRect(p)); window.Sound?.play('tap'); }
+    say(stepText(s, p));
+    render();
+    if (at < steps.length) return later(show, REDUCED ? 250 : s.did === 'draw' ? DRAW_MS : STEP_MS);
+    later(() => done(s), REDUCED ? 250 : s.G.end ? END_MS : s.did === 'pass' ? 900 : 700);
+  };
+  const done = async s => {
+    G = s.G; view = G;
+    const ok = await commit();
+    if (G !== s.G) return;
+    if (!ok) { showing = false; render(); return; }
+    if (G.end) { showing = false; return endManche(); }
+    runComputers();
+  };
+  later(show, REDUCED ? 200 : FIRST_MS);
+}
+function afterComputers() {
+  render();
+  if (stale) return;
+  const last = G.last;
+  if (last && last.p !== 0) {
+    const s = last.kind === 'play' ? `${who(last.p)} pose ${tname(last.t)}.` : last.kind === 'pass' ? stepText({ did: 'pass' }, last.p) : '';
+    say((s ? s + '\n' : '') + turnText());
+  } else say(turnText());
+  window.Sound?.play('turn');
+  coach();
+}
+
+/* ---------- The end of a manche, and of the game ---------- */
+// show: false when a saved game opens on its end: no sound and no dialog, only the sheet and the line.
+function endManche(show = true) {
+  hint = null; pick = null;
+  render();
+  const e = G.end;
+  if (G.result) {
+    Kit.gameOver(true);
+    if (show) later(() => window.Sound?.play(G.result === 'won' ? 'win' : 'lose'), 300);
+  } else if (e.winner === 0 && show) window.Sound?.play('good');
+  const head = e.winner === null ? 'Ligne bloquée, égalité : personne ne marque.'
+    : e.blocked ? (e.winner === 0 ? `Ligne bloquée : vous avez le plus petit total et marquez ${pts(e.points)}.` : `Ligne bloquée : ${who(e.winner)} a le plus petit total et marque ${pts(e.points)}.`)
+    : e.winner === 0 ? `Domino ! Vous avez posé tous vos dominos : vous marquez ${pts(e.points)}.` : `Domino ! ${who(e.winner)} a posé tous ses dominos et marque ${pts(e.points)}.`;
+  if (!G.result) return say(`${head} Cliquez sur « Manche suivante ».`);
+  const order = [0, 1, 2].sort((a, b) => G.scores[b] - G.scores[a]);
+  const lines = order.map(p => `${p === 0 ? 'Vous' : who(p)} : ${pts(G.scores[p])}`).join('\n');
+  const nth = !wonNow ? '' : stats.won === 1 ? "\nC'est votre première victoire." : `\nC'est votre ${stats.won}e victoire.`;
+  const lost = saved ? '' : "\nLa partie n'a pas pu être enregistrée : la mémoire de l'ordinateur est pleine.";
+  const dialog = (title, text, ...rest) => { if (show && !Kit.isOpen()) Kit.dialog(nb(title), nb(text), ...rest); };
+  if (G.result === 'won') {
+    say(`Bravo, vous avez gagné avec ${pts(G.scores[0])} ! Cliquez sur « Nouvelle partie » pour rejouer.`);
+    later(() => dialog('Bravo, vous avez gagné !', `Vous atteignez ${D.TARGET} points.\n${lines}${nth}${lost}`, [['Nouvelle partie', askNewGame, true], ['Retour aux jeux', Kit.home]], true), REDUCED ? 0 : 1400);
+  } else {
+    const w = order[0];
+    say(`${who(w)} a gagné la partie. Cliquez sur « Nouvelle partie » pour rejouer.`);
+    later(() => dialog(`${who(w)} a gagné`, `${who(w)} atteint ${D.TARGET} points.\n${lines}${lost}`,
+      [['Nouvelle partie', askNewGame, true], ...(undo.length ? [['Annuler le dernier coup', doUndo]] : []), ['Retour aux jeux', Kit.home]]), REDUCED ? 0 : 1400);
+  }
+}
+async function nextManche() {
+  if (Kit.isOpen() || !G.end || G.result) return;
+  calm();
+  G = view = D.nextManche(G);
+  undo = []; pick = null; hint = null; drawn = null;
+  lineU = Infinity;
+  window.Sound?.play('shuffle');
+  const current = G;
+  const ok = await save();
+  render();
+  if (!ok || G !== current) return;
+  startManche();
+}
+// The first player of a manche: him, or the computer players until his turn.
+function startManche() {
+  const p = G.turn;
+  if (p === 0) { say(`Manche ${G.manche}. ${turnText()}`); return coach(); }
+  say(`Manche ${G.manche}. ${who(p)} a ${tname(G.opening)}, le plus gros : il commence.`);
+  runComputers();
+}
+
+/* ---------- Buttons ---------- */
+function later(fn, ms) { const t = setTimeout(() => { timers = timers.filter(x => x !== t); fn(); }, ms); timers.push(t); return t; }
+function calm() { timers.forEach(clearTimeout); timers = []; showing = false; }
+function doUndo() {
+  if (!undo.length) return;
+  calm();
+  Kit.closeDialog();
+  G = view = JSON.parse(undo.pop()); pick = null; hint = null; fresh = null; drawn = null;
+  save(); render();
+  if (saved) say(`Coup annulé : votre domino est revenu dans votre main.\n${turnText()}`);
+  coach();
+}
+function showHint() {
+  if (Kit.isOpen() || refuseBusy()) return;
+  const a = D.advice(G);
+  if (a.kind !== 'play') { hint = null; render(); return say(turnText()); }
+  hint = { t: a.t, side: a.side };
+  const two = D.fits(G, a.t).length === 2 && new Set(D.ends(G)).size === 2;
+  if (pick !== null && pick !== a.t) pick = null;
+  render();
+  if (a.side === 'C') return say(`Commencez avec ${tname(a.t)} : cliquez sur le domino entouré.`);
+  const end = a.side === 'L' ? D.ends(G)[0] : D.ends(G)[1];
+  say(two ? `Posez ${tname(a.t)} au bout du ${end} : cliquez sur le domino entouré, puis sur ce bout.` : `Posez ${tname(a.t)} : cliquez sur le domino entouré.`);
+}
+function askNewGame() { Kit.chooseLevel(level, playing(), newGame); }
+async function newGame(lv) {
+  calm();
+  if (lv) level = lv;
+  Kit.showLevel(level);
+  newCast();
+  const seed = crypto.getRandomValues(new Uint32Array(1))[0];
+  G = view = D.newGame(level, seed); undo = []; pick = null; hint = null; wonNow = false; fresh = null; drawn = null;
+  lineU = Infinity;
+  const written = save();
+  render();
+  if (!stale) {
+    say(`Vous jouez contre ${who(1)} et ${who(2)}, en ${D.TARGET} points.`);
+    // The names stay in the message line a moment before the first domino, even without motion.
+    later(() => startManche(), 1600);
+  }
+  coach();
+  if (await written) GG.track('dominos', 'start');
+}
+
+/* ---------- Drawing ---------- */
+const handEl = t => $('hand').querySelector(`.dom[data-t="${t}"]`);
+const seatRect = p => $('seat' + p).querySelector('.ava').getBoundingClientRect();
+const face = p => p === 0 ? '<img class="ava" src="../lib/avatars/vous.webp" alt="" style="background:#C9951A">'
+  : `<img class="ava" src="../lib/avatars/${cast[p - 1]}.webp" alt="" style="background:${CAST[cast[p - 1]].color}">`;
+function seatHtml(g, p) {
+  const n = g.hands[p].length, turn = !g.end && !g.result && g.turn === p;
+  let now;
+  if (p === 0) now = turn ? (busy() ? 'Attendez' : 'À vous de jouer') : g.end ? (g.end.winner === 0 ? 'Gagne la manche' : 'Manche finie') : 'Attend son tour';
+  else now = turn ? (busy() ? 'Joue…' : 'Va jouer') : g.end && g.end.winner === p ? 'Gagne la manche' : plural(n, 'domino', 'dominos');
+  const backs = p === 0 ? '' : `<div class="backs" aria-hidden="true">${'<i></i>'.repeat(n)}</div>`;
+  return `${face(p)}<div class="who"><b>${who(p)}</b><span class="pts">${pts(g.scores[p])}</span><span class="now">${now}</span></div>${backs}`;
+}
+
+// The line: each domino keeps its element, so a domino that moves (the line closes up when it grows)
+// slides to its new place. lineU: the size of a unit, which only shrinks during a manche, so the line
+// never grows back and forth.
+let lineU = Infinity, lineOff = 0;
+const lineEls = new Map();
+function fitLine(g, W, H) {
+  const top = Math.min(lineU, 58, Math.floor(W / 10), Math.floor(H / 2.6));
+  for (let u = Math.max(12, top); u >= 12; u--) {
+    const C = Math.floor(W / u);
+    if (C < 8) continue;
+    const { off, rects, bounds: b } = DominoLine.best(g.line, g.first, C, lineOff);
+    if ((b.maxY - b.minY) * u <= H || u === 12) { lineOff = off; return { u, rects, b }; }
+  }
+}
+function renderLine(g) {
+  const box = $('line'), W = box.clientWidth, H = box.clientHeight, z = window.Zoom ? Zoom.z() : 1;
+  if (!g.line.length) { for (const el of lineEls.values()) el.remove(); lineEls.clear(); ['L', 'R'].forEach(s => $('ghost' + s).classList.remove('on')); return; }
+  const { u, rects, b } = fitLine(g, W, H);
+  lineU = u;
+  // The line in the middle of the mat, both ways.
+  const x0 = W / 2 - (b.minX + b.maxX) / 2 * u, y0 = (H - (b.maxY - b.minY) * u) / 2 - b.minY * u;
+  const keep = new Set();
+  for (const r of rects) {
+    const px = { left: x0 + r.x * u, top: y0 + r.y * u, w: r.w * u, h: r.h * u };
+    if (r.ghost) {
+      const el = $('ghost' + r.ghost);
+      Object.assign(el.style, { left: px.left + 'px', top: px.top + 'px', width: px.w + 'px', height: px.h + 'px' });
+      continue;
+    }
+    const x = g.line[r.i];
+    keep.add(x.t);
+    let el = lineEls.get(x.t);
+    const old = el ? el.getBoundingClientRect() : null;
+    if (!el) { el = document.createElement('div'); el.className = 'lt'; el.dataset.t = x.t; box.appendChild(el); lineEls.set(x.t, el); }
+    const vertical = r.dir === 'X' || r.dir === 'S' || r.dir === 'N';
+    const [a, bb] = r.dir === 'E' || r.dir === 'S' ? [r.vi, r.vo] : [r.vo, r.vi];
+    const key = `${vertical ? 'v' : 'h'}${a}${bb}`;
+    if (el.dataset.key !== key) { el.innerHTML = dominoSvg(a, bb, vertical); el.dataset.key = key; }
+    Object.assign(el.style, { left: px.left + 'px', top: px.top + 'px', width: px.w + 'px', height: px.h + 'px' });
+    el.setAttribute('aria-label', D.name(x.t));
+    const now = el.getBoundingClientRect();
+    const from = fresh && fresh.t === x.t && !fresh.hand ? fresh.from : old;
+    if (from && !REDUCED && (Math.abs(from.left - now.left) > 1 || Math.abs(from.top - now.top) > 1 || Math.abs(from.width - now.width) > 1)) {
+      const dx = (from.left + from.width / 2 - now.left - now.width / 2) / z, dy = (from.top + from.height / 2 - now.top - now.height / 2) / z;
+      const turn = (from.height > from.width) !== (now.height > now.width);
+      const s = turn ? Math.max(from.width, from.height) / Math.max(now.width, now.height) : from.width / now.width;
+      const fly = fresh && fresh.t === x.t;
+      el.animate([{ transform: `translate(${dx}px, ${dy}px) rotate(${turn ? 90 : 0}deg) scale(${s})`, zIndex: 3 }, { transform: 'none', zIndex: 3 }],
+        { duration: fly ? FLY_MS : 420, easing: 'cubic-bezier(.25,.8,.3,1)' });
+    }
+    if (fresh && fresh.t === x.t) { el.classList.remove('fresh'); void el.offsetWidth; el.classList.add('fresh'); }
+  }
+  for (const [t, el] of lineEls) if (!keep.has(t)) { el.remove(); lineEls.delete(t); }
+  // The free places at the two ends: framed while his domino goes at both, or for the hint.
+  for (const s of ['L', 'R']) {
+    const el = $('ghost' + s);
+    const on = mine() && pick !== null && D.fits(g, pick).includes(s);
+    el.classList.toggle('on', on);
+    el.classList.toggle('hint', on && !!hint && hint.t === pick && hint.side === s);
+    const end = s === 'L' ? D.ends(g)[0] : D.ends(g)[1];
+    el.setAttribute('aria-label', `Poser au bout du ${end}`);
+  }
+}
+// A domino face down flies from the pioche to a player.
+function flyBack(from, to) {
+  if (REDUCED || !from || !to) return;
+  const z = window.Zoom ? Zoom.z() : 1;
+  const el = document.createElement('div');
+  el.className = 'flying';
+  Object.assign(el.style, { position: 'fixed', zIndex: 3000, left: from.left / z + 'px', top: from.top / z + 'px', width: 46 + 'px', height: 92 + 'px', pointerEvents: 'none' });
+  el.innerHTML = backSvg(true);
+  document.body.appendChild(el);
+  const dx = (to.left + to.width / 2 - from.left - 23 * z) / z, dy = (to.top + to.height / 2 - from.top - 46 * z) / z;
+  el.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${dx}px, ${dy}px) scale(.5)`, opacity: .2 }], { duration: FLY_MS, easing: 'cubic-bezier(.3,.7,.3,1)' }).onfinish = () => el.remove();
+}
+
+function renderHand(g) {
+  const hand = $('hand'), z = window.Zoom ? Zoom.z() : 1;
+  const ids = g.hands[0];
+  const key = ids.join(',');
+  if (hand.dataset.key !== key) {
+    const before = new Map([...hand.querySelectorAll('.dom')].map(e => [+e.dataset.t, e.getBoundingClientRect()]));
+    hand.innerHTML = ids.map(t => `<button class="dom" data-t="${t}">${handSvg(t)}<span class="tag">Pioché</span></button>`).join('');
+    hand.dataset.key = key;
+    // The other dominoes slide to make room; a domino drawn comes from the pioche.
+    if (!REDUCED) for (const e of hand.querySelectorAll('.dom')) {
+      const t = +e.dataset.t, now = e.getBoundingClientRect();
+      const from = before.get(t) || (fresh && fresh.hand && fresh.t === t ? fresh.from : null);
+      if (!from) continue;
+      const dx = (from.left + from.width / 2 - now.left - now.width / 2) / z, dy = (from.top + from.height / 2 - now.top - now.height / 2) / z;
+      if (Math.abs(dx) + Math.abs(dy) < 2) continue;
+      const turn = from.width > from.height;
+      e.animate([{ transform: `translate(${dx}px, ${dy}px) rotate(${turn ? -90 : 0}deg)` }, { transform: 'none' }], { duration: before.has(t) ? 360 : FLY_MS, easing: 'cubic-bezier(.25,.8,.3,1)' });
+    }
+  }
+  const my = mine();
+  for (const e of hand.querySelectorAll('.dom')) {
+    const t = +e.dataset.t, sides = D.fits(g, t);
+    e.classList.toggle('can', my && marks() && sides.length > 0 && pick !== t);
+    e.classList.toggle('pick', my && pick === t);
+    e.classList.toggle('hint', my && !!hint && hint.t === t && pick !== t);
+    e.classList.toggle('new', my && drawn === t);
+    e.setAttribute('aria-label', `${D.name(t)}${my && marks() && sides.length ? ', se pose' : ''}${pick === t ? ', choisi' : ''}`);
+  }
+  $('me').classList.toggle('wait', !my);
+}
+
+// The way of play: three arrows on the mat, from him to the player on his right, to the one on his left,
+// and back to him, counter-clockwise. The arrow that leads to the player who plays now is bright.
+function renderWay(g) {
+  const svg = $('way'), w = svg.clientWidth, h = svg.clientHeight, i = 20, R = 36;
+  if (!w || !h) return;
+  const head = (x, y, dx, dy) => { const s = 9; return `M${x - dx * s * 1.4 - dy * s} ${y - dy * s * 1.4 + dx * s}L${x} ${y}L${x - dx * s * 1.4 + dy * s} ${y - dy * s * 1.4 - dx * s}`; };
+  const yMid1 = h * .58, yMid2 = h * .42;
+  const seg = [
+    // to the player on his right: from the bottom, round the corner, up the right side
+    `M${w * .66} ${h - i}H${w - i - R}Q${w - i} ${h - i} ${w - i} ${h - i - R}V${yMid1}` + head(w - i, yMid1, 0, -1),
+    // to the player on his left: up the right side, across the top, down the left side
+    `M${w - i} ${yMid2}V${i + R}Q${w - i} ${i} ${w - i - R} ${i}H${i + R}Q${i} ${i} ${i} ${i + R}V${yMid2}` + head(i, yMid2, 0, 1),
+    // back to him: down the left side and along the bottom
+    `M${i} ${yMid1}V${h - i - R}Q${i} ${h - i} ${i + R} ${h - i}H${w * .34}` + head(w * .34, h - i, 1, 0),
+  ];
+  const on = g.end || g.result ? -1 : g.turn === 1 ? 0 : g.turn === 2 ? 1 : 2;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.innerHTML = seg.map((d, k) => `<path d="${d}"${k === on ? ' class="on"' : ''}/>`).join('');
+}
+
+function renderSheet(g) {
+  const sh = $('sheet');
+  if (!g.end || busy()) { sh.hidden = true; return; }
+  const e = g.end;
+  const title = e.winner === null ? 'Ligne bloquée' : e.blocked ? 'Ligne bloquée' : 'Domino !';
+  const sub = e.winner === null ? 'Deux joueurs ont le même petit total : personne ne marque.'
+    : e.blocked ? `Plus personne ne peut jouer. ${e.winner === 0 ? 'Vous avez' : who(e.winner) + ' a'} le plus petit total.`
+    : e.winner === 0 ? 'Vous avez posé tous vos dominos.' : `${who(e.winner)} a posé tous ses dominos.`;
+  const mini = t => `<span>${handSvg(t)}</span>`;
+  const rows = [0, 1, 2].map(p => `<tr${p === e.winner ? ' class="win"' : ''}><td class="n">${face(p).replace('class="ava"', '')}${who(p)}</td>`
+    + `<td class="left"><span class="mini">${g.hands[p].map(mini).join('')}</span>${g.hands[p].length ? `reste ${e.pips[p]}` : 'plus rien'}</td>`
+    + `<td class="plus">${p === e.winner && e.points ? '+' + e.points : ''}</td><td class="tot">${g.scores[p]}</td></tr>`).join('');
+  const html = `<h2>${title}</h2><p class="sub">${sub}</p><table><tr class="head"><td></td><td class="left">En main</td><td>Manche</td><td>Total</td></tr>${rows}</table>`
+    + (g.result ? '<button id="againBtn" class="primary" data-nudge>Nouvelle partie</button>' : '<button id="nextBtn" class="primary" data-nudge>Manche suivante</button>');
+  if (sh.dataset.html !== html) { sh.innerHTML = html; sh.dataset.html = html; }
+  sh.hidden = false;
+  sh.classList.toggle('short', table.clientHeight < 420 || table.clientWidth < 600);
+}
+
+function render() {
+  if (!G) return;
+  const g = view;
+  layout();
+  for (const p of [0, 1, 2]) {
+    const s = $('seat' + p), html = seatHtml(g, p);
+    if (s.dataset.html !== html) { s.innerHTML = html; s.dataset.html = html; }
+    s.classList.toggle('turn', !g.end && !g.result && g.turn === p);
+  }
+  $('plaque').textContent = `Manche ${g.manche} · partie en ${D.TARGET} points`;
+  renderHand(g);
+  renderLine(g);
+  renderWay(g);
+  renderSheet(g);
+  fresh = null;
+  // The pioche: its count, and the key that draws, or passes when it is empty.
+  $('stack').innerHTML = Array.from({ length: Math.min(4, Math.ceil(g.stock.length / 2)) }, (_, k) => `<i style="top:${14 - k * 5}px"></i>`).join('');
+  $('stack').classList.toggle('empty', !g.stock.length);
+  $('count').textContent = g.stock.length ? `Pioche : ${plural(g.stock.length, 'domino', 'dominos')}` : 'Pioche vide';
+  const db = $('drawBtn'), my = mine(), stuck = my && g.line.length > 0 && !D.legal(g).length;
+  db.textContent = g.stock.length || !g.line.length ? 'Piocher' : 'Passer mon tour';
+  db.disabled = !stuck;
+  db.dataset.why = g.result ? 'La partie est finie : cliquez sur « Nouvelle partie ».' : g.end ? 'La manche est finie : cliquez sur « Manche suivante ».'
+    : !my ? `Attendez : c'est à ${who(g.turn)} de jouer.` : !g.line.length ? `Commencez par ${tname(g.opening)} : cliquez dessus.`
+    : marks() ? 'Un de vos dominos se pose : cliquez sur un domino encadré en jaune.' : 'Un de vos dominos se pose : cliquez dessus.';
+  db.toggleAttribute('data-nudge', stuck);
+  if (pick !== null) $('hintBtn').dataset.auto = 'no'; else delete $('hintBtn').dataset.auto;
+  if (!busy()) Kit.showWins(stats.won);
+  $('undoBtn').disabled = !undo.length;
+  $('undoBtn').dataset.why = "Il n'y a pas de domino à reprendre dans cette manche.";
+  $('hintBtn').disabled = !!G.result || !!G.end;
+  $('hintBtn').dataset.why = G.result ? 'La partie est finie : cliquez sur « Nouvelle partie ».' : 'La manche est finie : cliquez sur « Manche suivante ».';
+}
+function shake(e) { if (!e) return; window.Sound?.play('bad'); e.classList.remove('shake'); void e.offsetWidth; e.classList.add('shake'); }
+
+// Sizes: the dominoes in his hand as large as the room allows, the other players beside the mat when the
+// window is wide, above it otherwise.
+const table = $('table');
+function layout() {
+  const W = table.clientWidth, H = table.clientHeight, phone = innerWidth < 700;
+  const top = phone || W < 900;
+  $('board').classList.toggle('top', top);
+  table.classList.toggle('low', H < 430);
+  const n = Math.max(7, view ? view.hands[0].length : 7);
+  const sideW = phone ? 0 : 240 + 130;   // his place and the pioche
+  let hw = phone ? Math.min(46, (W - 12) / (Math.min(n, 8) * 1.18)) : Math.min(64, H * .1, (W - sideW - 60) / (n * 1.18));
+  hw = Math.max(phone ? 30 : 34, Math.floor(hw));
+  document.documentElement.style.setProperty('--hw', hw + 'px');
+  document.documentElement.style.setProperty('--seatW', (W >= 1500 ? 220 : W >= 1200 ? 172 : 150) + 'px');
+  const pad = phone ? 28 : H < 430 ? 30 : 34;
+  $('mat').style.setProperty('--pad', pad + 'px');
+}
+
+/* ---------- Mouse, touch and keys ---------- */
+$('hand').addEventListener('click', e => {
+  const d = e.target.closest('.dom');
+  if (d && once('t' + d.dataset.t)) tapTile(+d.dataset.t);
+});
+for (const s of ['L', 'R']) {
+  const g = document.createElement('button');
+  g.className = 'ghost'; g.id = 'ghost' + s; g.innerHTML = '<span></span>';
+  g.addEventListener('click', e => { e.stopPropagation(); if (once('g' + s)) tapEnd(s); });
+  $('line').appendChild(g);
+}
+// A click on the line: on an end while he picks a side, it lays the domino there; else it says what to do.
+$('mat').addEventListener('click', e => {
+  if (e.target.closest('#sheet') || e.target.closest('.ghost')) return;
+  if (!G || Kit.isOpen()) return;
+  const lt = e.target.closest('.lt');
+  if (lt && pick !== null && mine()) {
+    const t = +lt.dataset.t;
+    if (G.line[0].t === t && D.fits(G, pick).includes('L')) return tapEnd('L');
+    if (G.line[G.line.length - 1].t === t && D.fits(G, pick).includes('R')) return tapEnd('R');
+  }
+  if (refuseBusy()) return;
+  if (pick !== null) return say(`Cliquez sur un des deux bouts encadrés en jaune pour poser ${tname(pick)}.`);
+  say(D.legal(G).length ? (marks() ? 'Cliquez sur un domino encadré en jaune dans votre main.' : 'Cliquez sur un domino de votre main.') : turnText());
+});
+$('sheet').addEventListener('click', e => {
+  if (e.target.closest('#nextBtn') && once('next')) nextManche();
+  if (e.target.closest('#againBtn')) askNewGame();
+});
+$('stack').addEventListener('click', () => { if (once('draw')) doDraw(); });
+$('drawBtn').onclick = () => { if (once('draw')) doDraw(); };
+$('undoBtn').onclick = () => { if (once('undo')) doUndo(); };
+$('hintBtn').onclick = showHint;
+$('helpBtn').onclick = () => Kit.openHelp();
+$('newBtn').onclick = askNewGame;
+addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (!Kit.isOpen()) doUndo(); }
+  else if (e.key === 'Escape') { if (!Kit.escape() && pick !== null && mine()) { pick = null; render(); say(turnText()); } }
+});
+addEventListener('resize', () => { lineU = Infinity; render(); });
+
+/* ---------- The pictures of the rules ----------
+   data-line: the dominoes of a line, "4-1" lying with the 4 on the left, "ghost" a free place, ":here" the
+   place the hand points at. data-hand: dominoes standing in a hand, ":can", ":pick", ":here". */
+const pair = s => s.split('-').map(Number);
+for (const r of document.querySelectorAll('#help [data-line]')) {
+  r.innerHTML = r.dataset.line.split(',').map(x => {
+    const [what, mark = ''] = x.split(':');
+    if (what === 'ghost') return `<i class="gd ghost on${mark ? ' ' + mark : ''}">${mark ? Kit.icon('hand') : ''}</i>`;
+    const [a, b] = pair(what);
+    return `<i class="gd">${dominoSvg(a, b, false)}</i>`;
+  }).join('');
+}
+for (const r of document.querySelectorAll('#help [data-hand]')) {
+  r.innerHTML = r.dataset.hand.split(',').map(x => {
+    const [what, mark = ''] = x.split(':');
+    const [a, b] = pair(what);
+    return `<i class="gd v ${mark}">${dominoSvg(a, b, true)}${mark.includes('here') ? Kit.icon('hand') : ''}</i>`;
+  }).join('');
+}
+
+// The first time, a game starts at Facile at once, with the coach.
+if (load()) {
+  Kit.showLevel(level);
+  render();
+  if (G.result || G.end) endManche(false);
+  else if (G.turn !== 0) runComputers();
+  else { say(turnText()); coach(); }
+} else {
+  Kit.firstVisit(newGame);
+}
+</script>
+</body>
+</html>

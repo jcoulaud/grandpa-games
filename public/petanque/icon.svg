@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 110">
+<defs>
+<linearGradient id="gravel" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#E6CFA2"/><stop offset="1" stop-color="#C9AC7B"/></linearGradient>
+<radialGradient id="steel" cx=".34" cy=".3" r=".78"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".42" stop-color="#C8CDD5"/><stop offset="1" stop-color="#626A75"/></radialGradient>
+<radialGradient id="bronze" cx=".34" cy=".3" r=".78"><stop offset="0" stop-color="#F2CDA4"/><stop offset=".48" stop-color="#8C5A36"/><stop offset="1" stop-color="#3A210F"/></radialGradient>
+<radialGradient id="jack" cx=".34" cy=".3" r=".8"><stop offset="0" stop-color="#FFA27A"/><stop offset=".55" stop-color="#E2482A"/><stop offset="1" stop-color="#8E2412"/></radialGradient>
+<symbol id="grooves" viewBox="-10 -10 20 20" overflow="visible"><path d="M-8.6-3.2Q0 1.8 8.6-3.2M-8.9-1.4Q0 3.6 8.9-1.4M-3.4-9.3Q1.6 0-3.4 9.3" fill="none" stroke="#3A3A3A" stroke-width=".7" opacity=".55"/></symbol>
+</defs>
+<path d="M2 106 40 26h80l38 80z" fill="#7A5530"/>
+<path d="M11 106 44 31h72l33 75z" fill="url(#gravel)"/>
+<g fill="#7A6A52" opacity=".35"><circle cx="40" cy="96" r="1"/><circle cx="58" cy="78" r=".9"/><circle cx="120" cy="96" r="1.1"/><circle cx="96" cy="44" r=".7"/><circle cx="72" cy="52" r=".7"/><circle cx="130" cy="84" r=".9"/><circle cx="30" cy="88" r=".8"/><circle cx="110" cy="62" r=".8"/></g>
+<g fill="#FFF7E4" opacity=".7"><circle cx="48" cy="88" r=".9"/><circle cx="84" cy="98" r="1"/><circle cx="106" cy="52" r=".7"/><circle cx="64" cy="64" r=".8"/><circle cx="136" cy="100" r="1"/></g>
+<path d="M44 31h72l4 9c-14 5-26-3-40 2s-26 3-40-2z" fill="#3E4A2F" opacity=".16"/>
+<ellipse cx="86" cy="62" rx="5" ry="1.6" fill="#3A2412" opacity=".3"/>
+<circle cx="86" cy="58.5" r="4" fill="url(#jack)"/>
+<ellipse cx="66" cy="70" rx="11" ry="3" fill="#3A2412" opacity=".3"/>
+<circle cx="66" cy="60" r="10.5" fill="url(#steel)"/><use href="#grooves" x="55.5" y="49.5" width="21" height="21"/>
+<ellipse cx="108" cy="82" rx="13" ry="3.4" fill="#3A2412" opacity=".3"/>
+<circle cx="108" cy="70" r="12.5" fill="url(#bronze)"/><use href="#grooves" x="95.5" y="57.5" width="25" height="25"/>
+<ellipse cx="60" cy="101" rx="15" ry="3.8" fill="#3A2412" opacity=".3"/>
+<circle cx="60" cy="86" r="15" fill="url(#steel)"/><use href="#grooves" x="45" y="71" width="30" height="30"/>
+</svg>
