@@ -123,30 +123,52 @@
   #count { font: 700 20px/1.2 var(--ui); color: #FCEBD5; text-shadow: 0 2px 3px rgba(0,0,0,.4); white-space: nowrap; }
   #drawBtn { min-height: 58px; padding-inline: 22px; font-size: 22px; justify-content: center; white-space: nowrap; }
 
-  /* ---------- The end of a manche: a sheet on the mat ---------- */
-  #sheet { position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 20; width: min(700px, calc(100% - 24px)); max-height: calc(100% - 8px); overflow: auto;
-    padding: 18px 22px 18px; border-radius: 20px; background: var(--paper); color: var(--ink); box-shadow: 0 20px 50px rgba(0,0,0,.55); text-align: center; }
+  /* ---------- The end of a manche: a sheet on the mat ----------
+     The winner on top, in a gold ring, then where the points come from, then the race to the target: one bar
+     per player, this manche's gain in gold at its end, and what each one still held under the name. */
+  #sheet { position: fixed; left: 50%; top: 50%; translate: -50% -50%; z-index: 60; width: min(760px, calc(100% - 24px)); max-height: calc(100% - 16px); overflow: auto;
+    padding: 22px 26px 20px; border-radius: 24px; background: var(--paper); color: var(--ink);
+    box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 24px 60px rgba(0,0,0,.55), 0 0 0 100vmax rgba(12,20,16,.42); }
   #sheet[hidden] { display: none; }
-  #sheet h2 { margin: 0 0 4px; font: 800 30px/1.15 var(--ui); }
-  #sheet .sub { margin: 0 0 10px; font: 500 21px/1.3 var(--ui); color: #4E5A57; }
-  #sheet table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-  #sheet td { padding: 6px 8px; border-top: 1.5px solid #E9DFC9; font: 600 21px/1.2 var(--ui); white-space: nowrap; }
-  #sheet td.n { text-align: left; } #sheet td.n img { width: 40px; height: 40px; border-radius: 50%; vertical-align: middle; margin-right: 10px; }
-  #sheet td.left { text-align: left; white-space: normal; }
-  #sheet td.left .mini { display: inline-flex; gap: 4px; vertical-align: middle; margin-right: 8px; }
-  #sheet td.left .mini span { display: block; width: 18px; height: 36px; }
-  #sheet td.plus { color: #1D7A45; font-weight: 800; }
-  #sheet td.tot { font-weight: 800; font-size: 24px; font-variant-numeric: tabular-nums; }
-  #sheet tr.win td { background: #FFF3CF; }
-  #sheet .head td { border-top: 0; font: 600 20px/1.2 var(--ui); color: #5A6461; }
-  #sheet button { min-height: 58px; font-size: 22px; padding-inline: 28px; }
-  #sheet.short { padding: 10px 18px 12px; }
-  #sheet.short td.left .mini { display: none; }
+  #sheet .top { display: flex; align-items: center; gap: 18px; margin-bottom: 14px; }
+  #sheet .medal { position: relative; flex: none; width: 84px; height: 84px; border-radius: 50%; padding: 4px; background: conic-gradient(from 200deg, #F7D36B, #C9951A, #F7D36B, #B07F12, #F7D36B); box-shadow: 0 6px 14px rgba(120,80,0,.35); }
+  #sheet .medal img { display: block; width: 100%; height: 100%; border-radius: 50%; border: 3px solid var(--paper); }
+  #sheet .medal svg { position: absolute; right: -6px; bottom: -4px; width: 34px; height: 34px; }
+  #sheet h2 { margin: 0; font: 800 30px/1.15 var(--ui); }
+  #sheet .sub { margin: 4px 0 0; font: 500 21px/1.3 var(--ui); color: #4E5A57; }
+  #sheet .gain { display: flex; align-items: center; gap: 14px; margin: 0 0 16px; padding: 10px 16px; border-radius: 16px; background: #FFF0C2; box-shadow: inset 0 0 0 1.5px #EBCB72; }
+  #sheet .gain b { flex: none; font: 800 30px/1 var(--ui); color: #7A5300; font-variant-numeric: tabular-nums; }
+  #sheet .gain span { font: 600 20px/1.3 var(--ui); color: #4A3A12; }
+  #sheet ol { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 10px; }
+  #sheet li { display: grid; grid-template-columns: 48px minmax(120px, 190px) 1fr auto; align-items: center; gap: 4px 14px; padding: 8px 12px 8px 8px; border-radius: 16px; background: #F6EEDC; }
+  #sheet li.win { background: #FFF6DA; box-shadow: inset 0 0 0 2px #E7C25B; }
+  #sheet li > img { width: 48px; height: 48px; border-radius: 50%; }
+  #sheet .who { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  #sheet .who b { font: 700 22px/1.15 var(--ui); }
+  #sheet .held { display: flex; align-items: center; gap: 4px; font: 600 20px/1.2 var(--ui); color: #5A6461; white-space: nowrap; }
+  #sheet .held .mini { display: inline-flex; gap: 3px; margin-right: 4px; }
+  #sheet .held .mini span { display: block; width: 16px; height: 32px; }
+  #sheet .track { position: relative; height: 18px; border-radius: 9px; background: #E5D9BE; box-shadow: inset 0 1px 2px rgba(0,0,0,.15); }
+  #sheet .track i { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 9px; background: linear-gradient(#3E8E6E, #24644C); }
+  #sheet .track i.add { background: linear-gradient(#F7D36B, #D9A421); animation: grow .9s .25s both cubic-bezier(.2,.8,.2,1); }
+  #sheet .track::after { content: ""; position: absolute; right: 0; top: -5px; bottom: -5px; width: 3px; border-radius: 2px; background: #9C8A62; }
+  @keyframes grow { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+  #sheet .tot { min-width: 108px; text-align: right; font: 800 26px/1 var(--ui); font-variant-numeric: tabular-nums; }
+  #sheet .tot small { font: 600 20px var(--ui); color: #7A847F; }
+  #sheet .foot { display: flex; justify-content: center; }
+  #sheet button { min-height: 58px; font-size: 22px; padding-inline: 32px; }
+  @media (prefers-reduced-motion: reduce) { #sheet .track i.add { animation: none; } }
+  #sheet.short { padding: 12px 18px 12px; }
+  #sheet.short .top { gap: 12px; margin-bottom: 8px; }
+  #sheet.short .medal { width: 60px; height: 60px; padding: 3px; }
+  #sheet.short .medal svg { width: 26px; height: 26px; }
   #sheet.short h2 { font-size: 26px; }
-  #sheet.short .sub { margin-bottom: 4px; }
-  #sheet.short td { padding: 2px 8px; }
-  #sheet.short td.n img { width: 30px; height: 30px; }
-  #sheet.short table { margin-bottom: 8px; }
+  #sheet.short .gain { margin-bottom: 8px; padding: 6px 12px; }
+  #sheet.short .gain b { font-size: 26px; }
+  #sheet.short ol { gap: 6px; margin-bottom: 10px; }
+  #sheet.short li { padding: 4px 10px 4px 6px; grid-template-columns: 36px minmax(100px, 170px) 1fr auto; }
+  #sheet.short li > img { width: 36px; height: 36px; }
+  #sheet.short .held .mini { display: none; }
 
   /* ---------- A low window: smaller places, so the line keeps its room ---------- */
   #table.low .seat .now { display: none; }
@@ -154,8 +176,6 @@
   #table.low .ava { width: 48px; height: 48px; }
   #table.low #me { padding-top: 6px; }
   #table.low #stack { display: none; }
-  #table.low #sheet h2 { font-size: 26px; }
-  #table.low #sheet td { padding: 3px 8px; }
 
   /* A phone: the two players in a row on top, the mat, then his dominoes and the pioche. */
   @media (max-width: 700px) {
@@ -176,8 +196,13 @@
     #count { font-size: 15px; }
     #drawBtn { min-height: 46px; font-size: 17px; padding-inline: 14px; }
     #plaque { font-size: 14px; padding: 2px 10px; bottom: -10px; }
-    #sheet { padding: 10px; } #sheet h2 { font-size: 20px; } #sheet .sub, #sheet td { font-size: 14px; } #sheet td.tot { font-size: 16px; }
-    #sheet td.n img { width: 26px; height: 26px; margin-right: 4px; }
+    #sheet { padding: 12px; } #sheet h2 { font-size: 20px; } #sheet .sub, #sheet .gain span, #sheet .held { font-size: 14px; }
+    #sheet .medal, #sheet.short .medal { width: 52px; height: 52px; } #sheet .medal svg { width: 22px; height: 22px; }
+    #sheet .gain b { font-size: 22px; }
+    #sheet li, #sheet.short li { grid-template-columns: 32px 1fr auto; padding: 6px 8px 6px 6px; }
+    #sheet li > img { width: 32px; height: 32px; } #sheet .who b { font-size: 16px; }
+    #sheet .track { grid-row: 2; grid-column: 1 / -1; height: 12px; }
+    #sheet .tot { grid-row: 1; grid-column: 3; font-size: 18px; min-width: 0; white-space: nowrap; } #sheet .tot small { font-size: 13px; }
     #sheet button { min-height: 46px; font-size: 17px; }
     .dom .tag { font-size: 13px; }
   }
@@ -871,20 +896,34 @@ function renderWay(g) {
 function renderSheet(g) {
   const sh = $('sheet');
   if (!g.end || busy()) { sh.hidden = true; return; }
-  const e = g.end;
-  const title = e.winner === null ? 'Ligne bloquée' : e.blocked ? 'Ligne bloquée' : 'Domino !';
-  const sub = e.winner === null ? 'Deux joueurs ont le même petit total : personne ne marque.'
-    : e.blocked ? `Plus personne ne peut jouer. ${e.winner === 0 ? 'Vous avez' : who(e.winner) + ' a'} le plus petit total.`
-    : e.winner === 0 ? 'Vous avez posé tous vos dominos.' : `${who(e.winner)} a posé tous ses dominos.`;
+  const e = g.end, w = e.winner, T = D.TARGET;
+  const finalWin = g.result && w !== null;
+  const title = w === null ? 'Ligne bloquée'
+    : w === 0 ? (finalWin ? 'Vous gagnez la partie !' : 'Vous gagnez la manche !')
+    : `${who(w)} gagne ${finalWin ? 'la partie' : 'la manche'}`;
+  const sub = w === null ? 'Deux joueurs ont le même petit total : personne ne marque.'
+    : e.blocked ? `Plus personne ne peut jouer. ${w === 0 ? 'Vous avez' : who(w) + ' a'} le plus petit total.`
+    : w === 0 ? 'Vous avez posé tous vos dominos.' : `${CAST[cast[w - 1]].she ? 'Elle' : 'Il'} a posé tous ses dominos.`;
+  // Where the points come from: what the two others still held.
+  const from = w === null ? [] : [0, 1, 2].filter(p => p !== w && e.pips[p]).map(p => `${e.pips[p]} ${p === 0 ? 'dans votre main' : `chez ${who(p)}`}`);
+  const gain = w !== null && e.points ? `<div class="gain"><b>+${e.points}</b><span>${w === 0 ? 'pour vous' : `pour ${who(w)}`} : ${from.join(' + ')}.</span></div>` : '';
+  const star = '<svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="16" fill="#FFC83D" stroke="#fff" stroke-width="2.5"/><path d="M17 7.5c.4 4 2.1 6.5 7 8.5-4.9 2-6.6 4.5-7 8.5-.4-4-2.1-6.5-7-8.5 4.9-2 6.6-4.5 7-8.5z" fill="#5A3E00"/></svg>';
+  const medal = w === null ? '' : `<div class="medal">${face(w).replace(' class="ava"', '')}${star}</div>`;
   const mini = t => `<span>${handSvg(t)}</span>`;
-  const rows = [0, 1, 2].map(p => `<tr${p === e.winner ? ' class="win"' : ''}><td class="n">${face(p).replace('class="ava"', '')}${who(p)}</td>`
-    + `<td class="left"><span class="mini">${g.hands[p].map(mini).join('')}</span>${g.hands[p].length ? `reste ${e.pips[p]}` : 'plus rien'}</td>`
-    + `<td class="plus">${p === e.winner && e.points ? '+' + e.points : ''}</td><td class="tot">${g.scores[p]}</td></tr>`).join('');
-  const html = `<h2>${title}</h2><p class="sub">${sub}</p><table><tr class="head"><td></td><td class="left">En main</td><td>Manche</td><td>Total</td></tr>${rows}</table>`
-    + (g.result ? '<button id="againBtn" class="primary" data-nudge>Nouvelle partie</button>' : '<button id="nextBtn" class="primary" data-nudge>Manche suivante</button>');
+  const pct = n => Math.min(100, n / T * 100);
+  const rows = [0, 1, 2].map(p => {
+    const now = g.scores[p], add = p === w ? e.points : 0;
+    const held = g.hands[p].length ? `<span class="mini">${g.hands[p].map(mini).join('')}</span>${e.pips[p]} en main` : 'Plus rien en main';
+    return `<li${p === w ? ' class="win"' : ''}>${face(p).replace(' class="ava"', '')}<div class="who"><b>${who(p)}</b><span class="held">${held}</span></div>`
+      + `<div class="track" role="img" aria-label="${now} points sur ${T}">${add ? `<i class="add" style="width:${pct(now)}%"></i>` : ''}<i style="width:${pct(now - add)}%"></i></div>`
+      + `<div class="tot">${now}<small> / ${T}</small></div></li>`;
+  }).join('');
+  const html = `<div class="top">${medal}<div><h2>${title}</h2><p class="sub">${sub}</p></div></div>${gain}<ol>${rows}</ol>`
+    + `<div class="foot">${g.result ? '<button id="againBtn" class="primary" data-nudge>Nouvelle partie</button>' : '<button id="nextBtn" class="primary" data-nudge>Manche suivante</button>'}</div>`;
   if (sh.dataset.html !== html) { sh.innerHTML = html; sh.dataset.html = html; }
   sh.hidden = false;
-  sh.classList.toggle('short', table.clientHeight < 420 || table.clientWidth < 600);
+  const z = window.Zoom ? Zoom.z() : 1;
+  sh.classList.toggle('short', innerHeight / z < 640 || innerWidth / z < 600);
 }
 
 function render() {
