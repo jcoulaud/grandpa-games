@@ -296,6 +296,16 @@ try {
       return document.activeElement === before && before.isConnected && before.matches('a.tile');
     });
     check('new games: coming back to the tab keeps the focus on the chosen tile', kept);
+    // A redraw that changes the tags gives the focus back to the same tile.
+    const back = await p.evaluate(() => {
+      const id = document.activeElement.dataset.id;
+      localStorage.setItem('gg:news-hidden', JSON.stringify([]));
+      localStorage.setItem('gg:news-seen', JSON.stringify({}));
+      document.dispatchEvent(new Event('visibilitychange'));
+      const now = document.activeElement;
+      return now.matches('a.tile') && now.dataset.id === id && now.isConnected;
+    });
+    check('new games: a redraw keeps the focus on the same tile', back);
     await ctx.close();
 
     // Without storage, the library still shows the band, and « Masquer » hides it in this window.

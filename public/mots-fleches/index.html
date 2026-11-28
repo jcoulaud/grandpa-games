@@ -860,6 +860,8 @@ addEventListener('keydown', e => {
   // Space presses a button or link reached with the keyboard (Tab), as everywhere. A button clicked with the
   // mouse keeps the focus too, but without the visible ring: there, Space takes the other word of the cell,
   // so it never presses the same key or the hint a second time.
+  // Enter on a button clicked with the mouse would press it again: a second letter or a second hint.
+  if (k === 'Enter' && e.target instanceof Element && e.target.closest('button') && !e.target.matches(':focus-visible')) { e.preventDefault(); return; }
   if (k === ' ' && e.target instanceof Element && e.target.matches(':focus-visible') && e.target.closest('button, a, input, select, textarea, summary, [role="button"]')) return;
   if (k === ' ' && G) { e.preventDefault(); const o = wordsAt(at).find(w => w !== word); if (o !== undefined) choose(o, at); return; }
   if (k.length === 1) {

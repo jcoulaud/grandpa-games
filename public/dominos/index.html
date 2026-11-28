@@ -672,7 +672,8 @@ async function nextManche() {
 // The first player of a manche: him, or the computer players until his turn.
 function startManche() {
   // Only at the start of a manche: a late call after his opening domino does nothing.
-  if (G.end || G.line.length || busy()) return;
+  // Nor in a window that another tab has overtaken: the reload prompt is up.
+  if (G.end || G.line.length || busy() || stale) return;
   const p = G.turn;
   if (p === 0) { say(`Manche ${G.manche}. ${turnText()}`); return coach(); }
   say(`Manche ${G.manche}. ${who(p)} a ${tname(G.opening)}, le plus gros : il commence.`);

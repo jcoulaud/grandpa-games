@@ -984,6 +984,9 @@ function refresh() {
 }
 function render(fresh = newGames()) {
   lastState = shownState(fresh);
+  // The tile or band link he reached with the keyboard gets the focus back after the redraw.
+  const focused = document.activeElement?.closest?.('[data-id]');
+  const where = focused && (focused.closest('#news') ? '#news' : '#games');
   renderNews(fresh);
   const tile = g => {
     // The tile shows no line about the saved game: only the button says a game is in progress.
@@ -1001,6 +1004,7 @@ function render(fresh = newGames()) {
     return games.length ? `<section class="family" aria-labelledby="family-${id}"><h2 id="family-${id}">${esc(name)}</h2>
       <div class="grid">${games.map(tile).join('')}</div></section>` : '';
   }).join('');
+  if (where) document.querySelector(`${where} [data-id="${focused.dataset.id}"]`)?.focus();
 }
 function opening(e) {
   const t = e.target.closest('a.tile');
