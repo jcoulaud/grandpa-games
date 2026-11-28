@@ -537,9 +537,10 @@ async function lay(t, side) {
   const done = commit();
   render();
   say(side === 'C' ? `Vous commencez avec ${tname(t)}.` : G.end ? `Vous posez ${tname(t)}.` : `Vous posez ${tname(t)}. ${who(G.turn)} joue.`);
-  // A save that fails (a full or blocked memory) never stops the game: it goes on in this window.
+  // A save that fails because the memory is full or blocked never stops the game: it goes on in this window.
+  // A stale window (another window saved a newer game) stops here: the kit asks to reload.
   await done;
-  if (G !== current) return;
+  if (G !== current || stale) return;
   if (G.end) return later(endManche, REDUCED ? 0 : END_MS);
   runComputers();
 }
@@ -556,7 +557,7 @@ async function doDraw() {
     render();
     say('Vous passez votre tour.');
     await done;
-    if (G !== current) return;
+    if (G !== current || stale) return;
     if (G.end) return later(endManche, REDUCED ? 0 : END_MS);
     return runComputers();
   }
@@ -606,6 +607,7 @@ function runComputers() {
     G = s.G; view = G;
     await commit();
     if (G !== s.G) return;
+    if (stale) { showing = false; render(); return; }
     if (G.end) { showing = false; return endManche(); }
     runComputers();
   };
@@ -663,7 +665,7 @@ async function nextManche() {
   const current = G;
   render();
   await save();
-  if (G !== current) return;
+  if (G !== current || stale) return;
   startManche();
   if (!saved && !stale) warnSave();
 }

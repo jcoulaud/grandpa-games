@@ -971,10 +971,19 @@ function renderNews(fresh) {
     newsHidden = [...new Set([...newsHidden, ...shown.map(g => g.id)])];
     GG.set('news-hidden', newsHidden);
     renderNews(fresh);
+    lastState = shownState(fresh);
   };
 }
-function render() {
+// What the page shows of each game: whether it is new and hidden from the band, and whether a game is in
+// progress. A redraw that changes none of it is skipped, so the focus stays on the tile he chose.
+const shownState = fresh => JSON.stringify(GAMES.map(g => [fresh.includes(g), newsHidden.includes(g.id), inProgress(partsOf(GG.meta(g.id)))]));
+let lastState = '';
+function refresh() {
   const fresh = newGames();
+  if (shownState(fresh) !== lastState) render(fresh);
+}
+function render(fresh = newGames()) {
+  lastState = shownState(fresh);
   renderNews(fresh);
   const tile = g => {
     // The tile shows no line about the saved game: only the button says a game is in progress.
@@ -1006,7 +1015,9 @@ document.getElementById('games').addEventListener('click', opening);
 // Safari keeps the page in memory when Papi goes into a game. Coming back, redraw the tiles.
 addEventListener('pageshow', e => { if (e.persisted) render(); });
 // Back from a game in another tab, or after a long time open, the band and the tags follow what changed.
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') render(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refresh(); });
+// A library left open for days still drops a game once its 3 days are over.
+setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 36e5);
 
 
 // Chrome and Edge offer to install the site as an app. Show the offer as a plain button.

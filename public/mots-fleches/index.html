@@ -390,14 +390,17 @@ function type(letter) {
   if (G.result) return Kit.say('Cette grille est finie : cliquez sur « Nouvelle partie » pour en commencer une autre.');
   const ws = WS()[word];
   let i = at;
-  // The cell he is on holds a letter of the game: the letter goes in the next empty cell he can write,
-  // after it in the word, else before it, else in a written cell after it.
+  // The cell he is on holds a letter of the game: the letter goes in an empty cell of the word, the next
+  // one after it, else the first one. A full word is never changed this way: he clicks the letter to change.
   if (G.given[i] === '1') {
     const k0 = ws.cells.indexOf(at), free = ws.cells.filter(k => G.given[k] !== '1');
-    const after = k => ws.cells.indexOf(k) > k0;
-    i = free.find(k => after(k) && !filled(k)) ?? free.find(k => !filled(k)) ?? free.find(after) ?? free[0] ?? -1;
+    i = free.find(k => ws.cells.indexOf(k) > k0 && !filled(k)) ?? free.find(k => !filled(k)) ?? -1;
+    if (i < 0) {
+      window.Sound?.play('bad');
+      return Kit.say(free.length ? `Le mot ${quote(word)} est rempli. Pour changer une lettre, cliquez d’abord sur elle.`
+        : 'Les lettres de ce mot sont déjà données. Cliquez sur une autre case blanche.');
+    }
   }
-  if (i < 0) { window.Sound?.play('bad'); return Kit.say(`Les lettres de ce mot sont déjà données. Cliquez sur une autre case blanche.`); }
   const before = G, wasEmpty = !filled(i);
   G = M.write(G, i, letter);
   if (G === before) return;
@@ -854,8 +857,10 @@ addEventListener('keydown', e => {
   if (k === 'ArrowRight') { e.preventDefault(); return move(0, 1); }
   if (k === 'ArrowUp') { e.preventDefault(); return move(-1, 0); }
   if (k === 'ArrowDown') { e.preventDefault(); return move(1, 0); }
-  // Space presses a focused button or link, as everywhere; on the grid it takes the other word of the cell.
-  if (k === ' ' && e.target instanceof Element && e.target.closest('button, a, input, select, textarea, summary, [role="button"]')) return;
+  // Space presses a button or link reached with the keyboard (Tab), as everywhere. A button clicked with the
+  // mouse keeps the focus too, but without the visible ring: there, Space takes the other word of the cell,
+  // so it never presses the same key or the hint a second time.
+  if (k === ' ' && e.target instanceof Element && e.target.matches(':focus-visible') && e.target.closest('button, a, input, select, textarea, summary, [role="button"]')) return;
   if (k === ' ' && G) { e.preventDefault(); const o = wordsAt(at).find(w => w !== word); if (o !== undefined) choose(o, at); return; }
   if (k.length === 1) {
     const L = M.key(k);

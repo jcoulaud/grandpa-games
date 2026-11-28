@@ -209,7 +209,30 @@ await page.waitForFunction(() => G.manche === 2 && !showing && G.turn === 0 && G
 ok(await g(() => G.manche === 2 && G.hands.flat().length + G.stock.length + G.line.length === 28), 'with no room to save, the next manche is dealt and the others open it');
 ok(!errors.length, 'no page error with the memory full' + (errors.length ? ': ' + errors.join(' | ') : ''));
 
-// 15. The sizes. A long line of 23 dominoes and a full hand, at every window of docs/design.md.
+// 15. A window that is behind (another window saved a newer game) stops: the kit asks to reload, and the
+// others never start their turn there, after a domino or after a pass. Only a full or blocked memory lets
+// the game go on.
+await page.reload(); await wait(400);
+const other = await page.context().newPage();
+other.on('pageerror', e => errors.push(e.message));
+const behind = async (setup, act, what) => {
+  await setup();
+  await other.goto(URL); await other.waitForTimeout(400);
+  await setGame([[[6, 2], [3, 3], [5, 0]], [[1, 0], [2, 2], [5, 5]], [[0, 0]]], [[4, 1], [1, 6]]);
+  await g(() => GG.flush());
+  await act();
+  await other.waitForTimeout(2500);
+  const r = await other.evaluate(() => ({ asked: document.getElementById('overTitle').textContent === 'Le jeu a changé ailleurs' && Kit.isOpen(),
+    still: !showing && G.turn !== 0 && G.last && G.last.p === 0 }));
+  ok(r.asked && r.still, `${what} in a window that is behind: it asks to reload and the others do not play`);
+};
+await behind(() => setGame([[[6, 2], [3, 3], [5, 0]], [[1, 0], [2, 2], [5, 5]], [[0, 0]]], [[4, 1], [1, 6]]),
+  async () => { await other.locator(`#hand .dom[data-t="${await other.evaluate(() => Dominos.TILES.findIndex(([x, y]) => x === 2 && y === 6))}"]`).click(); }, 'a domino');
+await behind(() => setGame([[[3, 3], [5, 0]], [[1, 0], [2, 2]], []], [[4, 1], [1, 6]], { stock: null }),
+  () => other.locator('#drawBtn').click(), 'a pass');
+await other.close();
+
+// 16. The sizes. A long line of 23 dominoes and a full hand, at every window of docs/design.md.
 const LONG = [[0, 0], [0, 1], [1, 1], [1, 2], [2, 2], [2, 3], [3, 3], [3, 4], [4, 4], [4, 5], [5, 5], [5, 6], [6, 6], [6, 0], [0, 2], [2, 4], [4, 6], [6, 1], [1, 3], [3, 5], [5, 0], [0, 3], [3, 6]];
 const longLine = async p => p.evaluate(LONG => {
   const id = ([a, b]) => Dominos.TILES.findIndex(([x, y]) => x === Math.min(a, b) && y === Math.max(a, b));

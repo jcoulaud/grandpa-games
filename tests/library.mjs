@@ -287,6 +287,15 @@ try {
     await ctx.clock.setFixedTime(t0 + 61 * DAY);
     await p.reload();
     check('new games: a game first shown on day 59 still shows on day 61', (await band()).length > 0);
+
+    // Back on the library tab with nothing changed, the tile he chose with the keyboard keeps the focus.
+    await p.focus('.family a.tile');
+    const kept = await p.evaluate(() => {
+      const before = document.activeElement;
+      document.dispatchEvent(new Event('visibilitychange'));
+      return document.activeElement === before && before.isConnected && before.matches('a.tile');
+    });
+    check('new games: coming back to the tab keeps the focus on the chosen tile', kept);
     await ctx.close();
 
     // Without storage, the library still shows the band, and « Masquer » hides it in this window.

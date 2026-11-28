@@ -79,10 +79,10 @@ await g(() => dispatchEvent(new KeyboardEvent('keydown', { key: 'é', bubbles: t
 ok((await state()).typed[nextFree] === 'E', 'é is written E, as in the newspaper');
 await page.keyboard.press('Backspace');
 s = await state();
-ok(s.typed[ws[across].cells[2]] === ' ' && s.at === ws[across].cells[2] || s.typed[ws[across].cells[3]] === ' ', 'Backspace erases the letter');
-await g(([w, c]) => { word = w; at = c; render(); }, [across, ws[across].cells[2]]);
-await page.click(`#keys button[data-k="${target[2]}"]`); await page.mouse.move(5, 5); await wait(200);
-ok((await state()).typed[ws[across].cells[2]] === target[2], `a large key on the screen writes ${target[2]}`);
+ok(s.typed[nextFree] === ' ' && s.at === nextFree, 'Backspace erases the letter');
+await g(([w, c]) => { word = w; at = c; render(); }, [across, nextFree]);
+await page.click(`#keys button[data-k="${grid[nextFree]}"]`); await page.mouse.move(5, 5); await wait(200);
+ok((await state()).typed[nextFree] === grid[nextFree], `a large key on the screen writes ${grid[nextFree]} in the yellow cell`);
 // The arrow keys move the yellow cell to the next white cell.
 await g(([w, c]) => { word = w; at = c; render(); }, [across, ws[across].cells[1]]);
 await page.keyboard.press('ArrowRight');
@@ -99,34 +99,74 @@ ok((await state()).word === top, 'the top half takes the other word');
 ok(await g(t => document.querySelector(`#grid .part[data-w="${t}"]`).classList.contains('on'), top), 'the definition of the word he is on is lit in the grid');
 
 // 5b. A word whose last letter is given: a click on that given letter, then a key, fills the first empty
-// cell of the word, and never says the letters are all given (review: KOALA on Facile grid 0).
+// cell of the word, and never says the letters are all given (review: KOALA on Facile grid 0). Once the word
+// is full, the same key changes nothing: he must click the letter he wants to change.
 {
   const k = ws.findIndex(w => w.word === 'KOALA');
   ok(k >= 0, 'Facile grid 0 has KOALA');
-  const cells = ws[k].cells;
-  const kb = await cellAt(ws[k].clue).boundingBox(), parts = await g(c => document.querySelector(`#grid [data-i="${c}"]`).children.length, ws[k].clue);
-  await page.mouse.click(kb.x + kb.width / 2, kb.y + kb.height * (parts > 1 ? (ws[k].part ? .8 : .2) : .5)); await page.mouse.move(5, 5); await wait(560);
+  const cells = ws[k].cells, last = cells[cells.length - 1];
+  // KOALA starts with only its given letters, whatever the steps above wrote in it.
+  await g(c => { for (const i of c) G = M.write(G, i, ''); render(); }, cells);
+  const pickClue = async () => {
+    const kb = await cellAt(ws[k].clue).boundingBox(), parts = await g(c => document.querySelector(`#grid [data-i="${c}"]`).children.length, ws[k].clue);
+    await page.mouse.click(kb.x + kb.width / 2, kb.y + kb.height * (parts > 1 ? (ws[k].part ? .8 : .2) : .5)); await page.mouse.move(5, 5); await wait(560);
+  };
+  await pickClue();
   ok((await state()).word === k, 'a click on its definition takes KOALA');
-  const last = cells[cells.length - 1];
   ok(await g(i => G.given[i] === '1', last), 'the last A of KOALA is given by the game');
   await click(last);
-  await g(([w, c]) => { word = w; at = c; render(); }, [k, last]);
+  s = await state();
+  ok(s.word === k && s.at === last, 'a click on the given last A keeps KOALA and puts the yellow on that A');
   const empty = await g(c => c.find(i => G.typed[i] === ' '), cells);
   await page.keyboard.press(grid[empty]);
   ok(await g(([i, L]) => G.typed[i] === L, [empty, grid[empty]]) && !/déjà données/.test(await msg()), `a key on the given last letter fills the first empty cell of KOALA with ${grid[empty]}`);
+  // Fill the rest of KOALA, then type on its given A again: nothing changes.
+  for (const i of cells) if (await g(i => G.typed[i] === ' ', i)) { await g(([w, c]) => { word = w; at = c; render(); }, [k, i]); await page.keyboard.press(grid[i]); }
+  await wait(600);
+  await pickClue();
+  await click(last);
+  s = await state();
+  ok(s.word === k && s.at === last && cells.map(i => s.typed[i]).join('') === 'KOALA', 'KOALA is full, and the yellow is on its given A');
+  await page.keyboard.press('A');
+  ok(await g(c => c.map(i => G.typed[i]).join(''), cells) === 'KOALA' && /cliquez d’abord sur elle/.test(await msg()),
+    'a key on the given letter of a full word changes nothing and says to click the letter to change');
 }
 
-// 5c. Space presses a focused button, as everywhere: a letter key writes its letter, « Règles » opens.
+// 5c. Space presses a button reached with Tab, as everywhere. A button clicked with the mouse keeps the
+// focus, but Space must not press it a second time: not a letter key, not the hint.
 {
-  const target = await g(() => { const ws = M.wordsOf(G); for (let k = 0; k < ws.length; k++) { const i = ws[k].cells.find(c => G.typed[c] === ' '); if (i !== undefined) { word = k; at = i; render(); return i; } } return -1; });
+  const pick = () => g(() => { const ws = M.wordsOf(G); for (let k = 0; k < ws.length; k++) { const i = ws[k].cells.find(c => G.typed[c] === ' '); if (i !== undefined) { word = k; at = i; render(); return i; } } return -1; });
+  let target = await pick();
+  // With the keyboard: Tab to the key, then Space.
   const L = grid[target];
-  await page.focus(`#keys button[data-k="${L}"]`);
+  await g(L => { const b = document.querySelector(`#keys button[data-k="${L}"]`); b.previousElementSibling ? b.previousElementSibling.focus() : document.querySelector('#keys button').focus(); }, L);
+  const prev = await g(L => !!document.querySelector(`#keys button[data-k="${L}"]`).previousElementSibling, L);
+  if (prev) await page.keyboard.press('Tab'); else await g(L => document.querySelector(`#keys button[data-k="${L}"]`).focus(), L);
+  ok(await g(L => document.activeElement.dataset.k === L && document.activeElement.matches(':focus-visible'), L), `Tab reaches the key ${L}`);
   await page.keyboard.press('Space');
-  ok(await g(([i, L]) => G.typed[i] === L, [target, L]), `Space on the focused key ${L} writes ${L}`);
-  await page.focus('#helpBtn');
+  ok(await g(([i, L]) => G.typed[i] === L, [target, L]), `Space on the key ${L} reached with Tab writes ${L}`);
+  // With the mouse: a click on a key writes once; Space after it does not write it again.
+  target = await pick();
+  const M2 = grid[target];
+  await page.click(`#keys button[data-k="${M2}"]`);
+  const after = await g(() => G.typed);
+  ok(after[target] === M2, `a click on the key ${M2} writes it`);
   await page.keyboard.press('Space');
   await wait(200);
-  ok(await g(() => Kit.isOpen()), 'Space on the focused « Règles » opens the rules');
+  ok(await g(() => [...G.typed].filter(x => x !== ' ' && x !== '#').length) === [...after].filter(x => x !== ' ' && x !== '#').length,
+    'Space after a mouse click on a key does not write the letter again');
+  // The hint clicked with the mouse: Space does not give a second letter.
+  await pick();
+  await page.click('#hintBtn'); await wait(200);
+  const aided = await g(() => [...G.given].filter(x => x === '1').length);
+  await page.keyboard.press('Space'); await wait(600);
+  ok(await g(() => [...G.given].filter(x => x === '1').length) === aided, 'Space after a mouse click on the hint does not give a second letter');
+  // « Règles » reached with the keyboard opens on Space.
+  await g(() => document.getElementById('checkBtn').focus());
+  await page.keyboard.press('Tab');
+  ok(await g(() => document.activeElement.id === 'helpBtn' && document.activeElement.matches(':focus-visible')), 'Tab reaches « Règles »');
+  await page.keyboard.press('Space'); await wait(200);
+  ok(await g(() => Kit.isOpen()), 'Space on « Règles » reached with Tab opens the rules');
   await page.keyboard.press('Escape');
   await g(() => document.activeElement.blur());
 }
