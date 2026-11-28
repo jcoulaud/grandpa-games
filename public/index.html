@@ -933,7 +933,7 @@ function petanqueArt() {
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 const PLAY = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3.2v13.6a1 1 0 0 0 1.5.86l11-6.8a1 1 0 0 0 0-1.72l-11-6.8A1 1 0 0 0 5 3.2z"/></svg>';
-// A four-point star, the mark of what is new: on the band and on the tiles.
+// A four-point star, the mark of what is new: on the shelf and on the tiles.
 const SPARK = 'M12 1.5c.5 4.9 2.6 8 8.5 10.5-5.9 2.5-8 5.6-8.5 10.5-.5-4.9-2.6-8-8.5-10.5C9.4 9.5 11.5 6.4 12 1.5z';
 const art = (g, isNew) => `<div class="art" style="background: radial-gradient(90% 120% at 50% 0%, ${g.felt[0]}, ${g.felt[1]})">${isNew ? `<span class="new"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${SPARK}" fill="currentColor"/></svg>Nouveau</span>` : ''}${g.scene()}</div>`;
 // The line a game saved for the library, such as "Trou 3 sur 9 en cours · 2 parcours finis".
@@ -942,7 +942,7 @@ const inProgress = parts => parts.some(p => /en cours/i.test(p));
 // New games. A game with `added` is new for him when it was added in the last 60 days, he has not opened it
 // yet (the first visit saves a game, so GG.meta finds it), and the library first showed it to him less than
 // 3 days ago. gg:news-seen keeps when each game was first shown, gg:news-hidden the games put away with
-// « Masquer ». Without storage, the page still works: the band shows until « Masquer » in this window.
+// « Masquer ». Without storage, the page still works: the shelf shows until « Masquer » in this window.
 const DAY = 864e5;
 const asObject = v => v && typeof v === 'object' && !Array.isArray(v) ? v : {};
 let newsSeen = asObject(GG.get('news-seen'));
@@ -987,7 +987,7 @@ function renderNews(fresh) {
     lastState = shownState(fresh);
   };
 }
-// What the page shows of each game: whether it is new and hidden from the band, and whether a game is in
+// What the page shows of each game: whether it is new and hidden from the shelf, and whether a game is in
 // progress. A redraw that changes none of it is skipped, so the focus stays on the tile he chose.
 const shownState = fresh => JSON.stringify(GAMES.map(g => [fresh.includes(g), newsHidden.includes(g.id), inProgress(partsOf(GG.meta(g.id)))]));
 let lastState = '';
@@ -997,7 +997,7 @@ function refresh() {
 }
 function render(fresh = newGames()) {
   lastState = shownState(fresh);
-  // The tile or band link he reached with the keyboard gets the focus back after the redraw.
+  // The tile or shelf card he reached with the keyboard gets the focus back after the redraw.
   const focused = document.activeElement?.closest?.('[data-id]');
   const where = focused && (focused.closest('#news') ? '#news' : '#games');
   renderNews(fresh);
@@ -1031,7 +1031,7 @@ function opening(e) {
 document.getElementById('games').addEventListener('click', opening);
 // Safari keeps the page in memory when Papi goes into a game. Coming back, redraw the tiles.
 addEventListener('pageshow', e => { if (e.persisted) render(); });
-// Back from a game in another tab, or after a long time open, the band and the tags follow what changed.
+// Back from a game in another tab, or after a long time open, the shelf and the tags follow what changed.
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refresh(); });
 // A library left open for days still drops a game once its 3 days are over.
 setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 36e5);
