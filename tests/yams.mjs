@@ -61,6 +61,18 @@ ok(await page.locator('#sheet td.can').count() === 13, 'his 13 boxes show what t
 await click(die(1));
 ok(await g(() => G.kept[1]) && /Vous gardez le/.test(await msg()), 'a click keeps a die and says so');
 ok(/Relancer 4 dés/.test(await page.locator('#rollBtn').textContent()), 'the button says it throws 4 dice');
+ok(await g(() => document.getElementById('seat').textContent.startsWith('À vous de jouer')), 'the banner shows only him, who plays now');
+await click(box(1, 0));
+ok(/celle de/.test(await msg()), "a box in the computer's column is refused");
+// « Marquer mes points » stops the throws: the sheet is framed with his column only, and « Revenir aux dés » undoes it.
+await click(page.locator('#markBtn'));
+ok(await g(() => document.getElementById('sheet').classList.contains('marking') && document.getElementById('rollBtn').hidden && !document.getElementById('toSheet').hidden),
+  '« Marquer mes points » frames the sheet and hides the throw button');
+ok(await page.locator('#sheet td.it').first().isHidden(), "while he marks, the computer's column is hidden");
+await click(die(3));
+ok(/Revenir aux dés/.test(await msg()), 'a die while he marks says to pick a box or go back: ' + await msg());
+await click(page.locator('#backBtn'));
+ok(await g(() => !document.getElementById('sheet').classList.contains('marking') && !document.getElementById('rollBtn').hidden), '« Revenir aux dés » brings the throw button back');
 ok(await page.locator('#tags span.on').count() === 1, 'the kept die says "Gardé"');
 await page.screenshot({ path: `${OUT}/yams-kept.png` });
 // A double-click keeps the die: the second click is not counted.
@@ -73,12 +85,10 @@ ok(await g(k => G.rolls === 2 && G.dice[1] === k[0] && G.dice[2] === k[1], keptD
 await click(die(2));
 ok(await g(() => !G.kept[2]) && /sera relancé/.test(await msg()), 'a second click puts a kept die back');
 await click(page.locator('#rollBtn'));
-ok(await g(() => G.rolls === 3) && await page.locator('#rollBtn').isDisabled(), 'after three throws the button is off');
-ok(await g(() => /lancé trois fois/.test(document.getElementById('rollBtn').dataset.why)), 'the grey throw button says why');
+ok(await g(() => G.rolls === 3 && document.getElementById('rollBtn').hidden && document.getElementById('backBtn').hidden && document.getElementById('sheet').classList.contains('marking')),
+  'after three throws the sheet is the only thing to fill');
 await click(die(0));
 ok(/lancé trois fois/.test(await msg()), 'a die after the third throw is refused, with the reason');
-await click(box(1, 0));
-ok(/celle de/.test(await msg()), "a box in the computer's column is refused");
 
 // 4. Writing a box, then the computer plays its turn and gives the hand back.
 const chance = await g(() => G.dice.reduce((a, b) => a + b));

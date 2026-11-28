@@ -80,6 +80,8 @@
     --water: radial-gradient(60% 30% at 30% 35%, rgba(255,255,255,.08), transparent), linear-gradient(160deg, #2F80B5, #1D5F8E);
     background: var(--water); box-shadow: inset 0 0 0 1px rgba(10,40,70,.6); }
   #sea1 .q { cursor: crosshair; }
+  /* The ring of the coach (Kit.point) goes around the square: above its neighbours, or they hide its right and bottom sides. */
+  .q.coach { z-index: 6; }
   /* During his turn his own sea steps back, so the computer's sea is the one to click. */
   #side0.calm .sea { opacity: .72; filter: saturate(.7); transition: opacity .3s; }
   /* At Facile, after a hit, the open squares beside it have a soft gold edge: the ship goes on there. */

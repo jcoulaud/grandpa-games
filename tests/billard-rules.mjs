@@ -368,7 +368,7 @@ test('a hint pots the named ball, and the path preview ends at the matching pock
       const hint = B.hint(g);
       assert.equal(hint.target, 2);
       assert.equal(hint.pocket, p.id);
-      assert.match(hint.reason, /Visez la 2 bleue vers le trou/);
+      assert.match(hint.reason, /Visez la bleue pleine vers le trou/);
       if (inHand) {
         assert.ok(B.canPlace(g, hint.place.x, hint.place.y));
         const suggestion = B.suggestPlace(g);
